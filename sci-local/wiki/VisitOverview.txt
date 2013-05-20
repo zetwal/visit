@@ -1,0 +1,36 @@
+= Overview =
+
+!VisIt can help you explore your data and calculations. This is a summary of how you might utilize !VisIt to view the results of computations created with !Uintah/Wasatch.
+
+ 1. Run some simulation using '''sus''' which eventually produces a '''.uda''' file as its result.
+ 2. View the result using !VisIt running from your local machine, from a remote server, or a combination of both. 
+
+These pages explain how to get started using !VisIt. There are three ways to run !VisIt: locally, remotely, or a combination of local and remote execution.
+
+== Local Execution ==
+
+You can use a local build to visualize data that has been created on or copied to your local machine.
+
+ 1. Install a suitable version of !VisIt on your local machine: [wiki:VisitPrebuilt VisIt Installation].
+ 1. (''Linux Only'') Build the uintah udaReader plugin: [wiki:VisitBuildInstructions#buildplugin Building the udaReader Plugin].
+ 1. Run visit from the command line: '''<path_to_your_visit>/bin/visit'''
+
+== !Local/Remote Hybrid ==
+
+This option presents the best of both worlds: speedy local execution with unwieldy data remaining on the server. It also facilitates server-side parallel rendering using [wiki:VisitFAQ#SLIVR_Raycasting SLIVR Raycasting].
+
+ 1. Install a suitable version of !VisIt on your local machine: [wiki:VisitPrebuilt VisIt Installation] (''no need to build the udaReader plugin'').
+ 2. Copy the pertinent host profile for the remote server into your ~/.visit/hosts directory. [wiki:VisitServers Server Host Profiles.]
+ 3. Run visit from the command line: '''<path_to_your_visit>/bin/visit'''.
+ 4. File->Open->Select the remote host and enter user credentials when prompted. This will list the directory on the remote machine.
+ 5. Locate the file you want to open and then select the number of processors, nodes, and the account (bank) from which your compute time will be deducted.
+
+== Pure Remote Execution ==
+
+If your data lives on a remote server (ranger, updraft, longhorn, ember, kraken, bigmac, blaze, aurora, etc) and is too unwieldy to simply copy to your local machine, you can view it using !VisIt running on the remote machine. In general it is possible to execute a remote installation of !VisIt displayed on your local machine using an X Server.
+
+ 1. '''ssh -Y''' into the remote machine where your data can be found (the -Y option enables secure remote X11 forwarding).
+ 1. locate the installation of !VisIt on the remote machine (it might be listed [wiki:VisitServers here]).
+ 1. run '''<path_to_visit>/bin/visit'''
+
+NOTE: the SLIVR volume renderer will not work on most servers in this configuration. Instead, use [wiki:VisitFAQ#SLIVR_Raycasting SLIVR Raycasting] for volume rendering. 

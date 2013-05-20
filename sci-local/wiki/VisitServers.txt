@@ -1,0 +1,35 @@
+== Remote Machines ==
+
+We provide builds of !VisIt on updraft, ember, and aurora. Just copy one of these remote_host.xml files to your ~/.visit/hosts directory. Please note: while older versions of !VisIt may still exist on these machines, we can only support one version due to limited resources. If you have trouble please first upgrade your local installation to the latest supported version.
+
+=== updraft.chpc.utah.edu ===
+
+Installation directory: '''/uufs/updraft.arches/sys/pkg/VisIt/Install/gcc'''
+
+||version||uda reader||slivr fixes||host profile||notes||
+||2.6.2||yes||yes||[http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/host_updraft_2.6.2.xml "host_updraft_2.6.2.xml"]||you MUST have mvapich2 in your path. OpenMP will not work (see [wiki:VisitFAQ the FAQ])||
+||2.5.2||yes||yes||[http://www.sci.utah.edu/devbuilds/icse/visit/2.5.2/host_updraft_2.5.2.xml "host_updraft_2.5.2.xml"]||you MUST have mvapich2 in your path. OpenMP will not work (see [wiki:VisitFAQ the FAQ])||
+
+=== ember.chpc.utah.edu ===
+
+Installation directory: '''/uufs/ember.arches/sys/pkg/VisIt/Install/gcc'''
+
+||version||uda reader||slivr fixes||host profile||notes||
+||2.6.2||yes||yes||[http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/host_ember_2.6.2.xml "host_ember_2.6.2.xml"]||you MUST have mvapich2 in your path. OpenMP will not work (see [wiki:VisitFAQ the FAQ])||
+||2.5.2||yes||yes||[http://www.sci.utah.edu/devbuilds/icse/visit/2.5.2/host_ember_2.5.2.xml "host_ember_2.5.2.xml"]||you MUST have mvapich2 in your path. OpenMP will not work (see [wiki:VisitFAQ the FAQ])||
+
+=== aurora.crsim.utah.edu ===
+
+Installation directory: '''/usr/local/visit'''
+
+||version||uda reader||slivr fixes||host profile||notes||
+||2.6.2||yes||yes||[http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/host_aurora_2.6.2.xml "host_aurora_2.6.2.xml"]||||
+||2.5.2||yes||yes||[http://www.sci.utah.edu/devbuilds/icse/visit/2.5.2/host_aurora_2.5.2.xml "host_aurora_2.5.2.xml"]||||
+
+=== longhorn.tacc.utexas.edu ===
+
+More information at [wiki:Longhorn].
+
+=== ranger.tacc.utexas.edu ===
+
+Since they share drive space, just use [wiki:Longhorn] for rendering data produced by Ranger.

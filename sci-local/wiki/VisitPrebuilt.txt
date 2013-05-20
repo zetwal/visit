@@ -1,0 +1,25 @@
+== Installing !VisIt ==
+
+'''The currently supported version of !VisIt is ''2.6.2''.''' ([http://uintah.sci.utah.edu/VisIt/VisIt/Release_Notes/Entries/2013/4/4_Blue_bird_day.html Release Notes])
+
+=== Mac OSX ===
+
+We provide a parallel version of !VisIt for all versions of Mac OSX 10.6 and above that ''includes the udaReader.''[[BR]]
+[[BR]]
+''OpenMPI is required.'' You must create a symbolic link from your OpenMPI install location to /usr/local/mpi:[[BR]]'''sudo ln -s /path/to/your/openmpi /usr/local/mpi[[BR]]'''
+Please see the [wiki:VisitFAQ#ParallelReqs VisIt FAQ] for details.[[BR]]
+[[BR]]
+Download: [http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/visit2_6_2.darwin-x86_64.tar.gz "VisIt 2.6.2 for Mac OSX"][[BR]]
+Instructions: extract the tar.gz bundle and run from the command line with '''./bin/visit'''.[[BR]]
+[[BR]]
+,,Note: because Uintah (and therefore the udaReader) cannot be built without MPI, there is no benefit to providing a non-parallel version.,,
+
+=== Linux ===
+
+Because there are so many Linux variants we cannot provide precompiled client builds for this platform. 
+
+You will need to build !VisIt yourself, please see [wiki:VisitBuildInstructions Building Visit].
+
+=== Windows ===
+
+We do not currently support !VisIt for Windows. Please see the [http://visit.llnl.gov main VisIt site] for a pre-built Windows binary ''(does not include the volume rendering patch)''.

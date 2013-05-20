@@ -1,0 +1,2492 @@
+Index: src/third_party_builtin/slivr/slivr/ShaderProgramARB.cc
+===================================================================
+--- src/third_party_builtin/slivr/slivr/ShaderProgramARB.cc	(revision 20648)
++++ src/third_party_builtin/slivr/slivr/ShaderProgramARB.cc	(working copy)
+@@ -154,6 +154,7 @@
+       }
+       max_texture_size_1_ = Clamp(i, 64, i/2);
+ 
++
+       // Clear the OpenGL errors before checking for proxy textures.
+       CHECK_OPENGL_ERROR();
+       for (i = 64; i <= GL_MAX_TEXTURE_SIZE; i*=2)
+@@ -177,14 +178,7 @@
+     }
+ #endif // !sgi
+ 
+-    // Check for non-power-of-two texture support.
+-    // Apple seems to get this wrong, claims support and then crashes.
+-#if defined(__APPLE__)
+-    non_2_textures_ = false;
+-#else
+     non_2_textures_ = GLEW_ARB_texture_non_power_of_two;
+-#endif
+-
+     init_ = true;
+   }
+   return (true);
+Index: src/third_party_builtin/slivr/slivr/TextureRenderer.cc
+===================================================================
+--- src/third_party_builtin/slivr/slivr/TextureRenderer.cc	(revision 20648)
++++ src/third_party_builtin/slivr/slivr/TextureRenderer.cc	(working copy)
+@@ -441,6 +441,7 @@
+       // download texture data
+       glPixelStorei(GL_UNPACK_ROW_LENGTH, brick->sx());
+       glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, brick->sy());
++      glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);    // needed on osx mtn lion
+       glPixelStorei(GL_UNPACK_ALIGNMENT, (nb == 1)?1:4);
+ #if defined( GL_TEXTURE_COLOR_TABLE_SGI ) && defined(__sgi)
+       if (reuse)
+@@ -508,6 +509,7 @@
+       }
+ #  endif
+ #endif // !__sgi
++      glPixelStorei(GL_UNPACK_LSB_FIRST, GL_FALSE);
+       glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+       glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, 0);
+       glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+@@ -669,12 +671,13 @@
+       double bp = tan(1.570796327 * (0.5 - slice_alpha_*0.49999));
+       for(int j=0; j < 1024; j+=4) {
+         // interpolate from colormap
+-	double t = (j/4)*dv;
+-	float r,g,b,alpha;
+-	cmap1_->get_color(t, r, g, b, alpha);
++	      double t = (j/4)*dv;
++	      float r,g,b,alpha;
++	      cmap1_->get_color(t, r, g, b, alpha);
+         // scale slice opacity
+         alpha = pow(alpha, (float)bp);
+         // opacity correction
++        //alpha = 1.0 - pow((1.0 - alpha), 1.0/sampling_rate);
+         alpha = 1.0 - pow((1.0 - alpha), imode_ ?
+                           1.0/irate_/pow(2.0, level_exponent) :
+                           1.0/sampling_rate_/pow(2.0, level_exponent) );
+Index: src/third_party_builtin/slivr/slivr/VolumeRenderer.cc
+===================================================================
+--- src/third_party_builtin/slivr/slivr/VolumeRenderer.cc	(revision 20648)
++++ src/third_party_builtin/slivr/slivr/VolumeRenderer.cc	(working copy)
+@@ -216,9 +216,12 @@
+   const Vector cell_diag(diag.x() / (tex_->nx() * pow(2.0, levels-1)),
+                          diag.y() / (tex_->ny() * pow(2.0, levels-1)),
+                          diag.z() / (tex_->nz() * pow(2.0, levels-1)));
+-  const double dt = cell_diag.length()/rate;
+-  const int num_slices = (int)(diag.length()/dt);
++  //const double dt = cell_diag.length()/rate;
++  //const int num_slices = (int)(diag.length()/dt);
+ 
++  const int num_slices = sqrt(tex_->nx()*tex_->nx() + tex_->ny()*tex_->ny() + tex_->nz()*tex_->nz()) + 1;
++  const double dt = 1.0/num_slices;
++
+   vector<float> vertex;
+   vector<float> texcoord;
+   vector<int> size;
+@@ -525,7 +528,7 @@
+       texcoord.clear();
+       mask.clear();
+       size.clear();
+-      b->compute_polygons(view_ray, dt, vertex, texcoord, size);
++      b->compute_polygons(view_ray, (double)rate, vertex, texcoord, size);
+       b->mask_polygons(size, vertex, texcoord, mask, planes_);
+       if (vertex.size() == 0) { continue; }
+       load_brick(bs, i, use_cmap2);
+Index: src/third_party_builtin/slivr/slivr/VideoCardInfo.c
+===================================================================
+--- src/third_party_builtin/slivr/slivr/VideoCardInfo.c	(revision 20648)
++++ src/third_party_builtin/slivr/slivr/VideoCardInfo.c	(working copy)
+@@ -428,10 +428,13 @@
+ 
+ int video_card_memory_size()
+ {
+-  int size;
+-  size = video_card_memory_size_ATI();
+-  if(size) return size;
+-  return video_card_memory_size_NV();
++  static int size = -1;
++  if (size == -1){
++    size = video_card_memory_size_ATI();
++    if (!size)
++      size = video_card_memory_size_NV();
++  }
++  return size;
+ }
+ 
+ #elif __APPLE__
+Index: src/third_party_builtin/slivr/slivr/TextureBrick.cc
+===================================================================
+--- src/third_party_builtin/slivr/slivr/TextureBrick.cc	(revision 20648)
++++ src/third_party_builtin/slivr/slivr/TextureBrick.cc	(working copy)
+@@ -35,6 +35,7 @@
+ #include <slivr/Utils.h>
+ #include <utility>
+ #include <iostream>
++#include <cmath>
+ 
+ using namespace std;
+ 
+@@ -158,8 +159,15 @@
+   corner[5] = Point(pmax.x(), pmin.y(), pmax.z());
+   corner[6] = Point(pmax.x(), pmax.y(), pmin.z());
+   corner[7] = pmax;
++ 
++  int volDims[3];
++  volDims[0] = nx();  volDims[1] = ny();  volDims[2] = nz();
++  // dt is now initially storing the rate
++  int numSlices = (volDims[0]*fabs(view.direction().x()) + volDims[1]*fabs(view.direction().y()) + volDims[2]*fabs(view.direction().z())) * dt;
++  //std::cout << "dimensions: " << volDims[0] << " ,  " << volDims[1] << " ,  " << volDims[2] << std::endl;
++  //std::cout << "numSlices: " << numSlices << std::endl;
+ 
+-  double tmin = Dot(corner[0] - view.origin(), view.direction());;
++  double tmin = Dot(corner[0] - view.origin(), view.direction());
+   double tmax = tmin;
+   int maxi = 0;
+   for (int i=1; i<8; i++)
+@@ -168,6 +176,7 @@
+     tmin = Min(t, tmin);
+     if (t > tmax) { maxi = i; tmax = t; }
+   }
++  dt = (tmax - tmin)/numSlices;
+ 
+   // Make all of the slices consistent by offsetting them to a fixed
+   // position in space (the origin).  This way they are consistent
+Index: src/gui/QvisScribbleOpacityBar.C
+===================================================================
+--- src/gui/QvisScribbleOpacityBar.C	(revision 20648)
++++ src/gui/QvisScribbleOpacityBar.C	(working copy)
+@@ -478,7 +478,59 @@
+     emit opacitiesChanged();
+ }
+ 
++
+ // ****************************************************************************
++// Method: QvisScribbleOpacityBar::makeTent
++//
++// Purpose: 
++//   This is a Qt slot function that sets a series of tents
++//
++// Programmer: Pascal Grosset
++// Creation:   Mon Feb 12 15:33:35 MST 2001
++//
++// Modifications:
++//   Brad Whitlock, Thu Dec 18 14:09:40 PST 2008
++//   I changed how the image gets invalidated.
++//   
++// ****************************************************************************
++
++void
++QvisScribbleOpacityBar::makeTent()
++{
++    int numSplits = 12;
++    float sizeOfOne = nvalues/(numSplits*2);
++    float opacityValue = 0.85;
++    float up = opacityValue/sizeOfOne;
++
++    for(int i = 0; i < nvalues; ++i)
++        values[i] = 0.;
++
++    for(int i = 1; i < nvalues; i++){
++        float sumUp = 0;
++        for (int j=0; j<sizeOfOne-1; j++){
++            if (i >= nvalues)
++                break;
++            sumUp = sumUp + up;
++            values[i] = sumUp;
++            i++;
++        }
++        for (int j=0; j<sizeOfOne-1; j++){
++            if (i >= nvalues)
++                break;
++            sumUp = sumUp - up;
++            values[i] = (sumUp>=0)?sumUp:0.0;
++            i++;
++        }
++    }
++
++    imageDirty();
++    update();
++
++    // Emit a signal indicating that the values changed.
++    emit opacitiesChanged();
++}
++
++// ****************************************************************************
+ // Method: QvisScribbleOpacityBar::smoothCurve
+ //
+ // Purpose: 
+Index: src/gui/QvisScribbleOpacityBar.h
+===================================================================
+--- src/gui/QvisScribbleOpacityBar.h	(revision 20648)
++++ src/gui/QvisScribbleOpacityBar.h	(working copy)
+@@ -85,6 +85,7 @@
+     void makeInverseLinearRamp();
+     void makeTotallyOne();
+     void smoothCurve();
++    void makeTent();
+ 
+ protected:
+     virtual void mouseMoveEvent(QMouseEvent*);
+Index: src/databases/CMakeLists.txt
+===================================================================
+--- src/databases/CMakeLists.txt	(revision 20648)
++++ src/databases/CMakeLists.txt	(working copy)
+@@ -325,6 +325,7 @@
+ lata
+ volimage
+ unv
++#udaReaderMTMD
+ )
+ 
+ IF (Boost_USABLE_PARADIS)
+Index: src/plots/Volume/VolumeAttributes.C
+===================================================================
+--- src/plots/Volume/VolumeAttributes.C	(revision 20648)
++++ src/plots/Volume/VolumeAttributes.C	(working copy)
+@@ -48,21 +48,21 @@
+ 
+ static const char *Renderer_strings[] = {
+ "Splatting", "Texture3D", "RayCasting", 
+-"RayCastingIntegration", "SLIVR", "Tuvok"
+-};
++"RayCastingIntegration", "SLIVR", "RayCastingSLIVR", 
++"Tuvok"};
+ 
+ std::string
+ VolumeAttributes::Renderer_ToString(VolumeAttributes::Renderer t)
+ {
+     int index = int(t);
+-    if(index < 0 || index >= 6) index = 0;
++    if(index < 0 || index >= 7) index = 0;
+     return Renderer_strings[index];
+ }
+ 
+ std::string
+ VolumeAttributes::Renderer_ToString(int t)
+ {
+-    int index = (t < 0 || t >= 6) ? 0 : t;
++    int index = (t < 0 || t >= 7) ? 0 : t;
+     return Renderer_strings[index];
+ }
+ 
+@@ -70,7 +70,7 @@
+ VolumeAttributes::Renderer_FromString(const std::string &s, VolumeAttributes::Renderer &val)
+ {
+     val = VolumeAttributes::Splatting;
+-    for(int i = 0; i < 6; ++i)
++    for(int i = 0; i < 7; ++i)
+     {
+         if(s == Renderer_strings[i])
+         {
+@@ -344,7 +344,7 @@
+     smoothData = false;
+     samplesPerRay = 500;
+     rendererType = Splatting;
+-    gradientType = SobelOperator;
++    gradientType = CenteredDifferences;
+     num3DSlices = 200;
+     scaling = Linear;
+     skewFactor = 1;
+@@ -352,9 +352,13 @@
+     sampling = Rasterization;
+     rendererSamples = 3;
+     transferFunctionDim = 1;
+-    lowGradientLightingReduction = Lower;
++    lowGradientLightingReduction = Off;
+     lowGradientLightingClampFlag = false;
+     lowGradientLightingClampValue = 1;
++    materialProperties[0] = 0.4;
++    materialProperties[1] = 0.75;
++    materialProperties[2] = 0;
++    materialProperties[3] = 15;
+ 
+     VolumeAttributes::SelectAll();
+ }
+@@ -428,7 +432,10 @@
+     lowGradientLightingReduction = obj.lowGradientLightingReduction;
+     lowGradientLightingClampFlag = obj.lowGradientLightingClampFlag;
+     lowGradientLightingClampValue = obj.lowGradientLightingClampValue;
++    for(int i = 0; i < 4; ++i)
++        materialProperties[i] = obj.materialProperties[i];
+ 
++
+     VolumeAttributes::SelectAll();
+ }
+ 
+@@ -604,6 +611,11 @@
+         transferFunction2DWidgets_equal = (transferFunction2DWidgets1 == transferFunction2DWidgets2);
+     }
+ 
++    // Compare the materialProperties arrays.
++    bool materialProperties_equal = true;
++    for(int i = 0; i < 4 && materialProperties_equal; ++i)
++        materialProperties_equal = (materialProperties[i] == obj.materialProperties[i]);
++
+     // Create the return value
+     return ((legendFlag == obj.legendFlag) &&
+             (lightingFlag == obj.lightingFlag) &&
+@@ -638,7 +650,8 @@
+             (transferFunctionDim == obj.transferFunctionDim) &&
+             (lowGradientLightingReduction == obj.lowGradientLightingReduction) &&
+             (lowGradientLightingClampFlag == obj.lowGradientLightingClampFlag) &&
+-            (lowGradientLightingClampValue == obj.lowGradientLightingClampValue));
++            (lowGradientLightingClampValue == obj.lowGradientLightingClampValue) &&
++            materialProperties_equal);
+ }
+ 
+ // ****************************************************************************
+@@ -816,6 +829,7 @@
+     Select(ID_lowGradientLightingReduction,  (void *)&lowGradientLightingReduction);
+     Select(ID_lowGradientLightingClampFlag,  (void *)&lowGradientLightingClampFlag);
+     Select(ID_lowGradientLightingClampValue, (void *)&lowGradientLightingClampValue);
++    Select(ID_materialProperties,            (void *)materialProperties, 4);
+ }
+ 
+ // ****************************************************************************
+@@ -1086,7 +1100,13 @@
+         node->AddNode(new DataNode("lowGradientLightingClampValue", lowGradientLightingClampValue));
+     }
+ 
++    if(completeSave || !FieldsEqual(ID_materialProperties, &defaultObject))
++    {
++        addToParent = true;
++        node->AddNode(new DataNode("materialProperties", materialProperties, 4));
++    }
+ 
++
+     // Add the node to the parent node.
+     if(addToParent || forceAdd)
+         parentNode->AddNode(node);
+@@ -1185,7 +1205,7 @@
+         if(node->GetNodeType() == INT_NODE)
+         {
+             int ival = node->AsInt();
+-            if(ival >= 0 && ival < 6)
++            if(ival >= 0 && ival < 7)
+                 SetRendererType(Renderer(ival));
+         }
+         else if(node->GetNodeType() == STRING_NODE)
+@@ -1311,6 +1331,8 @@
+         SetLowGradientLightingClampFlag(node->AsBool());
+     if((node = searchNode->GetNode("lowGradientLightingClampValue")) != 0)
+         SetLowGradientLightingClampValue(node->AsDouble());
++    if((node = searchNode->GetNode("materialProperties")) != 0)
++        SetMaterialProperties(node->AsDoubleArray());
+     if(colorControlPoints.GetNumControlPoints() < 2)
+          SetDefaultColorControlPoints();
+ 
+@@ -1557,6 +1579,16 @@
+     Select(ID_lowGradientLightingClampValue, (void *)&lowGradientLightingClampValue);
+ }
+ 
++void
++VolumeAttributes::SetMaterialProperties(const double *materialProperties_)
++{
++    materialProperties[0] = materialProperties_[0];
++    materialProperties[1] = materialProperties_[1];
++    materialProperties[2] = materialProperties_[2];
++    materialProperties[3] = materialProperties_[3];
++    Select(ID_materialProperties, (void *)materialProperties, 4);
++}
++
+ ///////////////////////////////////////////////////////////////////////////////
+ // Get property methods
+ ///////////////////////////////////////////////////////////////////////////////
+@@ -1801,6 +1833,18 @@
+     return lowGradientLightingClampValue;
+ }
+ 
++const double *
++VolumeAttributes::GetMaterialProperties() const
++{
++    return materialProperties;
++}
++
++double *
++VolumeAttributes::GetMaterialProperties()
++{
++    return materialProperties;
++}
++
+ ///////////////////////////////////////////////////////////////////////////////
+ // Select property methods
+ ///////////////////////////////////////////////////////////////////////////////
+@@ -1841,6 +1885,12 @@
+     Select(ID_transferFunction2DWidgets, (void *)&transferFunction2DWidgets);
+ }
+ 
++void
++VolumeAttributes::SelectMaterialProperties()
++{
++    Select(ID_materialProperties, (void *)materialProperties, 4);
++}
++
+ ///////////////////////////////////////////////////////////////////////////////
+ // AttributeGroupVector convenience methods.
+ ///////////////////////////////////////////////////////////////////////////////
+@@ -2096,6 +2146,7 @@
+     case ID_lowGradientLightingReduction:  return "lowGradientLightingReduction";
+     case ID_lowGradientLightingClampFlag:  return "lowGradientLightingClampFlag";
+     case ID_lowGradientLightingClampValue: return "lowGradientLightingClampValue";
++    case ID_materialProperties:            return "materialProperties";
+     default:  return "invalid index";
+     }
+ }
+@@ -2154,6 +2205,7 @@
+     case ID_lowGradientLightingReduction:  return FieldType_enum;
+     case ID_lowGradientLightingClampFlag:  return FieldType_bool;
+     case ID_lowGradientLightingClampValue: return FieldType_double;
++    case ID_materialProperties:            return FieldType_doubleArray;
+     default:  return FieldType_unknown;
+     }
+ }
+@@ -2212,6 +2264,7 @@
+     case ID_lowGradientLightingReduction:  return "enum";
+     case ID_lowGradientLightingClampFlag:  return "bool";
+     case ID_lowGradientLightingClampValue: return "double";
++    case ID_materialProperties:            return "doubleArray";
+     default:  return "invalid index";
+     }
+ }
+@@ -2422,6 +2475,16 @@
+         retval = (lowGradientLightingClampValue == obj.lowGradientLightingClampValue);
+         }
+         break;
++    case ID_materialProperties:
++        {  // new scope
++        // Compare the materialProperties arrays.
++        bool materialProperties_equal = true;
++        for(int i = 0; i < 4 && materialProperties_equal; ++i)
++            materialProperties_equal = (materialProperties[i] == obj.materialProperties[i]);
++
++        retval = materialProperties_equal;
++        }
++        break;
+     default: retval = false;
+     }
+ 
+@@ -2481,6 +2544,7 @@
+         return true;
+ 
+     if (rendererType == VolumeAttributes::RayCasting ||
++        rendererType == VolumeAttributes::RayCastingSLIVR || 
+         rendererType == VolumeAttributes::RayCastingIntegration)
+     {
+         // We're in software mode. Any change to the renderer type requires
+@@ -2501,6 +2565,7 @@
+         // then we need to reexecute. Transferring between any of the hardware
+         // modes does not require a reexecute.
+         if(obj.rendererType == VolumeAttributes::RayCasting ||
++           obj.rendererType == VolumeAttributes::RayCastingSLIVR || 
+            obj.rendererType == VolumeAttributes::RayCastingIntegration)
+         {
+             return true;
+@@ -2828,9 +2893,7 @@
+            i == ID_opacityAttenuation || 
+            i == ID_opacityMode || 
+            i == ID_opacityControlPoints ||
+-           i == ID_freeformOpacity ||
+-           i == ID_transferFunction2DWidgets ||
+-           i == ID_transferFunctionDim)
++           i == ID_freeformOpacity)
+         {
+             continue;
+         }
+Index: src/plots/Volume/Volume.xml
+===================================================================
+--- src/plots/Volume/Volume.xml	(revision 20648)
++++ src/plots/Volume/Volume.xml	(working copy)
+@@ -88,6 +88,7 @@
+         RayCasting
+         RayCastingIntegration
+         SLIVR
++		RayCastingSLIVR
+         Tuvok
+       </Enum>
+       <Enum name="GradientType">
+@@ -186,7 +187,7 @@
+         Splatting
+       </Field>
+       <Field name="gradientType" label="Gradient Type" type="enum" subtype="GradientType">
+-        SobelOperator
++        CenteredDifferences
+       </Field>
+       <Field name="num3DSlices" label="num3DSlices" type="int">
+         200
+@@ -212,7 +213,7 @@
+         1
+       </Field>
+       <Field name="lowGradientLightingReduction" label="lowGradientLightingReduction" type="enum" subtype="LowGradientLightingReduction">
+-        Lower
++        Off
+       </Field>
+       <Field name="lowGradientLightingClampFlag" label="lowGradientLightingClampFlag" type="bool">
+         false
+@@ -220,6 +221,12 @@
+       <Field name="lowGradientLightingClampValue" label="lowGradientLightingClampFlag" type="double">
+         1.000000
+       </Field>
++	  <Field name="materialProperties" label="materialProperties" type="doubleArray" length="4">
++        0.4
++        0.75
++        0.0
++        15
++      </Field>
+       <Function name="ChangesRequireRecalculation" user="true" member="true">
+       </Function>
+       <Function name="GetTransferFunction" user="true" member="true">
+Index: src/plots/Volume/PyVolumeAttributes.C
+===================================================================
+--- src/plots/Volume/PyVolumeAttributes.C	(revision 20648)
++++ src/plots/Volume/PyVolumeAttributes.C	(working copy)
+@@ -182,7 +182,7 @@
+     str += tmpStr;
+     SNPRINTF(tmpStr, 1000, "%ssamplesPerRay = %d\n", prefix, atts->GetSamplesPerRay());
+     str += tmpStr;
+-    const char *rendererType_names = "Splatting, Texture3D, RayCasting, RayCastingIntegration, SLIVR, "
++    const char *rendererType_names = "Splatting, Texture3D, RayCasting, RayCastingSLIVR, RayCastingIntegration, SLIVR, "
+         "Tuvok";
+     switch (atts->GetRendererType())
+     {
+@@ -198,6 +198,10 @@
+           SNPRINTF(tmpStr, 1000, "%srendererType = %sRayCasting  # %s\n", prefix, prefix, rendererType_names);
+           str += tmpStr;
+           break;
++      case VolumeAttributes::RayCastingSLIVR:
++          SNPRINTF(tmpStr, 1000, "%srendererType = %RayCastingSLIVR  # %s\n", prefix, prefix, rendererType_names);
++          str += tmpStr;
++          break;
+       case VolumeAttributes::RayCastingIntegration:
+           SNPRINTF(tmpStr, 1000, "%srendererType = %sRayCastingIntegration  # %s\n", prefix, prefix, rendererType_names);
+           str += tmpStr;
+@@ -971,7 +975,7 @@
+         fprintf(stderr, "An invalid rendererType value was given. "
+                         "Valid values are in the range of [0,5]. "
+                         "You can also use the following names: "
+-                        "Splatting, Texture3D, RayCasting, RayCastingIntegration, SLIVR, "
++                        "Splatting, Texture3D, RayCasting, RayCastingSLIVR, RayCastingIntegration, SLIVR, "
+                         "Tuvok.");
+         return NULL;
+     }
+@@ -1573,6 +1577,8 @@
+         return PyInt_FromLong(long(VolumeAttributes::Texture3D));
+     if(strcmp(name, "RayCasting") == 0)
+         return PyInt_FromLong(long(VolumeAttributes::RayCasting));
++    if(strcmp(name, "RayCastingSLIVR") == 0)
++        return PyInt_FromLong(long(VolumeAttributes::RayCastingSLIVR));
+     if(strcmp(name, "RayCastingIntegration") == 0)
+         return PyInt_FromLong(long(VolumeAttributes::RayCastingIntegration));
+     if(strcmp(name, "SLIVR") == 0)
+Index: src/plots/Volume/QvisCMap2Display.C
+===================================================================
+--- src/plots/Volume/QvisCMap2Display.C	(revision 20648)
++++ src/plots/Volume/QvisCMap2Display.C	(working copy)
+@@ -311,7 +311,7 @@
+     ren->draw();
+ 
+     glFlush();
+-    swapBuffers();
++    //swapBuffers();
+ }
+ 
+ // ****************************************************************************
+Index: src/plots/Volume/QvisVolumePlotWindow.h
+===================================================================
+--- src/plots/Volume/QvisVolumePlotWindow.h	(revision 20648)
++++ src/plots/Volume/QvisVolumePlotWindow.h	(working copy)
+@@ -61,6 +61,7 @@
+ class QSpinBox;
+ class QDoubleSpinBox;
+ class QVBoxLayout;
++class QGridLayout;
+ class QvisColorSelectionWidget;
+ class QvisGaussianOpacityBar;
+ class QvisOpacitySlider;
+@@ -187,6 +188,7 @@
+     QWidget *Create1DTransferFunctionGroup(int);
+     QWidget *Create2DTransferFunctionGroup();
+     QWidget *CreateRendererOptionsGroup(int);
++    void CreateMatLightGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth);
+     void CreateColorGroup(QWidget *, QVBoxLayout *, int);
+     void CreateOpacityGroup(QWidget *, QVBoxLayout *, int);
+ private slots:
+@@ -233,6 +235,10 @@
+     void transferDimChanged(int);
+     void updateTransferFunc2D();
+     void updateTransferFunc2D(WidgetID id);
++    void setMaterialKa(double val);
++    void setMaterialKd(double val);
++    void setMaterialKs(double val);
++    void setMaterialN(double val);
+ private:
+     int                      plotType;
+     VolumeAttributes         *volumeAtts;
+@@ -271,6 +277,7 @@
+     QPushButton              *zeroButton;
+     QPushButton              *rampButton;
+     QPushButton              *inverseRampButton;
++    QPushButton              *tentButton;
+     QPushButton              *oneButton;
+     QPushButton              *smoothButton;
+     QvisOpacitySlider        *attenuationSlider;
+@@ -311,5 +318,10 @@
+     QSpinBox                 *samplesPerRay;
+     QLabel                   *rendererSamplesLabel;
+     QDoubleSpinBox           *rendererSamples;
++    QGroupBox                *lightMaterialPropGroup;
++    QDoubleSpinBox           *matKa; // ambient
++    QDoubleSpinBox           *matKd; // diffuse
++    QDoubleSpinBox           *matKs; // specular
++    QDoubleSpinBox           *matN;  // specularPower
+ };
+ #endif
+Index: src/plots/Volume/VolumeAttributes.code
+===================================================================
+--- src/plots/Volume/VolumeAttributes.code	(revision 20648)
++++ src/plots/Volume/VolumeAttributes.code	(working copy)
+@@ -70,6 +70,7 @@
+         return true;
+ 
+     if (rendererType == VolumeAttributes::RayCasting ||
++        rendererType == VolumeAttributes::RayCastingSLIVR || 
+         rendererType == VolumeAttributes::RayCastingIntegration)
+     {
+         // We're in software mode. Any change to the renderer type requires
+@@ -90,6 +91,7 @@
+         // then we need to reexecute. Transferring between any of the hardware
+         // modes does not require a reexecute.
+         if(obj.rendererType == VolumeAttributes::RayCasting ||
++           obj.rendererType == VolumeAttributes::RayCastingSLIVR || 
+            obj.rendererType == VolumeAttributes::RayCastingIntegration)
+         {
+             return true;
+@@ -444,9 +446,7 @@
+            i == ID_opacityAttenuation || 
+            i == ID_opacityMode || 
+            i == ID_opacityControlPoints ||
+-           i == ID_freeformOpacity ||
+-           i == ID_transferFunction2DWidgets ||
+-           i == ID_transferFunctionDim)
++           i == ID_freeformOpacity)
+         {
+             continue;
+         }
+Index: src/plots/Volume/avtVolumePlot.C
+===================================================================
+--- src/plots/Volume/avtVolumePlot.C	(revision 20648)
++++ src/plots/Volume/avtVolumePlot.C	(working copy)
+@@ -231,6 +231,7 @@
+ avtVolumePlot::PlotIsImageBased(void)
+ {
+     return (atts.GetRendererType() == VolumeAttributes::RayCasting ||
++            atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
+             atts.GetRendererType() == VolumeAttributes::RayCastingIntegration);
+ }
+ 
+@@ -521,7 +522,25 @@
+     return dob;
+ }
+ 
++
+ // ****************************************************************************
++//  Method: IsUintah
++//
++//  Purpose:
++//      to check if we are dealing with a uintah volume
++//
++// ****************************************************************************
++
++bool IsUintah(avtDataObject_p input)
++{
++    const avtDataAttributes &datts = input->GetInfo().GetAttributes();
++    std::string db = input->GetInfo().GetAttributes().GetFullDBName();
++    return (//db.find(".uda")     !=std::string::npos && 
++        db.find("index.xml")!=std::string::npos);
++}
++
++
++// ****************************************************************************
+ //  Method: avtVolumePlot::ApplyRenderingTransformation
+ //
+ //  Purpose:
+@@ -606,12 +625,13 @@
+     avtDataObject_p dob = input;
+ 
+     if (atts.GetRendererType() == VolumeAttributes::RayCasting ||
+-        atts.GetRendererType() == VolumeAttributes::RayCastingIntegration)
++        atts.GetRendererType() == VolumeAttributes::RayCastingIntegration ||
++        atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+     {
+ #ifdef ENGINE
+         // gradient calc for raycasting integration not needed, but
+         // lighting flag may still be on
+-        if (atts.GetRendererType() == VolumeAttributes::RayCasting &&
++        if ((atts.GetRendererType() == VolumeAttributes::RayCasting || atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)&&
+             atts.GetLightingFlag())
+         {
+             char gradName[128], gradName2[128];
+@@ -652,10 +672,12 @@
+     {
+         // For now, only let splatting skip resampling.
+         bool doResample = true;
+-        if (atts.GetRendererType() == VolumeAttributes::Splatting)
++        if (atts.GetRendererType() == VolumeAttributes::Splatting || atts.GetRendererType() == VolumeAttributes::SLIVR)
+             doResample = atts.GetResampleFlag();
+ 
+-        if (doResample)
++        bool isUintah=IsUintah(input);
++
++        if (doResample || (!doResample && isUintah))
+         {
+             // Resample the data
+             InternalResampleAttributes resampleAtts;
+@@ -664,7 +686,12 @@
+             resampleAtts.SetUseTargetVal(true);
+             resampleAtts.SetPrefersPowersOfTwo(atts.GetRendererType() == VolumeAttributes::Texture3D);
+             resampleFilter = new avtResampleFilter(&resampleAtts);
++            if (isUintah)
++                resampleFilter->setUintahResample(!doResample);
++            else
++                resampleFilter->setUintahResample(false);
+             resampleFilter->SetInput(input);
++
+             dob = resampleFilter->GetOutput();
+         }
+         else
+Index: src/plots/Volume/VolumeAttributes.h
+===================================================================
+--- src/plots/Volume/VolumeAttributes.h	(revision 20648)
++++ src/plots/Volume/VolumeAttributes.h	(working copy)
+@@ -70,6 +70,7 @@
+         RayCasting,
+         RayCastingIntegration,
+         SLIVR,
++        RayCastingSLIVR,
+         Tuvok
+     };
+     enum GradientType
+@@ -142,6 +143,7 @@
+     void SelectCompactVariable();
+     void SelectFreeformOpacity();
+     void SelectTransferFunction2DWidgets();
++    void SelectMaterialProperties();
+ 
+     // Property setting methods
+     void SetLegendFlag(bool legendFlag_);
+@@ -177,6 +179,7 @@
+     void SetLowGradientLightingReduction(LowGradientLightingReduction lowGradientLightingReduction_);
+     void SetLowGradientLightingClampFlag(bool lowGradientLightingClampFlag_);
+     void SetLowGradientLightingClampValue(double lowGradientLightingClampValue_);
++    void SetMaterialProperties(const double *materialProperties_);
+ 
+     // Property getting methods
+     bool                           GetLegendFlag() const;
+@@ -219,6 +222,8 @@
+     LowGradientLightingReduction   GetLowGradientLightingReduction() const;
+     bool                           GetLowGradientLightingClampFlag() const;
+     double                         GetLowGradientLightingClampValue() const;
++    const double                   *GetMaterialProperties() const;
++          double                   *GetMaterialProperties();
+ 
+     // Persistence methods
+     virtual bool CreateNode(DataNode *node, bool completeSave, bool forceAdd);
+@@ -327,6 +332,7 @@
+         ID_lowGradientLightingReduction,
+         ID_lowGradientLightingClampFlag,
+         ID_lowGradientLightingClampValue,
++        ID_materialProperties,
+         ID__LAST
+     };
+ 
+@@ -367,11 +373,12 @@
+     int                      lowGradientLightingReduction;
+     bool                     lowGradientLightingClampFlag;
+     double                   lowGradientLightingClampValue;
++    double                   materialProperties[4];
+ 
+     // Static class format string for type map.
+     static const char *TypeMapFormatString;
+     static const private_tmfs_t TmfsStruct;
+ };
+-#define VOLUMEATTRIBUTES_TMFS "bbafiabissUbfbfbfbfbiiiiidiifa*iibd"
++#define VOLUMEATTRIBUTES_TMFS "bbafiabissUbfbfbfbfbiiiiidiifa*iibdD"
+ 
+ #endif
+Index: src/plots/Volume/avtVolumeFilter.C
+===================================================================
+--- src/plots/Volume/avtVolumeFilter.C	(revision 20648)
++++ src/plots/Volume/avtVolumeFilter.C	(working copy)
+@@ -70,8 +70,14 @@
+ #include <snprintf.h>
+ #include <TimingsManager.h>
+ 
++#include <avtCallback.h>
++#include <avtDatabase.h>
++#include <avtDatabaseMetaData.h>
++
+ #include <string>
+ #include <vector>
++#include <cmath>
++#include <iostream>
+ 
+ //
+ // Function Prototypes
+@@ -339,6 +345,40 @@
+ //
+ // ****************************************************************************
+ 
++bool IsUintahB(avtDataObject_p input)
++{
++  const avtDataAttributes &datts = input->GetInfo().GetAttributes();
++  std::string db = input->GetInfo().GetAttributes().GetFullDBName();
++  return (//db.find(".uda")     !=std::string::npos && 
++          db.find("index.xml")!=std::string::npos);
++}
++
++bool GetLogicalBounds(avtDataObject_p input,int &width,int &height, int &depth)
++{
++    const avtDataAttributes &datts = input->GetInfo().GetAttributes();
++    std::string db = input->GetInfo().GetAttributes().GetFullDBName();
++
++    debug5<<"datts->GetTime(): "<<datts.GetTime()<<endl;
++    debug5<<"datts->GetTimeIndex(): "<<datts.GetTimeIndex()<<endl;
++    debug5<<"datts->GetCycle(): "<<datts.GetCycle()<<endl;
++
++    ref_ptr<avtDatabase> dbp = avtCallback::GetDatabase(db, datts.GetTimeIndex(), NULL);
++    avtDatabaseMetaData *md = dbp->GetMetaData(datts.GetTimeIndex(), 1);
++    std::string mesh = md->MeshForVar(datts.GetVariableName());
++    const avtMeshMetaData *mmd = md->GetMesh(mesh);
++
++    if (mmd->hasLogicalBounds == true)
++    {
++        width=mmd->logicalBounds[0];
++        height=mmd->logicalBounds[1];
++        depth=mmd->logicalBounds[2];
++
++        return true;
++    }
++
++    return false;
++}
++
+ avtImage_p
+ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
+                              const WindowAttributes &window)
+@@ -359,7 +399,10 @@
+     unsigned char vtf[4*256];
+     atts.GetTransferFunction(vtf);
+     avtOpacityMap om(256);
+-    om.SetTable(vtf, 256, atts.GetOpacityAttenuation());
++    if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
++        om.SetTable(vtf, 256, atts.GetOpacityAttenuation()*2.0 - 1.0, atts.GetRendererSamples());
++    else
++        om.SetTable(vtf, 256, atts.GetOpacityAttenuation());
+     double actualRange[2];
+     bool artificialMin = atts.GetUseColorVarMin();
+     bool artificialMax = atts.GetUseColorVarMax();
+@@ -600,6 +643,18 @@
+         // LEAK!!
+     }
+     avtCompositeRF *compositeRF = new avtCompositeRF(lm, &om, om2);
++    if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR){
++        compositeRF->SetRaycastingSLIVR(true);
++        double *matProp = atts.GetMaterialProperties();
++        double materialPropArray[4];
++        materialPropArray[0] = matProp[0];
++        materialPropArray[1] = matProp[1];
++        materialPropArray[2] = matProp[2];
++        materialPropArray[3] = matProp[3];
++        compositeRF->SetMaterial(materialPropArray);
++    }
++    else
++        compositeRF->SetRaycastingSLIVR(false);
+     avtIntegrationRF *integrateRF = new avtIntegrationRF(lm);
+ 
+     compositeRF->SetColorVariableIndex(primIndex);
+@@ -614,6 +669,11 @@
+         compositeRF->SetWeightVariableIndex(count);
+     }
+ 
++    if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
++        software->SetTrilinear(true);
++    else
++        software->SetTrilinear(false);
++    
+     if (atts.GetRendererType() == VolumeAttributes::RayCastingIntegration)
+         software->SetRayFunction(integrateRF);
+     else
+@@ -627,6 +687,27 @@
+     const View3DAttributes &view = window.GetView3D();
+     avtViewInfo vi;
+     CreateViewInfoFromViewAttributes(vi, view);
++
++    avtDataObject_p inputData = GetInput();
++    if (IsUintahB(inputData))      
++    {
++        double viewDirection[3];
++        int numSlices;
++        int width_,height_,depth_;
++        
++        viewDirection[0] = (view.GetViewNormal()[0] > 0)? view.GetViewNormal()[0]: -view.GetViewNormal()[0];
++        viewDirection[1] = (view.GetViewNormal()[1] > 0)? view.GetViewNormal()[1]: -view.GetViewNormal()[1];
++        viewDirection[2] = (view.GetViewNormal()[2] > 0)? view.GetViewNormal()[2]: -view.GetViewNormal()[2];
++
++        GetLogicalBounds(inputData, width_,height_,depth_);
++        numSlices = (width_*viewDirection[0] + height_*viewDirection[1] + depth_*viewDirection[2]) * atts.GetRendererSamples();
++
++        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
++            software->SetSamplesPerRay(numSlices);
++
++        debug5<<"RayCastingSLIVR - slices: "<<numSlices<<endl;
++    }
++
+     software->SetView(vi);
+     if (atts.GetRendererType() == VolumeAttributes::RayCastingIntegration)
+     {
+@@ -860,7 +941,7 @@
+         delete [] primaryVariable;
+     }
+ 
+-    avtDataRequest_p ds = contract->GetDataRequest();
++    avtDataRequest_p ds = new avtDataRequest(contract->GetDataRequest());
+     const char *var = ds->GetVariable();
+ 
+     bool setupExpr = false;
+@@ -869,7 +950,11 @@
+ 
+     if (atts.GetScaling() == VolumeAttributes::Linear)
+     {
+-        newcontract = contract;
++#ifdef HAVE_LIBSLIVR
++        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
++            ds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
++#endif
++        newcontract = new avtContract(contract, ds);
+         primaryVariable = new char[strlen(var)+1];
+         strcpy(primaryVariable, var);
+     }
+@@ -889,6 +974,10 @@
+         avtDataRequest_p nds = new avtDataRequest(exprName.c_str(),
+                                ds->GetTimestep(), ds->GetRestriction());
+         nds->AddSecondaryVariable(var);
++#ifdef HAVE_LIBSLIVR
++        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
++            nds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
++#endif
+         newcontract = new avtContract(contract, nds);
+         primaryVariable = new char[exprName.size()+1];
+         strcpy(primaryVariable, exprName.c_str());
+@@ -902,6 +991,10 @@
+             new avtDataRequest(exprName.c_str(),
+                                ds->GetTimestep(), ds->GetRestriction());
+         nds->AddSecondaryVariable(var);
++#ifdef HAVE_LIBSLIVR
++        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
++            nds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
++#endif
+         newcontract = new avtContract(contract, nds);
+         primaryVariable = new char[strlen(exprName.c_str())+1];
+         strcpy(primaryVariable, exprName.c_str());
+Index: src/plots/Volume/avtOpenGLSLIVRVolumeRenderer.C
+===================================================================
+--- src/plots/Volume/avtOpenGLSLIVRVolumeRenderer.C	(revision 20648)
++++ src/plots/Volume/avtOpenGLSLIVRVolumeRenderer.C	(working copy)
+@@ -411,6 +411,9 @@
+     // create a range from -1 to 1 instead of from 0 - 1
+     context->renderer->set_slice_alpha(props.atts.GetOpacityAttenuation()*2.0 - 1.0);
+ 
++    const double *matProp = props.atts.GetMaterialProperties();
++    context->renderer->set_material(matProp[0], matProp[1], matProp[2], matProp[3]);
++
+     // Render the context.
+     debug5 << mName << "Rendering..." << endl;
+     if(props.reducedDetail)
+@@ -492,7 +495,7 @@
+     if(renderer != 0)
+         delete renderer;
+     for(int i=0;i<planes.size();i++)
+-      delete planes[i];
++        delete planes[i];
+ }
+ 
+ // ****************************************************************************
+Index: src/plots/Volume/QvisVolumePlotWindow.C
+===================================================================
+--- src/plots/Volume/QvisVolumePlotWindow.C	(revision 20648)
++++ src/plots/Volume/QvisVolumePlotWindow.C	(working copy)
+@@ -178,6 +178,32 @@
+ "++++++++++++++++++++++++++++++++++++....",
+ "++++++++++++++++++++++++++++++++++++++.."};
+ 
++
++static const char * tents_xpm[] = {
++"40 20 2 1",
++"+    c #000000",
++".    c #FFFFFF",
++"........................................",
++"........................................",
++".......++..............++..............+",
++".......++..............++..............+",
++"......++++............++++............++",
++"......++++............++++............++",
++".....++++++..........++++++..........+++",
++".....++++++..........++++++..........+++",
++"....++++++++........++++++++........++++",
++"....++++++++........++++++++........++++",
++"...++++++++++......++++++++++......+++++",
++"...++++++++++......++++++++++......+++++",
++"..++++++++++++....++++++++++++....++++++",
++"..++++++++++++....++++++++++++....++++++",
++".++++++++++++++..++++++++++++++..+++++++",
++".++++++++++++++..++++++++++++++..+++++++",
++".++++++++++++++..++++++++++++++..+++++++",
++"++++++++++++++++++++++++++++++++++++++++",
++"++++++++++++++++++++++++++++++++++++++++",
++"++++++++++++++++++++++++++++++++++++++++"};
++
+ static const char * white_xpm[] = {
+ "40 20 1 1",
+ "+    c #FFFFFF",
+@@ -324,6 +350,92 @@
+ }
+ 
+ // ****************************************************************************
++// Method: QvisVolumePlot::CreateMatLightGroup
++//
++// Purpose: 
++//   Creates the different Light Shading options for SLIVR
++//
++// Programmer: Pascal Grosset
++// Creation:   Tue Apr 10
++//
++// Modifications:
++//   
++// ****************************************************************************
++
++void
++QvisVolumePlotWindow::CreateMatLightGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth)
++{
++    // Add the group box that will contain the options.
++    lightMaterialPropGroup = new QGroupBox(parent);
++    lightMaterialPropGroup->setTitle(tr("Material Properties"));
++    pLayout->addWidget(lightMaterialPropGroup);
++
++    QGridLayout *lightMaterialPropLayout = new QGridLayout(lightMaterialPropGroup);
++    lightMaterialPropLayout->setHorizontalSpacing (12);
++    lightMaterialPropLayout->setVerticalSpacing(1);
++    QLabel* spacer = new QLabel(tr(" "), central);
++    
++    // Material properties
++    matKa = new QDoubleSpinBox(central);
++    matKa->setMinimum(0.0);
++    matKa->setMaximum(1.0);
++    matKa->setDecimals(2);
++    matKa->setSingleStep(0.05);
++    matKa->setValue(0.4);
++    
++    matKd = new QDoubleSpinBox(central);
++    matKd->setMinimum(0.0);
++    matKd->setMaximum(1.0);
++    matKd->setDecimals(2);
++    matKd->setSingleStep(0.05);
++    matKd->setValue(0.75);
++    
++    matKs = new QDoubleSpinBox(central);
++    matKs->setMinimum(0.0);
++    matKs->setMaximum(1.0);
++    matKs->setDecimals(2);
++    matKs->setSingleStep(0.05);
++    matKs->setValue(0.0);
++    
++    matN = new QDoubleSpinBox(central);
++    matN->setMinimum(0.0);
++    matN->setMaximum(100.0);
++    matN->setDecimals(1);
++    matN->setSingleStep(1);
++    matN->setValue(15);
++    
++   
++    QLabel* Ka = new QLabel(tr("Ambient:"), central);
++    QLabel* Kd = new QLabel(tr("Diffuse:"), central);
++    QLabel* Ks = new QLabel(tr("Specular:"), central);
++    QLabel* specPow = new QLabel(tr("Shininess:"), central);
++    Ka->setBuddy(matKa);
++    Kd->setBuddy(matKd);
++    Ks->setBuddy(matKs);
++    specPow->setBuddy(matN);
++
++    
++    lightMaterialPropLayout->addWidget(Ka, 0,0, 1,1, Qt::AlignRight);
++    lightMaterialPropLayout->addWidget(matKa, 0,1, 1,1, Qt::AlignLeft);
++
++    lightMaterialPropLayout->addWidget(Kd, 0,3, 1,1, Qt::AlignRight);
++    lightMaterialPropLayout->addWidget(matKd, 0,4, 1,1, Qt::AlignLeft);
++
++    lightMaterialPropLayout->addWidget(Ks, 0,6, 1,1, Qt::AlignRight);
++    lightMaterialPropLayout->addWidget(matKs, 0,7, 1,1, Qt::AlignLeft);
++
++    lightMaterialPropLayout->addWidget(specPow,  0,10, 1,1, Qt::AlignRight);
++    lightMaterialPropLayout->addWidget(matN,  0,11, 1,1, Qt::AlignLeft);
++    
++
++    connect(matKa, SIGNAL(valueChanged(double)), this, SLOT(setMaterialKa(double))); 
++    connect(matKd, SIGNAL(valueChanged(double)), this, SLOT(setMaterialKd(double))); 
++    connect(matKs, SIGNAL(valueChanged(double)), this, SLOT(setMaterialKs(double))); 
++    connect(matN , SIGNAL(valueChanged(double)), this, SLOT(setMaterialN(double) ));
++}
++
++
++// ****************************************************************************
+ // Method: QvisVolumePlot::Create1DTransferFunctionGroup
+ //
+ // Purpose: 
+@@ -632,6 +744,7 @@
+     QPixmap blackIcon(black_xpm);
+     QPixmap rampIcon(ramp_xpm);
+     QPixmap inverseRampIcon(inverse_ramp_xpm);
++    QPixmap tentIcon(tents_xpm); 
+     QPixmap whiteIcon(white_xpm);
+ 
+     QHBoxLayout *abLayout = new QHBoxLayout(0);
+@@ -654,6 +767,11 @@
+     connect(inverseRampButton, SIGNAL(clicked()), scribbleAlphaWidget, SLOT(makeInverseLinearRamp()));
+     abLayout->addWidget(inverseRampButton);
+ 
++    tentButton = new QPushButton(opacityWidgetGroup);
++    tentButton->setIcon(QIcon(tentIcon));
++    connect(tentButton, SIGNAL(clicked()), scribbleAlphaWidget, SLOT(makeTent()));
++    abLayout->addWidget(tentButton);
++
+     oneButton = new QPushButton(opacityWidgetGroup);
+     oneButton->setIcon(QIcon(whiteIcon));
+     connect(oneButton, SIGNAL(clicked()), scribbleAlphaWidget, SLOT(makeTotallyOne()));
+@@ -828,6 +946,7 @@
+ #endif
+ #ifdef HAVE_LIBSLIVR
+     rendererTypesComboBox->addItem(tr("SLIVR"));
++    rendererTypesComboBox->addItem(tr("Ray casting: SLIVR"));
+ #endif
+     connect(rendererTypesComboBox, SIGNAL(activated(int)),
+             this, SLOT(rendererTypeChanged(int)));
+@@ -1057,6 +1176,8 @@
+             this, SLOT(lightingToggled(bool)));
+     miscLayout->addWidget(lightingToggle, 0, 1);
+ 
++    CreateMatLightGroup(parent, rendererOptionsLayout, maxWidth);
++
+     return parent;
+ }
+ 
+@@ -1239,6 +1360,8 @@
+ QvisVolumePlotWindow::UpdateWindow(bool doAll)
+ {
+     QString temp;
++    double *mat;
++
+     // If the plot info atts changed then update the histogram.
+     if(doAll || SelectedSubject() == GetViewerState()->GetPlotInformation(plotType))
+     {
+@@ -1276,14 +1399,15 @@
+             resampleTargetLabel->setEnabled(volumeAtts->GetResampleFlag());
+             compactVarLabel->setEnabled(!volumeAtts->GetResampleFlag());
+             compactVariable->setEnabled(!volumeAtts->GetResampleFlag());
+-            num3DSlices->setEnabled(volumeAtts->GetResampleFlag());
+-            num3DSlicesLabel->setEnabled(volumeAtts->GetResampleFlag());
+-            samplesPerRay->setEnabled(volumeAtts->GetResampleFlag());
+-            samplesPerRayLabel->setEnabled(volumeAtts->GetResampleFlag());
+-#ifdef HAVE_LIBSLIVR
+-            rendererSamples->setEnabled(volumeAtts->GetResampleFlag());
+-            rendererSamplesLabel->setEnabled(volumeAtts->GetResampleFlag());
+-#endif
++            // Not related to the number of samples
++            //num3DSlices->setEnabled(volumeAtts->GetResampleFlag());
++            //num3DSlicesLabel->setEnabled(volumeAtts->GetResampleFlag());
++            //samplesPerRay->setEnabled(volumeAtts->GetResampleFlag());
++            //samplesPerRayLabel->setEnabled(volumeAtts->GetResampleFlag());
++//#ifdef HAVE_LIBSLIVR
++            //rendererSamples->setEnabled(true);
++            //rendererSamplesLabel->setEnabled(true);
++//#endif
+         break;
+     case VolumeAttributes::ID_lightingFlag:
+             lightingToggle->blockSignals(true);
+@@ -1299,12 +1423,14 @@
+                 volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off &&
+                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
++                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
+             lowGradientClamp->setEnabled(
+                 volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off &&
+                 volumeAtts->GetLowGradientLightingClampFlag() &&
+                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
++                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
+             break;
+         case VolumeAttributes::ID_lowGradientLightingClampFlag:
+@@ -1317,6 +1443,7 @@
+                 volumeAtts->GetLowGradientLightingClampFlag() &&
+                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
++                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
+             break;
+         case VolumeAttributes::ID_lowGradientLightingClampValue:
+@@ -1442,8 +1569,6 @@
+                 num3DSlices->setEnabled(false);
+                 samplesPerRayLabel->setEnabled(false);
+                 samplesPerRay->setEnabled(false);
+-                resampleTargetLabel->setEnabled(true);
+-                resampleTarget->setEnabled(true);
+                 resampleToggle->setEnabled(true);
+                 compactVariable->setEnabled(!volumeAtts->GetResampleFlag());
+                 compactVarLabel->setEnabled(!volumeAtts->GetResampleFlag());
+@@ -1464,6 +1589,7 @@
+ #ifdef HAVE_LIBSLIVR
+                 rendererSamplesLabel->setEnabled(false);
+                 rendererSamples->setEnabled(false);
++                lightMaterialPropGroup->setEnabled(false);
+ #endif
+             }
+             else if (volumeAtts->GetRendererType() == VolumeAttributes::Texture3D)
+@@ -1499,6 +1625,7 @@
+ #ifdef HAVE_LIBSLIVR
+                 rendererSamplesLabel->setEnabled(false);
+                 rendererSamples->setEnabled(false);
++                lightMaterialPropGroup->setEnabled(false);
+ #endif
+             }
+             else if (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting)
+@@ -1534,6 +1661,7 @@
+ #ifdef HAVE_LIBSLIVR
+                 rendererSamplesLabel->setEnabled(false);
+                 rendererSamples->setEnabled(false);
++                lightMaterialPropGroup->setEnabled(false);
+ #endif
+             }
+             else if (volumeAtts->GetRendererType() == VolumeAttributes::RayCastingIntegration)
+@@ -1564,6 +1692,7 @@
+ #ifdef HAVE_LIBSLIVR
+                 rendererSamplesLabel->setEnabled(false);
+                 rendererSamples->setEnabled(false);
++                lightMaterialPropGroup->setEnabled(false);
+ #endif
+             }
+             else if (volumeAtts->GetRendererType() == VolumeAttributes::Tuvok)
+@@ -1594,6 +1723,7 @@
+ #ifdef HAVE_LIBSLIVR
+                 rendererSamplesLabel->setEnabled(false);
+                 rendererSamples->setEnabled(false);
++                lightMaterialPropGroup->setEnabled(false);
+ #endif
+             }
+             else if (volumeAtts->GetRendererType() == VolumeAttributes::SLIVR)
+@@ -1612,15 +1742,16 @@
+                 num3DSlices->setEnabled(false);
+                 rendererSamplesLabel->setEnabled(true);
+                 rendererSamples->setEnabled(true);
++                lightMaterialPropGroup->setEnabled(true);
+ #else
+                 // Revert to 3D texturing
+                 rendererTypesComboBox->setCurrentIndex(1);
+                 num3DSlicesLabel->setEnabled(true);
+                 num3DSlices->setEnabled(true);
+ #endif
+-                resampleTargetLabel->setEnabled(true);
+-                resampleTarget->setEnabled(true);
+-                resampleToggle->setEnabled(false);
++                resampleToggle->setEnabled(true);
++                resampleTargetLabel->setEnabled(volumeAtts->GetResampleFlag());
++                resampleTarget->setEnabled(volumeAtts->GetResampleFlag());
+                 compactVariable->setEnabled(false);
+                 compactVarLabel->setEnabled(false);
+                 samplesPerRayLabel->setEnabled(false);
+@@ -1632,7 +1763,48 @@
+                 lowGradientClampToggle->setEnabled(false);
+                 lowGradientClamp->setEnabled(false);
+             }
++            else if (volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR)
++            {
++                lightingToggle->setEnabled(true);
++                centeredDiffButton->setEnabled(true);
++                sobelButton->setEnabled(true);
+ #ifdef HAVE_LIBSLIVR
++    #ifdef USE_TUVOK
++                rendererTypesComboBox->setCurrentIndex(6);
++    #else
++                // There's no Tuvok so we use slot 5.
++                rendererTypesComboBox->setCurrentIndex(5);
++    #endif
++                num3DSlicesLabel->setEnabled(false);
++                num3DSlices->setEnabled(false);
++                rendererSamplesLabel->setEnabled(true);
++                rendererSamples->setEnabled(true);
++                lightMaterialPropGroup->setEnabled(true);
++#else
++                // Revert to 3D texturing
++                rendererTypesComboBox->setCurrentIndex(1);
++                num3DSlicesLabel->setEnabled(true);
++                num3DSlices->setEnabled(true);
++#endif
++                resampleTargetLabel->setEnabled(false);
++                resampleTarget->setEnabled(false);
++                resampleToggle->setEnabled(false);
++                resampleToggle->setChecked(false);
++                compactVariable->setEnabled(false);
++                compactVarLabel->setEnabled(false);
++                samplesPerRayLabel->setEnabled(true);   // temporary - that should go to false later on
++                samplesPerRay->setEnabled(true);
++                rasterizationButton->setEnabled(false);
++                kernelButton->setEnabled(false);
++                lowGradientLightingReductionLabel->setEnabled(true);
++                lowGradientLightingReductionCombo->setEnabled(true);
++                lowGradientClampToggle->setEnabled(
++                        volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off);
++                lowGradientClamp->setEnabled(
++                        volumeAtts->GetLowGradientLightingReduction() !=
++                            VolumeAttributes::Off && volumeAtts->GetLowGradientLightingClampFlag());
++                }
++#ifdef HAVE_LIBSLIVR
+             // Just for now, disable the opacity variable if we are using the
+             // SLIVR renderer -- until I figure out how to do color and opacity
+             // using separate variables.
+@@ -1702,6 +1874,26 @@
+             tfParent2D->setEnabled(volumeAtts->GetTransferFunctionDim()==2);
+ #endif
+             break;
++
++#ifdef HAVE_LIBSLIVR
++        case VolumeAttributes::ID_materialProperties:
++            matKa->blockSignals(true);
++            matKd->blockSignals(true);
++            matKs->blockSignals(true);
++            matN->blockSignals(true);
++
++            mat = volumeAtts->GetMaterialProperties();
++            matKa->setValue(mat[0]);
++            matKd->setValue(mat[1]);
++            matKs->setValue(mat[2]);
++            matN->setValue(mat[3]);
++
++            matKa->blockSignals(false);
++            matKd->blockSignals(false);
++            matKs->blockSignals(false);
++            matN->blockSignals(false);
++            break;
++#endif
+         }
+     }
+ 
+@@ -2944,12 +3136,14 @@
+                 volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off &&
+                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
++                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
+     lowGradientClamp->setEnabled(
+                 volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off &&
+                 volumeAtts->GetLowGradientLightingClampFlag() &&
+                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
++                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
+     SetUpdate(false);
+     Apply();
+@@ -2982,6 +3176,7 @@
+                 volumeAtts->GetLowGradientLightingClampFlag() &&
+                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
++                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
+                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
+     SetUpdate(false);
+     Apply();
+@@ -3504,24 +3699,40 @@
+         // though, SLIVR will be at slot 4.
+ #ifdef USE_TUVOK
+         volumeAtts->SetRendererType(VolumeAttributes::Tuvok);
++        volumeAtts->SetResampleFlag(true);
+ #elif HAVE_LIBSLIVR
+         volumeAtts->SetRendererType(VolumeAttributes::SLIVR);
+ #else
+         Warning("Renderer is not available. VisIt will revert to 3D texturing.");
+         volumeAtts->SetRendererType(VolumeAttributes::Texture3D);
++        volumeAtts->SetResampleFlag(true);
+ #endif
+-        volumeAtts->SetResampleFlag(true);
++        
+         break;
+       case 5:
+         // If we've got both Tuvok AND SLIVR, SLIVR will end up in slot 5.
+ #ifdef HAVE_LIBSLIVR
++#ifdef USE_TUVOK
+         volumeAtts->SetRendererType(VolumeAttributes::SLIVR);
+ #else
++        volumeAtts->SetRendererType(VolumeAttributes::RayCastingSLIVR);
++#endif
++#else
+         Warning("SLIVR is not available. VisIt will revert to 3D texturing.");
+         volumeAtts->SetRendererType(VolumeAttributes::Texture3D);
++        volumeAtts->SetResampleFlag(true);
+ #endif
++        break;
++       case 6:
++        // If we've got both Tuvok AND SLIVR, Ray Casting:SLIVR will end up in slot 6.
++#ifdef HAVE_LIBSLIVR
++          volumeAtts->SetRendererType(VolumeAttributes::RayCastingSLIVR);
++#else
++        Warning("SLIVR is not available. VisIt will revert to 3D texturing.");
++        volumeAtts->SetRendererType(VolumeAttributes::Texture3D);
+         volumeAtts->SetResampleFlag(true);
+         break;
++#endif
+       default:
+         EXCEPTION1(ImproperUseException,
+                    "The Volume plot received a signal for a renderer "
+@@ -3784,3 +3995,71 @@
+     updateTransferFunc2D();
+ #endif /* HAVE_LIBSLIVR */
+ }
++
++
++// ****************************************************************************
++// Method:  QvisVolumePlotWindow::setLight...
++//
++// Purpose:
++//   
++//
++//  Arguments:
++//    val        
++//
++// Programmer:  Pascal Grosset
++// Creation:    Tue Apr 10 2012
++//
++// Modifications:
++//
++// ****************************************************************************
++
++void
++QvisVolumePlotWindow::setMaterialKa(double val){
++    double *mat = new double[4];
++
++    mat = volumeAtts->GetMaterialProperties();
++    mat[0]=val;
++    volumeAtts->SetMaterialProperties(mat);
++    SetUpdate(false);
++
++    Apply();
++}
++
++
++void
++QvisVolumePlotWindow::setMaterialKd(double val){
++    double *mat = new double[4];
++
++    mat = volumeAtts->GetMaterialProperties();
++    mat[1]=val;
++    volumeAtts->SetMaterialProperties(mat);
++    SetUpdate(false);
++
++    Apply();
++}
++
++
++void
++QvisVolumePlotWindow::setMaterialKs(double val){
++    double *mat = new double[4];
++    
++    mat = volumeAtts->GetMaterialProperties();
++    mat[2]=val;
++    volumeAtts->SetMaterialProperties(mat);
++    SetUpdate(false);
++
++    Apply();
++}
++
++
++void
++QvisVolumePlotWindow::setMaterialN(double val){
++    double *mat = new double[4];
++
++    mat = volumeAtts->GetMaterialProperties();
++    mat[3]=val;
++    volumeAtts->SetMaterialProperties(mat);
++    SetUpdate(false);
++
++    Apply();
++}
+Index: src/avt/Pipeline/Data/avtFlatLighting.C
+===================================================================
+--- src/avt/Pipeline/Data/avtFlatLighting.C	(revision 20648)
++++ src/avt/Pipeline/Data/avtFlatLighting.C	(working copy)
+@@ -67,3 +67,9 @@
+ }
+ 
+ 
++
++void
++avtFlatLighting::AddLightingHeadlight(int, const avtRay *, unsigned char *, double alpha, double matProperties[4]) const
++{
++    ; // No-op; leave color as it is.
++}
+Index: src/avt/Pipeline/Data/avtOpacityMap.C
+===================================================================
+--- src/avt/Pipeline/Data/avtOpacityMap.C	(revision 20648)
++++ src/avt/Pipeline/Data/avtOpacityMap.C	(working copy)
+@@ -45,6 +45,7 @@
+ // For NULL
+ #include <stdlib.h>
+ #include <string.h>
++#include <math.h>
+ 
+ #include <DebugStream.h>
+ #include <ImproperUseException.h>
+@@ -244,6 +245,59 @@
+ //
+ //  Purpose:
+ //      Allows the table to be set from some outside array in the predefined
++//      RGBA format. Matches the SLIVR renderer.
++//
++//  Arguments:
++//      arr             The new table in RGBA format.
++//      te              The number of entries in arr.
++//      attenuation     The attenuation parameter specified
++//      over            Reducing based on the number of slices
++//
++//  Programmer: Pascal Grosset
++//  Creation:   December 11, 2012
++//
++// ****************************************************************************
++void
++avtOpacityMap::SetTable(unsigned char *arr, int te, double attenuation, float over)
++{
++    if (attenuation < -1. || attenuation > 1.)
++    {
++        debug1 << "Bad attenuation value " << attenuation << endl;
++        EXCEPTION0(ImproperUseException);
++    }
++
++    if (table != NULL)
++    {
++        delete [] table;
++    }
++
++    tableEntries = te;
++    table = new RGBA[tableEntries];
++    for (int i = 0 ; i < tableEntries ; i++)
++    {
++        double bp = tan(1.570796327 * (0.5 - attenuation*0.49999));
++        double alpha = pow((float) arr[i*4+3] / 255., (float)bp);
++        alpha = 1.0 - pow((1.0 - alpha), 1.0/over);
++
++        table[i].R = arr[i*4];
++        table[i].G = arr[i*4+1];
++        table[i].B = arr[i*4+2];
++        table[i].A = alpha;
++    }
++
++    //
++    // We need to set the intermediate vars again since the table size has
++    // potentially changed.
++    //
++    SetIntermediateVars();
++}
++
++
++// ****************************************************************************
++//  Method: avtOpacityMap::SetTable
++//
++//  Purpose:
++//      Allows the table to be set from some outside array in the predefined
+ //      RGBA format.
+ //
+ //  Arguments:
+Index: src/avt/Pipeline/Data/avtFlatLighting.h
+===================================================================
+--- src/avt/Pipeline/Data/avtFlatLighting.h	(revision 20648)
++++ src/avt/Pipeline/Data/avtFlatLighting.h	(working copy)
+@@ -75,6 +75,9 @@
+ 
+     virtual void            AddLighting(int, const avtRay *, unsigned char *)
+                                  const;
++
++    virtual void            AddLightingHeadlight(int, const avtRay *, unsigned char *, double alpha, double matProperties[4]) 
++    							const;
+ };
+ 
+ 
+Index: src/avt/Pipeline/Data/avtPhong.C
+===================================================================
+--- src/avt/Pipeline/Data/avtPhong.C	(revision 20648)
++++ src/avt/Pipeline/Data/avtPhong.C	(working copy)
+@@ -264,3 +264,101 @@
+ }
+ 
+ 
++// ****************************************************************************
++//  Method: avtPhong::AddLightingHeadlight
++//
++//  Purpose:
++//      Modifies the color to account for shading. Matches the SLIVR rendering
++//
++//  Note:       Based on the Phong Shading model
++//
++//  Programmer: Pascal Grosset
++//  Creation:   December 11, 2012
++//
++// ****************************************************************************
++double dot(double v1[3], double v2[3]){
++    double dotProduct = 0;
++    
++    for (int i=0; i<3; i++)
++        dotProduct += v1[i]*v2[i];
++    
++    return dotProduct;
++}
++
++void normalizeVec3(double v[3]){
++    double mag = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
++    v[0] = v[0]/mag;
++    v[1] = v[1]/mag;
++    v[2] = v[2]/mag;
++}
++
++void avtPhong::AddLightingHeadlight(int index, const avtRay *ray, unsigned char *rgb, double alpha, double matProperties[4]) const
++{
++    const LightAttributes &l = lights.GetLight(0);
++    if (l.GetEnabledFlag()){ 
++        double col[3];
++        for (int i=0; i<3; i++)
++            col[i] = rgb[i]/255.0;
++            
++        double dir[3];          // The view "right" vector.
++        double view_right[3];   // view_direction cross view_up
++                                
++        view_right[0] = view_direction[1]*view_up[2] - view_direction[2]*view_up[1];
++        view_right[1] = view_direction[2]*view_up[0] - view_direction[0]*view_up[2];
++        view_right[2] = view_direction[0]*view_up[1] - view_direction[1]*view_up[0];
++
++        // A camera light's components are scaling factors of
++        // view_right, view_up, and view_direction.  Scale the
++        // components and set to the dir vector.
++        double comp1[3];
++        comp1[0] = view_right[0] * l.GetDirection()[0];
++        comp1[1] = view_right[1] * l.GetDirection()[0];
++        comp1[2] = view_right[2] * l.GetDirection()[0];
++
++        double comp2[3];
++        comp2[0] = view_up[0] * l.GetDirection()[1];
++        comp2[1] = view_up[1] * l.GetDirection()[1];
++        comp2[2] = view_up[2] * l.GetDirection()[1];
++
++        double comp3[3];
++        comp3[0] = -view_direction[0] * l.GetDirection()[2];
++        comp3[1] = -view_direction[1] * l.GetDirection()[2];
++        comp3[2] = -view_direction[2] * l.GetDirection()[2];
++
++        dir[0] = comp1[0] + comp2[0] + comp3[0];
++        dir[1] = comp1[1] + comp2[1] + comp3[1];
++        dir[2] = comp1[2] + comp2[2] + comp3[2];
++        normalizeVec3(dir);
++        
++        double normal[3];
++        normal[0] = ray->sample[gradientVariableIndex][index];
++        normal[1] = ray->sample[gradientVariableIndex+1][index];
++        normal[2] = ray->sample[gradientVariableIndex+2][index];
++        normalizeVec3(normal);
++        
++        // lighting on both sides
++        double nl = dot(normal,dir);
++        if (nl < 0.0)
++            nl = -nl;
++
++        for (int i=0; i<3; i++) 
++              col[i] = ( ((matProperties[0] + (matProperties[1] * nl)) * col[i])   + ((matProperties[2] * pow(nl,matProperties[3])) * alpha) ) * lightingPower;
++           //                 amb           +          diff                        +                    spec
++
++        // convert to unsignedChar
++        if ((col[0] * 255) > 255.0)
++            rgb[0] = 255;
++        else
++            rgb[0] = (unsigned char) (col[0]  * 255);
++            
++        if ((col[1] * 255) > 255.0)
++            rgb[1] = 255;
++        else
++            rgb[1] = (unsigned char) (col[1] * 255);
++            
++        if ((col[2] * 255) > 255.0)
++            rgb[2] = 255;
++        else
++            rgb[2] = (unsigned char) (col[2] * 255);
++    }
++}
+Index: src/avt/Pipeline/Data/avtOpacityMap.h
+===================================================================
+--- src/avt/Pipeline/Data/avtOpacityMap.h	(revision 20648)
++++ src/avt/Pipeline/Data/avtOpacityMap.h	(working copy)
+@@ -44,6 +44,7 @@
+ #define AVT_OPACITY_MAP_H
+ 
+ #include <pipeline_exports.h>
++#include <iostream>
+ 
+ struct RGBA
+ {
+@@ -89,6 +90,7 @@
+ 
+     const RGBA                  *GetTable(void) { return table; };
+     void                         SetTable(unsigned char *, int, double = 1.);
++    void                         SetTable(unsigned char *arr, int te, double attenuation, float over);
+     void                         SetTable(RGBA *, int, double = 1.);
+     const RGBA                  &GetOpacity(double);
+ 
+@@ -103,6 +105,8 @@
+     int                          GetNumberOfTableEntries(void)
+                                                       { return tableEntries; };
+ 
++    float                        QuantizeValF(const double &val);
++
+   protected:
+     RGBA                        *table;
+     int                          tableEntries;
+@@ -151,7 +155,6 @@
+ avtOpacityMap::Quantize(const double &val)
+ {
+     int index = (int) ((val-min)*multiplier); 
+-
+     // This should be handled by the logic below ... but if we have
+     // a large range for the variable, but the user set's a narrow range
+     // of min/max, then we can have overflows that lead to bad pictures.
+@@ -171,7 +174,26 @@
+     return (index < 0 ? 0 : tableEntries-1);
+ }
+ 
++inline float 
++avtOpacityMap::QuantizeValF(const double &val){
++    float testVal = ((val-min)*multiplier); 
+ 
++    if (val < min)
++        return 0;
++    if (val > max)
++        return (float)(tableEntries-1);
++
++    //
++    // The normal case -- what we calculated was in the range.
++    //
++    if (testVal >= 0 && testVal < tableEntries)
++    {
++        return testVal;
++    }
++
++    return (testVal < 0 ? 0 : tableEntries-1); 
++}
++
+ #endif
+ 
+ 
+Index: src/avt/Pipeline/Data/avtPhong.h
+===================================================================
+--- src/avt/Pipeline/Data/avtPhong.h	(revision 20648)
++++ src/avt/Pipeline/Data/avtPhong.h	(working copy)
+@@ -82,6 +82,9 @@
+ 
+     virtual void           AddLighting(int, const avtRay *, unsigned char *)
+                              const;
++
++    virtual void 		   AddLightingHeadlight(int, const avtRay *, unsigned char *, double alpha, double matProperties[4]) 
++    						 const;
+   private:
+     double                 gradMax, lightingPower;
+ };
+Index: src/avt/Pipeline/Data/avtLightingModel.h
+===================================================================
+--- src/avt/Pipeline/Data/avtLightingModel.h	(revision 20648)
++++ src/avt/Pipeline/Data/avtLightingModel.h	(working copy)
+@@ -74,6 +74,8 @@
+ 
+     virtual void      AddLighting(int, const avtRay *, unsigned char *) 
+                              const = 0;
++    virtual void      AddLightingHeadlight(int, const avtRay *, unsigned char *, double alpha, double matProperties[4]) 
++                             const = 0;
+ 
+     void              SetGradientVariableIndex(int gvi)
+                              { gradientVariableIndex = gvi; };
+Index: src/avt/Pipeline/Data/avtCompositeRF.C
+===================================================================
+--- src/avt/Pipeline/Data/avtCompositeRF.C	(revision 20648)
++++ src/avt/Pipeline/Data/avtCompositeRF.C	(working copy)
+@@ -48,8 +48,8 @@
+ #include <avtOpacityMap.h>
+ #include <avtPointExtractor.h>
+ #include <avtRay.h>
++#include <iostream>
+ 
+-
+ // ****************************************************************************
+ //  Method: avtCompositeRF constructor
+ //
+@@ -82,6 +82,7 @@
+     colorVariableIndex   = 0;
+     opacityVariableIndex = 0;
+     weightVariableIndex  = -1;
++    raycastingSLIVR = false;
+ 
+     int entries = secondaryMap->GetNumberOfTableEntries();
+     double *opacities = new double[entries];
+@@ -92,6 +93,12 @@
+     }
+     rangeMaxTable.SetTable(entries, opacities);
+     // No need to free "opacities", since the rangeMaxTable now owns it.
++
++    // just setting some reasonable defaults for the material parameters
++    matProperties[0] = 0.4;     // ambient
++    matProperties[1] = 0.75;    // diffuse
++    matProperties[2] = 0.0;     // specular
++    matProperties[3] = 15;      // shininess
+ }
+ 
+ 
+@@ -207,14 +214,33 @@
+     {
+         if (validSample[z])
+         {
++            float opacityValue, value, diffRGB, diffAlpha;
++            RGBA colorLow, colorHigh, opacLow, opacHigh;
++
++            if (raycastingSLIVR == true){
++                value = map->QuantizeValF(sample[z]);
++                diffRGB = value - ((int)value);
++                colorLow = table[(int)value];
++                colorHigh = table[(int)value+1];
++
++                value = secondaryMap->QuantizeValF(sample2[z]);
++                diffAlpha = value - ((int)value);
++                opacLow = secondaryTable[(int)value];
++                opacHigh = secondaryTable[(int)value+1];
++            }
++
+             const RGBA &color = table[map->Quantize(sample[z])];
+-            const RGBA &opac  
+-                          = secondaryTable[secondaryMap->Quantize(sample2[z])];
++            const RGBA &opac = secondaryTable[secondaryMap->Quantize(sample2[z])];
+ 
++            if (raycastingSLIVR == false)
++                opacityValue = opac.A;
++            else
++                opacityValue = (1.0-diffAlpha)*opacLow.A + diffAlpha*opacHigh.A;
++
+             //
+             // Only calculate further when we get non-zero opacity.
+             //
+-            if (opac.A > 0)
++            if (opacityValue > 0)
+             {
+                 double tableOpac = opac.A;
+                 if (weight != NULL)
+@@ -222,13 +248,32 @@
+                     if (weight[z] < min_weight)
+                         tableOpac *= weight[z]*min_weight_denom;
+                 }
+-                double samplesOpacity = tableOpac * oneSamplesContribution;
+-                samplesOpacity = (samplesOpacity > 1. ? 1. : samplesOpacity);
++                double samplesOpacity = tableOpac;
++                if (raycastingSLIVR == false){
++                    samplesOpacity = tableOpac * oneSamplesContribution;
++                    samplesOpacity = (samplesOpacity > 1. ? 1. : samplesOpacity);
++                }
+ 
+-                unsigned char rgb[3] = { color.R, color.G, color.B };
+-                lighting->AddLighting(z, ray, rgb);
++                unsigned char rgbLow[3] = { colorLow.R, colorLow.G, colorLow.B };
++                unsigned char rgbHigh[3] = { colorHigh.R, colorHigh.G, colorHigh.B };
++                unsigned char rgb[3];
+ 
++                if (raycastingSLIVR == true){
++                    rgb[0] = (1.0-diffRGB)*rgbLow[0] + diffRGB*rgbHigh[0];
++                    rgb[1] = (1.0-diffRGB)*rgbLow[1] + diffRGB*rgbHigh[1];
++                    rgb[2] = (1.0-diffRGB)*rgbLow[2] + diffRGB*rgbHigh[2];
++                }else{
++                    rgb[0] = color.R;
++                    rgb[1] = color.G;
++                    rgb[2] = color.B;
++                }
+                 double ff = (1-opacity)*samplesOpacity;
++
++                if (raycastingSLIVR == true)
++                    lighting->AddLightingHeadlight(z, ray, rgb, 1.0, matProperties);
++                else
++                    lighting->AddLighting(z, ray, rgb);
++
+                 trgb[0] = trgb[0] + ff*rgb[0];
+                 trgb[1] = trgb[1] + ff*rgb[1];
+                 trgb[2] = trgb[2] + ff*rgb[2];
+@@ -302,5 +347,3 @@
+ 
+     return (opacMax > 0. ? true : false);
+ }
+-
+-
+Index: src/avt/Pipeline/Data/avtCompositeRF.h
+===================================================================
+--- src/avt/Pipeline/Data/avtCompositeRF.h	(revision 20648)
++++ src/avt/Pipeline/Data/avtCompositeRF.h	(working copy)
+@@ -103,6 +103,9 @@
+     virtual bool       CanContributeToPicture(int,
+                                           const double (*)[AVT_VARIABLE_LIMIT]);
+ 
++    void               SetRaycastingSLIVR(bool r) { raycastingSLIVR = r; };
++    void               SetMaterial(double mat[4]){for (int i=0; i<4; i++) matProperties[i]=mat[i];}
++
+   protected:
+     avtOpacityMap     *map;
+     avtOpacityMap     *secondaryMap;
+@@ -113,6 +116,8 @@
+     int                weightVariableIndex;
+ 
+     avtRangeMaxTable   rangeMaxTable;
++    bool               raycastingSLIVR;
++    double             matProperties[4];  //ambient, diffuse, specular, shininess
+ };
+ 
+ 
+Index: src/avt/Filters/avtMassVoxelExtractor.C
+===================================================================
+--- src/avt/Filters/avtMassVoxelExtractor.C	(revision 20648)
++++ src/avt/Filters/avtMassVoxelExtractor.C	(working copy)
+@@ -59,7 +59,11 @@
+ 
+ #include <DebugStream.h>
+ 
++#include <stdio.h>
++#include <stdlib.h>
++#include <time.h>
+ 
++
+ // ****************************************************************************
+ //  Method: avtMassVoxelExtractor constructor
+ //
+@@ -99,6 +103,7 @@
+ {
+     gridsAreInWorldSpace = false;
+     pretendGridsAreInWorldSpace = false;
++    trilinearInterpolation = false;
+     aspect = 1;
+     view_to_world_transform = vtkMatrix4x4::New();
+     X = NULL;
+@@ -111,6 +116,8 @@
+     prop_buffer   = new double[3*depth];
+     ind_buffer    = new int[3*depth];
+     valid_sample  = new bool[depth];
++
++    srand ( time(NULL) );
+ }
+ 
+ 
+@@ -419,11 +426,12 @@
+     // Some of our sampling routines need a chance to pre-process the data.
+     // Register the grid here so we can do that.
+     //
+-    RegisterGrid(rgrid, varnames, varsize);
++    RegisterGrid(rgrid, varnames, varsize);   // stores the values in a structure so that it can be used
+ 
+     //
+     // Set up a list of ranges to look at.
+     //
++
+     const int max_ranges = 100; // this should be bigger than log(max(W,H))
+     int width_min[max_ranges];
+     int width_max[max_ranges];
+@@ -436,6 +444,9 @@
+     height_max[curRange] = restrictedMaxHeight+1;
+     curRange++;
+ 
++    // width_min[curRange], restrictedMinWidth, .. indicate part of the screen that we will be processing for now
++    // this is narrowed down below for each part of the range
++
+     while (curRange > 0)
+     {
+         //
+@@ -456,7 +467,7 @@
+             continue;
+         }
+ 
+-        int num_rays = (w_max-w_min)*(h_max-h_min);
++        int num_rays = (w_max-w_min)*(h_max-h_min); // compute an area
+         if (num_rays > 5)
+         {
+             //
+@@ -485,10 +496,10 @@
+             for (int i = w_min ; i < w_max ; i++)
+                 for (int j = h_min ; j < h_max ; j++)
+                 {
+-                    double origin[4];
+-                    double terminus[4];
+-                    GetSegment(i, j, origin, terminus);
+-                    SampleAlongSegment(origin, terminus, i, j);
++                    double origin[4];       // starting point where we start sampling
++                    double terminus[4];     // ending point where we stop sampling
++                    GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
++                    SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
+                 }
+         }
+     }
+@@ -536,6 +547,9 @@
+         delete [] Y;
+     if (Z != NULL)
+         delete [] Z;
++
++    // dims is the size of each of the small 3D patches e.g. 52x16x16 (or grid)
++    // X, Y & Z store the "real" coordinates each point in the grid (the above grid) e.g. 0.61075, 0.19536, 0.01936 for 0,0,0
+     X = new double[dims[0]];
+     for (i = 0 ; i < dims[0] ; i++)
+         X[i] = rgrid->GetXCoordinates()->GetTuple1(i);
+@@ -571,9 +585,9 @@
+         if (idx < 0)
+             continue;
+         cell_index[ncell_arrays] = idx;
+-        cell_vartypes[ncell_arrays] = arr->GetDataType();
+-        cell_size[ncell_arrays] = arr->GetNumberOfComponents();
+-        cell_arrays[ncell_arrays++] = arr->GetVoidPointer(0);
++        cell_vartypes[ncell_arrays] = arr->GetDataType();           // the datatye of the data we are dealing with; i suppose int/float/...
++        cell_size[ncell_arrays] = arr->GetNumberOfComponents();     // number of arrays we are passing to it; generally 1
++        cell_arrays[ncell_arrays++] = arr->GetVoidPointer(0);       // the data usually
+     }
+ 
+     npt_arrays = 0;
+@@ -630,6 +644,12 @@
+ //  Purpose:
+ //      Gets a line segment based on a pixel location.
+ //
++//  Arguments:
++//      w           x; of the width of the render window 
++//      h           y; of the height of the render window
++//      origin      
++//      terminus
++//
+ //  Programmer: Hank Childs
+ //  Creation:   November 21, 2004
+ //
+@@ -667,6 +687,7 @@
+     view[1] = (h - height/2.)/(height/2.);
+     view[2] = cur_clip_range[0];
+     view[3] = 1.;
++
+     view_to_world_transform->MultiplyPoint(view, origin);
+     if (origin[3] != 0.)
+     {
+@@ -1094,12 +1115,40 @@
+ //
+ // ****************************************************************************
+ 
++void copyVals(double myvals[8], double vals[8]){
++    for (int i = 0 ; i < 8 ; i++)
++        myvals[i] = vals[i];
++}
++
++float solve(float r){
++    float u = r;
++    for (int i=0; i<5; i++)
++        u = (11.0*r + u*u*(6.0 + u*(8.0 - 9.0 * u))) / (4.0 + 12.0 * u * (1.0 + u * (1.0 - u)));
++
++    return u;
++}
++
++float cubicfilter(float x){
++    float ret;
++    if (x < 1.0/24.0)
++        ret = pow(24*x,0.25) - 2.0;
++    else if (x < 0.5)
++        ret = solve(24.0 * (x - 1.0/24)/11.0 ) - 1.0;
++    else if (x < 23.0/24.0)
++        ret = 1.0 - solve(24.0 * (23.0/24.0 - x) / 11.0);
++    else
++        ret = 2.0 - pow(24.0 * (1.0-x),0.25);
++
++    ret = ret/2.0;
++}
++
+ void
+ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
+ {
+     bool inrun = false;
+     int  count = 0;
+     avtRay *ray = volume->GetRay(w, h);
++    int myInd[3];
+     bool calc_cell_index = ((ncell_arrays > 0) || (ghosts != NULL));
+     for (int i = first ; i < last ; i++)
+     {
+@@ -1110,7 +1159,7 @@
+         if (calc_cell_index)
+             index = ind[2]*((dims[0]-1)*(dims[1]-1)) + ind[1]*(dims[0]-1) +
+                     ind[0];
+-  
++
+         if (ghosts != NULL)
+         {
+             if (ghosts[index] != 0)
+@@ -1123,18 +1172,121 @@
+             inrun = false;
+             count = 0;
+         }
++
++        float x_right = prop[0];            
++        float y_top = prop[1];              
++        float z_back = prop[2];             
++
++        float x_left = 1. - x_right;
++        float y_bottom = 1. - y_top;
++        float z_front = 1. - z_back;
++
++        int newInd[3];
++        newInd[0] = ind[0];
++        newInd[1] = ind[1];
++        newInd[2] = ind[2];
++
++        int index_left, index_right,                index_top, index_bottom,            index_front, index_back;
++        float dist_from_left, dist_from_right,      dist_from_top,dist_from_bottom,     dist_from_front, dist_from_back;
++
++        if (x_right < 0.5){
++            index_left = newInd[0]-1;
++            index_right = newInd[0];
++            dist_from_left = x_right + 0.5;
++            dist_from_right = 1.0 - dist_from_left;
++        }else{
++            index_left = newInd[0];
++            index_right = newInd[0]+1;
++            dist_from_left = x_right - 0.5;
++            dist_from_right = 1.0 - dist_from_left;
++        }
++
++        if (y_top < 0.5){
++            index_bottom = newInd[1]-1;
++            index_top = newInd[1];
++            dist_from_bottom = y_top + 0.5;
++            dist_from_top = 1.0 - dist_from_bottom;
++        }else{
++            index_bottom = newInd[1];
++            index_top = newInd[1]+1;
++            dist_from_bottom = y_top - 0.5;
++            dist_from_top = 1.0 - dist_from_bottom;
++        }
++
++        if (z_back < 0.5){
++            index_back = newInd[2]-1;
++            index_front = newInd[2];
++
++            dist_from_back = z_back + 0.5;
++            dist_from_front = 1.0 - dist_from_back;
++        }else{
++            index_back = newInd[2];
++            index_front = newInd[2]+1;
++
++            dist_from_back = z_back - 0.5;
++            dist_from_front = 1.0 - dist_from_back;
++        }
++
++        if (trilinearInterpolation){
++            // Checking for ghost cells
++            if (((newInd[0] <= 0)||(newInd[1] <= 0))||(newInd[2] <= 0))
++                valid_sample[i] = false;
++
++            if (((newInd[0] >= dims[0]-2)||(newInd[1] >= dims[1]-2))||(newInd[2] >= dims[2]-2))
++                valid_sample[i] = false;
++        }
+         if (!valid_sample[i])
+             continue;
+ 
++        float diff_sep = 0.005;
+         int  l;
++        if (trilinearInterpolation){
++            if (ncell_arrays > 0){
++                int indexT[8];
++                int offset = 1;
++                indexT[0] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_left);
++                indexT[1] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_right);
+ 
+-        for (l = 0 ; l < ncell_arrays ; l++)
+-        {
+-            for (int m = 0 ; m < cell_size[l] ; m++)
+-                tmpSampleList[count][cell_index[l]+m] = 
+-                                 ConvertToDouble(cell_vartypes[l], index,
+-                                              cell_size[l], m, cell_arrays[l]);
++                indexT[2] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_left);
++                indexT[3] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_right);
++
++                indexT[4] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_left);
++                indexT[5] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_right);
++
++                indexT[6] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_left);
++                indexT[7] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_right);
++
++                for (l = 0 ; l < ncell_arrays ; l++)
++                {
++                    void  *cell_array = cell_arrays[l];
++                    double vals[8];
++                    for (int m = 0 ; m < cell_size[l] ; m++){
++                        // initialize
++                        AssignEight(cell_vartypes[l], vals, indexT, cell_size[l], m, cell_array);
++                        double val =    dist_from_right     * dist_from_top         * dist_from_front*vals[0] + 
++                                        dist_from_left      * dist_from_top         * dist_from_front*vals[1] +
++                                        dist_from_right     * dist_from_bottom      * dist_from_front*vals[2] +
++                                        dist_from_left      * dist_from_bottom      * dist_from_front*vals[3] +
++
++                                        dist_from_right     * dist_from_top         * dist_from_back *vals[4] +
++                                        dist_from_left      * dist_from_top         * dist_from_back *vals[5] +
++                                        dist_from_right     * dist_from_bottom      * dist_from_back *vals[6] +
++                                        dist_from_left      * dist_from_bottom      * dist_from_back *vals[7];
++
++                        tmpSampleList[count][cell_index[l]+m] = val;  
++                    }
++                }
++            }
++        }else{
++            for (l = 0 ; l < ncell_arrays ; l++)
++            {
++                for (int m = 0 ; m < cell_size[l] ; m++)
++                    tmpSampleList[count][cell_index[l]+m] = 
++                                     ConvertToDouble(cell_vartypes[l], index,
++                                                  cell_size[l], m, cell_arrays[l]);
++            }
+         }
++
+         if (npt_arrays > 0)
+         {
+             int index[8];
+Index: src/avt/Filters/avtResampleFilter.C
+===================================================================
+--- src/avt/Filters/avtResampleFilter.C	(revision 20648)
++++ src/avt/Filters/avtResampleFilter.C	(working copy)
+@@ -50,6 +50,9 @@
+ #include <vtkPointData.h>
+ #include <vtkRectilinearGrid.h>
+ 
++#include <avtCallback.h>
++#include <avtDatabase.h>
++#include <avtDatabaseMetaData.h>
+ #include <avtDatasetExaminer.h>
+ #include <avtExtents.h>
+ #include <avtImagePartition.h>
+@@ -105,6 +108,7 @@
+     primaryVariable = NULL;
+     selID = -1;
+     cellCenteredOutput = false;
++    uintahResample = false;
+ }
+ 
+ 
+@@ -742,7 +746,42 @@
+ }
+ 
+ 
++
+ // ****************************************************************************
++//  Method: GetLogicalBounds
++//
++//  Purpose:
++//      Added for no resampling for uintah
++//
++// ****************************************************************************
++
++bool GetLogicalBounds(avtDataObject_p input,int &width,int &height, int &depth)
++{
++    const avtDataAttributes &datts = input->GetInfo().GetAttributes();
++    std::string db = input->GetInfo().GetAttributes().GetFullDBName();
++
++    debug5<<"datts->GetTime(): "<<datts.GetTime()<<endl;
++    debug5<<"datts->GetTimeIndex(): "<<datts.GetTimeIndex()<<endl;
++    debug5<<"datts->GetCycle(): "<<datts.GetCycle()<<endl;
++
++    ref_ptr<avtDatabase> dbp = avtCallback::GetDatabase(db, datts.GetTimeIndex(), NULL);
++    avtDatabaseMetaData *md = dbp->GetMetaData(datts.GetTimeIndex(), 1);
++    std::string mesh = md->MeshForVar(datts.GetVariableName());
++    const avtMeshMetaData *mmd = md->GetMesh(mesh);
++
++    if (mmd->hasLogicalBounds == true)
++    {
++        width=mmd->logicalBounds[0];
++        height=mmd->logicalBounds[1];
++        depth=mmd->logicalBounds[2];
++
++        return true;
++    }
++
++    return false;
++}
++
++// ****************************************************************************
+ //  Method: avtResampleFilter::GetDimensions
+ //
+ //  Purpose:
+@@ -875,6 +914,30 @@
+         height = atts.GetHeight();
+         depth  = atts.GetDepth();
+     }
++
++
++    {
++        // NOTE: we can't read the GetResampleFlag() from VolumeAttributes so for uintah volumes
++        // we always resample to the logical bounds.
++
++        // <ctc> this should go with the code in avtVolumePlot, but due to a bug reading
++        // variables that aren't defined in timestep 0 we leave this bit here. The bug has been
++        // acknowledged and should be fixed in 2.6.0.
++        avtDataObject_p input=GetInput();
++        if (uintahResample)
++        {
++            int width_,height_,depth_;
++            if (GetLogicalBounds(input,width_,height_,depth_))
++            {
++                width = width_;
++                height = height_;
++                depth = depth_;
++
++                debug5 << "Uintah resampling to original dimensions; equivalent of no resampling" << endl;
++            }      
++        }
++    }
++
+     if (width <= 0 || height <= 0 || depth < 0)
+     {
+         EXCEPTION1(VisItException, "The grid to resample on is degenerate."
+Index: src/avt/Filters/avtMassVoxelExtractor.h
+===================================================================
+--- src/avt/Filters/avtMassVoxelExtractor.h	(revision 20648)
++++ src/avt/Filters/avtMassVoxelExtractor.h	(working copy)
+@@ -106,6 +106,7 @@
+                                              const double *);
+     void             SetVariableInformation(std::vector<std::string> &names,
+                                             std::vector<int> varsize);
++    void             SetTrilinear(bool t) {trilinearInterpolation = t;   };
+ 
+   protected:
+     bool             gridsAreInWorldSpace;
+@@ -134,6 +135,7 @@
+     double          *prop_buffer;
+     int             *ind_buffer;
+     bool            *valid_sample;
++    bool            trilinearInterpolation;
+ 
+     // We repeatedly divide by the term (X[i+1]-X[i]).  In the interest of
+     // performance, cache the term 1./(X[i+1]-X[i]) and use that for faster
+Index: src/avt/Filters/avtSamplePointExtractor.C
+===================================================================
+--- src/avt/Filters/avtSamplePointExtractor.C	(revision 20648)
++++ src/avt/Filters/avtSamplePointExtractor.C	(working copy)
+@@ -160,6 +160,7 @@
+ 
+     modeIs3D = true;
+     SetKernelBasedSampling(false);
++    SetTrilinear(false);
+ 
+     shouldSetUpArbitrator    = false;
+     arbitratorPrefersMinimum = false;
+@@ -444,6 +445,8 @@
+     pointExtractor = new avtPointExtractor(width, height, depth, volume, cl);
+     pyramidExtractor = new avtPyramidExtractor(width, height, depth,volume,cl);
+ 
++    massVoxelExtractor->SetTrilinear(trilinearInterpolation);
++
+     hexExtractor->SendCellsMode(sendCells);
+     hex20Extractor->SendCellsMode(sendCells);
+     tetExtractor->SendCellsMode(sendCells);
+@@ -850,14 +853,20 @@
+ {
+     if (modeIs3D && ds->GetDataObjectType() == VTK_RECTILINEAR_GRID)
+     {
++        // Get attributes of the data
+         avtDataAttributes &atts = GetInput()->GetInfo().GetAttributes();
++
+         const double *xform = NULL;
+         if (atts.GetRectilinearGridHasTransform())
+             xform = atts.GetRectilinearGridTransform();
++
++        // set the coordinate system
+         massVoxelExtractor->SetGridsAreInWorldSpace(
+            rectilinearGridsAreInWorldSpace, viewInfo, aspect, xform);
++
+         avtSamplePoints_p samples = GetTypedOutput();
+         int numVars = samples->GetNumberOfRealVariables(); 
++
+         std::vector<std::string> varnames;
+         std::vector<int>         varsizes;
+         for (int i = 0 ; i < numVars ; i++)
+Index: src/avt/Filters/avtRayTracer.C
+===================================================================
+--- src/avt/Filters/avtRayTracer.C	(revision 20648)
++++ src/avt/Filters/avtRayTracer.C	(working copy)
+@@ -127,6 +127,7 @@
+     screen[0] = screen[1] = 400;
+     samplesPerRay  = 40;
+     kernelBasedSampling = false;
++    trilinearInterpolation = false;
+ }
+ 
+ 
+@@ -427,6 +428,7 @@
+     extractor.RegisterRayFunction(rayfoo);
+     extractor.SetJittering(true);
+     extractor.SetInput(trans.GetOutput());
++    extractor.SetTrilinear(trilinearInterpolation);
+ 
+     //
+     // For curvilinear and unstructured meshes, it makes sense to convert the
+Index: src/avt/Filters/avtResampleFilter.h
+===================================================================
+--- src/avt/Filters/avtResampleFilter.h	(revision 20648)
++++ src/avt/Filters/avtResampleFilter.h	(working copy)
+@@ -101,11 +101,14 @@
+     void                  MakeOutputCellCentered(bool doIt)
+                                 { cellCenteredOutput = doIt; };
+ 
++    void                  setUintahResample(bool resampleflag) {uintahResample = resampleflag;}
++
+   protected:
+     InternalResampleAttributes atts;
+     char                 *primaryVariable;
+     int                   selID;
+     bool                  cellCenteredOutput;
++    bool                  uintahResample;
+ 
+     virtual void          Execute(void);
+     virtual void          UpdateDataObjectInfo(void);
+Index: src/avt/Filters/avtSamplePointExtractor.h
+===================================================================
+--- src/avt/Filters/avtSamplePointExtractor.h	(revision 20648)
++++ src/avt/Filters/avtSamplePointExtractor.h	(working copy)
+@@ -158,6 +158,8 @@
+ 
+     void                      SetUpArbitrator(std::string &name, bool min);
+ 
++    void                      SetTrilinear(bool t) {trilinearInterpolation = t;  };
++
+   protected:
+     int                       width, height, depth;
+     int                       currentNode, totalNodes;
+@@ -169,6 +171,8 @@
+     bool                      kernelBasedSampling;
+     double                    point_radius;
+ 
++    bool                      trilinearInterpolation;
++
+     bool                      shouldSetUpArbitrator;
+     std::string               arbitratorVarName;
+     bool                      arbitratorPrefersMinimum;
+Index: src/avt/Filters/avtRayTracer.h
+===================================================================
+--- src/avt/Filters/avtRayTracer.h	(revision 20648)
++++ src/avt/Filters/avtRayTracer.h	(working copy)
+@@ -122,6 +122,7 @@
+ 
+     void                  SetKernelBasedSampling(bool v)
+                                     { kernelBasedSampling = v; };
++    void                  SetTrilinear(bool t) {trilinearInterpolation = t; };
+ 
+   protected:
+     avtViewInfo           view;
+@@ -129,6 +130,7 @@
+     int                   screen[2];
+     int                   samplesPerRay;
+     bool                  kernelBasedSampling;
++    bool                  trilinearInterpolation;
+     int                   backgroundMode;
+     unsigned char         background[3];
+     double                gradBG1[3];

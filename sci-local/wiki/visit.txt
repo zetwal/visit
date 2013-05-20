@@ -1,0 +1,26 @@
+== !VisIt ==
+
+This page covers some basic information setting up and using !VisIt to visualize data stored in Uintah Data Archives (uda's). For detailed information about !VisIt please goto the [http://www.llnl.gov/visit visit] site.
+
+ '''''latest supported version: 2.6.2''''' ([http://uintah.sci.utah.edu/VisIt/VisIt/Release_Notes/Entries/2013/4/4_Blue_bird_day.html Release Notes])
+
+=== Getting Started ===
+ * [wiki:VisitOverview Overview]
+ * [wiki:VisitPrebuilt Installation]
+ * [wiki:VisitServers Remote Servers]
+ * [wiki:VisitBuildInstructions Building VisIt and the udaReader Plugin]
+ * [wiki:UdaDataArchives Reading Uintah Data Archives]
+ * [wiki:VisitFAQ Frequently Asked Questions]
+
+=== Visualizing Data ===
+ * [wiki:Plots Plots]
+ * [wiki:Operators Operators]
+ * [wiki:Vectors Vectors]
+ * [wiki:AmrDataSets AMR Data Sets]
+ * [wiki:Examples Examples]
+
+=== This and That ===
+ * [wiki:RemoteData Reading Remote Data]
+ * [wiki:SessionSave Saving a Session]
+ * [wiki:ThreeSliceOperator Using the Three Slice Operator]
+ * [wiki:PicturesMovies Generating Pictures and Movies]

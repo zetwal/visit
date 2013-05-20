@@ -1,0 +1,70 @@
+ * [#buildvisit Building VisIt]
+ * [#buildplugin Building the udaReader Plugin]
+
+= Building !VisIt and the Uintah udaReader =
+
+Do you really need to build !VisIt? [wiki:VisitPrebuilt Prebuilt installations] are provided for some platforms and already exist on most shared supercomputers.
+
+[=#buildvisit] 
+== ''Building !VisIt'' ==
+
+'''The currently supported version of !VisIt is ''2.6.2''.'''
+
+'''Build Prerequisites'''
+ 1. Create directories in which to build !VisIt:[[BR]]'''mkdir $HOME/visit'''[[BR]]'''mkdir $HOME/visit/visit2.6.2'''[[BR]]'''mkdir $HOME/visit/visit2.6.2/build'''[[BR]]'''mkdir $HOME/visit/visit2.6.2/prebuild'''
+ 1. Get the !VisIt sources, build script and prerequisites by executing the following commands:
+{{{
+  cd $HOME/visit
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/visit2.6.2.tar.gz
+  cd visit2.6.2
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/patch2.6.2.diff
+  cd prebuild
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/build_visit2_6_2.txt
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/_prereqs/Imaging-1.1.6.tar.gz
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/_prereqs/IceT-1-0-0.tar.gz
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/_prereqs/MesaLib-7.8.2.tar.gz
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/_prereqs/Python-2.6.4.tgz
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/_prereqs/cmake-2.8.8.tar.gz
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/_prereqs/pyparsing-1.5.2.tar.gz
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/_prereqs/pyside-combined-1.1.1.tar.gz
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/_prereqs/qt-everywhere-opensource-src-4.8.3.tar.gz
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/_prereqs/visit-vtk-5.8.0.a.tar.gz
+  wget http://www.sci.utah.edu/devbuilds/icse/visit/2.6.2/_prereqs/silo-4.9.tar.gz
+}}}
+ 1. Make the build script executable:[[BR]]'''chmod u+x build_visit2_6_2.txt'''
+ 1. Start the !VisIt prebuild[[BR]]'''./build_visit2_6_2.txt --makeflags -j12 --no-visit --parallel --silo --slivr --python-module --fortran'''
+ 1. On the first screen select (at least): '''SLIVR''' and '''Python''' (maybe also select '''Parallel, Fortran, etc.''')
+ 1. Wait while prerequisites are built.[[BR]]''Note: you may have to install other prerequisities. If the prebuild fails, look at the last few lines of the log file and try to figure out what is missing.''[[BR]]For example, if you selected '''Parallel''' you might have to add:[[BR]]'''export PAR_COMPILER=!`which mpic++`'''[[BR]]'''export PAR_INCLUDE=/your/path/to/mpi/include'''[[BR]]'''export PAR_LIBS=-L/your/path/to/mpi/lib'''[[BR]]
+
+'''Build !VisIt'''
+ 1. Extract the source tree:[[BR]]'''cd ..'''[[BR]]'''tar zxf visit2.6.2.tar.gz'''
+ 1. Copy the machine-specific build file constructed in the prebuild process:[[BR]]'''cd visit2.6.2/src'''[[BR]]'''cp ../../prebuild/<your_machine_name>.cmake ./config-site'''.
+ 1. Apply the patch:[[BR]]'''patch -p0 < ../patch2.6.2.diff'''
+ 1. Run the cmake that was built in the prebuild and specify an installation directory:[[BR]]'''../../prebuild/cmake-2.8.8/bin/cmake -DCMAKE_INSTALL_PREFIX:PATH=$HOME/visit/Install'''
+ 1. Build it:[[BR]]'''make -j8'''
+ 1. Now you should have a patched and ready-to-install version of !VisIt. Install it:[[BR]]'''make install'''
+
+[=#buildplugin]
+== ''Building the udaReader Plugin'' ==
+
+'''NOTE:''' If you only want to load data from a remote machine on which the reader already exists (such as ember or updraft), you do not need to build the udaReader plugin on your local machine.
+
+If you need to build the Uintah Data Archive plugin for !VisIt.
+
+ 1. Go to your uintah source tree:[[BR]]'''cd /path/to/uintah/src'''
+ 1. Either use your existing build directory or create one specifically for the udaReader plugin:[[BR]]'''cd /path/to/udaReader_build_dir'''
+ 1. Configure uintah as you normally would, adding this line:[[BR]]'''--with-visit=$HOME/visit/Install'''
+ 1. Build it:[[BR]]'''make -j8'''
+
+You should now be ready to load uda files. Enjoy!
+
+=== Questions? ===
+
+See [wiki:VisitFAQ the FAQ]
+
+=== Further Reading ===
+
+The following may also be helpful:
+ * [https://wci.llnl.gov/codes/visit/download.html LLNL site]
+ * You may have to do a little fishing to find or install other prerequisites, such as [http://www.open-mpi.org/ "OpenMPI"].
+ * The [wiki:MolecularRenderer Molecular Renderer Patch] '''''(unsupported)'''''

@@ -1,0 +1,73 @@
+= !VisIt Frequently Asked Questions = 
+
+=== User Resources ===
+
+[http://visitusers.org]
+
+=== Building ===
+
+[wiki:VisitBuildInstructions]
+
+=== Running ===
+
+(from terminal)[[br]]
+'''cd /path/to/visit/installation'''[[br]]
+'''./bin/visit'''[[br]]
+[[br]]
+(parallel client)[[br]]
+'''./bin/visit -np 4''' (np stands for number of processes)[[br]]
+
+[=#ParallelReqs]
+=== Parallel OSX Client Requirements ===
+Running in parallel for things like faster streamlines (please note this will not make SLIVR volume rendering any faster).[[br]]
+[[BR]]
+You will need to install OpenMPI and create a symbolic link from the install location to /usr/local/mpi.[[BR]]
+Briefly, this is how to install it (if it's already installed, just create the symlink at the end):[[BR]]
+First, download the source from [http://www.open-mpi.org/software/ompi/v1.6/ the OpenMPI site].
+{{{
+ cd /path/to/openmpi-download
+ mkdir build
+ cd build
+ ../configure --prefix=/usr/local/openmpi-1.6.4
+ make -j8
+ sudo make install
+ cd /usr/local
+ sudo ln -s /usr/local/openmpi-1.6.4 mpi
+}}}
+
+=== Rendering ===
+
+==== Local ====
+We recommend using the SLIVR volume renderer for fast, high quality volume rendering of local datasets. More information can be found [http://uintah.sci.utah.edu/VisIt/VisIt/Release_Notes/Entries/2013/4/4_Blue_bird_day.html here][[BR]]
+
+[=#SLIVR_Raycasting]
+==== Remote ====
+When loading and rendering datasets from remote systems such as ember, updraft or aurora, we recommend using '''SLIVR Raycasting''', which uses far less bandwidth with comparable quality.[[br]]
+[[BR]]
+To select this renderer, add a Volume and double click the new item to open the rendering preferences. Select '''SLIVR Raycasting''' from the dropdown menu.[[BR]]
+[[BR]]
+Hints:
+ * Acquiring more nodes and making your window smaller will speed up rendering times.
+
+=== Issues ===
+
+These are some known issues our users have encountered:
+ * switching from Raycasting to SLIVR renderer will cause the rendering engine to crash. This is a known issue with !VisIt 2.6.2 and we are working with the !VisIt developers to resolve it.
+ * parallel Raycasting does not work from the local client. This is a known issue with !VisIt 2.6.2 and we are working with the !VisIt developers to resolve it.
+ * for staggered data, gzip compression in uintah must be disabled or the resulting uda files will be corrupt (for !VisIt, SCIRun or anything else).
+ * !VisIt contains a number of memory leaks (~32K as reported by valgrind), most of which shouldn't prevent normal operation, but be aware you might have to restart it periodically to reclaim memory.
+ * the version of !VisIt installed on '''ember''' and '''updraft''' requires the mvapich2 version of `mpirun` to be in the path '''(OpenMP will not work)'''.[[br]]
+For example, you might have this in your .bashrc:[[BR]]
+{{{
+ # Do Updraft specific initializations
+    if [[ "$UUFSCELL" = "updraft.arches" ]] ; then
+      source /uufs/updraft.arches/sys/pkg/mvapich2/1.7/etc/mvapich2.sh
+ # Do Ember specific initializations
+    elif [[ "$UUFSCELL" = "ember.arches" ]] ; then
+      source /uufs/ember.arches/sys/pkg/mvapich2/1.7/etc/mvapich2.sh
+}}}
+ * there is a small unresolved problem with some AMR sub-meshes, but most should render correctly. This is a known issue with !VisIt 2.6.2 and we are working with the !VisIt developers to resolve it.
+
+=== Contact ===
+
+Email questions to cam(at)sci(dot)utah(dot)edu.
