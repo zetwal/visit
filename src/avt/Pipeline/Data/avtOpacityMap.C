@@ -45,6 +45,7 @@
 // For NULL
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include <DebugStream.h>
 #include <ImproperUseException.h>
@@ -229,6 +230,59 @@ avtOpacityMap::SetTable(unsigned char *arr, int te, double attenuation)
         table[i].G = arr[i*4+1];
         table[i].B = arr[i*4+2];
         table[i].A = ((float) arr[i*4+3] / 255.) * attenuation;
+    }
+
+    //
+    // We need to set the intermediate vars again since the table size has
+    // potentially changed.
+    //
+    SetIntermediateVars();
+}
+
+
+// ****************************************************************************
+//  Method: avtOpacityMap::SetTable
+//
+//  Purpose:
+//      Allows the table to be set from some outside array in the predefined
+//      RGBA format. Matches the SLIVR renderer.
+//
+//  Arguments:
+//      arr             The new table in RGBA format.
+//      te              The number of entries in arr.
+//      attenuation     The attenuation parameter specified
+//      over            Reducing based on the number of slices
+//
+//  Programmer: Pascal Grosset
+//  Creation:   December 11, 2012
+//
+// ****************************************************************************
+void
+avtOpacityMap::SetTable(unsigned char *arr, int te, double attenuation, float over)
+{
+    if (attenuation < -1. || attenuation > 1.)
+    {
+        debug1 << "Bad attenuation value " << attenuation << endl;
+        EXCEPTION0(ImproperUseException);
+    }
+
+    if (table != NULL)
+    {
+        delete [] table;
+    }
+
+    tableEntries = te;
+    table = new RGBA[tableEntries];
+    for (int i = 0 ; i < tableEntries ; i++)
+    {
+        double bp = tan(1.570796327 * (0.5 - attenuation*0.49999));
+        double alpha = pow((float) arr[i*4+3] / 255., (float)bp);
+        alpha = 1.0 - pow((1.0 - alpha), 1.0/over);
+
+        table[i].R = arr[i*4];
+        table[i].G = arr[i*4+1];
+        table[i].B = arr[i*4+2];
+        table[i].A = alpha;
     }
 
     //

@@ -428,10 +428,13 @@ int video_card_memory_size_NV()
 
 int video_card_memory_size()
 {
-  int size;
-  size = video_card_memory_size_ATI();
-  if(size) return size;
-  return video_card_memory_size_NV();
+  static int size = -1;
+  if (size == -1){
+    size = video_card_memory_size_ATI();
+    if (!size)
+      size = video_card_memory_size_NV();
+  }
+  return size;
 }
 
 #elif __APPLE__

@@ -231,6 +231,7 @@ bool
 avtVolumePlot::PlotIsImageBased(void)
 {
     return (atts.GetRendererType() == VolumeAttributes::RayCasting ||
+            atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
             atts.GetRendererType() == VolumeAttributes::RayCastingIntegration);
 }
 
@@ -521,6 +522,24 @@ avtVolumePlot::ApplyOperators(avtDataObject_p input)
     return dob;
 }
 
+
+// ****************************************************************************
+//  Method: IsUintah
+//
+//  Purpose:
+//      to check if we are dealing with a uintah volume
+//
+// ****************************************************************************
+
+bool IsUintah(avtDataObject_p input)
+{
+    const avtDataAttributes &datts = input->GetInfo().GetAttributes();
+    std::string db = input->GetInfo().GetAttributes().GetFullDBName();
+    return (//db.find(".uda")     !=std::string::npos && 
+        db.find("index.xml")!=std::string::npos);
+}
+
+
 // ****************************************************************************
 //  Method: avtVolumePlot::ApplyRenderingTransformation
 //
@@ -606,12 +625,13 @@ avtVolumePlot::ApplyRenderingTransformation(avtDataObject_p input)
     avtDataObject_p dob = input;
 
     if (atts.GetRendererType() == VolumeAttributes::RayCasting ||
-        atts.GetRendererType() == VolumeAttributes::RayCastingIntegration)
+        atts.GetRendererType() == VolumeAttributes::RayCastingIntegration ||
+        atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
     {
 #ifdef ENGINE
         // gradient calc for raycasting integration not needed, but
         // lighting flag may still be on
-        if (atts.GetRendererType() == VolumeAttributes::RayCasting &&
+        if ((atts.GetRendererType() == VolumeAttributes::RayCasting || atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)&&
             atts.GetLightingFlag())
         {
             char gradName[128], gradName2[128];
@@ -652,10 +672,12 @@ avtVolumePlot::ApplyRenderingTransformation(avtDataObject_p input)
     {
         // For now, only let splatting skip resampling.
         bool doResample = true;
-        if (atts.GetRendererType() == VolumeAttributes::Splatting)
+        if (atts.GetRendererType() == VolumeAttributes::Splatting || atts.GetRendererType() == VolumeAttributes::SLIVR)
             doResample = atts.GetResampleFlag();
 
-        if (doResample)
+        bool isUintah=IsUintah(input);
+
+        if (doResample || (!doResample && isUintah))
         {
             // Resample the data
             InternalResampleAttributes resampleAtts;
@@ -664,7 +686,12 @@ avtVolumePlot::ApplyRenderingTransformation(avtDataObject_p input)
             resampleAtts.SetUseTargetVal(true);
             resampleAtts.SetPrefersPowersOfTwo(atts.GetRendererType() == VolumeAttributes::Texture3D);
             resampleFilter = new avtResampleFilter(&resampleAtts);
+            if (isUintah)
+                resampleFilter->setUintahResample(!doResample);
+            else
+                resampleFilter->setUintahResample(false);
             resampleFilter->SetInput(input);
+
             dob = resampleFilter->GetOutput();
         }
         else

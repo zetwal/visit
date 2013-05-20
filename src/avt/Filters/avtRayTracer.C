@@ -127,6 +127,7 @@ avtRayTracer::avtRayTracer()
     screen[0] = screen[1] = 400;
     samplesPerRay  = 40;
     kernelBasedSampling = false;
+    trilinearInterpolation = false;
 }
 
 
@@ -427,6 +428,7 @@ avtRayTracer::Execute(void)
     extractor.RegisterRayFunction(rayfoo);
     extractor.SetJittering(true);
     extractor.SetInput(trans.GetOutput());
+    extractor.SetTrilinear(trilinearInterpolation);
 
     //
     // For curvilinear and unstructured meshes, it makes sense to convert the

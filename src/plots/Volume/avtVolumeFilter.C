@@ -70,8 +70,14 @@
 #include <snprintf.h>
 #include <TimingsManager.h>
 
+#include <avtCallback.h>
+#include <avtDatabase.h>
+#include <avtDatabaseMetaData.h>
+
 #include <string>
 #include <vector>
+#include <cmath>
+#include <iostream>
 
 //
 // Function Prototypes
@@ -339,6 +345,40 @@ avtVolumeFilter::Execute(void)
 //
 // ****************************************************************************
 
+bool IsUintahB(avtDataObject_p input)
+{
+  const avtDataAttributes &datts = input->GetInfo().GetAttributes();
+  std::string db = input->GetInfo().GetAttributes().GetFullDBName();
+  return (//db.find(".uda")     !=std::string::npos && 
+          db.find("index.xml")!=std::string::npos);
+}
+
+bool GetLogicalBounds(avtDataObject_p input,int &width,int &height, int &depth)
+{
+    const avtDataAttributes &datts = input->GetInfo().GetAttributes();
+    std::string db = input->GetInfo().GetAttributes().GetFullDBName();
+
+    debug5<<"datts->GetTime(): "<<datts.GetTime()<<endl;
+    debug5<<"datts->GetTimeIndex(): "<<datts.GetTimeIndex()<<endl;
+    debug5<<"datts->GetCycle(): "<<datts.GetCycle()<<endl;
+
+    ref_ptr<avtDatabase> dbp = avtCallback::GetDatabase(db, datts.GetTimeIndex(), NULL);
+    avtDatabaseMetaData *md = dbp->GetMetaData(datts.GetTimeIndex(), 1);
+    std::string mesh = md->MeshForVar(datts.GetVariableName());
+    const avtMeshMetaData *mmd = md->GetMesh(mesh);
+
+    if (mmd->hasLogicalBounds == true)
+    {
+        width=mmd->logicalBounds[0];
+        height=mmd->logicalBounds[1];
+        depth=mmd->logicalBounds[2];
+
+        return true;
+    }
+
+    return false;
+}
+
 avtImage_p
 avtVolumeFilter::RenderImage(avtImage_p opaque_image,
                              const WindowAttributes &window)
@@ -359,7 +399,10 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     unsigned char vtf[4*256];
     atts.GetTransferFunction(vtf);
     avtOpacityMap om(256);
-    om.SetTable(vtf, 256, atts.GetOpacityAttenuation());
+    if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+        om.SetTable(vtf, 256, atts.GetOpacityAttenuation()*2.0 - 1.0, atts.GetRendererSamples());
+    else
+        om.SetTable(vtf, 256, atts.GetOpacityAttenuation());
     double actualRange[2];
     bool artificialMin = atts.GetUseColorVarMin();
     bool artificialMax = atts.GetUseColorVarMax();
@@ -600,6 +643,18 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         // LEAK!!
     }
     avtCompositeRF *compositeRF = new avtCompositeRF(lm, &om, om2);
+    if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR){
+        compositeRF->SetRaycastingSLIVR(true);
+        double *matProp = atts.GetMaterialProperties();
+        double materialPropArray[4];
+        materialPropArray[0] = matProp[0];
+        materialPropArray[1] = matProp[1];
+        materialPropArray[2] = matProp[2];
+        materialPropArray[3] = matProp[3];
+        compositeRF->SetMaterial(materialPropArray);
+    }
+    else
+        compositeRF->SetRaycastingSLIVR(false);
     avtIntegrationRF *integrateRF = new avtIntegrationRF(lm);
 
     compositeRF->SetColorVariableIndex(primIndex);
@@ -614,6 +669,11 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         compositeRF->SetWeightVariableIndex(count);
     }
 
+    if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+        software->SetTrilinear(true);
+    else
+        software->SetTrilinear(false);
+    
     if (atts.GetRendererType() == VolumeAttributes::RayCastingIntegration)
         software->SetRayFunction(integrateRF);
     else
@@ -627,6 +687,27 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     const View3DAttributes &view = window.GetView3D();
     avtViewInfo vi;
     CreateViewInfoFromViewAttributes(vi, view);
+
+    avtDataObject_p inputData = GetInput();
+    if (IsUintahB(inputData))      
+    {
+        double viewDirection[3];
+        int numSlices;
+        int width_,height_,depth_;
+        
+        viewDirection[0] = (view.GetViewNormal()[0] > 0)? view.GetViewNormal()[0]: -view.GetViewNormal()[0];
+        viewDirection[1] = (view.GetViewNormal()[1] > 0)? view.GetViewNormal()[1]: -view.GetViewNormal()[1];
+        viewDirection[2] = (view.GetViewNormal()[2] > 0)? view.GetViewNormal()[2]: -view.GetViewNormal()[2];
+
+        GetLogicalBounds(inputData, width_,height_,depth_);
+        numSlices = (width_*viewDirection[0] + height_*viewDirection[1] + depth_*viewDirection[2]) * atts.GetRendererSamples();
+
+        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+            software->SetSamplesPerRay(numSlices);
+
+        debug5<<"RayCastingSLIVR - slices: "<<numSlices<<endl;
+    }
+
     software->SetView(vi);
     if (atts.GetRendererType() == VolumeAttributes::RayCastingIntegration)
     {
@@ -860,7 +941,7 @@ avtVolumeFilter::ModifyContract(avtContract_p contract)
         delete [] primaryVariable;
     }
 
-    avtDataRequest_p ds = contract->GetDataRequest();
+    avtDataRequest_p ds = new avtDataRequest(contract->GetDataRequest());
     const char *var = ds->GetVariable();
 
     bool setupExpr = false;
@@ -869,7 +950,11 @@ avtVolumeFilter::ModifyContract(avtContract_p contract)
 
     if (atts.GetScaling() == VolumeAttributes::Linear)
     {
-        newcontract = contract;
+#ifdef HAVE_LIBSLIVR
+        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+            ds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
+#endif
+        newcontract = new avtContract(contract, ds);
         primaryVariable = new char[strlen(var)+1];
         strcpy(primaryVariable, var);
     }
@@ -889,6 +974,10 @@ avtVolumeFilter::ModifyContract(avtContract_p contract)
         avtDataRequest_p nds = new avtDataRequest(exprName.c_str(),
                                ds->GetTimestep(), ds->GetRestriction());
         nds->AddSecondaryVariable(var);
+#ifdef HAVE_LIBSLIVR
+        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+            nds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
+#endif
         newcontract = new avtContract(contract, nds);
         primaryVariable = new char[exprName.size()+1];
         strcpy(primaryVariable, exprName.c_str());
@@ -902,6 +991,10 @@ avtVolumeFilter::ModifyContract(avtContract_p contract)
             new avtDataRequest(exprName.c_str(),
                                ds->GetTimestep(), ds->GetRestriction());
         nds->AddSecondaryVariable(var);
+#ifdef HAVE_LIBSLIVR
+        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+            nds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
+#endif
         newcontract = new avtContract(contract, nds);
         primaryVariable = new char[strlen(exprName.c_str())+1];
         strcpy(primaryVariable, exprName.c_str());

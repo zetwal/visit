@@ -35,6 +35,7 @@
 #include <slivr/Utils.h>
 #include <utility>
 #include <iostream>
+#include <cmath>
 
 using namespace std;
 
@@ -158,8 +159,15 @@ TextureBrick::compute_polygons(const Ray& view, double dt,
   corner[5] = Point(pmax.x(), pmin.y(), pmax.z());
   corner[6] = Point(pmax.x(), pmax.y(), pmin.z());
   corner[7] = pmax;
+ 
+  int volDims[3];
+  volDims[0] = nx();  volDims[1] = ny();  volDims[2] = nz();
+  // dt is now initially storing the rate
+  int numSlices = (volDims[0]*fabs(view.direction().x()) + volDims[1]*fabs(view.direction().y()) + volDims[2]*fabs(view.direction().z())) * dt;
+  //std::cout << "dimensions: " << volDims[0] << " ,  " << volDims[1] << " ,  " << volDims[2] << std::endl;
+  //std::cout << "numSlices: " << numSlices << std::endl;
 
-  double tmin = Dot(corner[0] - view.origin(), view.direction());;
+  double tmin = Dot(corner[0] - view.origin(), view.direction());
   double tmax = tmin;
   int maxi = 0;
   for (int i=1; i<8; i++)
@@ -168,6 +176,7 @@ TextureBrick::compute_polygons(const Ray& view, double dt,
     tmin = Min(t, tmin);
     if (t > tmax) { maxi = i; tmax = t; }
   }
+  dt = (tmax - tmin)/numSlices;
 
   // Make all of the slices consistent by offsetting them to a fixed
   // position in space (the origin).  This way they are consistent

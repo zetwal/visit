@@ -182,7 +182,7 @@ PyVolumeAttributes_ToString(const VolumeAttributes *atts, const char *prefix)
     str += tmpStr;
     SNPRINTF(tmpStr, 1000, "%ssamplesPerRay = %d\n", prefix, atts->GetSamplesPerRay());
     str += tmpStr;
-    const char *rendererType_names = "Splatting, Texture3D, RayCasting, RayCastingIntegration, SLIVR, "
+    const char *rendererType_names = "Splatting, Texture3D, RayCasting, RayCastingSLIVR, RayCastingIntegration, SLIVR, "
         "Tuvok";
     switch (atts->GetRendererType())
     {
@@ -196,6 +196,10 @@ PyVolumeAttributes_ToString(const VolumeAttributes *atts, const char *prefix)
           break;
       case VolumeAttributes::RayCasting:
           SNPRINTF(tmpStr, 1000, "%srendererType = %sRayCasting  # %s\n", prefix, prefix, rendererType_names);
+          str += tmpStr;
+          break;
+      case VolumeAttributes::RayCastingSLIVR:
+          SNPRINTF(tmpStr, 1000, "%srendererType = %RayCastingSLIVR  # %s\n", prefix, prefix, rendererType_names);
           str += tmpStr;
           break;
       case VolumeAttributes::RayCastingIntegration:
@@ -971,7 +975,7 @@ VolumeAttributes_SetRendererType(PyObject *self, PyObject *args)
         fprintf(stderr, "An invalid rendererType value was given. "
                         "Valid values are in the range of [0,5]. "
                         "You can also use the following names: "
-                        "Splatting, Texture3D, RayCasting, RayCastingIntegration, SLIVR, "
+                        "Splatting, Texture3D, RayCasting, RayCastingSLIVR, RayCastingIntegration, SLIVR, "
                         "Tuvok.");
         return NULL;
     }
@@ -1573,6 +1577,8 @@ PyVolumeAttributes_getattr(PyObject *self, char *name)
         return PyInt_FromLong(long(VolumeAttributes::Texture3D));
     if(strcmp(name, "RayCasting") == 0)
         return PyInt_FromLong(long(VolumeAttributes::RayCasting));
+    if(strcmp(name, "RayCastingSLIVR") == 0)
+        return PyInt_FromLong(long(VolumeAttributes::RayCastingSLIVR));
     if(strcmp(name, "RayCastingIntegration") == 0)
         return PyInt_FromLong(long(VolumeAttributes::RayCastingIntegration));
     if(strcmp(name, "SLIVR") == 0)

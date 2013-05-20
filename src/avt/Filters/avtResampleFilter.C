@@ -50,6 +50,9 @@
 #include <vtkPointData.h>
 #include <vtkRectilinearGrid.h>
 
+#include <avtCallback.h>
+#include <avtDatabase.h>
+#include <avtDatabaseMetaData.h>
 #include <avtDatasetExaminer.h>
 #include <avtExtents.h>
 #include <avtImagePartition.h>
@@ -105,6 +108,7 @@ avtResampleFilter::avtResampleFilter(const AttributeGroup *a)
     primaryVariable = NULL;
     selID = -1;
     cellCenteredOutput = false;
+    uintahResample = false;
 }
 
 
@@ -742,6 +746,41 @@ avtResampleFilter::ResampleInput(void)
 }
 
 
+
+// ****************************************************************************
+//  Method: GetLogicalBounds
+//
+//  Purpose:
+//      Added for no resampling for uintah
+//
+// ****************************************************************************
+
+bool GetLogicalBounds(avtDataObject_p input,int &width,int &height, int &depth)
+{
+    const avtDataAttributes &datts = input->GetInfo().GetAttributes();
+    std::string db = input->GetInfo().GetAttributes().GetFullDBName();
+
+    debug5<<"datts->GetTime(): "<<datts.GetTime()<<endl;
+    debug5<<"datts->GetTimeIndex(): "<<datts.GetTimeIndex()<<endl;
+    debug5<<"datts->GetCycle(): "<<datts.GetCycle()<<endl;
+
+    ref_ptr<avtDatabase> dbp = avtCallback::GetDatabase(db, datts.GetTimeIndex(), NULL);
+    avtDatabaseMetaData *md = dbp->GetMetaData(datts.GetTimeIndex(), 1);
+    std::string mesh = md->MeshForVar(datts.GetVariableName());
+    const avtMeshMetaData *mmd = md->GetMesh(mesh);
+
+    if (mmd->hasLogicalBounds == true)
+    {
+        width=mmd->logicalBounds[0];
+        height=mmd->logicalBounds[1];
+        depth=mmd->logicalBounds[2];
+
+        return true;
+    }
+
+    return false;
+}
+
 // ****************************************************************************
 //  Method: avtResampleFilter::GetDimensions
 //
@@ -875,6 +914,30 @@ avtResampleFilter::GetDimensions(int &width, int &height, int &depth,
         height = atts.GetHeight();
         depth  = atts.GetDepth();
     }
+
+
+    {
+        // NOTE: we can't read the GetResampleFlag() from VolumeAttributes so for uintah volumes
+        // we always resample to the logical bounds.
+
+        // <ctc> this should go with the code in avtVolumePlot, but due to a bug reading
+        // variables that aren't defined in timestep 0 we leave this bit here. The bug has been
+        // acknowledged and should be fixed in 2.6.0.
+        avtDataObject_p input=GetInput();
+        if (uintahResample)
+        {
+            int width_,height_,depth_;
+            if (GetLogicalBounds(input,width_,height_,depth_))
+            {
+                width = width_;
+                height = height_;
+                depth = depth_;
+
+                debug5 << "Uintah resampling to original dimensions; equivalent of no resampling" << endl;
+            }      
+        }
+    }
+
     if (width <= 0 || height <= 0 || depth < 0)
     {
         EXCEPTION1(VisItException, "The grid to resample on is degenerate."

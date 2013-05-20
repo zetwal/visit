@@ -106,6 +106,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
                                              const double *);
     void             SetVariableInformation(std::vector<std::string> &names,
                                             std::vector<int> varsize);
+    void             SetTrilinear(bool t) {trilinearInterpolation = t;   };
 
   protected:
     bool             gridsAreInWorldSpace;
@@ -134,6 +135,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double          *prop_buffer;
     int             *ind_buffer;
     bool            *valid_sample;
+    bool            trilinearInterpolation;
 
     // We repeatedly divide by the term (X[i+1]-X[i]).  In the interest of
     // performance, cache the term 1./(X[i+1]-X[i]) and use that for faster

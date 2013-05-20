@@ -158,6 +158,8 @@ class AVTFILTERS_API avtSamplePointExtractor
 
     void                      SetUpArbitrator(std::string &name, bool min);
 
+    void                      SetTrilinear(bool t) {trilinearInterpolation = t;  };
+
   protected:
     int                       width, height, depth;
     int                       currentNode, totalNodes;
@@ -168,6 +170,8 @@ class AVTFILTERS_API avtSamplePointExtractor
     bool                      modeIs3D;
     bool                      kernelBasedSampling;
     double                    point_radius;
+
+    bool                      trilinearInterpolation;
 
     bool                      shouldSetUpArbitrator;
     std::string               arbitratorVarName;

@@ -61,6 +61,7 @@ class QRadioButton;
 class QSpinBox;
 class QDoubleSpinBox;
 class QVBoxLayout;
+class QGridLayout;
 class QvisColorSelectionWidget;
 class QvisGaussianOpacityBar;
 class QvisOpacitySlider;
@@ -187,6 +188,7 @@ protected:
     QWidget *Create1DTransferFunctionGroup(int);
     QWidget *Create2DTransferFunctionGroup();
     QWidget *CreateRendererOptionsGroup(int);
+    void CreateMatLightGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth);
     void CreateColorGroup(QWidget *, QVBoxLayout *, int);
     void CreateOpacityGroup(QWidget *, QVBoxLayout *, int);
 private slots:
@@ -233,6 +235,10 @@ private slots:
     void transferDimChanged(int);
     void updateTransferFunc2D();
     void updateTransferFunc2D(WidgetID id);
+    void setMaterialKa(double val);
+    void setMaterialKd(double val);
+    void setMaterialKs(double val);
+    void setMaterialN(double val);
 private:
     int                      plotType;
     VolumeAttributes         *volumeAtts;
@@ -271,6 +277,7 @@ private:
     QPushButton              *zeroButton;
     QPushButton              *rampButton;
     QPushButton              *inverseRampButton;
+    QPushButton              *tentButton;
     QPushButton              *oneButton;
     QPushButton              *smoothButton;
     QvisOpacitySlider        *attenuationSlider;
@@ -311,5 +318,10 @@ private:
     QSpinBox                 *samplesPerRay;
     QLabel                   *rendererSamplesLabel;
     QDoubleSpinBox           *rendererSamples;
+    QGroupBox                *lightMaterialPropGroup;
+    QDoubleSpinBox           *matKa; // ambient
+    QDoubleSpinBox           *matKd; // diffuse
+    QDoubleSpinBox           *matKs; // specular
+    QDoubleSpinBox           *matN;  // specularPower
 };
 #endif

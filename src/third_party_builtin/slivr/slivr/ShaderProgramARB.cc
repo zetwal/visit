@@ -154,6 +154,7 @@ ShaderProgramARB::init_shaders_supported(std::string& error)
       }
       max_texture_size_1_ = Clamp(i, 64, i/2);
 
+
       // Clear the OpenGL errors before checking for proxy textures.
       CHECK_OPENGL_ERROR();
       for (i = 64; i <= GL_MAX_TEXTURE_SIZE; i*=2)
@@ -177,14 +178,7 @@ ShaderProgramARB::init_shaders_supported(std::string& error)
     }
 #endif // !sgi
 
-    // Check for non-power-of-two texture support.
-    // Apple seems to get this wrong, claims support and then crashes.
-#if defined(__APPLE__)
-    non_2_textures_ = false;
-#else
     non_2_textures_ = GLEW_ARB_texture_non_power_of_two;
-#endif
-
     init_ = true;
   }
   return (true);

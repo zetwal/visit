@@ -325,6 +325,7 @@ Xmdv
 lata
 volimage
 unv
+#udaReaderMTMD
 )
 
 IF (Boost_USABLE_PARADIS)

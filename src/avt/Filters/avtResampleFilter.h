@@ -101,11 +101,14 @@ class AVTFILTERS_API avtResampleFilter : public avtDatasetToDatasetFilter
     void                  MakeOutputCellCentered(bool doIt)
                                 { cellCenteredOutput = doIt; };
 
+    void                  setUintahResample(bool resampleflag) {uintahResample = resampleflag;}
+
   protected:
     InternalResampleAttributes atts;
     char                 *primaryVariable;
     int                   selID;
     bool                  cellCenteredOutput;
+    bool                  uintahResample;
 
     virtual void          Execute(void);
     virtual void          UpdateDataObjectInfo(void);

@@ -122,6 +122,7 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
 
     void                  SetKernelBasedSampling(bool v)
                                     { kernelBasedSampling = v; };
+    void                  SetTrilinear(bool t) {trilinearInterpolation = t; };
 
   protected:
     avtViewInfo           view;
@@ -129,6 +130,7 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     int                   screen[2];
     int                   samplesPerRay;
     bool                  kernelBasedSampling;
+    bool                  trilinearInterpolation;
     int                   backgroundMode;
     unsigned char         background[3];
     double                gradBG1[3];

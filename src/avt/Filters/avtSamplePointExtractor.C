@@ -160,6 +160,7 @@ avtSamplePointExtractor::avtSamplePointExtractor(int w, int h, int d)
 
     modeIs3D = true;
     SetKernelBasedSampling(false);
+    SetTrilinear(false);
 
     shouldSetUpArbitrator    = false;
     arbitratorPrefersMinimum = false;
@@ -443,6 +444,8 @@ avtSamplePointExtractor::SetUpExtractors(void)
     wedgeExtractor = new avtWedgeExtractor(width, height, depth, volume, cl);
     pointExtractor = new avtPointExtractor(width, height, depth, volume, cl);
     pyramidExtractor = new avtPyramidExtractor(width, height, depth,volume,cl);
+
+    massVoxelExtractor->SetTrilinear(trilinearInterpolation);
 
     hexExtractor->SendCellsMode(sendCells);
     hex20Extractor->SendCellsMode(sendCells);
@@ -850,14 +853,20 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
 {
     if (modeIs3D && ds->GetDataObjectType() == VTK_RECTILINEAR_GRID)
     {
+        // Get attributes of the data
         avtDataAttributes &atts = GetInput()->GetInfo().GetAttributes();
+
         const double *xform = NULL;
         if (atts.GetRectilinearGridHasTransform())
             xform = atts.GetRectilinearGridTransform();
+
+        // set the coordinate system
         massVoxelExtractor->SetGridsAreInWorldSpace(
            rectilinearGridsAreInWorldSpace, viewInfo, aspect, xform);
+
         avtSamplePoints_p samples = GetTypedOutput();
         int numVars = samples->GetNumberOfRealVariables(); 
+
         std::vector<std::string> varnames;
         std::vector<int>         varsizes;
         for (int i = 0 ; i < numVars ; i++)

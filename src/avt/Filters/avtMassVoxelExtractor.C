@@ -59,6 +59,10 @@
 
 #include <DebugStream.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
 
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor constructor
@@ -99,6 +103,7 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
 {
     gridsAreInWorldSpace = false;
     pretendGridsAreInWorldSpace = false;
+    trilinearInterpolation = false;
     aspect = 1;
     view_to_world_transform = vtkMatrix4x4::New();
     X = NULL;
@@ -111,6 +116,8 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     prop_buffer   = new double[3*depth];
     ind_buffer    = new int[3*depth];
     valid_sample  = new bool[depth];
+
+    srand ( time(NULL) );
 }
 
 
@@ -419,11 +426,12 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     // Some of our sampling routines need a chance to pre-process the data.
     // Register the grid here so we can do that.
     //
-    RegisterGrid(rgrid, varnames, varsize);
+    RegisterGrid(rgrid, varnames, varsize);   // stores the values in a structure so that it can be used
 
     //
     // Set up a list of ranges to look at.
     //
+
     const int max_ranges = 100; // this should be bigger than log(max(W,H))
     int width_min[max_ranges];
     int width_max[max_ranges];
@@ -435,6 +443,9 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     height_min[curRange] = restrictedMinHeight;
     height_max[curRange] = restrictedMaxHeight+1;
     curRange++;
+
+    // width_min[curRange], restrictedMinWidth, .. indicate part of the screen that we will be processing for now
+    // this is narrowed down below for each part of the range
 
     while (curRange > 0)
     {
@@ -456,7 +467,7 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             continue;
         }
 
-        int num_rays = (w_max-w_min)*(h_max-h_min);
+        int num_rays = (w_max-w_min)*(h_max-h_min); // compute an area
         if (num_rays > 5)
         {
             //
@@ -485,10 +496,10 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             for (int i = w_min ; i < w_max ; i++)
                 for (int j = h_min ; j < h_max ; j++)
                 {
-                    double origin[4];
-                    double terminus[4];
-                    GetSegment(i, j, origin, terminus);
-                    SampleAlongSegment(origin, terminus, i, j);
+                    double origin[4];       // starting point where we start sampling
+                    double terminus[4];     // ending point where we stop sampling
+                    GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
+                    SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
                 }
         }
     }
@@ -536,6 +547,9 @@ avtMassVoxelExtractor::RegisterGrid(vtkRectilinearGrid *rgrid,
         delete [] Y;
     if (Z != NULL)
         delete [] Z;
+
+    // dims is the size of each of the small 3D patches e.g. 52x16x16 (or grid)
+    // X, Y & Z store the "real" coordinates each point in the grid (the above grid) e.g. 0.61075, 0.19536, 0.01936 for 0,0,0
     X = new double[dims[0]];
     for (i = 0 ; i < dims[0] ; i++)
         X[i] = rgrid->GetXCoordinates()->GetTuple1(i);
@@ -571,9 +585,9 @@ avtMassVoxelExtractor::RegisterGrid(vtkRectilinearGrid *rgrid,
         if (idx < 0)
             continue;
         cell_index[ncell_arrays] = idx;
-        cell_vartypes[ncell_arrays] = arr->GetDataType();
-        cell_size[ncell_arrays] = arr->GetNumberOfComponents();
-        cell_arrays[ncell_arrays++] = arr->GetVoidPointer(0);
+        cell_vartypes[ncell_arrays] = arr->GetDataType();           // the datatye of the data we are dealing with; i suppose int/float/...
+        cell_size[ncell_arrays] = arr->GetNumberOfComponents();     // number of arrays we are passing to it; generally 1
+        cell_arrays[ncell_arrays++] = arr->GetVoidPointer(0);       // the data usually
     }
 
     npt_arrays = 0;
@@ -630,6 +644,12 @@ avtMassVoxelExtractor::RegisterGrid(vtkRectilinearGrid *rgrid,
 //  Purpose:
 //      Gets a line segment based on a pixel location.
 //
+//  Arguments:
+//      w           x; of the width of the render window 
+//      h           y; of the height of the render window
+//      origin      
+//      terminus
+//
 //  Programmer: Hank Childs
 //  Creation:   November 21, 2004
 //
@@ -667,6 +687,7 @@ avtMassVoxelExtractor::GetSegment(int w, int h, double *origin, double *terminus
     view[1] = (h - height/2.)/(height/2.);
     view[2] = cur_clip_range[0];
     view[3] = 1.;
+
     view_to_world_transform->MultiplyPoint(view, origin);
     if (origin[3] != 0.)
     {
@@ -1094,12 +1115,40 @@ avtMassVoxelExtractor::FindSegmentIntersections(const double *origin,
 //
 // ****************************************************************************
 
+void copyVals(double myvals[8], double vals[8]){
+    for (int i = 0 ; i < 8 ; i++)
+        myvals[i] = vals[i];
+}
+
+float solve(float r){
+    float u = r;
+    for (int i=0; i<5; i++)
+        u = (11.0*r + u*u*(6.0 + u*(8.0 - 9.0 * u))) / (4.0 + 12.0 * u * (1.0 + u * (1.0 - u)));
+
+    return u;
+}
+
+float cubicfilter(float x){
+    float ret;
+    if (x < 1.0/24.0)
+        ret = pow(24*x,0.25) - 2.0;
+    else if (x < 0.5)
+        ret = solve(24.0 * (x - 1.0/24)/11.0 ) - 1.0;
+    else if (x < 23.0/24.0)
+        ret = 1.0 - solve(24.0 * (23.0/24.0 - x) / 11.0);
+    else
+        ret = 2.0 - pow(24.0 * (1.0-x),0.25);
+
+    ret = ret/2.0;
+}
+
 void
 avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 {
     bool inrun = false;
     int  count = 0;
     avtRay *ray = volume->GetRay(w, h);
+    int myInd[3];
     bool calc_cell_index = ((ncell_arrays > 0) || (ghosts != NULL));
     for (int i = first ; i < last ; i++)
     {
@@ -1110,7 +1159,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         if (calc_cell_index)
             index = ind[2]*((dims[0]-1)*(dims[1]-1)) + ind[1]*(dims[0]-1) +
                     ind[0];
-  
+
         if (ghosts != NULL)
         {
             if (ghosts[index] != 0)
@@ -1123,18 +1172,121 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
             inrun = false;
             count = 0;
         }
+
+        float x_right = prop[0];            
+        float y_top = prop[1];              
+        float z_back = prop[2];             
+
+        float x_left = 1. - x_right;
+        float y_bottom = 1. - y_top;
+        float z_front = 1. - z_back;
+
+        int newInd[3];
+        newInd[0] = ind[0];
+        newInd[1] = ind[1];
+        newInd[2] = ind[2];
+
+        int index_left, index_right,                index_top, index_bottom,            index_front, index_back;
+        float dist_from_left, dist_from_right,      dist_from_top,dist_from_bottom,     dist_from_front, dist_from_back;
+
+        if (x_right < 0.5){
+            index_left = newInd[0]-1;
+            index_right = newInd[0];
+            dist_from_left = x_right + 0.5;
+            dist_from_right = 1.0 - dist_from_left;
+        }else{
+            index_left = newInd[0];
+            index_right = newInd[0]+1;
+            dist_from_left = x_right - 0.5;
+            dist_from_right = 1.0 - dist_from_left;
+        }
+
+        if (y_top < 0.5){
+            index_bottom = newInd[1]-1;
+            index_top = newInd[1];
+            dist_from_bottom = y_top + 0.5;
+            dist_from_top = 1.0 - dist_from_bottom;
+        }else{
+            index_bottom = newInd[1];
+            index_top = newInd[1]+1;
+            dist_from_bottom = y_top - 0.5;
+            dist_from_top = 1.0 - dist_from_bottom;
+        }
+
+        if (z_back < 0.5){
+            index_back = newInd[2]-1;
+            index_front = newInd[2];
+
+            dist_from_back = z_back + 0.5;
+            dist_from_front = 1.0 - dist_from_back;
+        }else{
+            index_back = newInd[2];
+            index_front = newInd[2]+1;
+
+            dist_from_back = z_back - 0.5;
+            dist_from_front = 1.0 - dist_from_back;
+        }
+
+        if (trilinearInterpolation){
+            // Checking for ghost cells
+            if (((newInd[0] <= 0)||(newInd[1] <= 0))||(newInd[2] <= 0))
+                valid_sample[i] = false;
+
+            if (((newInd[0] >= dims[0]-2)||(newInd[1] >= dims[1]-2))||(newInd[2] >= dims[2]-2))
+                valid_sample[i] = false;
+        }
         if (!valid_sample[i])
             continue;
 
+        float diff_sep = 0.005;
         int  l;
+        if (trilinearInterpolation){
+            if (ncell_arrays > 0){
+                int indexT[8];
+                int offset = 1;
+                indexT[0] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_left);
+                indexT[1] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_right);
 
-        for (l = 0 ; l < ncell_arrays ; l++)
-        {
-            for (int m = 0 ; m < cell_size[l] ; m++)
-                tmpSampleList[count][cell_index[l]+m] = 
-                                 ConvertToDouble(cell_vartypes[l], index,
-                                              cell_size[l], m, cell_arrays[l]);
+                indexT[2] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_left);
+                indexT[3] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_right);
+
+                indexT[4] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_left);
+                indexT[5] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_right);
+
+                indexT[6] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_left);
+                indexT[7] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_right);
+
+                for (l = 0 ; l < ncell_arrays ; l++)
+                {
+                    void  *cell_array = cell_arrays[l];
+                    double vals[8];
+                    for (int m = 0 ; m < cell_size[l] ; m++){
+                        // initialize
+                        AssignEight(cell_vartypes[l], vals, indexT, cell_size[l], m, cell_array);
+                        double val =    dist_from_right     * dist_from_top         * dist_from_front*vals[0] + 
+                                        dist_from_left      * dist_from_top         * dist_from_front*vals[1] +
+                                        dist_from_right     * dist_from_bottom      * dist_from_front*vals[2] +
+                                        dist_from_left      * dist_from_bottom      * dist_from_front*vals[3] +
+
+                                        dist_from_right     * dist_from_top         * dist_from_back *vals[4] +
+                                        dist_from_left      * dist_from_top         * dist_from_back *vals[5] +
+                                        dist_from_right     * dist_from_bottom      * dist_from_back *vals[6] +
+                                        dist_from_left      * dist_from_bottom      * dist_from_back *vals[7];
+
+                        tmpSampleList[count][cell_index[l]+m] = val;  
+                    }
+                }
+            }
+        }else{
+            for (l = 0 ; l < ncell_arrays ; l++)
+            {
+                for (int m = 0 ; m < cell_size[l] ; m++)
+                    tmpSampleList[count][cell_index[l]+m] = 
+                                     ConvertToDouble(cell_vartypes[l], index,
+                                                  cell_size[l], m, cell_arrays[l]);
+            }
         }
+
         if (npt_arrays > 0)
         {
             int index[8];

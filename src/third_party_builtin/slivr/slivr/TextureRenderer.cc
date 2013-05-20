@@ -441,6 +441,7 @@ TextureRenderer::load_brick(vector<TextureBrick*> &bricks, int bindex,
       // download texture data
       glPixelStorei(GL_UNPACK_ROW_LENGTH, brick->sx());
       glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, brick->sy());
+      glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);    // needed on osx mtn lion
       glPixelStorei(GL_UNPACK_ALIGNMENT, (nb == 1)?1:4);
 #if defined( GL_TEXTURE_COLOR_TABLE_SGI ) && defined(__sgi)
       if (reuse)
@@ -508,6 +509,7 @@ TextureRenderer::load_brick(vector<TextureBrick*> &bricks, int bindex,
       }
 #  endif
 #endif // !__sgi
+      glPixelStorei(GL_UNPACK_LSB_FIRST, GL_FALSE);
       glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
       glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, 0);
       glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -669,12 +671,13 @@ TextureRenderer::build_colormap1(vector<float> cmap_array,
       double bp = tan(1.570796327 * (0.5 - slice_alpha_*0.49999));
       for(int j=0; j < 1024; j+=4) {
         // interpolate from colormap
-	double t = (j/4)*dv;
-	float r,g,b,alpha;
-	cmap1_->get_color(t, r, g, b, alpha);
+	      double t = (j/4)*dv;
+	      float r,g,b,alpha;
+	      cmap1_->get_color(t, r, g, b, alpha);
         // scale slice opacity
         alpha = pow(alpha, (float)bp);
         // opacity correction
+        //alpha = 1.0 - pow((1.0 - alpha), 1.0/sampling_rate);
         alpha = 1.0 - pow((1.0 - alpha), imode_ ?
                           1.0/irate_/pow(2.0, level_exponent) :
                           1.0/sampling_rate_/pow(2.0, level_exponent) );

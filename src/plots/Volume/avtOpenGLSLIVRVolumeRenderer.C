@@ -411,6 +411,9 @@ avtOpenGLSLIVRVolumeRenderer::Render(
     // create a range from -1 to 1 instead of from 0 - 1
     context->renderer->set_slice_alpha(props.atts.GetOpacityAttenuation()*2.0 - 1.0);
 
+    const double *matProp = props.atts.GetMaterialProperties();
+    context->renderer->set_material(matProp[0], matProp[1], matProp[2], matProp[3]);
+
     // Render the context.
     debug5 << mName << "Rendering..." << endl;
     if(props.reducedDetail)
@@ -492,7 +495,7 @@ avtOpenGLSLIVRVolumeRenderer::SlivrContext::~SlivrContext()
     if(renderer != 0)
         delete renderer;
     for(int i=0;i<planes.size();i++)
-      delete planes[i];
+        delete planes[i];
 }
 
 // ****************************************************************************

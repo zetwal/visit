@@ -178,6 +178,32 @@ static const char * inverse_ramp_xpm[] = {
 "++++++++++++++++++++++++++++++++++++....",
 "++++++++++++++++++++++++++++++++++++++.."};
 
+
+static const char * tents_xpm[] = {
+"40 20 2 1",
+"+    c #000000",
+".    c #FFFFFF",
+"........................................",
+"........................................",
+".......++..............++..............+",
+".......++..............++..............+",
+"......++++............++++............++",
+"......++++............++++............++",
+".....++++++..........++++++..........+++",
+".....++++++..........++++++..........+++",
+"....++++++++........++++++++........++++",
+"....++++++++........++++++++........++++",
+"...++++++++++......++++++++++......+++++",
+"...++++++++++......++++++++++......+++++",
+"..++++++++++++....++++++++++++....++++++",
+"..++++++++++++....++++++++++++....++++++",
+".++++++++++++++..++++++++++++++..+++++++",
+".++++++++++++++..++++++++++++++..+++++++",
+".++++++++++++++..++++++++++++++..+++++++",
+"++++++++++++++++++++++++++++++++++++++++",
+"++++++++++++++++++++++++++++++++++++++++",
+"++++++++++++++++++++++++++++++++++++++++"};
+
 static const char * white_xpm[] = {
 "40 20 1 1",
 "+    c #FFFFFF",
@@ -322,6 +348,92 @@ QvisVolumePlotWindow::CreateWindowContents()
     connect(colorSelect, SIGNAL(selectedColor(const QColor &)),
             this, SLOT(selectedColor(const QColor &)));
 }
+
+// ****************************************************************************
+// Method: QvisVolumePlot::CreateMatLightGroup
+//
+// Purpose: 
+//   Creates the different Light Shading options for SLIVR
+//
+// Programmer: Pascal Grosset
+// Creation:   Tue Apr 10
+//
+// Modifications:
+//   
+// ****************************************************************************
+
+void
+QvisVolumePlotWindow::CreateMatLightGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth)
+{
+    // Add the group box that will contain the options.
+    lightMaterialPropGroup = new QGroupBox(parent);
+    lightMaterialPropGroup->setTitle(tr("Material Properties"));
+    pLayout->addWidget(lightMaterialPropGroup);
+
+    QGridLayout *lightMaterialPropLayout = new QGridLayout(lightMaterialPropGroup);
+    lightMaterialPropLayout->setHorizontalSpacing (12);
+    lightMaterialPropLayout->setVerticalSpacing(1);
+    QLabel* spacer = new QLabel(tr(" "), central);
+    
+    // Material properties
+    matKa = new QDoubleSpinBox(central);
+    matKa->setMinimum(0.0);
+    matKa->setMaximum(1.0);
+    matKa->setDecimals(2);
+    matKa->setSingleStep(0.05);
+    matKa->setValue(0.4);
+    
+    matKd = new QDoubleSpinBox(central);
+    matKd->setMinimum(0.0);
+    matKd->setMaximum(1.0);
+    matKd->setDecimals(2);
+    matKd->setSingleStep(0.05);
+    matKd->setValue(0.75);
+    
+    matKs = new QDoubleSpinBox(central);
+    matKs->setMinimum(0.0);
+    matKs->setMaximum(1.0);
+    matKs->setDecimals(2);
+    matKs->setSingleStep(0.05);
+    matKs->setValue(0.0);
+    
+    matN = new QDoubleSpinBox(central);
+    matN->setMinimum(0.0);
+    matN->setMaximum(100.0);
+    matN->setDecimals(1);
+    matN->setSingleStep(1);
+    matN->setValue(15);
+    
+   
+    QLabel* Ka = new QLabel(tr("Ambient:"), central);
+    QLabel* Kd = new QLabel(tr("Diffuse:"), central);
+    QLabel* Ks = new QLabel(tr("Specular:"), central);
+    QLabel* specPow = new QLabel(tr("Shininess:"), central);
+    Ka->setBuddy(matKa);
+    Kd->setBuddy(matKd);
+    Ks->setBuddy(matKs);
+    specPow->setBuddy(matN);
+
+    
+    lightMaterialPropLayout->addWidget(Ka, 0,0, 1,1, Qt::AlignRight);
+    lightMaterialPropLayout->addWidget(matKa, 0,1, 1,1, Qt::AlignLeft);
+
+    lightMaterialPropLayout->addWidget(Kd, 0,3, 1,1, Qt::AlignRight);
+    lightMaterialPropLayout->addWidget(matKd, 0,4, 1,1, Qt::AlignLeft);
+
+    lightMaterialPropLayout->addWidget(Ks, 0,6, 1,1, Qt::AlignRight);
+    lightMaterialPropLayout->addWidget(matKs, 0,7, 1,1, Qt::AlignLeft);
+
+    lightMaterialPropLayout->addWidget(specPow,  0,10, 1,1, Qt::AlignRight);
+    lightMaterialPropLayout->addWidget(matN,  0,11, 1,1, Qt::AlignLeft);
+    
+
+    connect(matKa, SIGNAL(valueChanged(double)), this, SLOT(setMaterialKa(double))); 
+    connect(matKd, SIGNAL(valueChanged(double)), this, SLOT(setMaterialKd(double))); 
+    connect(matKs, SIGNAL(valueChanged(double)), this, SLOT(setMaterialKs(double))); 
+    connect(matN , SIGNAL(valueChanged(double)), this, SLOT(setMaterialN(double) ));
+}
+
 
 // ****************************************************************************
 // Method: QvisVolumePlot::Create1DTransferFunctionGroup
@@ -632,6 +744,7 @@ QvisVolumePlotWindow::CreateOpacityGroup(QWidget *parent, QVBoxLayout *pLayout,
     QPixmap blackIcon(black_xpm);
     QPixmap rampIcon(ramp_xpm);
     QPixmap inverseRampIcon(inverse_ramp_xpm);
+    QPixmap tentIcon(tents_xpm); 
     QPixmap whiteIcon(white_xpm);
 
     QHBoxLayout *abLayout = new QHBoxLayout(0);
@@ -653,6 +766,11 @@ QvisVolumePlotWindow::CreateOpacityGroup(QWidget *parent, QVBoxLayout *pLayout,
     inverseRampButton->setIcon(QIcon(inverseRampIcon));
     connect(inverseRampButton, SIGNAL(clicked()), scribbleAlphaWidget, SLOT(makeInverseLinearRamp()));
     abLayout->addWidget(inverseRampButton);
+
+    tentButton = new QPushButton(opacityWidgetGroup);
+    tentButton->setIcon(QIcon(tentIcon));
+    connect(tentButton, SIGNAL(clicked()), scribbleAlphaWidget, SLOT(makeTent()));
+    abLayout->addWidget(tentButton);
 
     oneButton = new QPushButton(opacityWidgetGroup);
     oneButton->setIcon(QIcon(whiteIcon));
@@ -828,6 +946,7 @@ QvisVolumePlotWindow::CreateRendererOptionsGroup(int maxWidth)
 #endif
 #ifdef HAVE_LIBSLIVR
     rendererTypesComboBox->addItem(tr("SLIVR"));
+    rendererTypesComboBox->addItem(tr("Ray casting: SLIVR"));
 #endif
     connect(rendererTypesComboBox, SIGNAL(activated(int)),
             this, SLOT(rendererTypeChanged(int)));
@@ -1057,6 +1176,8 @@ QvisVolumePlotWindow::CreateRendererOptionsGroup(int maxWidth)
             this, SLOT(lightingToggled(bool)));
     miscLayout->addWidget(lightingToggle, 0, 1);
 
+    CreateMatLightGroup(parent, rendererOptionsLayout, maxWidth);
+
     return parent;
 }
 
@@ -1239,6 +1360,8 @@ void
 QvisVolumePlotWindow::UpdateWindow(bool doAll)
 {
     QString temp;
+    double *mat;
+
     // If the plot info atts changed then update the histogram.
     if(doAll || SelectedSubject() == GetViewerState()->GetPlotInformation(plotType))
     {
@@ -1276,14 +1399,15 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
             resampleTargetLabel->setEnabled(volumeAtts->GetResampleFlag());
             compactVarLabel->setEnabled(!volumeAtts->GetResampleFlag());
             compactVariable->setEnabled(!volumeAtts->GetResampleFlag());
-            num3DSlices->setEnabled(volumeAtts->GetResampleFlag());
-            num3DSlicesLabel->setEnabled(volumeAtts->GetResampleFlag());
-            samplesPerRay->setEnabled(volumeAtts->GetResampleFlag());
-            samplesPerRayLabel->setEnabled(volumeAtts->GetResampleFlag());
-#ifdef HAVE_LIBSLIVR
-            rendererSamples->setEnabled(volumeAtts->GetResampleFlag());
-            rendererSamplesLabel->setEnabled(volumeAtts->GetResampleFlag());
-#endif
+            // Not related to the number of samples
+            //num3DSlices->setEnabled(volumeAtts->GetResampleFlag());
+            //num3DSlicesLabel->setEnabled(volumeAtts->GetResampleFlag());
+            //samplesPerRay->setEnabled(volumeAtts->GetResampleFlag());
+            //samplesPerRayLabel->setEnabled(volumeAtts->GetResampleFlag());
+//#ifdef HAVE_LIBSLIVR
+            //rendererSamples->setEnabled(true);
+            //rendererSamplesLabel->setEnabled(true);
+//#endif
         break;
     case VolumeAttributes::ID_lightingFlag:
             lightingToggle->blockSignals(true);
@@ -1299,12 +1423,14 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off &&
                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
+                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
             lowGradientClamp->setEnabled(
                 volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off &&
                 volumeAtts->GetLowGradientLightingClampFlag() &&
                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
+                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
             break;
         case VolumeAttributes::ID_lowGradientLightingClampFlag:
@@ -1317,6 +1443,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 volumeAtts->GetLowGradientLightingClampFlag() &&
                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
+                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
             break;
         case VolumeAttributes::ID_lowGradientLightingClampValue:
@@ -1442,8 +1569,6 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 num3DSlices->setEnabled(false);
                 samplesPerRayLabel->setEnabled(false);
                 samplesPerRay->setEnabled(false);
-                resampleTargetLabel->setEnabled(true);
-                resampleTarget->setEnabled(true);
                 resampleToggle->setEnabled(true);
                 compactVariable->setEnabled(!volumeAtts->GetResampleFlag());
                 compactVarLabel->setEnabled(!volumeAtts->GetResampleFlag());
@@ -1464,6 +1589,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
 #ifdef HAVE_LIBSLIVR
                 rendererSamplesLabel->setEnabled(false);
                 rendererSamples->setEnabled(false);
+                lightMaterialPropGroup->setEnabled(false);
 #endif
             }
             else if (volumeAtts->GetRendererType() == VolumeAttributes::Texture3D)
@@ -1499,6 +1625,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
 #ifdef HAVE_LIBSLIVR
                 rendererSamplesLabel->setEnabled(false);
                 rendererSamples->setEnabled(false);
+                lightMaterialPropGroup->setEnabled(false);
 #endif
             }
             else if (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting)
@@ -1534,6 +1661,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
 #ifdef HAVE_LIBSLIVR
                 rendererSamplesLabel->setEnabled(false);
                 rendererSamples->setEnabled(false);
+                lightMaterialPropGroup->setEnabled(false);
 #endif
             }
             else if (volumeAtts->GetRendererType() == VolumeAttributes::RayCastingIntegration)
@@ -1564,6 +1692,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
 #ifdef HAVE_LIBSLIVR
                 rendererSamplesLabel->setEnabled(false);
                 rendererSamples->setEnabled(false);
+                lightMaterialPropGroup->setEnabled(false);
 #endif
             }
             else if (volumeAtts->GetRendererType() == VolumeAttributes::Tuvok)
@@ -1594,6 +1723,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
 #ifdef HAVE_LIBSLIVR
                 rendererSamplesLabel->setEnabled(false);
                 rendererSamples->setEnabled(false);
+                lightMaterialPropGroup->setEnabled(false);
 #endif
             }
             else if (volumeAtts->GetRendererType() == VolumeAttributes::SLIVR)
@@ -1612,15 +1742,16 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 num3DSlices->setEnabled(false);
                 rendererSamplesLabel->setEnabled(true);
                 rendererSamples->setEnabled(true);
+                lightMaterialPropGroup->setEnabled(true);
 #else
                 // Revert to 3D texturing
                 rendererTypesComboBox->setCurrentIndex(1);
                 num3DSlicesLabel->setEnabled(true);
                 num3DSlices->setEnabled(true);
 #endif
-                resampleTargetLabel->setEnabled(true);
-                resampleTarget->setEnabled(true);
-                resampleToggle->setEnabled(false);
+                resampleToggle->setEnabled(true);
+                resampleTargetLabel->setEnabled(volumeAtts->GetResampleFlag());
+                resampleTarget->setEnabled(volumeAtts->GetResampleFlag());
                 compactVariable->setEnabled(false);
                 compactVarLabel->setEnabled(false);
                 samplesPerRayLabel->setEnabled(false);
@@ -1632,6 +1763,47 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 lowGradientClampToggle->setEnabled(false);
                 lowGradientClamp->setEnabled(false);
             }
+            else if (volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+            {
+                lightingToggle->setEnabled(true);
+                centeredDiffButton->setEnabled(true);
+                sobelButton->setEnabled(true);
+#ifdef HAVE_LIBSLIVR
+    #ifdef USE_TUVOK
+                rendererTypesComboBox->setCurrentIndex(6);
+    #else
+                // There's no Tuvok so we use slot 5.
+                rendererTypesComboBox->setCurrentIndex(5);
+    #endif
+                num3DSlicesLabel->setEnabled(false);
+                num3DSlices->setEnabled(false);
+                rendererSamplesLabel->setEnabled(true);
+                rendererSamples->setEnabled(true);
+                lightMaterialPropGroup->setEnabled(true);
+#else
+                // Revert to 3D texturing
+                rendererTypesComboBox->setCurrentIndex(1);
+                num3DSlicesLabel->setEnabled(true);
+                num3DSlices->setEnabled(true);
+#endif
+                resampleTargetLabel->setEnabled(false);
+                resampleTarget->setEnabled(false);
+                resampleToggle->setEnabled(false);
+                resampleToggle->setChecked(false);
+                compactVariable->setEnabled(false);
+                compactVarLabel->setEnabled(false);
+                samplesPerRayLabel->setEnabled(true);   // temporary - that should go to false later on
+                samplesPerRay->setEnabled(true);
+                rasterizationButton->setEnabled(false);
+                kernelButton->setEnabled(false);
+                lowGradientLightingReductionLabel->setEnabled(true);
+                lowGradientLightingReductionCombo->setEnabled(true);
+                lowGradientClampToggle->setEnabled(
+                        volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off);
+                lowGradientClamp->setEnabled(
+                        volumeAtts->GetLowGradientLightingReduction() !=
+                            VolumeAttributes::Off && volumeAtts->GetLowGradientLightingClampFlag());
+                }
 #ifdef HAVE_LIBSLIVR
             // Just for now, disable the opacity variable if we are using the
             // SLIVR renderer -- until I figure out how to do color and opacity
@@ -1702,6 +1874,26 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
             tfParent2D->setEnabled(volumeAtts->GetTransferFunctionDim()==2);
 #endif
             break;
+
+#ifdef HAVE_LIBSLIVR
+        case VolumeAttributes::ID_materialProperties:
+            matKa->blockSignals(true);
+            matKd->blockSignals(true);
+            matKs->blockSignals(true);
+            matN->blockSignals(true);
+
+            mat = volumeAtts->GetMaterialProperties();
+            matKa->setValue(mat[0]);
+            matKd->setValue(mat[1]);
+            matKs->setValue(mat[2]);
+            matN->setValue(mat[3]);
+
+            matKa->blockSignals(false);
+            matKd->blockSignals(false);
+            matKs->blockSignals(false);
+            matN->blockSignals(false);
+            break;
+#endif
         }
     }
 
@@ -2944,12 +3136,14 @@ QvisVolumePlotWindow::lowGradientLightingReductionChanged(int val)
                 volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off &&
                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
+                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
     lowGradientClamp->setEnabled(
                 volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off &&
                 volumeAtts->GetLowGradientLightingClampFlag() &&
                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
+                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
     SetUpdate(false);
     Apply();
@@ -2982,6 +3176,7 @@ QvisVolumePlotWindow::lowGradientClampToggled(bool val)
                 volumeAtts->GetLowGradientLightingClampFlag() &&
                 (volumeAtts->GetRendererType() == VolumeAttributes::RayCasting ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Texture3D ||
+                 volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
                  volumeAtts->GetRendererType() == VolumeAttributes::Splatting));
     SetUpdate(false);
     Apply();
@@ -3504,24 +3699,40 @@ QvisVolumePlotWindow::rendererTypeChanged(int val)
         // though, SLIVR will be at slot 4.
 #ifdef USE_TUVOK
         volumeAtts->SetRendererType(VolumeAttributes::Tuvok);
+        volumeAtts->SetResampleFlag(true);
 #elif HAVE_LIBSLIVR
         volumeAtts->SetRendererType(VolumeAttributes::SLIVR);
 #else
         Warning("Renderer is not available. VisIt will revert to 3D texturing.");
         volumeAtts->SetRendererType(VolumeAttributes::Texture3D);
-#endif
         volumeAtts->SetResampleFlag(true);
+#endif
+        
         break;
       case 5:
         // If we've got both Tuvok AND SLIVR, SLIVR will end up in slot 5.
 #ifdef HAVE_LIBSLIVR
+#ifdef USE_TUVOK
         volumeAtts->SetRendererType(VolumeAttributes::SLIVR);
+#else
+        volumeAtts->SetRendererType(VolumeAttributes::RayCastingSLIVR);
+#endif
 #else
         Warning("SLIVR is not available. VisIt will revert to 3D texturing.");
         volumeAtts->SetRendererType(VolumeAttributes::Texture3D);
+        volumeAtts->SetResampleFlag(true);
 #endif
+        break;
+       case 6:
+        // If we've got both Tuvok AND SLIVR, Ray Casting:SLIVR will end up in slot 6.
+#ifdef HAVE_LIBSLIVR
+          volumeAtts->SetRendererType(VolumeAttributes::RayCastingSLIVR);
+#else
+        Warning("SLIVR is not available. VisIt will revert to 3D texturing.");
+        volumeAtts->SetRendererType(VolumeAttributes::Texture3D);
         volumeAtts->SetResampleFlag(true);
         break;
+#endif
       default:
         EXCEPTION1(ImproperUseException,
                    "The Volume plot received a signal for a renderer "
@@ -3783,4 +3994,72 @@ QvisVolumePlotWindow::updateTransferFunc2D(WidgetID id)
 #ifdef HAVE_LIBSLIVR
     updateTransferFunc2D();
 #endif /* HAVE_LIBSLIVR */
+}
+
+
+// ****************************************************************************
+// Method:  QvisVolumePlotWindow::setLight...
+//
+// Purpose:
+//   
+//
+//  Arguments:
+//    val        
+//
+// Programmer:  Pascal Grosset
+// Creation:    Tue Apr 10 2012
+//
+// Modifications:
+//
+// ****************************************************************************
+
+void
+QvisVolumePlotWindow::setMaterialKa(double val){
+    double *mat = new double[4];
+
+    mat = volumeAtts->GetMaterialProperties();
+    mat[0]=val;
+    volumeAtts->SetMaterialProperties(mat);
+    SetUpdate(false);
+
+    Apply();
+}
+
+
+void
+QvisVolumePlotWindow::setMaterialKd(double val){
+    double *mat = new double[4];
+
+    mat = volumeAtts->GetMaterialProperties();
+    mat[1]=val;
+    volumeAtts->SetMaterialProperties(mat);
+    SetUpdate(false);
+
+    Apply();
+}
+
+
+void
+QvisVolumePlotWindow::setMaterialKs(double val){
+    double *mat = new double[4];
+    
+    mat = volumeAtts->GetMaterialProperties();
+    mat[2]=val;
+    volumeAtts->SetMaterialProperties(mat);
+    SetUpdate(false);
+
+    Apply();
+}
+
+
+void
+QvisVolumePlotWindow::setMaterialN(double val){
+    double *mat = new double[4];
+
+    mat = volumeAtts->GetMaterialProperties();
+    mat[3]=val;
+    volumeAtts->SetMaterialProperties(mat);
+    SetUpdate(false);
+
+    Apply();
 }

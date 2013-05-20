@@ -216,8 +216,11 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
   const Vector cell_diag(diag.x() / (tex_->nx() * pow(2.0, levels-1)),
                          diag.y() / (tex_->ny() * pow(2.0, levels-1)),
                          diag.z() / (tex_->nz() * pow(2.0, levels-1)));
-  const double dt = cell_diag.length()/rate;
-  const int num_slices = (int)(diag.length()/dt);
+  //const double dt = cell_diag.length()/rate;
+  //const int num_slices = (int)(diag.length()/dt);
+
+  const int num_slices = sqrt(tex_->nx()*tex_->nx() + tex_->ny()*tex_->ny() + tex_->nz()*tex_->nz()) + 1;
+  const double dt = 1.0/num_slices;
 
   vector<float> vertex;
   vector<float> texcoord;
@@ -525,7 +528,7 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
       texcoord.clear();
       mask.clear();
       size.clear();
-      b->compute_polygons(view_ray, dt, vertex, texcoord, size);
+      b->compute_polygons(view_ray, (double)rate, vertex, texcoord, size);
       b->mask_polygons(size, vertex, texcoord, mask, planes_);
       if (vertex.size() == 0) { continue; }
       load_brick(bs, i, use_cmap2);

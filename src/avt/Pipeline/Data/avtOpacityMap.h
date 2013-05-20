@@ -44,6 +44,7 @@
 #define AVT_OPACITY_MAP_H
 
 #include <pipeline_exports.h>
+#include <iostream>
 
 struct RGBA
 {
@@ -89,6 +90,7 @@ class PIPELINE_API avtOpacityMap
 
     const RGBA                  *GetTable(void) { return table; };
     void                         SetTable(unsigned char *, int, double = 1.);
+    void                         SetTable(unsigned char *arr, int te, double attenuation, float over);
     void                         SetTable(RGBA *, int, double = 1.);
     const RGBA                  &GetOpacity(double);
 
@@ -102,6 +104,8 @@ class PIPELINE_API avtOpacityMap
     inline int                   Quantize(const double &);
     int                          GetNumberOfTableEntries(void)
                                                       { return tableEntries; };
+
+    float                        QuantizeValF(const double &val);
 
   protected:
     RGBA                        *table;
@@ -151,7 +155,6 @@ inline int
 avtOpacityMap::Quantize(const double &val)
 {
     int index = (int) ((val-min)*multiplier); 
-
     // This should be handled by the logic below ... but if we have
     // a large range for the variable, but the user set's a narrow range
     // of min/max, then we can have overflows that lead to bad pictures.
@@ -171,6 +174,25 @@ avtOpacityMap::Quantize(const double &val)
     return (index < 0 ? 0 : tableEntries-1);
 }
 
+inline float 
+avtOpacityMap::QuantizeValF(const double &val){
+    float testVal = ((val-min)*multiplier); 
+
+    if (val < min)
+        return 0;
+    if (val > max)
+        return (float)(tableEntries-1);
+
+    //
+    // The normal case -- what we calculated was in the range.
+    //
+    if (testVal >= 0 && testVal < tableEntries)
+    {
+        return testVal;
+    }
+
+    return (testVal < 0 ? 0 : tableEntries-1); 
+}
 
 #endif
 

@@ -311,7 +311,7 @@ QvisCMap2Display::paintGL()
     ren->draw();
 
     glFlush();
-    swapBuffers();
+    //swapBuffers();
 }
 
 // ****************************************************************************
