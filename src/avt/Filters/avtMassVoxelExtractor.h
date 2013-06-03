@@ -107,7 +107,8 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetVariableInformation(std::vector<std::string> &names,
                                             std::vector<int> varsize);
     void             SetTrilinear(bool t) {trilinearInterpolation = t;   };
-
+    void             SetLighting(bool l) {lighting = l; };
+ 
   protected:
     bool             gridsAreInWorldSpace;
     bool             pretendGridsAreInWorldSpace;
@@ -115,6 +116,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           aspect;
     double           cur_clip_range[2];
     vtkMatrix4x4    *view_to_world_transform;
+    vtkMatrix4x4    *world_to_view_transform;
 
     double           *X;
     double           *Y;
@@ -137,12 +139,18 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     bool            *valid_sample;
     bool            trilinearInterpolation;
 
+
     // We repeatedly divide by the term (X[i+1]-X[i]).  In the interest of
     // performance, cache the term 1./(X[i+1]-X[i]) and use that for faster
     // multiplication.  This sped up total performance by about 5%.
     double           *divisors_X;
     double           *divisors_Y;
     double           *divisors_Z;
+
+    bool             lighting;
+    float            *imgArray;
+    int              imgWidth, imgHeight;
+    int              fullImgWidth, fullImgHeight;
 
     void             ExtractImageSpaceGrid(vtkRectilinearGrid *,
                              std::vector<std::string> &varnames,
@@ -162,6 +170,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     bool             GridOnPlusSideOfPlane(const double *, const double *) const;
     bool             FindSegmentIntersections(const double *, const double *, 
                                               int &, int &);
+
 };
 
 

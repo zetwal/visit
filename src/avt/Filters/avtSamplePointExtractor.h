@@ -159,6 +159,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     void                      SetUpArbitrator(std::string &name, bool min);
 
     void                      SetTrilinear(bool t) {trilinearInterpolation = t;  };
+    void                      SetLighting(bool l) {lighting = l; };
 
   protected:
     int                       width, height, depth;
@@ -193,6 +194,8 @@ class AVTFILTERS_API avtSamplePointExtractor
     bool                      rectilinearGridsAreInWorldSpace;
     avtViewInfo               viewInfo;
     double                    aspect;
+
+    bool                      lighting;
 
     virtual void              Execute(void);
     virtual void              PreExecute(void);

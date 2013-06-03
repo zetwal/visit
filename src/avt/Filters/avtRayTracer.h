@@ -123,6 +123,7 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     void                  SetKernelBasedSampling(bool v)
                                     { kernelBasedSampling = v; };
     void                  SetTrilinear(bool t) {trilinearInterpolation = t; };
+    void                  SetLighting(bool l) {lighting = l; };
 
   protected:
     avtViewInfo           view;
@@ -136,6 +137,8 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     double                gradBG1[3];
     double                gradBG2[3];
     avtRayFunction       *rayfoo;
+
+    bool                  lighting;
     
     avtImage_p            opaqueImage;
 

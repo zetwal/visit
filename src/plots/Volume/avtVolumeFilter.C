@@ -608,10 +608,12 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     if (atts.GetLightingFlag())
     {
         lm = &phong;
+        software->SetLighting(true);
     }
     else
     {
         lm = &fl;
+        software->SetLighting(false);
     }
 
     avtOpacityMap *om2 = NULL;

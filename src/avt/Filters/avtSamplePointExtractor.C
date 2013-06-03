@@ -165,6 +165,8 @@ avtSamplePointExtractor::avtSamplePointExtractor(int w, int h, int d)
     shouldSetUpArbitrator    = false;
     arbitratorPrefersMinimum = false;
     arbitrator               = NULL;
+
+    lighting = false;
 }
 
 
@@ -399,6 +401,7 @@ avtSamplePointExtractor::SetUpExtractors(void)
         output->SetVolume(width, height, depth);
     else
         output->GetVolume()->ResetSamples();
+
     output->ResetCellList();
     avtVolume *volume = output->GetVolume();
     if (shouldDoTiling)
@@ -433,6 +436,8 @@ avtSamplePointExtractor::SetUpExtractors(void)
         delete pyramidExtractor;
     }
 
+    //std::cout << "width: " << width << "  height: " << height << std::endl;
+    //std::cout << "width_min, max: "<< " : " << width_min << " ,  " << width_max << "  height_min, max:   " << height_min << " ,  " << height_max << std::endl;
     //
     // Set up the extractors and tell them which cell list to use.
     //
@@ -464,7 +469,7 @@ avtSamplePointExtractor::SetUpExtractors(void)
 
     if (shouldDoTiling)
     {
-        hexExtractor->Restrict(width_min, width_max-1, 
+        hexExtractor->Restrict(height, width_max-1, 
                                height_min, height_max-1);
         hex20Extractor->Restrict(width_min, width_max-1, 
                                  height_min, height_max-1);
@@ -688,10 +693,19 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
         return;
     }
 
+    double bounds[6];
+    
+
+    // the file is read and 
+
+
     //
     // Get the dataset for this leaf in the tree.
     //
     vtkDataSet *ds = dt->GetDataRepresentation().GetDataVTK();
+    ds->GetBounds(bounds);
+    //std::cout << "avtSamplePointExtractor::ExecuteTree " << PAR_Rank() << "   currentNode: " << currentNode << "   totalNodes: " << totalNodes << "         bounds: " << bounds[0] << " ,  " << bounds[1] << "    |  " << bounds[2] << " ,  " << bounds[3] << "   |   " << bounds[4] << " , " << bounds[5] << std::endl;
+    //std::cout << "PAR_Rank(): " << PAR_Rank() << "    PAR_Size(): " << PAR_Size() << std::endl;
 
     //
     // Iterate over all cells in the mesh and call the appropriate 
@@ -705,7 +719,6 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     UpdateProgress(10*currentNode+9, 10*totalNodes);
     currentNode++;
 }
-
 
 // ****************************************************************************
 //  Method: avtSamplePointExtractor::KernelBasedSample
@@ -874,6 +887,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
             varnames.push_back(samples->GetVariableName(i));
             varsizes.push_back(samples->GetVariableSize(i));
         }
+        massVoxelExtractor->SetLighting(lighting);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
         return;
@@ -2057,7 +2071,7 @@ avtSamplePointExtractor::GetLoadingInfoForArrays(vtkDataSet *ds,
             }
         }
     }
-
+ 
     int npd = ds->GetPointData()->GetNumberOfArrays();
     li.pointDataIndex.resize(npd);
     li.pointDataSize.resize(npd);

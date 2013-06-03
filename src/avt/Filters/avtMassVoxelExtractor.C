@@ -63,6 +63,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
 
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor constructor
@@ -96,16 +100,27 @@
 //    Use double instead of float.
 //
 // ****************************************************************************
+std::string NumberToString ( int Number )
+  {
+     std::ostringstream ss;
+     ss << Number;
+     return ss.str();
+  }
 
 avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
                                              avtVolume *vol, avtCellList *cl)
     : avtExtractor(w, h, d, vol, cl)
 {
+    //std::cout << "w: " << w << "  h: " << h << std::endl;
+    fullImgWidth = w;
+    fullImgHeight = h;
+
     gridsAreInWorldSpace = false;
     pretendGridsAreInWorldSpace = false;
     trilinearInterpolation = false;
     aspect = 1;
     view_to_world_transform = vtkMatrix4x4::New();
+    world_to_view_transform = vtkMatrix4x4::New();
     X = NULL;
     Y = NULL;
     Z = NULL;
@@ -116,6 +131,8 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     prop_buffer   = new double[3*depth];
     ind_buffer    = new int[3*depth];
     valid_sample  = new bool[depth];
+
+    lighting = false;
 
     srand ( time(NULL) );
 }
@@ -147,6 +164,7 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
 avtMassVoxelExtractor::~avtMassVoxelExtractor()
 {
     view_to_world_transform->Delete();
+    world_to_view_transform->Delete();
     delete [] prop_buffer;
     delete [] ind_buffer;
     delete [] valid_sample;
@@ -382,12 +400,15 @@ avtMassVoxelExtractor::SetGridsAreInWorldSpace(bool val, const avtViewInfo &v,
         vtkMatrix4x4 *rectTrans = vtkMatrix4x4::New();
         rectTrans->DeepCopy(xform);
         vtkMatrix4x4::Multiply4x4(mat, rectTrans, view_to_world_transform);
+        world_to_view_transform->DeepCopy(view_to_world_transform);
         view_to_world_transform->Invert();
         rectTrans->Delete();
     }
     else
     {
+        // being executed for now for raycasting slivr
         vtkMatrix4x4::Invert(mat, view_to_world_transform);
+        world_to_view_transform->DeepCopy(mat);
     }
     cam->Delete();
 }
@@ -444,9 +465,6 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     height_max[curRange] = restrictedMaxHeight+1;
     curRange++;
 
-    // width_min[curRange], restrictedMinWidth, .. indicate part of the screen that we will be processing for now
-    // this is narrowed down below for each part of the range
-
     while (curRange > 0)
     {
         //
@@ -468,6 +486,7 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         }
 
         int num_rays = (w_max-w_min)*(h_max-h_min); // compute an area
+        /*
         if (num_rays > 5)
         {
             //
@@ -489,18 +508,102 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             curRange++;
         }
         else
+        */
         {
-            //
+            int xMin, xMax, yMin, yMax;
+            float coordinates[8][3];
+            coordinates[0][0] = X[0];           coordinates[0][1] = Y[0];           coordinates[0][2] = Z[0];
+            coordinates[1][0] = X[dims[0]-1];   coordinates[1][1] = Y[0];           coordinates[1][2] = Z[0];
+            coordinates[2][0] = X[dims[0]-1];   coordinates[2][1] = Y[dims[1]-1];   coordinates[2][2] = Z[0];
+            coordinates[3][0] = X[0];           coordinates[3][1] = Y[dims[1]-1];   coordinates[3][2] = Z[0];
+
+            coordinates[4][0] = X[0];           coordinates[4][1] = Y[0];           coordinates[4][2] = Z[dims[2]-1];
+            coordinates[5][0] = X[dims[0]-1];   coordinates[5][1] = Y[0];           coordinates[5][2] = Z[dims[2]-1];
+            coordinates[6][0] = X[dims[0]-1];   coordinates[6][1] = Y[dims[1]-1];   coordinates[6][2] = Z[dims[2]-1];
+            coordinates[7][0] = X[0];           coordinates[7][1] = Y[dims[1]-1];   coordinates[7][2] = Z[dims[2]-1];
+
+
+            xMin = yMin = 1000000;
+            xMax = yMax = -1000000;
+            double _world[4], _view[4];
+            _world[3] = 1.0;
+            for (int i=0; i<8; i++){
+                _world[0] = coordinates[i][0];
+                _world[1] = coordinates[i][1];
+                _world[2] = coordinates[i][2];
+
+                world_to_view_transform->MultiplyPoint(_world, _view);
+
+                if (_view[3] != 0.){
+                    _view[0] /= _view[3];
+                    _view[1] /= _view[3];
+                    _view[2] /= _view[3];
+                }
+                _view[0] = _view[0]*(fullImgWidth/2.) + (fullImgWidth/2.);
+                _view[1] = _view[1]*(fullImgHeight/2.) + (fullImgHeight/2.);
+
+                if (xMin > _view[0])
+                    xMin = _view[0];
+
+                if (xMax < _view[0])
+                    xMax = _view[0];
+
+                if (yMin > _view[1])
+                    yMin = _view[1];
+
+                if (yMax < _view[1])
+                    yMax = _view[1];
+            }
+            float offset = 4.0;
+            xMin = xMin - offset;
+            xMax = xMax + offset;
+            yMin = yMin - offset;
+            yMax = yMax + offset;
+
+        
+        //imgArray = new float[fullImgWidth * fullImgHeight];
+        //for (int i=0; i<fullImgWidth * fullImgHeight; i++)
+        //    imgArray[i] = 0.0;
+
             // We have a small amount of rays, so just evaluate them.
             //
-            for (int i = w_min ; i < w_max ; i++)
-                for (int j = h_min ; j < h_max ; j++)
+            
+            //std::cout << "\n   xMin : " << xMin  << "   -  xMax :" << xMax  <<  std::endl;
+            //std::cout << "   w_min: " << w_min << "   -  w_max:" << w_max <<  std::endl;
+            //std::cout << "   yMin : " << yMin  << "   -  yMax :" << yMax  <<  std::endl;
+            //std::cout << "   h_min: " << h_min << "   -  h_max:" << h_max <<  std::endl;
+            //std::cout << "fullImgWidth: " << fullImgWidth << "  fullImgHeight: " << fullImgHeight << std::endl;
+
+            //for (int i = w_min ; i < w_max ; i++)
+            //    for (int j = h_min ; j < h_max ; j++)
+            for (int i = xMin ; i < xMax ; i++)
+                for (int j = yMin ; j < yMax ; j++)
                 {
                     double origin[4];       // starting point where we start sampling
                     double terminus[4];     // ending point where we stop sampling
                     GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
                     SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
                 }
+/*
+            ofstream myfile;
+            std::string x = "/home/pascal/Desktop/example";
+            x += NumberToString(count);
+            x += ".txt";
+            myfile.open (x.c_str());
+            myfile << "P2.\n";
+            myfile << fullImgWidth << " " << fullImgHeight << "\n";
+            myfile << "255\n";
+            for (int i=0; i<fullImgHeight; i++){
+                for (int j=0; j<fullImgWidth; j++){
+                    myfile << imgArray[i*fullImgWidth + j] << " ";
+                }
+                myfile << "\n";
+            }
+            myfile.close();
+            count++;
+            delete []imgArray;
+            std::cout << "=============================" << std::endl;
+            */
         }
     }
 }
@@ -695,7 +798,6 @@ avtMassVoxelExtractor::GetSegment(int w, int h, double *origin, double *terminus
         origin[1] /= origin[3];
         origin[2] /= origin[3];
     }
-
     view[0] = (w - width/2.)/(width/2.);
     if (pretendGridsAreInWorldSpace)
         view[0] *= -1;
@@ -1054,8 +1156,9 @@ avtMassVoxelExtractor::FindSegmentIntersections(const double *origin,
         }
     }
 
-    if (num_hits == 0)
+    if (num_hits == 0){
         return false;
+    }
 
     //
     // We are expecting exactly two hits.  If we don't get that, then
@@ -1075,12 +1178,14 @@ avtMassVoxelExtractor::FindSegmentIntersections(const double *origin,
         hits[1] = t;
     }
 
-    if (hits[0] < 0 && hits[1] < 0)
+    if (hits[0] < 0 && hits[1] < 0){
         // Dataset on back side of camera -- no intersection.
         return false;
-    if (hits[0] > 1. && hits[1] > 1.)
+    }
+    if (hits[0] > 1. && hits[1] > 1.){
         // Dataset past far clipping plane -- no intersection.
         return false;
+    }
 
     // This is the correct calculation whether we are using orthographic or
     // perspective projection ... because with perspective we are using
@@ -1274,6 +1379,11 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                         dist_from_left      * dist_from_bottom      * dist_from_back *vals[7];
 
                         tmpSampleList[count][cell_index[l]+m] = val;  
+
+                        //float scalar[4];
+                        //for (int i=0; i<4; i++)
+                        //    scalar[i] = val;
+                        //imgArray[h*fullImgWidth + w] = 255;
                     }
                 }
             }
@@ -1432,7 +1542,7 @@ avtMassVoxelExtractor::SampleAlongSegment(const double *origin,
 
     double pt[3];
     bool hasSamples = false;
- 
+
     for (int i = first ; i < last ; i++)
     {
         int *ind = ind_buffer + 3*i;
