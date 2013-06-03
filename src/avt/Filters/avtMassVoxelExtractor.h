@@ -48,6 +48,8 @@
 #include <avtExtractor.h>
 #include <avtViewInfo.h>
 
+#include <avtOpacityMap.h>
+
 class     vtkRectilinearGrid;
 class     vtkMatrix4x4;
 
@@ -108,6 +110,9 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
                                             std::vector<int> varsize);
     void             SetTrilinear(bool t) {trilinearInterpolation = t;   };
     void             SetLighting(bool l) {lighting = l; };
+    void             SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
+    void             SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
+    void             SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
  
   protected:
     bool             gridsAreInWorldSpace;
@@ -148,6 +153,10 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           *divisors_Z;
 
     bool             lighting;
+    double           lightPosition[4];
+    double           materialProperties[4];
+    avtOpacityMap    *transferFn1D;
+
     float            *imgArray;
     int              imgWidth, imgHeight;
     int              fullImgWidth, fullImgHeight;

@@ -106,10 +106,12 @@ class PIPELINE_API avtOpacityMap
                                                       { return tableEntries; };
 
     float                        QuantizeValF(const double &val);
+    void                         QueryTF(double scalarValue, double color[4]);
 
   protected:
     RGBA                        *table;
     int                          tableEntries;
+    double                       *transferFn1D;
 
     double                       max, min;
     double                       range, inverseRange, multiplier;
@@ -194,6 +196,77 @@ avtOpacityMap::QuantizeValF(const double &val){
     return (testVal < 0 ? 0 : tableEntries-1); 
 }
 
+
+
+// ****************************************************************************
+//  Method: avtOpacityMap::QueryTF
+//
+//  Purpose:
+//      Queries a Transfer function for the color based on the scalr value passed in 
+//
+//  Arguments:
+//      scalarValue     scalar value
+//      color           the color queried from the transfer function based on the scalar value
+//
+//  Returns: 
+//
+//  Programmer: Pascal Grosset 
+//  Creation:   June 3, 2013
+//
+//  Modifications:
+//
+// ****************************************************************************
+inline void
+avtOpacityMap::QueryTF(double scalarValue, double color[4]){
+
+    if (scalarValue <= min){
+        int index = 0;
+        RGBA colorRGBA = table[index];
+        color[0] = (float)colorRGBA.R;
+        color[1] = (float)colorRGBA.G;
+        color[2] = (float)colorRGBA.B;
+        color[3] = (float)colorRGBA.A;
+        return;
+    }
+
+    if (scalarValue >= max){
+        int index = tableEntries-1;
+        RGBA colorRGBA = table[index];
+        color[0] = (float)colorRGBA.R;
+        color[1] = (float)colorRGBA.G;
+        color[2] = (float)colorRGBA.B;
+        color[3] = (float)colorRGBA.A;
+        return;
+    }
+
+    int indexLow, indexHigh;
+    RGBA colorRGBALow, colorRGBAHigh;
+    double colorLow[4], colorHigh[4];
+    float indexPos, indexDiff;
+
+    indexPos  = (scalarValue-min)*multiplier;    // multiplier = 1.0/(max-min) * tableEntries
+    indexLow  = (int)indexPos;
+    indexHigh = (int)(indexPos+1.0);
+
+    indexDiff = indexPos - indexLow;
+
+    
+    colorRGBALow = table[indexLow];
+    colorLow[0] = (float)colorRGBALow.R;
+    colorLow[1] = (float)colorRGBALow.G;
+    colorLow[2] = (float)colorRGBALow.B;
+    colorLow[3] = (float)colorRGBALow.A;
+
+    colorRGBAHigh = table[indexHigh];
+    colorHigh[0] = (float)colorRGBAHigh.R;
+    colorHigh[1] = (float)colorRGBAHigh.G;
+    colorHigh[2] = (float)colorRGBAHigh.B;
+    colorHigh[3] = (float)colorRGBAHigh.A;
+
+    color[0] = (1.0-indexDiff)*colorLow[0] + indexDiff*colorHigh[0];
+    color[1] = (1.0-indexDiff)*colorLow[1] + indexDiff*colorHigh[1];
+    color[2] = (1.0-indexDiff)*colorLow[2] + indexDiff*colorHigh[2];
+    color[3] = (1.0-indexDiff)*colorLow[3] + indexDiff*colorHigh[3];
+}
+
 #endif
-
-

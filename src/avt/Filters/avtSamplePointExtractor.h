@@ -50,6 +50,8 @@
 
 #include <avtViewInfo.h>
 
+#include <avtOpacityMap.h>
+
 class  vtkDataArray;
 class  vtkDataSet;
 class  vtkHexahedron;
@@ -160,6 +162,9 @@ class AVTFILTERS_API avtSamplePointExtractor
 
     void                      SetTrilinear(bool t) {trilinearInterpolation = t;  };
     void                      SetLighting(bool l) {lighting = l; };
+    void                      SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
+    void                      SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
+    void                      SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
 
   protected:
     int                       width, height, depth;
@@ -196,6 +201,9 @@ class AVTFILTERS_API avtSamplePointExtractor
     double                    aspect;
 
     bool                      lighting;
+    double                    lightPosition[4];
+    double                    materialProperties[4];
+    avtOpacityMap             *transferFn1D;
 
     virtual void              Execute(void);
     virtual void              PreExecute(void);

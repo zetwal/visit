@@ -47,6 +47,7 @@
 
 #include <avtDatasetToImageFilter.h>
 #include <avtViewInfo.h>
+#include <avtOpacityMap.h>
 
 class   avtRayFunction;
 class   vtkMatrix4x4;
@@ -122,8 +123,13 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
 
     void                  SetKernelBasedSampling(bool v)
                                     { kernelBasedSampling = v; };
+
+
     void                  SetTrilinear(bool t) {trilinearInterpolation = t; };
     void                  SetLighting(bool l) {lighting = l; };
+    void                  SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
+    void                  SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
+    void                  SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
 
   protected:
     avtViewInfo           view;
@@ -139,6 +145,10 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     avtRayFunction       *rayfoo;
 
     bool                  lighting;
+    double                lightPosition[4];
+    double                materialProperties[4];
+    avtOpacityMap         *transferFn1D;
+
     
     avtImage_p            opaqueImage;
 
