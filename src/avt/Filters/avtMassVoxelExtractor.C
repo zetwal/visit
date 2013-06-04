@@ -109,7 +109,6 @@ std::string NumberToString ( int Number )
 
 void createPpm(float array[], int dimx, int dimy, std::string filename){
     int i, j;
-    std::cout << "hihi" << std::endl;
     FILE *fp = fopen(filename.c_str(), "wb"); /* b - binary mode */
     (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
     for (j = 0; j < dimy; ++j){
@@ -122,7 +121,6 @@ void createPpm(float array[], int dimx, int dimy, std::string filename){
         }
     }
     (void) fclose(fp);
-    std::cout << "hihi hoho" << std::endl;
 }
 
 avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
