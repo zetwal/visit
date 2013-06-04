@@ -101,11 +101,29 @@
 //
 // ****************************************************************************
 std::string NumberToString ( int Number )
-  {
+{
      std::ostringstream ss;
      ss << Number;
      return ss.str();
-  }
+}
+
+void createPpm(float array[], int dimx, int dimy, std::string filename){
+    int i, j;
+    std::cout << "hihi" << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); /* b - binary mode */
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    for (j = 0; j < dimy; ++j){
+        for (i = 0; i < dimx; ++i){
+            static unsigned char color[3];
+            color[0] = array[j*(dimx*3) + i*3 + 0] * 255;  /* red */
+            color[1] = array[j*(dimx*3) + i*3 + 1] * 255;  /* green */
+            color[2] = array[j*(dimx*3) + i*3 + 2] * 255;  /* blue */
+            (void) fwrite(color, 1, 3, fp);
+        }
+    }
+    (void) fclose(fp);
+    std::cout << "hihi hoho" << std::endl;
+}
 
 avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
                                              avtVolume *vol, avtCellList *cl)
@@ -563,9 +581,11 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             yMax = yMax + offset;
 
         
-        //imgArray = new float[fullImgWidth * fullImgHeight];
-        //for (int i=0; i<fullImgWidth * fullImgHeight; i++)
-        //    imgArray[i] = 0.0;
+            //std::cout << "hello" << std::endl;
+            //imgArray = new float[(fullImgWidth*3) * fullImgHeight];
+            //for (int i=0; i<fullImgWidth * fullImgHeight * 3; i++)
+            //    imgArray[i] = 0.0;
+            //std::cout << "hello hello" << std::endl;
 
             // We have a small amount of rays, so just evaluate them.
             //
@@ -586,26 +606,14 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                     GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
                     SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
                 }
-/*
-            ofstream myfile;
-            std::string x = "/home/pascal/Desktop/example";
-            x += NumberToString(count);
-            x += ".txt";
-            myfile.open (x.c_str());
-            myfile << "P2.\n";
-            myfile << fullImgWidth << " " << fullImgHeight << "\n";
-            myfile << "255\n";
-            for (int i=0; i<fullImgHeight; i++){
-                for (int j=0; j<fullImgWidth; j++){
-                    myfile << imgArray[i*fullImgWidth + j] << " ";
-                }
-                myfile << "\n";
-            }
-            myfile.close();
-            count++;
-            delete []imgArray;
-            std::cout << "=============================" << std::endl;
-            */
+            //std::cout << "sugar" << std::endl;
+            //std::string imgFilename = "/home/pascal/Desktop/example";
+            //imgFilename += NumberToString(count);
+            //imgFilename += ".ppm";
+            //count++;
+            //createPpm(imgArray, fullImgWidth, fullImgHeight, imgFilename);
+            //delete []imgArray;
+        
         }
     }
 }
@@ -1385,7 +1393,9 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         //float scalar[4];
                         //for (int i=0; i<4; i++)
                         //    scalar[i] = val;
-                        //imgArray[h*fullImgWidth + w] = 255;
+                        //imgArray[h*(fullImgWidth*3) + w*3 + 0] = 1.0;
+                        //imgArray[h*(fullImgWidth*3) + w*3 + 1] = 1.0;
+                        //imgArray[h*(fullImgWidth*3) + w*3 + 2] = 0.0;
                     }
                 }
             }

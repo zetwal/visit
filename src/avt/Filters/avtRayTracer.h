@@ -124,12 +124,12 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     void                  SetKernelBasedSampling(bool v)
                                     { kernelBasedSampling = v; };
 
-
-    void                  SetTrilinear(bool t) {trilinearInterpolation = t; };
     void                  SetLighting(bool l) {lighting = l; };
     void                  SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void                  SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void                  SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
+    void                  SetTrilinear(bool t) {trilinearInterpolation = t; };
+    void                  SetRaycasterSLIVR(bool _raycasterSLIVR){ raycasterSLIVR = _raycasterSLIVR; };
 
   protected:
     avtViewInfo           view;
@@ -137,7 +137,6 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     int                   screen[2];
     int                   samplesPerRay;
     bool                  kernelBasedSampling;
-    bool                  trilinearInterpolation;
     int                   backgroundMode;
     unsigned char         background[3];
     double                gradBG1[3];
@@ -148,7 +147,8 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     double                lightPosition[4];
     double                materialProperties[4];
     avtOpacityMap         *transferFn1D;
-
+    bool                  trilinearInterpolation;
+    bool                  raycasterSLIVR;
     
     avtImage_p            opaqueImage;
 
