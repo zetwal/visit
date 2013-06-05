@@ -580,9 +580,9 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
         
             //std::cout << "hello" << std::endl;
-            //imgArray = new float[(fullImgWidth*3) * fullImgHeight];
-            //for (int i=0; i<fullImgWidth * fullImgHeight * 3; i++)
-            //    imgArray[i] = 0.0;
+            imgArray = new float[(fullImgWidth*3) * fullImgHeight];
+            for (int i=0; i<fullImgWidth * fullImgHeight * 3; i++)
+                imgArray[i] = 0;
             //std::cout << "hello hello" << std::endl;
 
             // We have a small amount of rays, so just evaluate them.
@@ -605,12 +605,13 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                     SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
                 }
             //std::cout << "sugar" << std::endl;
-            //std::string imgFilename = "/home/pascal/Desktop/example";
-            //imgFilename += NumberToString(count);
-            //imgFilename += ".ppm";
-            //count++;
-            //createPpm(imgArray, fullImgWidth, fullImgHeight, imgFilename);
-            //delete []imgArray;
+                int count =1;
+            std::string imgFilename = "/home/pbmanasa/Desktop/example";
+            imgFilename += NumberToString(count);
+            imgFilename += ".ppm";
+            count++;
+            createPpm(imgArray, fullImgWidth, fullImgHeight, imgFilename);
+            delete []imgArray;
         
         }
     }
@@ -1391,9 +1392,9 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         //float scalar[4];
                         //for (int i=0; i<4; i++)
                         //    scalar[i] = val;
-                        //imgArray[h*(fullImgWidth*3) + w*3 + 0] = 1.0;
-                        //imgArray[h*(fullImgWidth*3) + w*3 + 1] = 1.0;
-                        //imgArray[h*(fullImgWidth*3) + w*3 + 2] = 0.0;
+                        imgArray[h*(fullImgWidth*3) + w*3 + 0] = 1.f-val;
+                        imgArray[h*(fullImgWidth*3) + w*3 + 1] = 1.f-val;
+                        imgArray[h*(fullImgWidth*3) + w*3 + 2] = 1.f-val;
                     }
                 }
             }
