@@ -684,42 +684,81 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
         return;
     }
 
-    if (dt->GetNChildren() != 0)
-    {
-        for (int i = 0; i < dt->GetNChildren(); i++)
-        {
-            if (dt->ChildIsPresent(i))
-                ExecuteTree(dt->GetChild(i));
-        }
 
-        return;
+    for (int i = 0; i < dt->GetNChildren(); i++) {
+        if (dt->ChildIsPresent(i) && !( *(dt->GetChild(i)) == NULL))
+        {
+
+            avtDataTree_p child = dt->GetChild(i);
+            double bounds[6];
+            
+            // the file is read and 
+
+
+            //
+            // Get the dataset for this leaf in the tree.
+            //
+            vtkDataSet *ds = child->GetDataRepresentation().GetDataVTK();
+            ds->GetBounds(bounds);
+            //std::cout << "avtSamplePointExtractor::ExecuteTree " << PAR_Rank() << "   currentNode: " << currentNode << "   totalNodes: " << totalNodes << "         bounds: " << bounds[0] << " ,  " << bounds[1] << "    |  " << bounds[2] << " ,  " << bounds[3] << "   |   " << bounds[4] << " , " << bounds[5] << std::endl;
+            //std::cout << "PAR_Rank(): " << PAR_Rank() << "    PAR_Size(): " << PAR_Size() << std::endl;
+
+            //
+            // Iterate over all cells in the mesh and call the appropriate 
+            // extractor for each cell to get the sample points.
+            //
+            if (kernelBasedSampling)
+                KernelBasedSample(ds);
+            else
+                RasterBasedSample(ds);
+
+            UpdateProgress(10*currentNode+9, 10*totalNodes);
+            currentNode++;
+
+        }
     }
 
-    double bounds[6];
+
+
+
+
+    // if (dt->GetNChildren() != 0)
+    // {
+    //     printf("%d\n", dt->GetNChildren());
+    //     for (int i = 0; i < dt->GetNChildren(); i++)
+    //     {
+    //         if (dt->ChildIsPresent(i))
+    //             ExecuteTree(dt->GetChild(i));
+    //     }
+
+    //     return;
+    // }
+
+    // double bounds[6];
     
 
-    // the file is read and 
+    // // the file is read and 
 
 
-    //
-    // Get the dataset for this leaf in the tree.
-    //
-    vtkDataSet *ds = dt->GetDataRepresentation().GetDataVTK();
-    ds->GetBounds(bounds);
-    //std::cout << "avtSamplePointExtractor::ExecuteTree " << PAR_Rank() << "   currentNode: " << currentNode << "   totalNodes: " << totalNodes << "         bounds: " << bounds[0] << " ,  " << bounds[1] << "    |  " << bounds[2] << " ,  " << bounds[3] << "   |   " << bounds[4] << " , " << bounds[5] << std::endl;
-    //std::cout << "PAR_Rank(): " << PAR_Rank() << "    PAR_Size(): " << PAR_Size() << std::endl;
+    // //
+    // // Get the dataset for this leaf in the tree.
+    // //
+    // vtkDataSet *ds = dt->GetDataRepresentation().GetDataVTK();
+    // ds->GetBounds(bounds);
+    // //std::cout << "avtSamplePointExtractor::ExecuteTree " << PAR_Rank() << "   currentNode: " << currentNode << "   totalNodes: " << totalNodes << "         bounds: " << bounds[0] << " ,  " << bounds[1] << "    |  " << bounds[2] << " ,  " << bounds[3] << "   |   " << bounds[4] << " , " << bounds[5] << std::endl;
+    // //std::cout << "PAR_Rank(): " << PAR_Rank() << "    PAR_Size(): " << PAR_Size() << std::endl;
 
-    //
-    // Iterate over all cells in the mesh and call the appropriate 
-    // extractor for each cell to get the sample points.
-    //
-    if (kernelBasedSampling)
-        KernelBasedSample(ds);
-    else
-        RasterBasedSample(ds);
+    // //
+    // // Iterate over all cells in the mesh and call the appropriate 
+    // // extractor for each cell to get the sample points.
+    // //
+    // if (kernelBasedSampling)
+    //     KernelBasedSample(ds);
+    // else
+    //     RasterBasedSample(ds);
 
-    UpdateProgress(10*currentNode+9, 10*totalNodes);
-    currentNode++;
+    // UpdateProgress(10*currentNode+9, 10*totalNodes);
+    // currentNode++;
 }
 
 // ****************************************************************************
