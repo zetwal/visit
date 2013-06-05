@@ -1284,7 +1284,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
     int myInd[3];
     bool calc_cell_index = ((ncell_arrays > 0) || (ghosts != NULL));
 
-    double dest_rgb[4];     // to store the computed color
+    double dest_rgb[4] = {0.0,0.0,0.0, 0.0};     // to store the computed color
     for (int i = first ; i < last ; i++)
     {
         const int *ind = ind_buffer + 3*i;
