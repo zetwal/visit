@@ -1410,7 +1410,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
                         tmpSampleList[count][cell_index[l]+m] = val;  
 
-                        computePixelColor(val, dest_rgb);
+                        //computePixelColor(val, dest_rgb);
                         //float scalar[4];
                         //for (int i=0; i<4; i++)
                         //    scalar[i] = val;

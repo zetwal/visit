@@ -890,6 +890,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
             varsizes.push_back(samples->GetVariableSize(i));
         }
         massVoxelExtractor->SetLighting(lighting);
+        massVoxelExtractor->SetTransferFn(transferFn1D);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
         return;
