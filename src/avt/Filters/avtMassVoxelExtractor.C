@@ -123,6 +123,8 @@ void createPpm(float array[], int dimx, int dimy, std::string filename){
     (void) fclose(fp);
 }
 
+
+
 avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
                                              avtVolume *vol, avtCellList *cl)
     : avtExtractor(w, h, d, vol, cl)
@@ -1256,6 +1258,24 @@ float cubicfilter(float x){
 }
 
 void
+avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4]){
+    double source_rgb[4];
+    transferFn1D->QueryTF(scalarValue,source_rgb);
+
+    // might need to add opacity correction later
+    // float opacityCorrectiong = 0.8;  // need to be properly set according to number of slices; 0.8 is too arbitrary
+    // float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
+    // source_rgb[3] = alpha;
+
+    // front to back
+    for (int i=0; i<4; i++)
+        dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
+    
+    // back to front
+    //    dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
+}
+
+void
 avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 {
     bool inrun = false;
@@ -1263,6 +1283,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
     avtRay *ray = volume->GetRay(w, h);
     int myInd[3];
     bool calc_cell_index = ((ncell_arrays > 0) || (ghosts != NULL));
+
+    double dest_rgb[4];     // to store the computed color
     for (int i = first ; i < last ; i++)
     {
         const int *ind = ind_buffer + 3*i;
@@ -1388,6 +1410,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
                         tmpSampleList[count][cell_index[l]+m] = val;  
 
+                        computePixelColor(val, dest_rgb);
                         //float scalar[4];
                         //for (int i=0; i<4; i++)
                         //    scalar[i] = val;

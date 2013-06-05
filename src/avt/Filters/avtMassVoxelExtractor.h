@@ -182,6 +182,8 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     bool             FindSegmentIntersections(const double *, const double *, 
                                               int &, int &);
 
+    void             computePixelColor(double scalarValue, double dest_rgb[4]);
+
 };
 
 
