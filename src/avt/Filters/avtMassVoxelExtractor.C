@@ -574,14 +574,13 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                 if (yMax < _view[1])
                     yMax = _view[1];
             }
-            float offset = 4.0;
+            float offset = 5.0;
             xMin = xMin - offset;
             xMax = xMax + offset;
             yMin = yMin - offset;
             yMax = yMax + offset;
 
         
-            //std::cout << "hello" << std::endl;
             //imgArray = new float[(fullImgWidth*3) * fullImgHeight];
             //for (int i=0; i<fullImgWidth * fullImgHeight * 3; i++)
             //    imgArray[i] = 0.0;

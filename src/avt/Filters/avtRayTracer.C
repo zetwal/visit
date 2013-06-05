@@ -448,7 +448,7 @@ avtRayTracer::Execute(void)
         trans.SetPassThruRectilinearGrids(true);
         extractor.SetRectilinearGridsAreInWorldSpace(true, view, aspect);
     }
-
+    
     avtDataObject_p samples = extractor.GetOutput();
 
 #ifdef PARALLEL
