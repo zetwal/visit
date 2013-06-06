@@ -260,9 +260,9 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
 
     indexDiff = indexPos - indexLow;
 
-    std::cout << "\nindexPos: " << indexPos << std::endl;
-    std::cout << "indexLow: " << indexLow << std::endl;
-    std::cout << "indexHigh: " << indexHigh << std::endl;
+   // std::cout << "\nindexPos: " << indexPos << std::endl;
+   // std::cout << "indexLow: " << indexLow << std::endl;
+   // std::cout << "indexHigh: " << indexHigh << std::endl;
     
     colorRGBALow = table[indexLow];
     colorLow[0] = (float)colorRGBALow.R/255.;

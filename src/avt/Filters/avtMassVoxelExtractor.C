@@ -612,7 +612,7 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                 }
             //std::cout << "sugar" << std::endl;
            //     int count =1;
-            std::string imgFilename = "/Users/pascalgrosset/Desktop/example";
+            std::string imgFilename = "/home/pascal/Desktopexample";
            // imgFilename += NumberToString(count);
             imgFilename += ".ppm";
             //count++;
