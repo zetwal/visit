@@ -675,6 +675,8 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         software->SetTrilinear(true);
     else
         software->SetTrilinear(false);
+
+    software->SetTransferFn(&om);
     
     if (atts.GetRendererType() == VolumeAttributes::RayCastingIntegration)
         software->SetRayFunction(integrateRF);

@@ -436,6 +436,7 @@ avtRayTracer::Execute(void)
     extractor.SetInput(trans.GetOutput());
     extractor.SetTrilinear(trilinearInterpolation);
     extractor.SetLighting(lighting);
+    extractor.SetTransferFn(transferFn1D);
 
     //
     // For curvilinear and unstructured meshes, it makes sense to convert the
@@ -448,7 +449,7 @@ avtRayTracer::Execute(void)
         trans.SetPassThruRectilinearGrids(true);
         extractor.SetRectilinearGridsAreInWorldSpace(true, view, aspect);
     }
-    
+
     avtDataObject_p samples = extractor.GetOutput();
 
 #ifdef PARALLEL
@@ -592,6 +593,68 @@ avtRayTracer::Execute(void)
     visitTimer->DumpTimings();
 }
 
+
+// ****************************************************************************
+//  Method: avtRayTracer::Composite
+//
+//  Purpose:
+//      Composites the different patches rendered by the volume renderer.  
+//      It takes in the image each sub 3D volume outputs and copites them into an image
+//
+//  Programmer: Pascal Grosset
+//  Creation:   June 5, 2013
+//
+//  Modifications:
+//
+// ****************************************************************************
+/*
+struct patch{
+    int height, width;
+
+};
+void
+avtRayTracer::Composite(void)
+{
+    // size of the whole image
+    float *compositeStageImage;
+    compositeStageImage = new float[screen[0]*4 * screen[1]];
+    for (int i=0; i<screen[0]*4 * screen[1]; i++)
+        compositeStageImage[i] = 0.0;
+
+    int numPatches = 800;   // should be equal to the number of leaves in the tree
+
+    // Get each patch
+    for (int np=0; np<numPatches; np++){
+
+
+        // each patch has a certain height and width
+        for (int i=0; i<patchHeight; i++){
+            for (int j=0; j<patchWidth; j++){
+                index = (patchWidth*4)*i + j*4;
+
+                compositeImage[index+0] = compositeImage[index+0]*compositeImage[index+3] + background[index+0]*(1.0 - compositeImage[index+3]);
+                compositeImage[index+1] = compositeImage[index+1]*compositeImage[index+3] + background[index+1]*(1.0 - compositeImage[index+3]);
+                compositeImage[index+2] = compositeImage[index+2]*compositeImage[index+3] + background[index+2]*(1.0 - compositeImage[index+3]);
+            }
+        }
+    }
+
+
+    float *compositeImage;
+    compositeImage = new float[screen[0]*3 * screen[1]];
+
+    // Merge the final image with the background
+    for (int i=0; i<screen[1]; i++)
+         for (int j=0; j<screen[0]; j++){
+            index = (screen[0]*3)*i + j*3;
+            compositeImage[index+0] = compositeImage[index+0]*compositeImage[index+3] + background[index+0]*(1.0 - compositeStageImage[index+3]);
+            compositeImage[index+1] = compositeImage[index+1]*compositeImage[index+3] + background[index+1]*(1.0 - compositeStageImage[index+3]);
+            compositeImage[index+2] = compositeImage[index+2]*compositeImage[index+3] + background[index+2]*(1.0 - compositeStageImage[index+3]);
+         }
+         // color = color1 + backColor*(1.0-color1.a);
+
+}
+*/
 
 // ****************************************************************************
 //  Method: avtRayTracer::SetView

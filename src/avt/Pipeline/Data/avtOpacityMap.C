@@ -283,6 +283,8 @@ avtOpacityMap::SetTable(unsigned char *arr, int te, double attenuation, float ov
         table[i].G = arr[i*4+1];
         table[i].B = arr[i*4+2];
         table[i].A = alpha;
+
+        std::cout << i << " : " << (float) table[i].R << " ,  " << (float) table[i].G << " ,  " << (float) table[i].B << " ,  " << (float) table[i].A << std::endl;
     }
 
     //
@@ -291,6 +293,9 @@ avtOpacityMap::SetTable(unsigned char *arr, int te, double attenuation, float ov
     //
     SetIntermediateVars();
 }
+
+
+
 
 
 // ****************************************************************************
