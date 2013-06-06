@@ -279,12 +279,13 @@ avtOpacityMap::SetTable(unsigned char *arr, int te, double attenuation, float ov
         double alpha = pow((float) arr[i*4+3] / 255., (float)bp);
         alpha = 1.0 - pow((1.0 - alpha), 1.0/over);
 
-        table[i].R = arr[i*4];
-        table[i].G = arr[i*4+1];
-        table[i].B = arr[i*4+2];
+        table[i].R = (float)arr[i*4];
+        table[i].G = (float)arr[i*4+1];
+        table[i].B = (float)arr[i*4+2];
         table[i].A = alpha;
 
-        std::cout << i << " : " << (float) table[i].R << " ,  " << (float) table[i].G << " ,  " << (float) table[i].B << " ,  " << (float) table[i].A << std::endl;
+        //std::cout << i << " : " << arr[i*4] << " ,  " << arr[i*4+1] << " ,  " << arr[i*4+2] << " ,  " << alpha << std::endl;
+        //std::cout << i << " : " << (float) table[i].R << " ,  " << (float) table[i].G << " ,  " << (float) table[i].B << " ,  " << (float) table[i].A << std::endl;
     }
 
     //
@@ -296,7 +297,43 @@ avtOpacityMap::SetTable(unsigned char *arr, int te, double attenuation, float ov
 
 
 
+void
+avtOpacityMap::SetTableDouble(unsigned char *arr, int te, double attenuation, float over)
+{
+    if (attenuation < -1. || attenuation > 1.)
+    {
+        debug1 << "Bad attenuation value " << attenuation << endl;
+        EXCEPTION0(ImproperUseException);
+    }
 
+    if (transferFn1D != NULL)
+    {
+        delete [] transferFn1D;
+    }
+
+    tableEntries = te;
+    transferFn1D = new double[256*4];
+    for (int i = 0 ; i < tableEntries ; i++)
+    {
+        double bp = tan(1.570796327 * (0.5 - attenuation*0.49999));
+        double alpha = pow((float) arr[i*4+3] / 255., (float)bp);
+        alpha = 1.0 - pow((1.0 - alpha), 1.0/over);
+
+        transferFn1D[i+0] = (float)arr[i*4];
+        transferFn1D[i+1] = (float)arr[i*4+1];
+        transferFn1D[i+2] = (float)arr[i*4+2];
+        transferFn1D[i+3] = alpha;
+
+        //std::cout << i << " : " << arr[i*4] << " ,  " << arr[i*4+1] << " ,  " << arr[i*4+2] << " ,  " << alpha << std::endl;
+        //std::cout << i << " : " << (float) table[i].R << " ,  " << (float) table[i].G << " ,  " << (float) table[i].B << " ,  " << (float) table[i].A << std::endl;
+    }
+
+    //
+    // We need to set the intermediate vars again since the table size has
+    // potentially changed.
+    //
+    SetIntermediateVars();
+}
 
 // ****************************************************************************
 //  Method: avtOpacityMap::SetTable

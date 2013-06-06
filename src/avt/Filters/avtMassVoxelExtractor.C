@@ -612,7 +612,7 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                 }
             //std::cout << "sugar" << std::endl;
            //     int count =1;
-            std::string imgFilename = "/home/pascal/Desktopexample";
+            std::string imgFilename = "/home/pascal/Desktop/example";
            // imgFilename += NumberToString(count);
             imgFilename += ".ppm";
             //count++;
@@ -1277,10 +1277,10 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4])
     //std::cout << " dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
     // front to back
     for (int i=0; i<4; i++)
-    //    dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
+        dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
     
     // back to front
-        dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
+    //    dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
 }
 
 void

@@ -687,6 +687,8 @@ TextureRenderer::build_colormap1(vector<float> cmap_array,
         cmap_array[j+1] = g*alpha;
         cmap_array[j+2] = b*alpha;
         cmap_array[j+3] = alpha;
+
+        std::cout << j/4 << " : " << cmap_array[j+0]*255 << " ,  " << cmap_array[j+1]*255 << " ,  " << cmap_array[j+2]*255 << " ,  " << cmap_array[j+3] << std::endl;
       }
     } break;
     default:
