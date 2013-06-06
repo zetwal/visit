@@ -328,12 +328,12 @@ unv
 udaReaderMTMD
 )
 
-IF (Boost_USABLE_PARADIS)
-    LIST(APPEND REQUIRED_DATABASE_PLUGINS
-        paraDIS
-        paraDIS_tecplot
-    )
-ENDIF (Boost_USABLE_PARADIS)
+#IF (Boost_USABLE_PARADIS)
+#    LIST(APPEND REQUIRED_DATABASE_PLUGINS
+#        paraDIS
+#        paraDIS_tecplot
+#    )
+#ENDIF (Boost_USABLE_PARADIS)
 
 IF (NOT WIN32)
     LIST(APPEND REQUIRED_DATABASE_PLUGINS 

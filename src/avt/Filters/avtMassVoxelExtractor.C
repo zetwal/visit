@@ -585,9 +585,9 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                 imgArray[i] = 0.0;
 
             //std::cout << "hello" << std::endl;
-           // imgArray = new float[(fullImgWidth*3) * fullImgHeight];
-           // for (int i=0; i<fullImgWidth * fullImgHeight * 3; i++)
-           //     imgArray[i] = 0;
+            // imgArray = new float[(fullImgWidth*3) * fullImgHeight];
+            // for (int i=0; i<fullImgWidth * fullImgHeight * 3; i++)
+            //     imgArray[i] = 0;
 
             //std::cout << "hello hello" << std::endl;
 
@@ -612,7 +612,7 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                 }
             //std::cout << "sugar" << std::endl;
            //     int count =1;
-            std::string imgFilename = "/home/pascal/Desktop/example";
+            std::string imgFilename = "/Users/pascalgrosset/Desktop/example";
            // imgFilename += NumberToString(count);
             imgFilename += ".ppm";
             //count++;
@@ -1273,14 +1273,14 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4])
     // float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
     // source_rgb[3] = alpha;
 
-    std::cout << " source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " ,  " << source_rgb[2] << " ,  " << source_rgb[3] << std::endl;
-    std::cout << " dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
+    //std::cout << " source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " ,  " << source_rgb[2] << " ,  " << source_rgb[3] << std::endl;
+    //std::cout << " dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
     // front to back
     for (int i=0; i<4; i++)
-        dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
+    //    dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
     
     // back to front
-    //    dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
+        dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
 }
 
 void
@@ -1420,7 +1420,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
                         computePixelColor(val, dest_rgb);
 
-                        std::cout << "dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
+                        //std::cout << "dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
                         //float scalar[4];
                         //for (int i=0; i<4; i++)
                         //    scalar[i] = val;
@@ -1494,7 +1494,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
     imgArray[h*(fullImgWidth*3) + w*3 + 1] = dest_rgb[1]*dest_rgb[3];
     imgArray[h*(fullImgWidth*3) + w*3 + 2] = dest_rgb[2]*dest_rgb[3];
 
-    std::cout << "final dest_rgb: " << dest_rgb[0]*dest_rgb[3] << " , " << dest_rgb[1]*dest_rgb[3] << " ,  " << dest_rgb[2]*dest_rgb[3] <<  std::endl;
+    //std::cout << "final dest_rgb: " << dest_rgb[0]*dest_rgb[3] << " , " << dest_rgb[1]*dest_rgb[3] << " ,  " << dest_rgb[2]*dest_rgb[3] <<  std::endl;
     //
     // Make sure we get runs at the end.
     //

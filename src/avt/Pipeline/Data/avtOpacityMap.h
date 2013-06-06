@@ -218,7 +218,7 @@ avtOpacityMap::QuantizeValF(const double &val){
 // ****************************************************************************
 inline void
 avtOpacityMap::QueryTF(double scalarValue, double color[4]){
-    std::cout << "\n\n\nscalarValue: " << scalarValue << std::endl;
+    //std::cout << "\n\n\nscalarValue: " << scalarValue << std::endl;
     if (scalarValue <= min){
         int index = 0;
         RGBA colorRGBA = table[index];
@@ -227,8 +227,8 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
         color[2] = (float)colorRGBA.B/255.;
         color[3] = (float)colorRGBA.A;
 
-    std::cout << "min color: " << color[0] << " , " << color[1] << " ,  " << color[2] << " ,  " << color[3] << std::endl;
-    std::cout << "colorRGB: " << colorRGBA.R << " , " << colorRGBA.G << " ,  " << colorRGBA.B << " ,  " << colorRGBA.A << std::endl;
+    //std::cout << "min color: " << color[0] << " , " << color[1] << " ,  " << color[2] << " ,  " << color[3] << std::endl;
+    //std::cout << "colorRGB: " << colorRGBA.R << " , " << colorRGBA.G << " ,  " << colorRGBA.B << " ,  " << colorRGBA.A << std::endl;
         return;
     }
 
@@ -240,14 +240,14 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
         color[2] = (float)colorRGBA.B/255;
         color[3] = (float)colorRGBA.A;
 
-    std::cout << "max color: " << color[0] << " , " << color[1] << " ,  " << color[2] << " ,  " << color[3] << std::endl;
-    std::cout << "colorRGB: " << colorRGBA.R << " , " << colorRGBA.G << " ,  " << colorRGBA.B << " ,  " << colorRGBA.A << std::endl;
+    //std::cout << "max color: " << color[0] << " , " << color[1] << " ,  " << color[2] << " ,  " << color[3] << std::endl;
+    //std::cout << "colorRGB: " << colorRGBA.R << " , " << colorRGBA.G << " ,  " << colorRGBA.B << " ,  " << colorRGBA.A << std::endl;
         return;
     }
 
-    std::cout << "\nscalarValue min: " << min << std::endl;
-    std::cout << "scalarValue max: " << max << std::endl;
-    std::cout << "tableEntries: " << tableEntries << std::endl;
+    //std::cout << "\nscalarValue min: " << min << std::endl;
+    //std::cout << "scalarValue max: " << max << std::endl;
+    //std::cout << "tableEntries: " << tableEntries << std::endl;
 
     int indexLow, indexHigh;
     RGBA colorRGBALow, colorRGBAHigh;
@@ -270,8 +270,8 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
     colorLow[2] = (float)colorRGBALow.B/255.;
     colorLow[3] = (float)colorRGBALow.A;
 
-    std::cout << "\ncolorRGBALow: " << colorRGBALow.R << " , " << colorRGBALow.G << " ,  " << colorRGBALow.B << " ,  " << colorRGBALow.A << std::endl;
-    std::cout << "colorLow: " << colorLow[0] << " , " << colorLow[1] << " ,  " << colorLow[2] << " ,  " << colorLow[3] << std::endl;
+    //std::cout << "\ncolorRGBALow: " << colorRGBALow.R << " , " << colorRGBALow.G << " ,  " << colorRGBALow.B << " ,  " << colorRGBALow.A << std::endl;
+    //std::cout << "colorLow: " << colorLow[0] << " , " << colorLow[1] << " ,  " << colorLow[2] << " ,  " << colorLow[3] << std::endl;
 
     colorRGBAHigh = table[indexHigh];
     colorHigh[0] = (float)colorRGBAHigh.R/255.;
@@ -279,15 +279,15 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
     colorHigh[2] = (float)colorRGBAHigh.B/255.;
     colorHigh[3] = (float)colorRGBAHigh.A;
 
- std::cout << "colorRGBAHigh: " << colorRGBAHigh.R << " , " << colorRGBAHigh.G << " ,  " << colorRGBAHigh.B << " ,  " << colorRGBAHigh.A << std::endl;
- std::cout << "colorHigh: " << colorHigh[0] << " , " << colorHigh[1] << " ,  " << colorHigh[2] << " ,  " << colorHigh[3] << std::endl;
+    //std::cout << "colorRGBAHigh: " << colorRGBAHigh.R << " , " << colorRGBAHigh.G << " ,  " << colorRGBAHigh.B << " ,  " << colorRGBAHigh.A << std::endl;
+    //std::cout << "colorHigh: " << colorHigh[0] << " , " << colorHigh[1] << " ,  " << colorHigh[2] << " ,  " << colorHigh[3] << std::endl;
 
     color[0] = (1.0-indexDiff)*colorLow[0] + indexDiff*colorHigh[0];
     color[1] = (1.0-indexDiff)*colorLow[1] + indexDiff*colorHigh[1];
     color[2] = (1.0-indexDiff)*colorLow[2] + indexDiff*colorHigh[2];
     color[3] = (1.0-indexDiff)*colorLow[3] + indexDiff*colorHigh[3];
 
-    std::cout << "\n color: " << color[0] << " , " << color[1] << " ,  " << color[2] << " ,  " << color[3] << std::endl;
+    //std::cout << "\n color: " << color[0] << " , " << color[1] << " ,  " << color[2] << " ,  " << color[3] << std::endl;
 }
 
 #endif
