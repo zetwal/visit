@@ -77,12 +77,15 @@ avtOpacityMap::avtOpacityMap(int te)
 {
     tableEntries = te;
     table = new RGBA[tableEntries];
+
+    transferFn1D = new _RGBA[tableEntries];
   
     // RGBA contains a padded byte after the B and before the A.  Use a memset
     // to make sure this inaccessible byte is initialized.  This will allow
     // us to avoid purify issues.
     memset(table, 0, sizeof(RGBA)*tableEntries);
 
+/*
     for (int i = 0 ; i < tableEntries ; i++)
     {
         table[i].R = 0;
@@ -90,6 +93,7 @@ avtOpacityMap::avtOpacityMap(int te)
         table[i].B = 0;
         table[i].A = 0.;
     }
+*/
 
     min = 0.;
     max = 1.;
@@ -110,6 +114,11 @@ avtOpacityMap::~avtOpacityMap()
     if (table != NULL)
     {
         delete [] table;
+    }
+
+    if (transferFn1D != NULL)
+    {
+        delete [] transferFn1D;
     }
 }
 
@@ -283,9 +292,6 @@ avtOpacityMap::SetTable(unsigned char *arr, int te, double attenuation, float ov
         table[i].G = (float)arr[i*4+1];
         table[i].B = (float)arr[i*4+2];
         table[i].A = alpha;
-
-        //std::cout << i << " : " << arr[i*4] << " ,  " << arr[i*4+1] << " ,  " << arr[i*4+2] << " ,  " << alpha << std::endl;
-        //std::cout << i << " : " << (float) table[i].R << " ,  " << (float) table[i].G << " ,  " << (float) table[i].B << " ,  " << (float) table[i].A << std::endl;
     }
 
     //
@@ -297,8 +303,25 @@ avtOpacityMap::SetTable(unsigned char *arr, int te, double attenuation, float ov
 
 
 
+// ****************************************************************************
+//  Method: avtOpacityMap::SetTable
+//
+//  Purpose:
+//      Allows the table to be set from some outside array in the predefined
+//      RGBA format. Matches the SLIVR renderer.
+//
+//  Arguments:
+//      arr             The new table in RGBA format.
+//      te              The number of entries in arr.
+//      attenuation     The attenuation parameter specified
+//      over            Reducing based on the number of slices
+//
+//  Programmer: Pascal Grosset
+//  Creation:   June 6, 2013
+//
+// ****************************************************************************
 void
-avtOpacityMap::SetTableDouble(unsigned char *arr, int te, double attenuation, float over)
+avtOpacityMap::SetTableFloat(unsigned char *arr, int te, double attenuation, float over)
 {
     if (attenuation < -1. || attenuation > 1.)
     {
@@ -312,20 +335,19 @@ avtOpacityMap::SetTableDouble(unsigned char *arr, int te, double attenuation, fl
     }
 
     tableEntries = te;
-    transferFn1D = new double[256*4];
+    transferFn1D = new _RGBA[tableEntries];
     for (int i = 0 ; i < tableEntries ; i++)
     {
         double bp = tan(1.570796327 * (0.5 - attenuation*0.49999));
         double alpha = pow((float) arr[i*4+3] / 255., (float)bp);
         alpha = 1.0 - pow((1.0 - alpha), 1.0/over);
 
-        transferFn1D[i+0] = (float)arr[i*4];
-        transferFn1D[i+1] = (float)arr[i*4+1];
-        transferFn1D[i+2] = (float)arr[i*4+2];
-        transferFn1D[i+3] = alpha;
+        transferFn1D[i].R = (float)arr[i*4]/255.  *alpha;
+        transferFn1D[i].G = (float)arr[i*4+1]/255.*alpha;
+        transferFn1D[i].B = (float)arr[i*4+2]/255.*alpha;
+        transferFn1D[i].A = alpha;
 
-        //std::cout << i << " : " << arr[i*4] << " ,  " << arr[i*4+1] << " ,  " << arr[i*4+2] << " ,  " << alpha << std::endl;
-        //std::cout << i << " : " << (float) table[i].R << " ,  " << (float) table[i].G << " ,  " << (float) table[i].B << " ,  " << (float) table[i].A << std::endl;
+        //std::cout << i << " : " << transferFn1D[i].R << " ,  " << transferFn1D[i].G << " ,  " << transferFn1D[i].B << " ,  " << transferFn1D[i].A << std::endl;
     }
 
     //

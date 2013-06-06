@@ -399,8 +399,10 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     unsigned char vtf[4*256];
     atts.GetTransferFunction(vtf);
     avtOpacityMap om(256);
-    if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+    if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR){
         om.SetTable(vtf, 256, atts.GetOpacityAttenuation()*2.0 - 1.0, atts.GetRendererSamples());
+        om.SetTableFloat(vtf, 256, atts.GetOpacityAttenuation()*2.0 - 1.0, atts.GetRendererSamples());
+    }
     else
         om.SetTable(vtf, 256, atts.GetOpacityAttenuation());
     double actualRange[2];

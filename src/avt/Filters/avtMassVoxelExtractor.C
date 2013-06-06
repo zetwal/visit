@@ -1269,14 +1269,15 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4])
     //source_rgb[0] = source_rgb[1] = source_rgb[2] = source_rgb[3] = 1.0-scalarValue;
 
     // might need to add opacity correction later
-    // float opacityCorrectiong = 0.8;  // need to be properly set according to number of slices; 0.8 is too arbitrary
-    // float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
-    // source_rgb[3] = alpha;
+     //float opacityCorrectiong = 0.8;  // need to be properly set according to number of slices; 0.8 is too arbitrary
+     //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
+     //source_rgb[3] = alpha;
 
     //std::cout << " source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " ,  " << source_rgb[2] << " ,  " << source_rgb[3] << std::endl;
     //std::cout << " dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
-    // front to back
+    
     for (int i=0; i<4; i++)
+    // front to back
         dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
     
     // back to front
