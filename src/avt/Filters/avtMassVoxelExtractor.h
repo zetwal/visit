@@ -162,6 +162,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     float            *imgArray;
     int              imgWidth, imgHeight;
     int              fullImgWidth, fullImgHeight;
+    int              xMin, xMax, yMin, yMax;
 
     void             ExtractImageSpaceGrid(vtkRectilinearGrid *,
                              std::vector<std::string> &varnames,

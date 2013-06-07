@@ -530,7 +530,7 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         else
         */
         {
-            int xMin, xMax, yMin, yMax;
+            //int xMin, xMax, yMin, yMax;
             float coordinates[8][3];
             coordinates[0][0] = X[0];           coordinates[0][1] = Y[0];           coordinates[0][2] = Z[0];
             coordinates[1][0] = X[dims[0]-1];   coordinates[1][1] = Y[0];           coordinates[1][2] = Z[0];
@@ -574,17 +574,27 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                 if (yMax < _view[1])
                     yMax = _view[1];
             }
-            float offset = 5.0;
+
+            float error_correction = 1.f;
+            xMin = xMin + error_correction;
+            yMin = yMin + error_correction;
+            xMax = xMax + error_correction;
+            yMax = yMax + error_correction;
+
+            float offset = 2.0;
             xMin = xMin - offset;
             xMax = xMax + offset;
             yMin = yMin - offset;
             yMax = yMax + offset;
 
-            imgArray = new float[(fullImgWidth*3) * fullImgHeight];
-            for (int i=0; i<fullImgWidth * fullImgHeight * 3; i++)
+
+            imgWidth = xMax - xMin;
+            imgHeight = yMax - yMin;
+
+            imgArray = new float[((imgWidth)*3) * imgHeight];
+            for (int i=0; i<imgHeight * imgWidth * 3; i++)
                 imgArray[i] = 0.0;
 
-            //std::cout << "hello" << std::endl;
             // imgArray = new float[(fullImgWidth*3) * fullImgHeight];
             // for (int i=0; i<fullImgWidth * fullImgHeight * 3; i++)
             //     imgArray[i] = 0;
@@ -593,12 +603,6 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
             // We have a small amount of rays, so just evaluate them.
             //
-            
-            //std::cout << "\n   xMin : " << xMin  << "   -  xMax :" << xMax  <<  std::endl;
-            //std::cout << "   w_min: " << w_min << "   -  w_max:" << w_max <<  std::endl;
-            //std::cout << "   yMin : " << yMin  << "   -  yMax :" << yMax  <<  std::endl;
-            //std::cout << "   h_min: " << h_min << "   -  h_max:" << h_max <<  std::endl;
-            //std::cout << "fullImgWidth: " << fullImgWidth << "  fullImgHeight: " << fullImgHeight << std::endl;
 
             //for (int i = w_min ; i < w_max ; i++)
             //    for (int j = h_min ; j < h_max ; j++)
@@ -610,13 +614,13 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                     GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
                     SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
                 }
-            //std::cout << "sugar" << std::endl;
+
            //     int count =1;
-            std::string imgFilename = "/home/pascal/Desktop/example";
+            std::string imgFilename = "/home/pbmanasa/Desktop/example";
            // imgFilename += NumberToString(count);
             imgFilename += ".ppm";
             //count++;
-            createPpm(imgArray, fullImgWidth, fullImgHeight, imgFilename);
+            createPpm(imgArray, imgWidth, imgHeight, imgFilename);
             delete []imgArray;
         
         }
@@ -1420,7 +1424,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
                         computePixelColor(val, dest_rgb);
 
-                        //std::cout << "dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
                         //float scalar[4];
                         //for (int i=0; i<4; i++)
                         //    scalar[i] = val;
@@ -1489,12 +1492,11 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         inrun = true;
         count++;
     }
-        
-    imgArray[h*(fullImgWidth*3) + w*3 + 0] = dest_rgb[0]*dest_rgb[3];
-    imgArray[h*(fullImgWidth*3) + w*3 + 1] = dest_rgb[1]*dest_rgb[3];
-    imgArray[h*(fullImgWidth*3) + w*3 + 2] = dest_rgb[2]*dest_rgb[3];
 
-    //std::cout << "final dest_rgb: " << dest_rgb[0]*dest_rgb[3] << " , " << dest_rgb[1]*dest_rgb[3] << " ,  " << dest_rgb[2]*dest_rgb[3] <<  std::endl;
+    imgArray[(h-yMin)*(imgWidth*3) + (w-xMin)*3 + 0] = dest_rgb[0]*dest_rgb[3];
+    imgArray[(h-yMin)*(imgWidth*3) + (w-xMin)*3 + 1] = dest_rgb[1]*dest_rgb[3];
+    imgArray[(h-yMin)*(imgWidth*3) + (w-xMin)*3 + 2] = dest_rgb[2]*dest_rgb[3];
+
     //
     // Make sure we get runs at the end.
     //
