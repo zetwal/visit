@@ -115,6 +115,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void             SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void             SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
+    void             getComputedImage(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, float *image);
  
   protected:
     bool             gridsAreInWorldSpace;
@@ -146,7 +147,6 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     bool            *valid_sample;
     bool            trilinearInterpolation;
 
-
     // We repeatedly divide by the term (X[i+1]-X[i]).  In the interest of
     // performance, cache the term 1./(X[i+1]-X[i]) and use that for faster
     // multiplication.  This sped up total performance by about 5%.
@@ -158,8 +158,12 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           lightPosition[4];
     double           materialProperties[4];
     avtOpacityMap    *transferFn1D;
-
+    int              imgDims[2];
+    int              imgLowerLeft[2];
+    int              imgUpperRight[2];
+    float            imgDepth;
     float            *imgArray;
+    
     int              imgWidth, imgHeight;
     int              fullImgWidth, fullImgHeight;
 
@@ -183,10 +187,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
                                               int &, int &);
 
     void             computePixelColor(double scalarValue, double dest_rgb[4]);
-
+    
 };
 
-
 #endif
-
-

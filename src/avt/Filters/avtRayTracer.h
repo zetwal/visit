@@ -48,6 +48,16 @@
 #include <avtDatasetToImageFilter.h>
 #include <avtViewInfo.h>
 #include <avtOpacityMap.h>
+#include <map>
+
+struct imagePatch{
+    int patchNumber;
+    int imgDims[2];
+    int screen_ul[2];
+    int screen_lr[2];
+    float avg_z;            // in eye view
+    float *imagePatch;      //height x width x 4 (RGBA)
+};
 
 class   avtRayFunction;
 class   vtkMatrix4x4;
@@ -149,6 +159,7 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     avtOpacityMap         *transferFn1D;
     bool                  trilinearInterpolation;
     bool                  raycasterSLIVR;
+    std::multimap<float, imagePatch> patches;
     
     avtImage_p            opaqueImage;
 

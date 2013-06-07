@@ -514,7 +514,8 @@ avtRayTracer::Execute(void)
     }
     rc.SetInput(samples);
     avtImage_p image = rc.GetTypedOutput();
-
+    image->Update(GetGeneralContract());
+    std::cout << "Hello rayTracer 0" << std::endl;
 #ifdef PARALLEL
     //
     // Communicate the screen to the root processor.
@@ -525,7 +526,7 @@ avtRayTracer::Execute(void)
     imageCommunicator.SetInput(dob);
     image = imageCommunicator.GetTypedOutput();
 #endif
-
+    std::cout << "Hello rayTracer 1" << std::endl;
     //
     // Update the pipeline several times, once for each tile.
     // The tiles are important to make sure that we never need too much
@@ -544,6 +545,8 @@ avtRayTracer::Execute(void)
         whole_image->GetImage() = img;
         img->Delete();
     }
+
+    std::cout << "Hello rayTracer 3" << std::endl;
     for (int i = 0 ; i < numDivisions ; i++)
         for (int j = 0 ; j < numDivisions ; j++)
         {
@@ -563,7 +566,9 @@ avtRayTracer::Execute(void)
             imageCommunicator.SetImagePartition(&imagePartition);
 #endif
             extractor.RestrictToTile(IStart, IEnd, JStart, JEnd);
+            std::cout << "Hello rayTracer 888" << std::endl;
             image->Update(GetGeneralContract());
+            std::cout << "Hello rayTracer 999" << std::endl;
             if (PAR_Rank() == 0)
             {
                 unsigned char *whole_rgb = 
@@ -581,6 +586,7 @@ avtRayTracer::Execute(void)
                     }
             }
         }
+    std::cout << "Hello rayTracer 4" << std::endl;
     if (PAR_Rank() == 0)
         image->Copy(*whole_image);
 
@@ -601,17 +607,30 @@ avtRayTracer::Execute(void)
 //      Composites the different patches rendered by the volume renderer.  
 //      It takes in the image each sub 3D volume outputs and copites them into an image
 //
+//  Arguments:
+//      v       The view info.
+//
 //  Programmer: Pascal Grosset
 //  Creation:   June 5, 2013
 //
 //  Modifications:
 //
 // ****************************************************************************
-/*
-struct patch{
-    int height, width;
 
-};
+/*
+
+void
+avtRayTracer::AddImageComposite(void)
+{
+    imgPatch tempPatch;
+    tempPatch.patchNumber;
+    int height, width;
+    int screen_ul[2];
+    int screen_lr[2];
+    float avg_z;            // in eye view
+    float *imagePatch;      //height x width x 4 (RGBA)
+
+}
 void
 avtRayTracer::Composite(void)
 {

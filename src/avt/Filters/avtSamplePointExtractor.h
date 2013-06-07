@@ -76,6 +76,15 @@ class  avtWedgeExtractor;
 class  avtRayFunction;
 
 
+struct imgPatch{
+    int patchNumber;
+    int dims[2];
+    int screen_ll[2];
+    int screen_ur[2];
+    float avg_z;            // in eye view
+    float *imagePatch;      // height x width x 4 (RGBA)
+};
+
 // ****************************************************************************
 //  Class: avtSamplePointExtractor
 //

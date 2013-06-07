@@ -79,6 +79,22 @@
 #include <TimingsManager.h>
 
 
+void createPpm(float array[], int dimx, int dimy, std::string filename){
+    int i, j;
+    FILE *fp = fopen(filename.c_str(), "wb"); /* b - binary mode */
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    for (j = 0; j < dimy; ++j){
+        for (i = 0; i < dimx; ++i){
+            static unsigned char color[3];
+            color[0] = array[j*(dimx*3) + i*3 + 0] * 255;  /* red */
+            color[1] = array[j*(dimx*3) + i*3 + 1] * 255;  /* green */
+            color[2] = array[j*(dimx*3) + i*3 + 2] * 255;  /* blue */
+            (void) fwrite(color, 1, 3, fp);
+        }
+    }
+    (void) fclose(fp);
+}
+
 // ****************************************************************************
 //  Method: avtSamplePointExtractor constructor
 //
@@ -707,11 +723,13 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
             // Iterate over all cells in the mesh and call the appropriate 
             // extractor for each cell to get the sample points.
             //
+            std::cout << "before if (kernelBasedSampling)" << std::endl;
             if (kernelBasedSampling)
                 KernelBasedSample(ds);
             else
                 RasterBasedSample(ds);
 
+            std::cout << "after if (kernelBasedSampling)" << std::endl;
             UpdateProgress(10*currentNode+9, 10*totalNodes);
             currentNode++;
 
@@ -932,6 +950,16 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
         massVoxelExtractor->SetTransferFn(transferFn1D);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
+
+        /*
+        if (trilinearInterpolation == true){
+            imgPatch thePatch;
+            massVoxelExtractor->getComputedImage(thePatch.patchNumber, thePatch.dims, thePatch.screen_ll, thePatch.screen_ur, thePatch.avg_z, thePatch.imagePatch);
+            std::cout << "Done extracting" << std::endl;
+            std::string imgFilename = "/home/pascal/Desktop/examplePtEx.ppm";
+            createPpm(thePatch.imagePatch, thePatch.dims[0], thePatch.dims[1], imgFilename);
+        }
+*/
         return;
     }
 

@@ -107,23 +107,24 @@ std::string NumberToString ( int Number )
      return ss.str();
 }
 
+/*
 void createPpm(float array[], int dimx, int dimy, std::string filename){
     int i, j;
-    FILE *fp = fopen(filename.c_str(), "wb"); /* b - binary mode */
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
     (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
     for (j = 0; j < dimy; ++j){
         for (i = 0; i < dimx; ++i){
             static unsigned char color[3];
-            color[0] = array[j*(dimx*3) + i*3 + 0] * 255;  /* red */
-            color[1] = array[j*(dimx*3) + i*3 + 1] * 255;  /* green */
-            color[2] = array[j*(dimx*3) + i*3 + 2] * 255;  /* blue */
+            color[0] = array[j*(dimx*3) + i*3 + 0] * 255;  // red
+            color[1] = array[j*(dimx*3) + i*3 + 1] * 255;  // green
+            color[2] = array[j*(dimx*3) + i*3 + 2] * 255;  // blue 
             (void) fwrite(color, 1, 3, fp);
         }
     }
     (void) fclose(fp);
 }
 
-
+*/
 
 avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
                                              avtVolume *vol, avtCellList *cl)
@@ -542,16 +543,23 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             coordinates[6][0] = X[dims[0]-1];   coordinates[6][1] = Y[dims[1]-1];   coordinates[6][2] = Z[dims[2]-1];
             coordinates[7][0] = X[0];           coordinates[7][1] = Y[dims[1]-1];   coordinates[7][2] = Z[dims[2]-1];
 
+            std::cout << "\n\ncoordinates: " << std::endl;
+            for (int i=0; i<8; i++){
+                std::cout << "i: " << coordinates[i][0] << " ,  " << coordinates[i][1] << " ,  " << coordinates[i][2] << std::endl; 
+            }
+            
 
             xMin = yMin = 1000000;
             xMax = yMax = -1000000;
             double _world[4], _view[4];
             _world[3] = 1.0;
+            imgDepth = 0;
             for (int i=0; i<8; i++){
                 _world[0] = coordinates[i][0];
                 _world[1] = coordinates[i][1];
                 _world[2] = coordinates[i][2];
 
+                //std::cout << "i: " << coordinates[i][0] << " ,  " << coordinates[i][1] << " ,  " << coordinates[i][2] << std::endl; 
                 world_to_view_transform->MultiplyPoint(_world, _view);
 
                 if (_view[3] != 0.){
@@ -559,6 +567,8 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                     _view[1] /= _view[3];
                     _view[2] /= _view[3];
                 }
+
+                std::cout << i << " ~ " << _view[0] << " ,  " << _view[1] << " ,  " << _view[2] << std::endl; 
                 _view[0] = _view[0]*(fullImgWidth/2.) + (fullImgWidth/2.);
                 _view[1] = _view[1]*(fullImgHeight/2.) + (fullImgHeight/2.);
 
@@ -573,7 +583,11 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
                 if (yMax < _view[1])
                     yMax = _view[1];
+
+                imgDepth += _view[2]; 
             }
+            imgDepth = imgDepth/8.0;
+
             float offset = 5.0;
             xMin = xMin - offset;
             xMax = xMax + offset;
@@ -583,6 +597,11 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             imgArray = new float[(fullImgWidth*3) * fullImgHeight];
             for (int i=0; i<fullImgWidth * fullImgHeight * 3; i++)
                 imgArray[i] = 0.0;
+
+            imgDims[0] = xMax - xMin;       imgDims[1] = yMax - yMin;
+            imgLowerLeft[0] = xMin;         imgLowerLeft[1] = yMin;
+            imgUpperRight[0] = xMax;         imgUpperRight[1] = yMax;
+            
 
             //std::cout << "hello" << std::endl;
             // imgArray = new float[(fullImgWidth*3) * fullImgHeight];
@@ -610,19 +629,37 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                     GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
                     SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
                 }
-            //std::cout << "sugar" << std::endl;
-           //     int count =1;
-            std::string imgFilename = "/home/pascal/Desktop/example";
-           // imgFilename += NumberToString(count);
-            imgFilename += ".ppm";
-            //count++;
-            createPpm(imgArray, fullImgWidth, fullImgHeight, imgFilename);
-            delete []imgArray;
+
+            //     int count =1;
+            //std::string imgFilename = "/home/pascal/Desktop/example";
+            // imgFilename += NumberToString(count);
+            //imgFilename += ".ppm";
+            ///count++;
+            //createPpm(imgArray, fullImgWidth, fullImgHeight, imgFilename);
+            //delete []imgArray;
+
+            //std::cout << "done massVoxel" << std::endl;
         
         }
     }
 }
 
+void
+avtMassVoxelExtractor::getComputedImage(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, float *image){
+    dims[0] = imgDims[0];
+    dims[1] = imgDims[1];
+
+    screen_ll[0] = imgLowerLeft[0];
+    screen_ll[1] = imgLowerLeft[1];
+
+    screen_ur[0] = imgUpperRight[1];
+    screen_ur[1] = imgUpperRight[1];
+
+    avg_z = imgDepth;
+    image = imgArray;
+
+    delete []imgArray;
+}
 
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor::RegisterGrid
@@ -1269,9 +1306,9 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4])
     //source_rgb[0] = source_rgb[1] = source_rgb[2] = source_rgb[3] = 1.0-scalarValue;
 
     // might need to add opacity correction later
-     //float opacityCorrectiong = 0.8;  // need to be properly set according to number of slices; 0.8 is too arbitrary
-     //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
-     //source_rgb[3] = alpha;
+    //float opacityCorrectiong = 0.8;  // need to be properly set according to number of slices; 0.8 is too arbitrary
+    //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
+    //source_rgb[3] = alpha;
 
     //std::cout << " source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " ,  " << source_rgb[2] << " ,  " << source_rgb[3] << std::endl;
     //std::cout << " dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
