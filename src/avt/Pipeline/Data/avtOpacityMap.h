@@ -54,6 +54,14 @@ struct RGBA
     float         A;
 };
 
+struct _RGBA
+{
+    float R;
+    float G;
+    float B;
+    float A;
+};
+
 
 // ****************************************************************************
 //  Class: avtOpacityMap
@@ -91,7 +99,7 @@ class PIPELINE_API avtOpacityMap
     const RGBA                  *GetTable(void) { return table; };
     void                         SetTable(unsigned char *, int, double = 1.);
     void                         SetTable(unsigned char *arr, int te, double attenuation, float over);
-    void                         SetTableDouble(unsigned char *arr, int te, double attenuation, float over);
+    void                         SetTableFloat(unsigned char *arr, int te, double attenuation, float over);
     void                         SetTable(RGBA *, int, double = 1.);
     const RGBA                  &GetOpacity(double);
 
@@ -111,8 +119,9 @@ class PIPELINE_API avtOpacityMap
 
   protected:
     RGBA                        *table;
+    _RGBA                       *transferFn1D;
     int                          tableEntries;
-    double                       *transferFn1D;
+    
 
     double                       max, min;
     double                       range, inverseRange, multiplier;
@@ -222,11 +231,11 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
     //std::cout << "\n\n\nscalarValue: " << scalarValue << std::endl;
     if (scalarValue <= min){
         int index = 0;
-        RGBA colorRGBA = table[index];
-        color[0] = (float)colorRGBA.R/255. * (float)colorRGBA.A;
-        color[1] = (float)colorRGBA.G/255. * (float)colorRGBA.A;
-        color[2] = (float)colorRGBA.B/255. * (float)colorRGBA.A;
-        color[3] = (float)colorRGBA.A;
+        _RGBA colorRGBA = transferFn1D[index];
+        color[0] = colorRGBA.R;
+        color[1] = colorRGBA.G;
+        color[2] = colorRGBA.B;
+        color[3] = colorRGBA.A;
 
     //std::cout << "min color: " << color[0] << " , " << color[1] << " ,  " << color[2] << " ,  " << color[3] << std::endl;
     //std::cout << "colorRGB: " << colorRGBA.R << " , " << colorRGBA.G << " ,  " << colorRGBA.B << " ,  " << colorRGBA.A << std::endl;
@@ -235,11 +244,11 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
 
     if (scalarValue >= max){
         int index = tableEntries-1;
-        RGBA colorRGBA = table[index];
-        color[0] = (float)colorRGBA.R/255 * (float)colorRGBA.A;
-        color[1] = (float)colorRGBA.G/255 * (float)colorRGBA.A;
-        color[2] = (float)colorRGBA.B/255 * (float)colorRGBA.A;
-        color[3] = (float)colorRGBA.A;
+        _RGBA colorRGBA = transferFn1D[index];
+        color[0] = colorRGBA.R;
+        color[1] = colorRGBA.G;
+        color[2] = colorRGBA.B;
+        color[3] = colorRGBA.A;
 
     //std::cout << "max color: " << color[0] << " , " << color[1] << " ,  " << color[2] << " ,  " << color[3] << std::endl;
     //std::cout << "colorRGB: " << colorRGBA.R << " , " << colorRGBA.G << " ,  " << colorRGBA.B << " ,  " << colorRGBA.A << std::endl;
@@ -251,7 +260,7 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
     //std::cout << "tableEntries: " << tableEntries << std::endl;
 
     int indexLow, indexHigh;
-    RGBA colorRGBALow, colorRGBAHigh;
+    _RGBA colorRGBALow, colorRGBAHigh;
     double colorLow[4], colorHigh[4];
     float indexPos, indexDiff;
 
@@ -265,20 +274,20 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
    // std::cout << "indexLow: " << indexLow << std::endl;
    // std::cout << "indexHigh: " << indexHigh << std::endl;
     
-    colorRGBALow = table[indexLow];
-    colorLow[0] = (float)colorRGBALow.R/255. * (float)colorRGBALow.A;
-    colorLow[1] = (float)colorRGBALow.G/255. * (float)colorRGBALow.A;
-    colorLow[2] = (float)colorRGBALow.B/255. * (float)colorRGBALow.A;
-    colorLow[3] = (float)colorRGBALow.A;
+    colorRGBALow = transferFn1D[indexLow];
+    colorLow[0] = colorRGBALow.R;
+    colorLow[1] = colorRGBALow.G;
+    colorLow[2] = colorRGBALow.B;
+    colorLow[3] = colorRGBALow.A;
 
     //std::cout << "\ncolorRGBALow: " << colorRGBALow.R << " , " << colorRGBALow.G << " ,  " << colorRGBALow.B << " ,  " << colorRGBALow.A << std::endl;
     //std::cout << "colorLow: " << colorLow[0] << " , " << colorLow[1] << " ,  " << colorLow[2] << " ,  " << colorLow[3] << std::endl;
 
-    colorRGBAHigh = table[indexHigh];
-    colorHigh[0] = (float)colorRGBAHigh.R/255. * (float)colorRGBAHigh.A;
-    colorHigh[1] = (float)colorRGBAHigh.G/255. * (float)colorRGBAHigh.A;
-    colorHigh[2] = (float)colorRGBAHigh.B/255. * (float)colorRGBAHigh.A;
-    colorHigh[3] = (float)colorRGBAHigh.A;
+    colorRGBAHigh = transferFn1D[indexHigh];
+    colorHigh[0] = colorRGBAHigh.R;
+    colorHigh[1] = colorRGBAHigh.G;
+    colorHigh[2] = colorRGBAHigh.B;
+    colorHigh[3] = colorRGBAHigh.A;
 
     //std::cout << "colorRGBAHigh: " << colorRGBAHigh.R << " , " << colorRGBAHigh.G << " ,  " << colorRGBAHigh.B << " ,  " << colorRGBAHigh.A << std::endl;
     //std::cout << "colorHigh: " << colorHigh[0] << " , " << colorHigh[1] << " ,  " << colorHigh[2] << " ,  " << colorHigh[3] << std::endl;
