@@ -164,8 +164,8 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     int              imgLowerLeft[2];
     int              imgUpperRight[2];
     float            imgDepth;
-    //float            *imgArray;
-    float            imgArray[89*3*26];
+    float            *imgArray;
+    //float            imgArray[89*3*26];
     
     int              imgWidth, imgHeight;
     int              fullImgWidth, fullImgHeight;
