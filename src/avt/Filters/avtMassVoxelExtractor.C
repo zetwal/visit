@@ -607,9 +607,9 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             imgWidth = xMax - xMin;
             imgHeight = yMax - yMin;
 
-            //imgArray = new float[((imgWidth)*3) * imgHeight];
-            //for (int i=0; i<imgHeight * imgWidth * 3; i++)
-            //    imgArray[i] = 0.0;
+            imgArray = new float[((imgWidth)*3) * imgHeight];
+            for (int i=0; i<imgHeight * imgWidth * 3; i++)
+                imgArray[i] = 1.0;
 
             imgDims[0] = imgWidth;       imgDims[1] = imgHeight;
             imgLowerLeft[0] = xMin;         imgLowerLeft[1] = yMin;
