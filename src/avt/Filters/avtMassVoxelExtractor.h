@@ -115,7 +115,9 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void             SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void             SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
-    void             getComputedImage(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, float image[]);
+    void             getImageDimensions(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
+    void             getComputedImage(float *image);
+    //void             getComputedImage(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, float *image);
  
   protected:
     bool             gridsAreInWorldSpace;

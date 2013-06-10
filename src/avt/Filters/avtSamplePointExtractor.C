@@ -956,24 +956,28 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
 
         if (trilinearInterpolation == true){
             imgPatch thePatch;
-            //massVoxelExtractor->getComputedImage(thePatch.patchNumber, thePatch.dims, thePatch.screen_ll, thePatch.screen_ur, thePatch.avg_z, thePatch.imagePatch);
-          //  std::cout << "imgDims:" << thePatch.dims[0] << ", " << thePatch.dims[1] << std::endl;
-           // std::cout << "screen_ll:" << thePatch.screen_ll[0] << ", " << thePatch.screen_ll[1] << std::endl;
-            //std::cout << "screen_ur:" << thePatch.screen_ur[0] << ", " << thePatch.screen_ur[1] << std::endl;
-           // std::cout << "avg_z:" << thePatch.avg_z << std::endl;
-          //  std::cout << "Done extracting" << std::endl;
+
+            massVoxelExtractor->getImageDimensions(thePatch.patchNumber, thePatch.dims, thePatch.screen_ll, thePatch.screen_ur, thePatch.avg_z);
+            std::cout << "imgDims:" << thePatch.dims[0] << ", " << thePatch.dims[1] << std::endl;
+            std::cout << "screen_ll:" << thePatch.screen_ll[0] << ", " << thePatch.screen_ll[1] << std::endl;
+            std::cout << "screen_ur:" << thePatch.screen_ur[0] << ", " << thePatch.screen_ur[1] << std::endl;
+            std::cout << "avg_z:" << thePatch.avg_z << std::endl;
+            thePatch.imagePatch = new float [(thePatch.dims[0]*3)*thePatch.dims[1]];
+
+            massVoxelExtractor->getComputedImage(thePatch.imagePatch);
+            std::cout << "Done extracting" << std::endl;
             
-/*
-            for (int i=0; i<thePatch.dims[1]; i++){
-                for (int j=0; j<thePatch.dims[0]; j++){
-                    int index = i*(3*thePatch.dims[0]) + j;
-                    std::cout << thePatch.imagePatch[index]<< ", " << thePatch.imagePatch[index+1] << ", " << thePatch.imagePatch[index+2] << ", " << thePatch.imagePatch[index+3] << "  -  ";
-                }
-                std::cout << "\n";
-            }
-*/
-            //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx.ppm";
-           // createPpm(thePatch.imagePatch, thePatch.dims[0], thePatch.dims[1], imgFilename);
+
+            // for (int i=0; i<thePatch.dims[1]; i++){
+            //     for (int j=0; j<thePatch.dims[0]; j++){
+            //         int index = i*(3*thePatch.dims[0]) + j;
+            //         std::cout << thePatch.imagePatch[index]<< ", " << thePatch.imagePatch[index+1] << ", " << thePatch.imagePatch[index+2] << ", " << thePatch.imagePatch[index+3] << "  -  ";
+            //     }
+            //     std::cout << "\n";
+            // }
+
+            std::string imgFilename = "/home/pbmanasa/Desktop/examplePtEx_inSamplePtEx.ppm";
+            createPpm(thePatch.imagePatch, thePatch.dims[0], thePatch.dims[1], imgFilename);
         }
 
         return;
