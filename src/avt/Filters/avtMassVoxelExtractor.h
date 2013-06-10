@@ -115,7 +115,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void             SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void             SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
-    void             getComputedImage(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, float *image);
+    void             getComputedImage(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, float image[]);
  
   protected:
     bool             gridsAreInWorldSpace;
@@ -162,10 +162,12 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     int              imgLowerLeft[2];
     int              imgUpperRight[2];
     float            imgDepth;
-    float            *imgArray;
+    //float            *imgArray;
+    float            imgArray[89*3*26];
     
     int              imgWidth, imgHeight;
     int              fullImgWidth, fullImgHeight;
+    int              xMin, xMax, yMin, yMax;
 
     void             ExtractImageSpaceGrid(vtkRectilinearGrid *,
                              std::vector<std::string> &varnames,

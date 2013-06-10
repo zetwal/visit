@@ -81,19 +81,22 @@
 
 void createPpm(float array[], int dimx, int dimy, std::string filename){
     int i, j;
-    FILE *fp = fopen(filename.c_str(), "wb"); /* b - binary mode */
+    std::cout << "createPpm  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
     (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
     for (j = 0; j < dimy; ++j){
         for (i = 0; i < dimx; ++i){
             static unsigned char color[3];
-            color[0] = array[j*(dimx*3) + i*3 + 0] * 255;  /* red */
-            color[1] = array[j*(dimx*3) + i*3 + 1] * 255;  /* green */
-            color[2] = array[j*(dimx*3) + i*3 + 2] * 255;  /* blue */
+            color[0] = array[j*(dimx*3) + i*3 + 0] * 255;  // red
+            color[1] = array[j*(dimx*3) + i*3 + 1] * 255;  // green
+            color[2] = array[j*(dimx*3) + i*3 + 2] * 255;  // blue 
             (void) fwrite(color, 1, 3, fp);
         }
     }
     (void) fclose(fp);
+    std::cout << "End createPpm: " << std::endl;
 }
+
 
 // ****************************************************************************
 //  Method: avtSamplePointExtractor constructor
@@ -951,15 +954,28 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
 
-        /*
         if (trilinearInterpolation == true){
             imgPatch thePatch;
-            massVoxelExtractor->getComputedImage(thePatch.patchNumber, thePatch.dims, thePatch.screen_ll, thePatch.screen_ur, thePatch.avg_z, thePatch.imagePatch);
-            std::cout << "Done extracting" << std::endl;
-            std::string imgFilename = "/home/pascal/Desktop/examplePtEx.ppm";
-            createPpm(thePatch.imagePatch, thePatch.dims[0], thePatch.dims[1], imgFilename);
-        }
+            //massVoxelExtractor->getComputedImage(thePatch.patchNumber, thePatch.dims, thePatch.screen_ll, thePatch.screen_ur, thePatch.avg_z, thePatch.imagePatch);
+          //  std::cout << "imgDims:" << thePatch.dims[0] << ", " << thePatch.dims[1] << std::endl;
+           // std::cout << "screen_ll:" << thePatch.screen_ll[0] << ", " << thePatch.screen_ll[1] << std::endl;
+            //std::cout << "screen_ur:" << thePatch.screen_ur[0] << ", " << thePatch.screen_ur[1] << std::endl;
+           // std::cout << "avg_z:" << thePatch.avg_z << std::endl;
+          //  std::cout << "Done extracting" << std::endl;
+            
+/*
+            for (int i=0; i<thePatch.dims[1]; i++){
+                for (int j=0; j<thePatch.dims[0]; j++){
+                    int index = i*(3*thePatch.dims[0]) + j;
+                    std::cout << thePatch.imagePatch[index]<< ", " << thePatch.imagePatch[index+1] << ", " << thePatch.imagePatch[index+2] << ", " << thePatch.imagePatch[index+3] << "  -  ";
+                }
+                std::cout << "\n";
+            }
 */
+            //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx.ppm";
+           // createPpm(thePatch.imagePatch, thePatch.dims[0], thePatch.dims[1], imgFilename);
+        }
+
         return;
     }
 
