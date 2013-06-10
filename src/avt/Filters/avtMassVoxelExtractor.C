@@ -712,7 +712,7 @@ avtMassVoxelExtractor::getComputedImage(float *image){
     // std::cout << "screen_ur:" << screen_ur[0] << ", " << screen_ur[1] << std::endl;
     // std::cout << "avg_z:" << avg_z << std::endl;
     std::cout << "in avtMassVoxelExtractor" << std::endl;
-    std::string imgFilename = "/home/pbmanasa/Desktop/examplePtExinMassVoxel.ppm";
+    std::string imgFilename = "/home/pascal/Desktop/examplePtExinMassVoxel.ppm";
             createPpm2(imgArray, imgWidth, imgHeight, imgFilename);
     //delete []imgArray;
 }

@@ -976,7 +976,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
             //     std::cout << "\n";
             // }
 
-            std::string imgFilename = "/home/pbmanasa/Desktop/examplePtEx_inSamplePtEx.ppm";
+            std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx.ppm";
             createPpm(thePatch.imagePatch, thePatch.dims[0], thePatch.dims[1], imgFilename);
         }
 
