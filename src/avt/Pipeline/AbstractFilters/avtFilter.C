@@ -270,7 +270,16 @@ avtFilter::Update(avtContract_p contract)
             numInExecute++;
 
             PreExecute();
+
+
+            printf("In avtFilter:275\n");
+
+
             Execute();
+
+
+            printf("In avtFilter:281\n");
+
             PostExecute();
             if (debug_dump)
                 DumpDataObject(GetOutput(), "output");

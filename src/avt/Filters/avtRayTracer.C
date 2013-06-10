@@ -515,6 +515,21 @@ avtRayTracer::Execute(void)
     rc.SetInput(samples);
     avtImage_p image = rc.GetTypedOutput();
     image->Update(GetGeneralContract());
+
+    std::cout << "Getting stuff from avtSamplePointExtractor\n";
+    int size;
+    extractor.getImgPatchSize(size);
+
+    imgPatch *imgPatchAll;
+    imgPatchAll = new imgPatch[size];
+
+    extractor.getImgPatches(imgPatchAll);
+
+    std::cout << "Finished getting all patches\n";
+
+
+
+
     std::cout << "Hello rayTracer 0" << std::endl;
 #ifdef PARALLEL
     //

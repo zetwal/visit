@@ -361,6 +361,9 @@ avtSamplePointExtractor::RestrictToTile(int wmin, int wmax, int hmin, int hmax)
 void
 avtSamplePointExtractor::Execute(void)
 {
+
+    printf("In avtSamplePointExtractor:365\n");
+
     int timingsIndex = visitTimer->StartTimer();
 
     SetUpExtractors();
@@ -703,24 +706,22 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
         return;
     }
 
+    imgPatchSize = dt->GetNChildren();
+    imagePatchArray = new imgPatch[imgPatchSize];
 
-    for (int i = 0; i < dt->GetNChildren(); i++) {
+
+    for (int i = 0; i < imgPatchSize; i++) {
         if (dt->ChildIsPresent(i) && !( *(dt->GetChild(i)) == NULL))
         {
 
             avtDataTree_p child = dt->GetChild(i);
             double bounds[6];
-            
-            // the file is read and 
-
 
             //
             // Get the dataset for this leaf in the tree.
             //
             vtkDataSet *ds = child->GetDataRepresentation().GetDataVTK();
             ds->GetBounds(bounds);
-            //std::cout << "avtSamplePointExtractor::ExecuteTree " << PAR_Rank() << "   currentNode: " << currentNode << "   totalNodes: " << totalNodes << "         bounds: " << bounds[0] << " ,  " << bounds[1] << "    |  " << bounds[2] << " ,  " << bounds[3] << "   |   " << bounds[4] << " , " << bounds[5] << std::endl;
-            //std::cout << "PAR_Rank(): " << PAR_Rank() << "    PAR_Size(): " << PAR_Size() << std::endl;
 
             //
             // Iterate over all cells in the mesh and call the appropriate 
@@ -730,7 +731,7 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
             if (kernelBasedSampling)
                 KernelBasedSample(ds);
             else
-                RasterBasedSample(ds);
+                RasterBasedSample(ds, i);
 
             std::cout << "after if (kernelBasedSampling)" << std::endl;
             UpdateProgress(10*currentNode+9, 10*totalNodes);
@@ -781,6 +782,23 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     // UpdateProgress(10*currentNode+9, 10*totalNodes);
     // currentNode++;
 }
+
+
+
+void
+avtSamplePointExtractor::getImgPatchSize(int &size){
+    size = imgPatchSize;
+}
+
+void
+avtSamplePointExtractor::getImgPatches(imgPatch *image){
+
+    for (int i = 0; i < imgPatchSize; i++) {
+        image[i] = imagePatchArray[i];
+    }
+
+}
+
 
 // ****************************************************************************
 //  Method: avtSamplePointExtractor::KernelBasedSample
@@ -924,7 +942,7 @@ avtSamplePointExtractor::KernelBasedSample(vtkDataSet *ds)
 // ****************************************************************************
 
 void
-avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
+avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 {
     if (modeIs3D && ds->GetDataObjectType() == VTK_RECTILINEAR_GRID)
     {
@@ -955,16 +973,15 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
                                     varnames, varsizes);
 
         if (trilinearInterpolation == true){
-            imgPatch thePatch;
 
-            massVoxelExtractor->getImageDimensions(thePatch.patchNumber, thePatch.dims, thePatch.screen_ll, thePatch.screen_ur, thePatch.avg_z);
-            std::cout << "imgDims:" << thePatch.dims[0] << ", " << thePatch.dims[1] << std::endl;
-            std::cout << "screen_ll:" << thePatch.screen_ll[0] << ", " << thePatch.screen_ll[1] << std::endl;
-            std::cout << "screen_ur:" << thePatch.screen_ur[0] << ", " << thePatch.screen_ur[1] << std::endl;
-            std::cout << "avg_z:" << thePatch.avg_z << std::endl;
-            thePatch.imagePatch = new float [(thePatch.dims[0]*3)*thePatch.dims[1]];
+            massVoxelExtractor->getImageDimensions(imagePatchArray[num].patchNumber, imagePatchArray[num].dims, imagePatchArray[num].screen_ll, imagePatchArray[num].screen_ur, imagePatchArray[num].avg_z);
+            std::cout << "imgDims:" << imagePatchArray[num].dims[0] << ", " << imagePatchArray[num].dims[1] << std::endl;
+            std::cout << "screen_ll:" << imagePatchArray[num].screen_ll[0] << ", " << imagePatchArray[num].screen_ll[1] << std::endl;
+            std::cout << "screen_ur:" << imagePatchArray[num].screen_ur[0] << ", " << imagePatchArray[num].screen_ur[1] << std::endl;
+            std::cout << "avg_z:" << imagePatchArray[num].avg_z << std::endl;
+            imagePatchArray[num].imagePatch = new float [(imagePatchArray[num].dims[0]*3)*imagePatchArray[num].dims[1]];
 
-            massVoxelExtractor->getComputedImage(thePatch.imagePatch);
+            massVoxelExtractor->getComputedImage(imagePatchArray[num].imagePatch);
             std::cout << "Done extracting" << std::endl;
             
 
@@ -977,7 +994,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
             // }
 
             std::string imgFilename = "/home/pbmanasa/Desktop/examplePtEx_inSamplePtEx.ppm";
-            createPpm(thePatch.imagePatch, thePatch.dims[0], thePatch.dims[1], imgFilename);
+            createPpm(imagePatchArray[num].imagePatch, imagePatchArray[num].dims[0], imagePatchArray[num].dims[1], imgFilename);
         }
 
         return;
