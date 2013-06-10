@@ -79,7 +79,7 @@
 #include <TimingsManager.h>
 
 
-void createPpm(float array[], int dimx, int dimy, std::string filename){
+void createPpm3(float array[], int dimx, int dimy, std::string filename){
     int i, j;
     std::cout << "createPpm  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
     FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
@@ -994,7 +994,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             // }
 
             std::string imgFilename = "/home/pbmanasa/Desktop/examplePtEx_inSamplePtEx.ppm";
-            createPpm(imagePatchArray[num].imagePatch, imagePatchArray[num].dims[0], imagePatchArray[num].dims[1], imgFilename);
+            createPpm3(imagePatchArray[num].imagePatch, imagePatchArray[num].dims[0], imagePatchArray[num].dims[1], imgFilename);
         }
 
         return;

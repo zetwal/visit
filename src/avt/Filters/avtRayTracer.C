@@ -92,6 +92,42 @@ using     std::vector;
 //
 // ****************************************************************************
 
+void createPpm(imgPatch *image, int size, std::string filename){
+    int i, j;
+    std::cout << "createPpm "; //dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
+
+    int dimx = 0, dimy = 0;
+
+    
+    dimx = image[0].dims[0];
+    dimy = image[0].dims[1];
+  
+
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+
+    for(int n = 0; n < 1; n++){
+
+
+        for (j = 0; j < dimx; ++j){
+            for (i = 0; i < dimy; ++i){
+                static unsigned char color[3];
+                color[0] = image[n].imagePatch[j*(dimx*3) + i*3 + 0] * 255;  // red
+                color[1] = image[n].imagePatch[j*(dimx*3) + i*3 + 1] * 255;  // green
+                color[2] = image[n].imagePatch[j*(dimx*3) + i*3 + 2] * 255;  // blue 
+                (void) fwrite(color, 1, 3, fp);
+            }
+        }
+
+
+
+    }
+
+    (void) fclose(fp);
+    std::cout << "End createPpm: " << std::endl;
+}
+
+
 avtRayTracer::avtRayTracer()
 {
     view.camera[0] = -5.;
@@ -516,16 +552,16 @@ avtRayTracer::Execute(void)
     avtImage_p image = rc.GetTypedOutput();
     image->Update(GetGeneralContract());
 
-    std::cout << "Getting stuff from avtSamplePointExtractor\n";
-    int size;
-    extractor.getImgPatchSize(size);
+    // std::cout << "Getting stuff from avtSamplePointExtractor\n";
+    // int size;
+    // extractor.getImgPatchSize(size);
 
-    imgPatch *imgPatchAll;
-    imgPatchAll = new imgPatch[size];
+    // imgPatch *imgPatchAll;
+    // imgPatchAll = new imgPatch[size];
 
-    extractor.getImgPatches(imgPatchAll);
+    // extractor.getImgPatches(imgPatchAll);
 
-    std::cout << "Finished getting all patches\n";
+    // std::cout << "Finished getting all patches\n";
 
 
 
@@ -583,6 +619,23 @@ avtRayTracer::Execute(void)
             extractor.RestrictToTile(IStart, IEnd, JStart, JEnd);
             std::cout << "Hello rayTracer 888" << std::endl;
             image->Update(GetGeneralContract());
+
+
+            std::cout << "Getting stuff from avtSamplePointExtractor\n";
+            int size;
+            extractor.getImgPatchSize(size);
+
+            imgPatch *imgPatchAll;
+            imgPatchAll = new imgPatch[size];
+
+            extractor.getImgPatches(imgPatchAll);
+
+            std::cout << "Finished getting all patches\n";
+
+            std::string imgFilename = "/home/pbmanasa/Desktop/examplePtEx_inRayTracer.ppm";
+            createPpm(imgPatchAll, size, imgFilename);
+
+
             std::cout << "Hello rayTracer 999" << std::endl;
             if (PAR_Rank() == 0)
             {
