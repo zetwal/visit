@@ -652,7 +652,7 @@ avtRayTracer::Execute(void)
                         std::cout << "\n";
                         for (int i=0; i<imgPatchAll[i].dims[1]; i++){
                             for (int j=0; j<imgPatchAll[i].dims[0]; j++){
-                                int index = (i*(4*imgPatchAll[i].dims[0])) + j;
+                                int index = (i*(4*imgPatchAll[i].dims[0])) + j*4;
                                 //std::cout << imgPatchAll[i].imagePatch[index]<< ", " << imgPatchAll[i].imagePatch[index+1] << ", " << imgPatchAll[i].imagePatch[index+2] << ", " << imgPatchAll[i].imagePatch[index+3] << "  -  ";
                                 printf("%.2f ,  %.2f ,  %.2f ,  %.2f     ~    ",imgPatchAll[i].imagePatch[index+0],imgPatchAll[i].imagePatch[index+1],imgPatchAll[i].imagePatch[index+2],imgPatchAll[i].imagePatch[index+3]);
                             }
