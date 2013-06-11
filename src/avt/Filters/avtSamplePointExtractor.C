@@ -820,6 +820,10 @@ avtSamplePointExtractor::getImgPatches(imgPatch *image){
     for (int i = 0; i < imgPatchSize; i++) {
         image[i] = imagePatchArray[i];
     }
+
+
+
+    delete []imagePatchArray;
 }
 
 
