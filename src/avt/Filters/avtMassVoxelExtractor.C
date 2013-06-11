@@ -487,6 +487,8 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     height_max[curRange] = restrictedMaxHeight+1;
     curRange++;
 
+    patchDrawn = false;
+
     while (curRange > 0)
     {
         //
@@ -605,13 +607,14 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             imgWidth = xMax - xMin;
             imgHeight = yMax - yMin;
 
-            imgArray = new float[((imgWidth)*3) * imgHeight];
-            for (int i=0; i<imgHeight * imgWidth * 3; i++)
+            imgArray = new float[((imgWidth)*4) * imgHeight];
+            for (int i=0; i<imgHeight * imgWidth * 4; i++)
                 imgArray[i] = 0.0;
 
             imgDims[0] = imgWidth;       imgDims[1] = imgHeight;
             imgLowerLeft[0] = xMin;         imgLowerLeft[1] = yMin;
             imgUpperRight[0] = xMax;         imgUpperRight[1] = yMax;
+
             
             // We have a small amount of rays, so just evaluate them.
             //
@@ -627,7 +630,7 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                     SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
                 }
 
-            std::cout << "Done ExtractWorldSpaceGrid!" << std::endl;
+            //std::cout << "Done ExtractWorldSpaceGrid!" << std::endl;
         }
     }
 }
@@ -635,8 +638,10 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
 
 void
-avtMassVoxelExtractor::getImageDimensions(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z)
+avtMassVoxelExtractor::getImageDimensions(bool &inUse, int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z)
 {
+    inUse = patchDrawn;
+
     dims[0] = imgDims[0];
     dims[1] = imgDims[1];
 
@@ -655,7 +660,7 @@ avtMassVoxelExtractor::getImageDimensions(int &patchNumber, int dims[2], int scr
 void
 avtMassVoxelExtractor::getComputedImage(float *image)
 {
-    for (int i=0; i< imgDims[0]*3*imgDims[1]; i++)
+    for (int i=0; i< imgDims[0]*4*imgDims[1]; i++)
         image[i] = imgArray[i];
 
     //std::cout << "in getComputedImage" << std::endl;
@@ -1422,6 +1427,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         if (!valid_sample[i])
             continue;
 
+        patchDrawn = true;
         float diff_sep = 0.005;
         int  l;
         if (trilinearInterpolation){
@@ -1530,9 +1536,10 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         count++;
     }
 
-    imgArray[(h-yMin)*(imgWidth*3) + (w-xMin)*3 + 0] = dest_rgb[0]*dest_rgb[3];
-    imgArray[(h-yMin)*(imgWidth*3) + (w-xMin)*3 + 1] = dest_rgb[1]*dest_rgb[3];
-    imgArray[(h-yMin)*(imgWidth*3) + (w-xMin)*3 + 2] = dest_rgb[2]*dest_rgb[3];
+    imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = dest_rgb[0]*dest_rgb[3];
+    imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = dest_rgb[1]*dest_rgb[3];
+    imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = dest_rgb[2]*dest_rgb[3];
+    imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = dest_rgb[3];
 
     //
     // Make sure we get runs at the end.

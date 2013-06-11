@@ -79,28 +79,21 @@
 #include <TimingsManager.h>
 
 
-void createPpm(float array[], int dimx, int dimy, std::string filename){
+void createPpm3(float array[], int dimx, int dimy, std::string filename){
     int i, j;
-    std::cout << "createPpm  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
-   // FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
-    std::fstream fp (filename.c_str(), ios::out | ios::binary);
-    //(void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
-    
-    fp << "P6\n" << dimx << " " << dimy << "\n255\n" << endl;
-
-
+    std::cout << "createPpm3  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
     for (j = 0; j < dimy; ++j){
         for (i = 0; i < dimx; ++i){
-            static unsigned char zymcolor[3];
-            zymcolor[0] = array[j*(dimx*3) + i*3 + 0] * 255;  // red
-            zymcolor[1] = array[j*(dimx*3) + i*3 + 1] * 255;  // green
-            zymcolor[2] = array[j*(dimx*3) + i*3 + 2] * 255;  // blue 
-            //(void) fwrite(zymcolor, 1, 3, fp);
-            fp << zymcolor[0] << zymcolor[1] <<  zymcolor[2];
+            static unsigned char color[3];
+            color[0] = array[j*(dimx*3) + i*3 + 0] * 255;  // red
+            color[1] = array[j*(dimx*3) + i*3 + 1] * 255;  // green
+            color[2] = array[j*(dimx*3) + i*3 + 2] * 255;  // blue 
+            (void) fwrite(color, 1, 3, fp);
         }
     }
-    //(void) fclose(fp);
-    fp.close();
+    (void) fclose(fp);
     std::cout << "End createPpm: " << std::endl;
 }
 
@@ -111,6 +104,19 @@ std::string NumToString ( int Number )
      return ss.str();
 }
 
+imgPatch
+initPatch(){
+    imgPatch temp;
+    temp.inUse = false;
+    temp.patchNumber = -1;
+    temp.dims[0] = temp.dims[1] = -1;
+    temp.screen_ll[0] = temp.screen_ll[1] = -1;
+    temp.screen_ur[0] = temp.screen_ur[1] = -1;
+    temp.avg_z = -1.0;
+    temp.imagePatch = NULL;
+
+    return temp;
+}
 
 // ****************************************************************************
 //  Method: avtSamplePointExtractor constructor
@@ -375,6 +381,9 @@ avtSamplePointExtractor::RestrictToTile(int wmin, int wmax, int hmin, int hmax)
 void
 avtSamplePointExtractor::Execute(void)
 {
+
+    //printf("In avtSamplePointExtractor:365\n");
+
     int timingsIndex = visitTimer->StartTimer();
 
     SetUpExtractors();
@@ -720,24 +729,24 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
         return;
     }
 
+    imgPatchSize = dt->GetNChildren();
+    imagePatchArray = new imgPatch[imgPatchSize];   // get the number of children and create patches for them
+    for (int i=0; i<imgPatchSize; i++)
+        imagePatchArray[i] = initPatch();
 
-    for (int i = 0; i < dt->GetNChildren(); i++) {
+
+    for (int i = 0; i < imgPatchSize; i++) {
         if (dt->ChildIsPresent(i) && !( *(dt->GetChild(i)) == NULL))
         {
 
             avtDataTree_p child = dt->GetChild(i);
             double bounds[6];
-            
-            // the file is read and 
-
 
             //
             // Get the dataset for this leaf in the tree.
             //
             vtkDataSet *ds = child->GetDataRepresentation().GetDataVTK();
             ds->GetBounds(bounds);
-            //std::cout << "avtSamplePointExtractor::ExecuteTree " << PAR_Rank() << "   currentNode: " << currentNode << "   totalNodes: " << totalNodes << "         bounds: " << bounds[0] << " ,  " << bounds[1] << "    |  " << bounds[2] << " ,  " << bounds[3] << "   |   " << bounds[4] << " , " << bounds[5] << std::endl;
-            //std::cout << "PAR_Rank(): " << PAR_Rank() << "    PAR_Size(): " << PAR_Size() << std::endl;
 
             //
             // Iterate over all cells in the mesh and call the appropriate 
@@ -747,12 +756,11 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
             if (kernelBasedSampling)
                 KernelBasedSample(ds);
             else
-                RasterBasedSample(ds);
+                RasterBasedSample(ds, i);
 
             //std::cout << "after if (kernelBasedSampling)" << std::endl;
             UpdateProgress(10*currentNode+9, 10*totalNodes);
             currentNode++;
-
         }
     }
 
@@ -798,6 +806,22 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     // UpdateProgress(10*currentNode+9, 10*totalNodes);
     // currentNode++;
 }
+
+
+
+void
+avtSamplePointExtractor::getImgPatchSize(int &size){
+    size = imgPatchSize;
+}
+
+void
+avtSamplePointExtractor::getImgPatches(imgPatch *image){
+
+    for (int i = 0; i < imgPatchSize; i++) {
+        image[i] = imagePatchArray[i];
+    }
+}
+
 
 // ****************************************************************************
 //  Method: avtSamplePointExtractor::KernelBasedSample
@@ -941,7 +965,7 @@ avtSamplePointExtractor::KernelBasedSample(vtkDataSet *ds)
 // ****************************************************************************
 
 void
-avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
+avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 {
     if (modeIs3D && ds->GetDataObjectType() == VTK_RECTILINEAR_GRID)
     {
@@ -972,19 +996,15 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
                                     varnames, varsizes);
 
         if (trilinearInterpolation == true){
-            imgPatch thePatch;
+            massVoxelExtractor->getImageDimensions(imagePatchArray[num].inUse, imagePatchArray[num].patchNumber, imagePatchArray[num].dims, imagePatchArray[num].screen_ll, imagePatchArray[num].screen_ur, imagePatchArray[num].avg_z);
+            imagePatchArray[num].imagePatch = new float [(imagePatchArray[num].dims[0]*4)*imagePatchArray[num].dims[1]];
+            massVoxelExtractor->getComputedImage(imagePatchArray[num].imagePatch);
 
-            massVoxelExtractor->getImageDimensions(thePatch.patchNumber, thePatch.dims, thePatch.screen_ll, thePatch.screen_ur, thePatch.avg_z);
-            thePatch.imagePatch = new float [(thePatch.dims[0]*3)*thePatch.dims[1]];
-            massVoxelExtractor->getComputedImage(thePatch.imagePatch);
-            
-            //std::cout << PAR_Rank() << "   imgDims:" << thePatch.dims[0] << ", " << thePatch.dims[1] << std::endl;
-            //std::cout <<  PAR_Rank() << "   screen_ll:" << thePatch.screen_ll[0] << ", " << thePatch.screen_ll[1] << std::endl;
-            //std::cout <<  PAR_Rank() << "   screen_ur:" << thePatch.screen_ur[0] << ", " << thePatch.screen_ur[1] << std::endl;
-            //std::cout <<  PAR_Rank() << "   avg_z:" << thePatch.avg_z << std::endl;
-
-            //std::cout <<  PAR_Rank() << "   Done RasterBasedSample" << std::endl;
-            
+            // std::cout << "imgDims:" << imagePatchArray[num].dims[0] << ", " << imagePatchArray[num].dims[1] << std::endl;
+            // std::cout << "screen_ll:" << imagePatchArray[num].screen_ll[0] << ", " << imagePatchArray[num].screen_ll[1] << std::endl;
+            // std::cout << "screen_ur:" << imagePatchArray[num].screen_ur[0] << ", " << imagePatchArray[num].screen_ur[1] << std::endl;
+            // std::cout << "avg_z:" << imagePatchArray[num].avg_z << std::endl;
+            // std::cout << "Done extracting" << std::endl;
 
             // for (int i=0; i<thePatch.dims[1]; i++){
             //     for (int j=0; j<thePatch.dims[0]; j++){
@@ -995,7 +1015,8 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
             //  }
 
             //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx" + NumToString(PAR_Rank()) + ".ppm";
-            //createPpm(thePatch.imagePatch, thePatch.dims[0], thePatch.dims[1], imgFilename);
+            //createPpm3(imagePatchArray[num].imagePatch, imagePatchArray[num].dims[0], imagePatchArray[num].dims[1], imgFilename);
+
         }
 
         return;

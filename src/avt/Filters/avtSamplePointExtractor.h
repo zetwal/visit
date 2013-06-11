@@ -78,6 +78,7 @@ class  avtRayFunction;
 
 
 struct imgPatch{
+    bool inUse;
     int patchNumber;
     int dims[2];
     int screen_ll[2];
@@ -85,6 +86,8 @@ struct imgPatch{
     float avg_z;            // in eye view
     float *imagePatch;      // height x width x 4 (RGBA)
 };
+
+
 
 // ****************************************************************************
 //  Class: avtSamplePointExtractor
@@ -176,6 +179,10 @@ class AVTFILTERS_API avtSamplePointExtractor
     void                      SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void                      SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
 
+    //
+    void                      getImgPatchSize(int& size);
+    void                      getImgPatches(imgPatch *image);
+
   protected:
     int                       width, height, depth;
     int                       currentNode, totalNodes;
@@ -221,6 +228,9 @@ class AVTFILTERS_API avtSamplePointExtractor
     virtual void              ExecuteTree(avtDataTree_p);
     void                      SetUpExtractors(void);
 
+    imgPatch                  *imagePatchArray;   // all the patches generated
+    int                       imgPatchSize;
+
     typedef struct 
     {
       std::vector<int>                  cellDataIndex;
@@ -252,7 +262,7 @@ class AVTFILTERS_API avtSamplePointExtractor
                                            LoadingInfo &);
 
     void                      KernelBasedSample(vtkDataSet *);
-    void                      RasterBasedSample(vtkDataSet *);
+    void                      RasterBasedSample(vtkDataSet *, int);
 
     virtual bool              FilterUnderstandsTransformedRectMesh();
 
