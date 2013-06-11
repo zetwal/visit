@@ -116,9 +116,9 @@ void createPpm2(float array[], int dimx, int dimy, std::string filename){
     for (j = 0; j < dimy; ++j){
         for (i = 0; i < dimx; ++i){
             static unsigned char color[3];
-            color[0] = array[j*(dimx*3) + i*3 + 0] * 255;  // red
-            color[1] = array[j*(dimx*3) + i*3 + 1] * 255;  // green
-            color[2] = array[j*(dimx*3) + i*3 + 2] * 255;  // blue 
+            color[0] = array[j*(dimx*4) + i*4 + 0] * 255;  // red
+            color[1] = array[j*(dimx*4) + i*4 + 1] * 255;  // green
+            color[2] = array[j*(dimx*4) + i*4 + 2] * 255;  // blue 
             (void) fwrite(color, 1, 3, fp);
         }
     }
@@ -654,6 +654,12 @@ avtMassVoxelExtractor::getImageDimensions(bool &inUse, int &patchNumber, int dim
     screen_ur[1] = imgUpperRight[1];
 
     avg_z = imgDepth;
+
+
+    cout << "\ndims: " << imgDims[0] << " " << imgDims[1] ;
+
+
+
 }
 
 
@@ -663,7 +669,22 @@ avtMassVoxelExtractor::getComputedImage(float *image)
     for (int i=0; i< imgDims[0]*4*imgDims[1]; i++)
         image[i] = imgArray[i];
 
-    //std::cout << "in getComputedImage" << std::endl;
+    // std::cout << "\nIn avtMassVoxelExtractor::getComputedImage" << std::endl;
+    // std::cout << "\n\n" << std::endl;
+
+    // for (int j = 0; j < imgDims[1]; ++j){
+    //     for (int i = 0; i < imgDims[0]; ++i){
+    //         printf("%.2f ,  %.2f ,  %.2f ,  %.2f     ~    ", imgArray[j*(imgDims[0]*4) + i*4 + 0],  // red
+    //          imgArray[j*(imgDims[0]*4) + i*4 + 1], // green
+    //          imgArray[j*(imgDims[0]*4) + i*4 + 2],  // blue 
+    //          imgArray[j*(imgDims[0]*4) + i*4 + 3]);  // alpha 
+    //     }
+
+    //     cout << "\n\n";
+    // }
+
+
+    // std::cout << std::endl;
     //std::string imgFilename = "/home/pascal/Desktop/examplePtExinMassVoxel.ppm";
     //createPpm2(imgArray, imgWidth, imgHeight, imgFilename);
     //delete []imgArray;
