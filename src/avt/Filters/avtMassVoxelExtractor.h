@@ -117,7 +117,6 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
     void             getImageDimensions(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
     void             getComputedImage(float *image);
-    //void             getComputedImage(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, float *image);
  
   protected:
     bool             gridsAreInWorldSpace;
@@ -165,8 +164,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     int              imgUpperRight[2];
     float            imgDepth;
     float            *imgArray;
-    //float            imgArray[89*3*26];
-    
+ 
     int              imgWidth, imgHeight;
     int              fullImgWidth, fullImgHeight;
     int              xMin, xMax, yMin, yMax;

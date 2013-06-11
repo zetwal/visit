@@ -515,7 +515,7 @@ avtRayTracer::Execute(void)
     rc.SetInput(samples);
     avtImage_p image = rc.GetTypedOutput();
     image->Update(GetGeneralContract());
-    std::cout << "Hello rayTracer 0" << std::endl;
+    //std::cout << "Hello rayTracer 0" << std::endl;
 #ifdef PARALLEL
     //
     // Communicate the screen to the root processor.
@@ -526,7 +526,7 @@ avtRayTracer::Execute(void)
     imageCommunicator.SetInput(dob);
     image = imageCommunicator.GetTypedOutput();
 #endif
-    std::cout << "Hello rayTracer 1" << std::endl;
+    //std::cout << "Hello rayTracer 1" << std::endl;
     //
     // Update the pipeline several times, once for each tile.
     // The tiles are important to make sure that we never need too much
@@ -546,7 +546,7 @@ avtRayTracer::Execute(void)
         img->Delete();
     }
 
-    std::cout << "Hello rayTracer 3" << std::endl;
+    //std::cout << "Hello rayTracer 3" << std::endl;
     for (int i = 0 ; i < numDivisions ; i++)
         for (int j = 0 ; j < numDivisions ; j++)
         {
@@ -586,7 +586,7 @@ avtRayTracer::Execute(void)
                     }
             }
         }
-    std::cout << "Hello rayTracer 4" << std::endl;
+    //std::cout << "Hello rayTracer 4" << std::endl;
     if (PAR_Rank() == 0)
         image->Copy(*whole_image);
 

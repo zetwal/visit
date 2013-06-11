@@ -51,6 +51,7 @@
 #include <avtViewInfo.h>
 
 #include <avtOpacityMap.h>
+#include <fstream>
 
 class  vtkDataArray;
 class  vtkDataSet;
@@ -83,8 +84,6 @@ struct imgPatch{
     int screen_ur[2];
     float avg_z;            // in eye view
     float *imagePatch;      // height x width x 4 (RGBA)
-    //float imagePatch[89*3*26];
-
 };
 
 // ****************************************************************************
@@ -263,5 +262,4 @@ class AVTFILTERS_API avtSamplePointExtractor
 
 
 #endif
-
 

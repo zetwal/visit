@@ -132,7 +132,6 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
                                              avtVolume *vol, avtCellList *cl)
     : avtExtractor(w, h, d, vol, cl)
 {
-    //std::cout << "w: " << w << "  h: " << h << std::endl;
     fullImgWidth = w;
     fullImgHeight = h;
 
@@ -545,10 +544,10 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             coordinates[6][0] = X[dims[0]-1];   coordinates[6][1] = Y[dims[1]-1];   coordinates[6][2] = Z[dims[2]-1];
             coordinates[7][0] = X[0];           coordinates[7][1] = Y[dims[1]-1];   coordinates[7][2] = Z[dims[2]-1];
 
-            std::cout << "\n\ncoordinates: " << std::endl;
-            for (int i=0; i<8; i++){
-                std::cout << "i: " << coordinates[i][0] << " ,  " << coordinates[i][1] << " ,  " << coordinates[i][2] << std::endl; 
-            }
+            //std::cout << "\n\ncoordinates: " << std::endl;
+            //for (int i=0; i<8; i++){
+            //    std::cout << "i: " << coordinates[i][0] << " ,  " << coordinates[i][1] << " ,  " << coordinates[i][2] << std::endl; 
+            //}
             
 
             xMin = yMin = 1000000;
@@ -561,7 +560,6 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                 _world[1] = coordinates[i][1];
                 _world[2] = coordinates[i][2];
 
-                //std::cout << "i: " << coordinates[i][0] << " ,  " << coordinates[i][1] << " ,  " << coordinates[i][2] << std::endl; 
                 world_to_view_transform->MultiplyPoint(_world, _view);
 
                 if (_view[3] != 0.){
@@ -570,7 +568,7 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                     _view[2] /= _view[3];
                 }
 
-                std::cout << i << " ~ " << _view[0] << " ,  " << _view[1] << " ,  " << _view[2] << std::endl; 
+                //std::cout << i << " ~ " << _view[0] << " ,  " << _view[1] << " ,  " << _view[2] << std::endl; 
                 _view[0] = _view[0]*(fullImgWidth/2.) + (fullImgWidth/2.);
                 _view[1] = _view[1]*(fullImgHeight/2.) + (fullImgHeight/2.);
 
@@ -609,21 +607,12 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
             imgArray = new float[((imgWidth)*3) * imgHeight];
             for (int i=0; i<imgHeight * imgWidth * 3; i++)
-                imgArray[i] = 1.0;
+                imgArray[i] = 0.0;
 
             imgDims[0] = imgWidth;       imgDims[1] = imgHeight;
             imgLowerLeft[0] = xMin;         imgLowerLeft[1] = yMin;
             imgUpperRight[0] = xMax;         imgUpperRight[1] = yMax;
             
-
-            //std::cout << "hello" << std::endl;
-
-            // imgArray = new float[(fullImgWidth*3) * fullImgHeight];
-            // for (int i=0; i<fullImgWidth * fullImgHeight * 3; i++)
-            //     imgArray[i] = 0;
-
-            //std::cout << "hello hello" << std::endl;
-
             // We have a small amount of rays, so just evaluate them.
             //
 
@@ -638,25 +627,16 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                     SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
                 }
 
-
-            //     int count =1;
-            //std::string imgFilename = "/home/pascal/Desktop/example";
-            // imgFilename += NumberToString(count);
-            //imgFilename += ".ppm";
-            //count++;
-            //createPpm(imgArray, imgWidth, imgHeight, imgFilename);
-            //delete []imgArray;
-            //delete []imgArray;    
-            std::cout << "done massVoxel" << std::endl;
-
-        
+            std::cout << "Done ExtractWorldSpaceGrid!" << std::endl;
         }
     }
 }
 
 
+
 void
-avtMassVoxelExtractor::getImageDimensions(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z){
+avtMassVoxelExtractor::getImageDimensions(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z)
+{
     dims[0] = imgDims[0];
     dims[1] = imgDims[1];
 
@@ -672,48 +652,15 @@ avtMassVoxelExtractor::getImageDimensions(int &patchNumber, int dims[2], int scr
 }
 
 
-
-
 void
-//avtMassVoxelExtractor::getComputedImage(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, float *image){
-//avtMassVoxelExtractor::getComputedImage(int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, float image[]){
-avtMassVoxelExtractor::getComputedImage(float *image){
-
-    // dims[0] = imgDims[0];
-    // dims[1] = imgDims[1];
-
-    // patchNumber = 0;
-
-    // screen_ll[0] = imgLowerLeft[0];
-    // screen_ll[1] = imgLowerLeft[1];
-
-    // screen_ur[0] = imgUpperRight[1];
-    // screen_ur[1] = imgUpperRight[1];
-
-    // avg_z = imgDepth;
-   // image = imgArray;
-
-    //image = new float [(imgDims[0]*3)*imgDims[1]];
-
+avtMassVoxelExtractor::getComputedImage(float *image)
+{
     for (int i=0; i< imgDims[0]*3*imgDims[1]; i++)
         image[i] = imgArray[i];
 
-
-    // for (int i=0; i<dims[1]; i++){
-    //     for (int j=0; j<dims[0]; j++){
-    //         int index = i*(3*dims[0]) + j;
-    //         std::cout << imgArray[index]<< ", " << imgArray[index+1] << ", " << imgArray[index+2] << ", " << imgArray[index+3] << "  -  ";
-    //     }
-    //     std::cout << "\n";
-    // }
-    
-    // std::cout << "imgDims:" << imgDims[0] << ", " << imgDims[1] << std::endl;
-    // std::cout << "screen_ll:" << screen_ll[0] << ", " << screen_ll[1] << std::endl;
-    // std::cout << "screen_ur:" << screen_ur[0] << ", " << screen_ur[1] << std::endl;
-    // std::cout << "avg_z:" << avg_z << std::endl;
-    std::cout << "in avtMassVoxelExtractor" << std::endl;
-    std::string imgFilename = "/home/pascal/Desktop/examplePtExinMassVoxel.ppm";
-            createPpm2(imgArray, imgWidth, imgHeight, imgFilename);
+    //std::cout << "in getComputedImage" << std::endl;
+    //std::string imgFilename = "/home/pascal/Desktop/examplePtExinMassVoxel.ppm";
+    //createPpm2(imgArray, imgWidth, imgHeight, imgFilename);
     //delete []imgArray;
 }
 
@@ -2168,5 +2115,4 @@ avtMassVoxelExtractor::ExtractImageSpaceGrid(vtkRectilinearGrid *rgrid,
         }
     }
 }
-
 

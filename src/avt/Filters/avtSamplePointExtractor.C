@@ -82,19 +82,33 @@
 void createPpm(float array[], int dimx, int dimy, std::string filename){
     int i, j;
     std::cout << "createPpm  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
-    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
-    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+   // FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
+    std::fstream fp (filename.c_str(), ios::out | ios::binary);
+    //(void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    
+    fp << "P6\n" << dimx << " " << dimy << "\n255\n" << endl;
+
+
     for (j = 0; j < dimy; ++j){
         for (i = 0; i < dimx; ++i){
-            static unsigned char color[3];
-            color[0] = array[j*(dimx*3) + i*3 + 0] * 255;  // red
-            color[1] = array[j*(dimx*3) + i*3 + 1] * 255;  // green
-            color[2] = array[j*(dimx*3) + i*3 + 2] * 255;  // blue 
-            (void) fwrite(color, 1, 3, fp);
+            static unsigned char zymcolor[3];
+            zymcolor[0] = array[j*(dimx*3) + i*3 + 0] * 255;  // red
+            zymcolor[1] = array[j*(dimx*3) + i*3 + 1] * 255;  // green
+            zymcolor[2] = array[j*(dimx*3) + i*3 + 2] * 255;  // blue 
+            //(void) fwrite(zymcolor, 1, 3, fp);
+            fp << zymcolor[0] << zymcolor[1] <<  zymcolor[2];
         }
     }
-    (void) fclose(fp);
+    //(void) fclose(fp);
+    fp.close();
     std::cout << "End createPpm: " << std::endl;
+}
+
+std::string NumToString ( int Number )
+{
+     std::ostringstream ss;
+     ss << Number;
+     return ss.str();
 }
 
 
@@ -689,6 +703,9 @@ avtSamplePointExtractor::PostExecute(void)
 //    Moved raster based sampling into its own method.  Added support for
 //    kernel based sampling.
 //
+//    Manasa Prasad Jun 6 2013
+//    Changed the function to a loop from recursion
+//
 // ****************************************************************************
 
 void
@@ -726,13 +743,13 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
             // Iterate over all cells in the mesh and call the appropriate 
             // extractor for each cell to get the sample points.
             //
-            std::cout << "before if (kernelBasedSampling)" << std::endl;
+            //std::cout << "before if (kernelBasedSampling)" << std::endl;
             if (kernelBasedSampling)
                 KernelBasedSample(ds);
             else
                 RasterBasedSample(ds);
 
-            std::cout << "after if (kernelBasedSampling)" << std::endl;
+            //std::cout << "after if (kernelBasedSampling)" << std::endl;
             UpdateProgress(10*currentNode+9, 10*totalNodes);
             currentNode++;
 
@@ -958,26 +975,27 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds)
             imgPatch thePatch;
 
             massVoxelExtractor->getImageDimensions(thePatch.patchNumber, thePatch.dims, thePatch.screen_ll, thePatch.screen_ur, thePatch.avg_z);
-            std::cout << "imgDims:" << thePatch.dims[0] << ", " << thePatch.dims[1] << std::endl;
-            std::cout << "screen_ll:" << thePatch.screen_ll[0] << ", " << thePatch.screen_ll[1] << std::endl;
-            std::cout << "screen_ur:" << thePatch.screen_ur[0] << ", " << thePatch.screen_ur[1] << std::endl;
-            std::cout << "avg_z:" << thePatch.avg_z << std::endl;
             thePatch.imagePatch = new float [(thePatch.dims[0]*3)*thePatch.dims[1]];
-
             massVoxelExtractor->getComputedImage(thePatch.imagePatch);
-            std::cout << "Done extracting" << std::endl;
+            
+            //std::cout << PAR_Rank() << "   imgDims:" << thePatch.dims[0] << ", " << thePatch.dims[1] << std::endl;
+            //std::cout <<  PAR_Rank() << "   screen_ll:" << thePatch.screen_ll[0] << ", " << thePatch.screen_ll[1] << std::endl;
+            //std::cout <<  PAR_Rank() << "   screen_ur:" << thePatch.screen_ur[0] << ", " << thePatch.screen_ur[1] << std::endl;
+            //std::cout <<  PAR_Rank() << "   avg_z:" << thePatch.avg_z << std::endl;
+
+            //std::cout <<  PAR_Rank() << "   Done RasterBasedSample" << std::endl;
             
 
             // for (int i=0; i<thePatch.dims[1]; i++){
             //     for (int j=0; j<thePatch.dims[0]; j++){
-            //         int index = i*(3*thePatch.dims[0]) + j;
-            //         std::cout << thePatch.imagePatch[index]<< ", " << thePatch.imagePatch[index+1] << ", " << thePatch.imagePatch[index+2] << ", " << thePatch.imagePatch[index+3] << "  -  ";
+            //          int index = i*(3*thePatch.dims[0]) + j;
+            //          std::cout << thePatch.imagePatch[index]<< ", " << thePatch.imagePatch[index+1] << ", " << thePatch.imagePatch[index+2] << ", " << thePatch.imagePatch[index+3] << "  -  ";
             //     }
             //     std::cout << "\n";
-            // }
+            //  }
 
-            std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx.ppm";
-            createPpm(thePatch.imagePatch, thePatch.dims[0], thePatch.dims[1], imgFilename);
+            //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx" + NumToString(PAR_Rank()) + ".ppm";
+            //createPpm(thePatch.imagePatch, thePatch.dims[0], thePatch.dims[1], imgFilename);
         }
 
         return;
@@ -2186,5 +2204,4 @@ avtSamplePointExtractor::GetLoadingInfoForArrays(vtkDataSet *ds,
         }
     }
 }
-
 
