@@ -764,10 +764,6 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
         }
     }
 
-
-
-
-
     // if (dt->GetNChildren() != 0)
     // {
     //     printf("%d\n", dt->GetNChildren());
@@ -1020,7 +1016,6 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx" + NumToString(PAR_Rank()) + ".ppm";
             //createPpm3(imagePatchArray[num].imagePatch, imagePatchArray[num].dims[0], imagePatchArray[num].dims[1], imgFilename);
-
         }
 
         return;

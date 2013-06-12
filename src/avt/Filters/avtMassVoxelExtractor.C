@@ -68,6 +68,34 @@
 #include <string>
 #include <sstream>
 
+
+
+std::string NumberToString ( int Number )
+{
+     std::ostringstream ss;
+     ss << Number;
+     return ss.str();
+}
+
+
+void createPpm2(float array[], int dimx, int dimy, std::string filename){
+    int i, j;
+    std::cout << "createPpm2  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    for (j = 0; j < dimy; ++j){
+        for (i = 0; i < dimx; ++i){
+            static unsigned char color[3];
+            color[0] = array[j*(dimx*4) + i*4 + 0] * 255;  // red
+            color[1] = array[j*(dimx*4) + i*4 + 1] * 255;  // green
+            color[2] = array[j*(dimx*4) + i*4 + 2] * 255;  // blue 
+            (void) fwrite(color, 1, 3, fp);
+        }
+    }
+    (void) fclose(fp);
+    std::cout << "End createPpm: " << std::endl;
+}
+
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor constructor
 //
@@ -100,34 +128,6 @@
 //    Use double instead of float.
 //
 // ****************************************************************************
-std::string NumberToString ( int Number )
-{
-     std::ostringstream ss;
-     ss << Number;
-     return ss.str();
-}
-
-
-void createPpm2(float array[], int dimx, int dimy, std::string filename){
-    int i, j;
-    std::cout << "createPpm2  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
-    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
-    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
-    for (j = 0; j < dimy; ++j){
-        for (i = 0; i < dimx; ++i){
-            static unsigned char color[3];
-            color[0] = array[j*(dimx*4) + i*4 + 0] * 255;  // red
-            color[1] = array[j*(dimx*4) + i*4 + 1] * 255;  // green
-            color[2] = array[j*(dimx*4) + i*4 + 2] * 255;  // blue 
-            (void) fwrite(color, 1, 3, fp);
-        }
-    }
-    (void) fclose(fp);
-    std::cout << "End createPpm: " << std::endl;
-}
-
-
-
 avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
                                              avtVolume *vol, avtCellList *cl)
     : avtExtractor(w, h, d, vol, cl)
@@ -660,11 +660,7 @@ avtMassVoxelExtractor::getImageDimensions(bool &inUse, int &patchNumber, int dim
 
     avg_z = imgDepth;
 
-
-    cout << "\ndims: " << imgDims[0] << " " << imgDims[1] ;
-
-
-
+    //cout << "\ndims: " << imgDims[0] << " " << imgDims[1] ;
 }
 
 
@@ -674,8 +670,9 @@ avtMassVoxelExtractor::getComputedImage(float *image)
     for (int i=0; i< imgDims[0]*4*imgDims[1]; i++)
         image[i] = imgArray[i];
 
-    std::cout << "\nIn avtMassVoxelExtractor::getComputedImage" << std::endl;
-    std::cout << "\n\n" << std::endl;
+    // std::cout << "\nIn avtMassVoxelExtractor::getComputedImage" << std::endl;
+    // std::cout << "\n\n" << std::endl;
+
 
     // for (int j = 0; j < imgDims[1]; ++j){
     //     for (int i = 0; i < imgDims[0]; ++i){
@@ -684,18 +681,16 @@ avtMassVoxelExtractor::getComputedImage(float *image)
     //          imgArray[j*(imgDims[0]*4) + i*4 + 2],  // blue 
     //          imgArray[j*(imgDims[0]*4) + i*4 + 3]);  // alpha 
     //     }
-
     //     cout << "\n\n";
     // }
 
 
-    std::cout << std::endl;
-    //std::string imgFilename = "/home/pascal/Desktop/examplePtExinMassVoxel.ppm";
-    //createPpm2(imgArray, imgWidth, imgHeight, imgFilename);
-
-
-
     printf("\n-------------Image array deleted");
+
+    for (int i=0; i< imgDims[0]*4*imgDims[1]; i++)
+        image[i] = imgArray[i];
+
+
     delete []imgArray;
 }
 
@@ -1292,23 +1287,41 @@ avtMassVoxelExtractor::FindSegmentIntersections(const double *origin,
 
 
 // ****************************************************************************
-//  Method: avtMassVoxelExtractor::SampleVariable
+//  Method: avtMassVoxelExtractor::computePixelColor
 //
 //  Purpose:
-//      Actually samples the variable into our temporaray structure.
+//      Computes color
 //
-//  Programmer: Hank Childs
-//  Creation:   November 20, 2004
+//  Programmer: Pascal Grosset
+//  Creation:   June 10, 2013
 //
 //  Modifications:
-//
-//    Hank Childs, Fri Jun  1 15:45:58 PDT 2007
-//    Add support for non-scalars.
-//
-//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
-//    Use double instead of float.
+//      Need to take into account lighting
+//      Need to take into accoujnt multiple light sources
 //
 // ****************************************************************************
+void
+avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4]){
+    double source_rgb[4];
+    transferFn1D->QueryTF(scalarValue,source_rgb);
+    //source_rgb[0] = source_rgb[1] = source_rgb[2] = source_rgb[3] = 1.0-scalarValue;
+
+    // might need to add opacity correction later
+    //float opacityCorrectiong = 0.8;  // need to be properly set according to number of slices; 0.8 is too arbitrary
+    //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
+    //source_rgb[3] = alpha;
+
+    //std::cout << " source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " ,  " << source_rgb[2] << " ,  " << source_rgb[3] << std::endl;
+    //std::cout << " dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
+    
+    for (int i=0; i<4; i++)
+    // front to back
+        dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
+    
+    // back to front
+    //    dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
+}
+
 
 void copyVals(double myvals[8], double vals[8]){
     for (int i = 0 ; i < 8 ; i++)
@@ -1337,28 +1350,27 @@ float cubicfilter(float x){
     ret = ret/2.0;
 }
 
-void
-avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4]){
-    double source_rgb[4];
-    transferFn1D->QueryTF(scalarValue,source_rgb);
-    //source_rgb[0] = source_rgb[1] = source_rgb[2] = source_rgb[3] = 1.0-scalarValue;
 
-    // might need to add opacity correction later
-    //float opacityCorrectiong = 0.8;  // need to be properly set according to number of slices; 0.8 is too arbitrary
-    //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
-    //source_rgb[3] = alpha;
 
-    //std::cout << " source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " ,  " << source_rgb[2] << " ,  " << source_rgb[3] << std::endl;
-    //std::cout << " dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
-    
-    for (int i=0; i<4; i++)
-    // front to back
-        dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
-    
-    // back to front
-    //    dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
-}
 
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::SampleVariable
+//
+//  Purpose:
+//      Actually samples the variable into our temporaray structure.
+//
+//  Programmer: Hank Childs
+//  Creation:   November 20, 2004
+//
+//  Modifications:
+//
+//    Hank Childs, Fri Jun  1 15:45:58 PDT 2007
+//    Add support for non-scalars.
+//
+//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
+//    Use double instead of float.
+//
+// ****************************************************************************
 void
 avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 {
@@ -1566,6 +1578,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         count++;
     }
 
+    // copyt the color generated by one ray through the volume to the image
     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = dest_rgb[0]*dest_rgb[3];
     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = dest_rgb[1]*dest_rgb[3];
     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = dest_rgb[2]*dest_rgb[3];
