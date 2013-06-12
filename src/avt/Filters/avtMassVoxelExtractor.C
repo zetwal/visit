@@ -608,6 +608,11 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             imgHeight = yMax - yMin;
 
             imgArray = new float[((imgWidth)*4) * imgHeight];
+            printf("\n----------New image array created");
+
+
+
+
             for (int i=0; i<imgHeight * imgWidth * 4; i++)
                 imgArray[i] = 0.0;
 
@@ -662,8 +667,12 @@ avtMassVoxelExtractor::getImageDimensions(bool &inUse, int &patchNumber, int dim
 void
 avtMassVoxelExtractor::getComputedImage(float *image)
 {
+    for (int i=0; i< imgDims[0]*4*imgDims[1]; i++)
+        image[i] = imgArray[i];
+
     // std::cout << "\nIn avtMassVoxelExtractor::getComputedImage" << std::endl;
     // std::cout << "\n\n" << std::endl;
+
 
     // for (int j = 0; j < imgDims[1]; ++j){
     //     for (int i = 0; i < imgDims[0]; ++i){
@@ -675,13 +684,12 @@ avtMassVoxelExtractor::getComputedImage(float *image)
     //     cout << "\n\n";
     // }
 
-    //std::cout << std::endl;
-    //std::string imgFilename = "/home/pascal/Desktop/examplePtExinMassVoxel.ppm";
-    //createPpm2(imgArray, imgWidth, imgHeight, imgFilename);
 
+    printf("\n-------------Image array deleted");
 
     for (int i=0; i< imgDims[0]*4*imgDims[1]; i++)
         image[i] = imgArray[i];
+
 
     delete []imgArray;
 }
