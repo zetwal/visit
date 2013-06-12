@@ -823,7 +823,7 @@ avtSamplePointExtractor::getImgPatches(imgPatch *image){
 
 
 
-    delete []imagePatchArray;
+    //delete []imagePatchArray;
 }
 
 

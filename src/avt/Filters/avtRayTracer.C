@@ -584,7 +584,7 @@ avtRayTracer::Execute(void)
     // The tiles are important to make sure that we never need too much
     // memory.
     //
-    int numDivisions = GetNumberOfDivisions(screen[0],screen[1],samplesPerRay);
+    int numDivisions = 1; //GetNumberOfDivisions(screen[0],screen[1],samplesPerRay);
 
     int IStep = screen[0] / numDivisions;
     int JStep = screen[1] / numDivisions;
@@ -644,27 +644,27 @@ avtRayTracer::Execute(void)
                 //  << "\t  used: " << ((imgPatchAll[i].inUse == true)? 1: 0) << std::endl;
 
 
-                if (imgPatchAll[i].inUse == true){
-                    printf("\n\n Rank: %d  patch: %d \n dims: %d %d \n screen_ll: %d %d \n screen_ur: %d %d  \n avg_z: %f \n used: %d",PAR_Rank(),i,imgPatchAll[i].dims[0],imgPatchAll[i].dims[1],imgPatchAll[i].screen_ll[0],imgPatchAll[i].screen_ll[1],imgPatchAll[i].screen_ur[0],imgPatchAll[i].screen_ur[1],imgPatchAll[i].avg_z,((imgPatchAll[i].inUse == true)? 1: 0));
+                // if (imgPatchAll[i].inUse == true){
+                //     printf("\n\n Rank: %d  patch: %d \n dims: %d %d \n screen_ll: %d %d \n screen_ur: %d %d  \n avg_z: %f \n used: %d",PAR_Rank(),i,imgPatchAll[i].dims[0],imgPatchAll[i].dims[1],imgPatchAll[i].screen_ll[0],imgPatchAll[i].screen_ll[1],imgPatchAll[i].screen_ur[0],imgPatchAll[i].screen_ur[1],imgPatchAll[i].avg_z,((imgPatchAll[i].inUse == true)? 1: 0));
 
-                    specialCount = specialCount +1;
-                    if (specialCount < 25){
-                        std::cout << "\n(" << imgPatchAll[i].dims[1] << " , " << imgPatchAll[i].dims[0] << ")\n";
+                //     specialCount = specialCount +1;
+                //     if (specialCount < 25){
+                //         std::cout << "\n(" << imgPatchAll[i].dims[1] << " , " << imgPatchAll[i].dims[0] << ")\n";
 
 
-                        for (int k=0; k<imgPatchAll[i].dims[1]; k++){
-                            for (int j=0; j<imgPatchAll[i].dims[0]; j++){
-                                int index = (k*(4*imgPatchAll[i].dims[0])) + j*4;
-                                //std::cout << imgPatchAll[i].imagePatch[index]<< ", " << imgPatchAll[i].imagePatch[index+1] << ", " << imgPatchAll[i].imagePatch[index+2] << ", " << imgPatchAll[i].imagePatch[index+3] << "  -  ";
-                                printf("%.2f ,  %.2f ,  %.2f ,  %.2f     ~    ",imgPatchAll[i].imagePatch[index+0],imgPatchAll[i].imagePatch[index+1],imgPatchAll[i].imagePatch[index+2],imgPatchAll[i].imagePatch[index+3]);
-                            }
-                            std::cout << "\n(" << k << " , " << j << ")";
-                            printf("\n");
-                        }
-                        printf("\n");
-                        //std::cout << "\n";
-                    }
-                }
+                //         for (int k=0; k<imgPatchAll[i].dims[1]; k++){
+                //             for (int j=0; j<imgPatchAll[i].dims[0]; j++){
+                //                 int index = (k*(4*imgPatchAll[i].dims[0])) + j*4;
+                //                 //std::cout << imgPatchAll[i].imagePatch[index]<< ", " << imgPatchAll[i].imagePatch[index+1] << ", " << imgPatchAll[i].imagePatch[index+2] << ", " << imgPatchAll[i].imagePatch[index+3] << "  -  ";
+                //                 printf("%.2f ,  %.2f ,  %.2f ,  %.2f     ~    ",imgPatchAll[i].imagePatch[index+0],imgPatchAll[i].imagePatch[index+1],imgPatchAll[i].imagePatch[index+2],imgPatchAll[i].imagePatch[index+3]);
+                //             }
+                //             std::cout << "\n(" << k << " , " << j << ")";
+                //             printf("\n");
+                //         }
+                //         printf("\n");
+                //         //std::cout << "\n";
+                //     }
+                // }
                 //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inRayTracer_Rank_" + NumbToString(PAR_Rank()) + "_ item_" + NumbToString(i) +  ".ppm";
                 //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inRayTracer.ppm";
                 //createPpm(imgPatchAll, size, imgFilename);
