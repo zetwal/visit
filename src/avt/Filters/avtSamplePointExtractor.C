@@ -817,11 +817,13 @@ avtSamplePointExtractor::getImgPatches(imgPatch *image){
         image[i] = imagePatchArray[i];
     }
 
-
-
-    delete []imagePatchArray;
+    //delete []imagePatchArray;
 }
 
+void
+avtSamplePointExtractor::delImgPatches(){
+    delete []imagePatchArray;
+}
 
 // ****************************************************************************
 //  Method: avtSamplePointExtractor::KernelBasedSample
@@ -995,12 +997,15 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
 
+debug5 << "RasterBasedSample." << endl;
         if (trilinearInterpolation == true){
             massVoxelExtractor->getImageDimensions(imagePatchArray[num].inUse, imagePatchArray[num].patchNumber, imagePatchArray[num].dims, imagePatchArray[num].screen_ll, imagePatchArray[num].screen_ur, imagePatchArray[num].avg_z);
             imagePatchArray[num].imagePatch = new float [(imagePatchArray[num].dims[0]*4)*imagePatchArray[num].dims[1]];
             massVoxelExtractor->getComputedImage(imagePatchArray[num].imagePatch);
 
-            // std::cout << "imgDims:" << imagePatchArray[num].dims[0] << ", " << imagePatchArray[num].dims[1] << std::endl;
+
+             debug5 << "RasterBasedSample." << endl;
+             //std::cout << "imgDims:" << imagePatchArray[num].dims[0] << ", " << imagePatchArray[num].dims[1] << std::endl;
             // std::cout << "screen_ll:" << imagePatchArray[num].screen_ll[0] << ", " << imagePatchArray[num].screen_ll[1] << std::endl;
             // std::cout << "screen_ur:" << imagePatchArray[num].screen_ur[0] << ", " << imagePatchArray[num].screen_ur[1] << std::endl;
             // std::cout << "avg_z:" << imagePatchArray[num].avg_z << std::endl;

@@ -585,7 +585,7 @@ avtRayTracer::Execute(void)
     // memory.
     //
     int numDivisions = GetNumberOfDivisions(screen[0],screen[1],samplesPerRay);
-
+    numDivisions = 1;
     int IStep = screen[0] / numDivisions;
     int JStep = screen[1] / numDivisions;
     avtImage_p whole_image;
@@ -619,7 +619,7 @@ avtRayTracer::Execute(void)
 #endif
             extractor.RestrictToTile(IStart, IEnd, JStart, JEnd);
             std::cout << "Hello rayTracer 888" << std::endl;
-            image->Update(GetGeneralContract());
+            image->Update(GetGeneralContract());                    // execution happens here - identified with gdb
 
 
             //std::cout << "Getting stuff from avtSamplePointExtractor\n";
@@ -671,7 +671,7 @@ avtRayTracer::Execute(void)
             //     }
             // }
             // std::cout << "Finished getting all patches\n";
-            if (PAR_Rank() == 0)
+            if (PAR_Rank() == 0)    // stage 8 of 9
             {
                 unsigned char *whole_rgb = 
                                         whole_image->GetImage().GetRGBBuffer();
@@ -696,6 +696,7 @@ avtRayTracer::Execute(void)
     // Make our output image look the same as the ray compositer's.
     //
     SetOutput(image);
+    extractor.delImgPatches();
 
     visitTimer->StopTimer(timingIndex, "Ray Tracing");
     visitTimer->DumpTimings();

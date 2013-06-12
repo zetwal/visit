@@ -182,6 +182,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     //
     void                      getImgPatchSize(int& size);
     void                      getImgPatches(imgPatch *image);
+    void                      delImgPatches();
 
   protected:
     int                       width, height, depth;

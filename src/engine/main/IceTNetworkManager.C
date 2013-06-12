@@ -235,6 +235,7 @@ IceTNetworkManager::~IceTNetworkManager(void)
 void
 IceTNetworkManager::TileLayout(size_t width, size_t height) const
 {
+    std::cout << "IceTNetworkManager::TileLayout" << std::endl;
     debug2 << "IceTNM: configuring " << width << "x" << height
            << " single tile display." << std::endl;
 
@@ -306,6 +307,7 @@ avtDataObject_p
 IceTNetworkManager::Render(bool, intVector networkIds, bool getZBuffer,
                            int annotMode, int windowID, bool leftEye)
 {
+    std::cout << "IceTNetworkManager::Render" << std::endl;
     int t0 = visitTimer->StartTimer();
     DataNetwork *origWorkingNet = workingNet;
     avtDataObject_p retval;
@@ -513,6 +515,7 @@ IceTNetworkManager::Render(bool, intVector networkIds, bool getZBuffer,
 void
 IceTNetworkManager::RealRender()
 {
+    std::cout << "IceTNetworkManager::RealRender" << std::endl;
     avtImage_p dob = this->RenderGeometry();
     if(avtDebugDumpOptions::DumpEnabled())
     {
@@ -557,6 +560,7 @@ IceTNetworkManager::RealRender()
 avtImage_p
 IceTNetworkManager::RenderGeometry()
 {
+    std::cout << "IceTNetworkManager::RenderGeometry" << std::endl;
     VisWindow *viswin = viswinMap.find(this->r_mgmt.windowID)->second.viswin;
     if(this->MemoMultipass(viswin))
     {
@@ -586,6 +590,7 @@ IceTNetworkManager::RenderGeometry()
 avtDataObject_p
 IceTNetworkManager::RenderTranslucent(int windowID, const avtImage_p& input)
 {
+    std::cout << "IceTNetworkManager::RenderTranslucent" << std::endl;
     VisWindow *viswin = viswinMap.find(windowID)->second.viswin;
     CallProgressCallback("IceTNetworkManager", "Transparent rendering", 0, 1);
     {
@@ -661,6 +666,7 @@ avtImage_p
 IceTNetworkManager::Readback(VisWindow * const viswin,
                              bool readZ) const
 {
+    std::cout << "IceTNetworkManager::Readback" << std::endl;
     GLboolean have_image;
 
     ICET(icetGetBooleanv(ICET_COLOR_BUFFER_VALID, &have_image));
@@ -849,6 +855,7 @@ IceTNetworkManager::VerifyColorFormat() const
 extern "C" void
 render()
 {
+    std::cout << "IceTNetworkManager render" << std::endl;
     debug2 << "IceT has invoked our render function." << std::endl;
     Engine *engy = Engine::Instance();
     IceTNetworkManager *net_mgr;
