@@ -405,10 +405,10 @@ QvisVolumePlotWindow::CreateMatLightGroup(QWidget *parent, QGridLayout *pLayout,
     matN->setValue(15);
     
    
-    QLabel* Ka = new QLabel(tr("Ambient:"), central);
-    QLabel* Kd = new QLabel(tr("Diffuse:"), central);
-    QLabel* Ks = new QLabel(tr("Specular:"), central);
-    QLabel* specPow = new QLabel(tr("Shininess:"), central);
+    Ka = new QLabel(tr("Ambient:"), central);
+    Kd = new QLabel(tr("Diffuse:"), central);
+    Ks = new QLabel(tr("Specular:"), central);
+    specPow = new QLabel(tr("Shininess:"), central);
     Ka->setBuddy(matKa);
     Kd->setBuddy(matKd);
     Ks->setBuddy(matKs);
@@ -434,6 +434,81 @@ QvisVolumePlotWindow::CreateMatLightGroup(QWidget *parent, QGridLayout *pLayout,
     connect(matN , SIGNAL(valueChanged(double)), this, SLOT(setMaterialN(double) ));
 }
 
+
+// ****************************************************************************
+// Method: QvisVolumePlotWindow::CreateOccShGroup
+//
+// Purpose: 
+//   Creates the widgets in the occlusion shading.
+//
+// Note:       Adapted from CreateWindowContents when porting to Qt 4.
+//
+// Programmer: Pascal Grosset
+// Creation:   Wed Jun 2013
+//
+// Modifications:
+//
+// ****************************************************************************
+void
+QvisVolumePlotWindow::CreateOccShGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth)
+{
+    // Add the group box that will contain the options.
+    ambOccPropGroup = new QGroupBox(parent);
+    ambOccPropGroup->setTitle(tr("Ambient Occlusion Properties"));
+    pLayout->addWidget(ambOccPropGroup);
+
+    QGridLayout *occlusionShadingPropLayout = new QGridLayout(ambOccPropGroup);
+    occlusionShadingPropLayout->setHorizontalSpacing (12);
+    QLabel* spacer = new QLabel(tr(" "), central);
+
+
+    // Algo
+    occlusionShadingToggle = new QCheckBox(tr("Occlusion"), central);
+    
+
+    // Ambient Occlusion properties
+    ambientIntensityLabel = new QLabel(tr("Ambient intensity:"), central);
+    ambIntensity = new QDoubleSpinBox(central);
+    ambIntensity->setMinimum(0.0);
+    ambIntensity->setMaximum(5.0);
+    ambIntensity->setDecimals(1);
+    ambIntensity->setSingleStep(0.5);
+    ambIntensity->setValue(1.0);
+    ambientIntensityLabel->setBuddy(ambIntensity);
+    
+
+    angleLabel = new QLabel(tr("Angle:"), central);
+    angleFac = new QDoubleSpinBox(central);
+    angleFac->setMinimum(0.0);
+    angleFac->setMaximum(89.0);
+    angleFac->setDecimals(1);
+    angleFac->setSingleStep(5.0);
+    angleFac->setValue(45);
+    angleLabel->setBuddy(angleFac);
+    
+
+    occlusionShadingPropLayout->addWidget(occlusionShadingToggle, 0,0, 1,1, Qt::AlignLeft);
+    occlusionShadingPropLayout->addWidget(spacer, 0,1, 1,1, Qt::AlignLeft);
+
+    occlusionShadingPropLayout->addWidget(ambientIntensityLabel, 0,3, 1,1, Qt::AlignRight);
+    occlusionShadingPropLayout->addWidget(ambIntensity, 0,4, 1,1, Qt::AlignLeft);
+
+    occlusionShadingPropLayout->addWidget(angleLabel, 0,6, 1,1, Qt::AlignRight);
+    occlusionShadingPropLayout->addWidget(angleFac, 0,7, 1,1, Qt::AlignLeft);
+
+
+    ambOccPropGroup->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    occlusionShadingToggle->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    ambIntensity->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    angleFac->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    ambientIntensityLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    angleLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    
+
+    connect(occlusionShadingToggle, SIGNAL(toggled(bool)),  this, SLOT(occlusionToggled(bool)));
+    connect(ambIntensity, SIGNAL(valueChanged(double)), this, SLOT(setAmbIntensity(double))); 
+    connect(angleFac, SIGNAL(valueChanged(double)), this, SLOT(setAngleFac(double))); 
+}
 
 // ****************************************************************************
 // Method: QvisVolumePlot::Create1DTransferFunctionGroup
@@ -1093,23 +1168,26 @@ QvisVolumePlotWindow::CreateRendererOptionsGroup(int maxWidth)
     kernelButton = new QRadioButton(tr("Kernel Based"),central);
     samplingButtonGroup->addButton(kernelButton, 1);
     methodsLayout->addWidget(kernelButton,1,2);
+    trilinearButton = new QRadioButton(tr("Trilinear"),central);
+    samplingButtonGroup->addButton(trilinearButton, 2);
+    methodsLayout->addWidget(trilinearButton,1,3);
 
-    //
-    // Create the smoothing stuff
-    //
-    QGroupBox *smoothingGroup = new QGroupBox(central);
-    smoothingGroup->setTitle(tr("Smoothing"));
-    rendererOptionsLayout->addWidget(smoothingGroup, 5, 0, 1, 1 );
+    // //
+    // // Create the smoothing stuff
+    // //
+    // QGroupBox *smoothingGroup = new QGroupBox(central);
+    // smoothingGroup->setTitle(tr("Smoothing"));
+    // rendererOptionsLayout->addWidget(smoothingGroup, 5, 0, 1, 1 );
 
-    QGridLayout *smoothingLayout = new QGridLayout(smoothingGroup);
-    smoothingLayout->setMargin(5);
-    smoothingLayout->setSpacing(10);
+    // QGridLayout *smoothingLayout = new QGridLayout(smoothingGroup);
+    // smoothingLayout->setMargin(5);
+    // smoothingLayout->setSpacing(10);
 
-    // Create the smooth data toggle.
-    smoothDataToggle = new QCheckBox(tr("Smooth Data"), central);
-    connect(smoothDataToggle, SIGNAL(toggled(bool)),
-            this, SLOT(smoothDataToggled(bool)));
-    smoothingLayout->addWidget(smoothDataToggle,0,0);
+    // // Create the smooth data toggle.
+    // smoothDataToggle = new QCheckBox(tr("Smooth Data"), central);
+    // connect(smoothDataToggle, SIGNAL(toggled(bool)),
+    //         this, SLOT(smoothDataToggled(bool)));
+    // smoothingLayout->addWidget(smoothDataToggle,0,0);
 
     //
     // Create the low gradient lighting reduction.
@@ -1176,7 +1254,14 @@ QvisVolumePlotWindow::CreateRendererOptionsGroup(int maxWidth)
             this, SLOT(lightingToggled(bool)));
     miscLayout->addWidget(lightingToggle, 0, 1);
 
+    // Create the smooth data toggle.
+    smoothDataToggle = new QCheckBox(tr("Smooth Data"), central);
+    connect(smoothDataToggle, SIGNAL(toggled(bool)),
+            this, SLOT(smoothDataToggled(bool)));
+    miscLayout->addWidget(smoothDataToggle,0,2);
+
     CreateMatLightGroup(parent, rendererOptionsLayout, maxWidth);
+    CreateOccShGroup(parent, rendererOptionsLayout, maxWidth);
 
     return parent;
 }
@@ -1361,6 +1446,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
 {
     QString temp;
     double *mat;
+    bool matEnabled = false;
 
     // If the plot info atts changed then update the histogram.
     if(doAll || SelectedSubject() == GetViewerState()->GetPlotInformation(plotType))
@@ -1577,6 +1663,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
         
                 rasterizationButton->setEnabled(false);
                 kernelButton->setEnabled(false);
+                trilinearButton->setEnabled(false);
                 lowGradientLightingReductionLabel->setEnabled(true);
                 lowGradientLightingReductionCombo->setEnabled(true);
                 lowGradientClampToggle->setEnabled(
@@ -1613,6 +1700,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 samplesPerRay->setEnabled(false);
                 rasterizationButton->setEnabled(false);
                 kernelButton->setEnabled(false);
+                trilinearButton->setEnabled(false);
                 lowGradientLightingReductionLabel->setEnabled(true);
                 lowGradientLightingReductionCombo->setEnabled(true);
                 lowGradientClampToggle->setEnabled(
@@ -1649,6 +1737,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 samplesPerRay->setEnabled(true);
                 rasterizationButton->setEnabled(true);
                 kernelButton->setEnabled(true);
+                trilinearButton->setEnabled(true);
                 lowGradientLightingReductionLabel->setEnabled(true);
                 lowGradientLightingReductionCombo->setEnabled(true);
                 lowGradientClampToggle->setEnabled(
@@ -1685,6 +1774,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 samplesPerRay->setEnabled(true);
                 rasterizationButton->setEnabled(true);
                 kernelButton->setEnabled(true);
+                trilinearButton->setEnabled(false);
                 lowGradientLightingReductionLabel->setEnabled(false);
                 lowGradientLightingReductionCombo->setEnabled(false);
                 lowGradientClampToggle->setEnabled(false);
@@ -1716,6 +1806,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 samplesPerRay->setEnabled(false);
                 rasterizationButton->setEnabled(false);
                 kernelButton->setEnabled(false);
+                trilinearButton->setEnabled(false);
                 lowGradientLightingReductionLabel->setEnabled(false);
                 lowGradientLightingReductionCombo->setEnabled(false);
                 lowGradientClampToggle->setEnabled(false);
@@ -1758,6 +1849,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 samplesPerRay->setEnabled(false);
                 rasterizationButton->setEnabled(false);
                 kernelButton->setEnabled(false);
+                trilinearButton->setEnabled(false);
                 lowGradientLightingReductionLabel->setEnabled(false);
                 lowGradientLightingReductionCombo->setEnabled(false);
                 lowGradientClampToggle->setEnabled(false);
@@ -1796,6 +1888,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 samplesPerRay->setEnabled(true);
                 rasterizationButton->setEnabled(false);
                 kernelButton->setEnabled(false);
+                trilinearButton->setEnabled(false);
                 lowGradientLightingReductionLabel->setEnabled(true);
                 lowGradientLightingReductionCombo->setEnabled(true);
                 lowGradientClampToggle->setEnabled(
@@ -1845,7 +1938,10 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
             if (volumeAtts->GetSampling() == VolumeAttributes::Rasterization)
                 samplingButtonGroup->button(0)->setChecked(true);
             else
-                samplingButtonGroup->button(1)->setChecked(true);
+                if (volumeAtts->GetSampling() == VolumeAttributes::KernelBased)
+                    samplingButtonGroup->button(1)->setChecked(true);
+                else
+                    samplingButtonGroup->button(2)->setChecked(true);
             samplingButtonGroup->blockSignals(false);
             break;
         case VolumeAttributes::ID_rendererSamples:
@@ -1888,10 +1984,25 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
             matKs->setValue(mat[2]);
             matN->setValue(mat[3]);
 
+            Ka->setEnabled(matEnabled);
+            Kd->setEnabled(matEnabled);
+            Ks->setEnabled(matEnabled);
+            specPow->setEnabled(matEnabled);
+
             matKa->blockSignals(false);
             matKd->blockSignals(false);
             matKs->blockSignals(false);
             matN->blockSignals(false);
+            break;
+
+        case VolumeAttributes::ID_occlusionShadingOn:
+            occlusionShadingToggle->setChecked(volumeAtts->GetOcclusionShadingOn());
+            break;
+        case VolumeAttributes::ID_ambientIntensity:
+            ambIntensity->setValue(volumeAtts->GetAmbientIntensity());
+            break;
+        case VolumeAttributes::ID_ambientAngle:
+            angleFac->setValue(volumeAtts->GetAmbientAngle());
             break;
 #endif
         }
@@ -3101,6 +3212,23 @@ void
 QvisVolumePlotWindow::lightingToggled(bool)
 {
     volumeAtts->SetLightingFlag(!volumeAtts->GetLightingFlag());
+
+    bool matEnabled = false;
+    if (volumeAtts->GetRendererType() == VolumeAttributes::SLIVR || 
+        volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
+        volumeAtts->GetSampling() == VolumeAttributes::Trilinear)
+        if (volumeAtts->GetLightingFlag())
+            matEnabled = true;
+    matKa->setEnabled(matEnabled);
+    matKd->setEnabled(matEnabled);
+    matKs->setEnabled(matEnabled);
+    matN->setEnabled(matEnabled);
+    Ka->setEnabled(matEnabled);
+    Kd->setEnabled(matEnabled);
+    Ks->setEnabled(matEnabled);
+    specPow->setEnabled(matEnabled);
+
+
     SetUpdate(false);
     Apply();
 }
@@ -3633,6 +3761,9 @@ QvisVolumePlotWindow::samplingTypeChanged(int val)
       case 1:
         volumeAtts->SetSampling(VolumeAttributes::KernelBased);
         break;
+      case 2:
+        volumeAtts->SetSampling(VolumeAttributes::Trilinear);
+        break;
       default:
         EXCEPTION1(ImproperUseException,
                    "The Volume plot received a signal for a sampling method "
@@ -3739,6 +3870,31 @@ QvisVolumePlotWindow::rendererTypeChanged(int val)
                    "that it didn't understand");
         break;
     }
+
+    bool matEnabled = false;
+    if (volumeAtts->GetRendererType() == VolumeAttributes::SLIVR || 
+        volumeAtts->GetRendererType() == VolumeAttributes::RayCastingSLIVR ||
+        volumeAtts->GetSampling() == VolumeAttributes::Trilinear)
+
+        if (volumeAtts->GetLightingFlag())
+            matEnabled = true;
+
+    matKa->setEnabled(matEnabled);
+    matKd->setEnabled(matEnabled);
+    matKs->setEnabled(matEnabled);
+    matN->setEnabled(matEnabled);
+    Ka->setEnabled(matEnabled);
+    Kd->setEnabled(matEnabled);
+    Ks->setEnabled(matEnabled);
+    specPow->setEnabled(matEnabled);
+
+    ambOccPropGroup->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    occlusionShadingToggle->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    ambIntensity->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    angleFac->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    ambientIntensityLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    angleLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+
     Apply();
 }
 
@@ -4061,5 +4217,30 @@ QvisVolumePlotWindow::setMaterialN(double val){
     volumeAtts->SetMaterialProperties(mat);
     SetUpdate(false);
 
+    Apply();
+}
+
+void
+QvisVolumePlotWindow::setAmbIntensity(double val){
+    volumeAtts->SetAmbientIntensity(val);
+    SetUpdate(false);
+
+    Apply();
+}
+
+
+void
+QvisVolumePlotWindow::setAngleFac(double val){
+    volumeAtts->SetAmbientAngle(val);
+    SetUpdate(false);
+
+    Apply();
+}
+
+void
+QvisVolumePlotWindow::occlusionToggled(bool value)
+{
+    volumeAtts->SetOcclusionShadingOn(value);
+    SetUpdate(false);
     Apply();
 }

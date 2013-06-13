@@ -198,20 +198,21 @@ VolumeAttributes::LimitsMode_FromString(const std::string &s, VolumeAttributes::
 //
 
 static const char *SamplingType_strings[] = {
-"KernelBased", "Rasterization"};
+"KernelBased", "Rasterization", "Trilinear"
+};
 
 std::string
 VolumeAttributes::SamplingType_ToString(VolumeAttributes::SamplingType t)
 {
     int index = int(t);
-    if(index < 0 || index >= 2) index = 0;
+    if(index < 0 || index >= 3) index = 0;
     return SamplingType_strings[index];
 }
 
 std::string
 VolumeAttributes::SamplingType_ToString(int t)
 {
-    int index = (t < 0 || t >= 2) ? 0 : t;
+    int index = (t < 0 || t >= 3) ? 0 : t;
     return SamplingType_strings[index];
 }
 
@@ -219,7 +220,7 @@ bool
 VolumeAttributes::SamplingType_FromString(const std::string &s, VolumeAttributes::SamplingType &val)
 {
     val = VolumeAttributes::KernelBased;
-    for(int i = 0; i < 2; ++i)
+    for(int i = 0; i < 3; ++i)
     {
         if(s == SamplingType_strings[i])
         {
@@ -359,6 +360,9 @@ void VolumeAttributes::Init()
     materialProperties[1] = 0.75;
     materialProperties[2] = 0;
     materialProperties[3] = 15;
+    occlusionShadingOn = false;
+    ambientIntensity = 1;
+    ambientAngle = 45;
 
     VolumeAttributes::SelectAll();
 }
@@ -435,6 +439,9 @@ void VolumeAttributes::Copy(const VolumeAttributes &obj)
     for(int i = 0; i < 4; ++i)
         materialProperties[i] = obj.materialProperties[i];
 
+    occlusionShadingOn = obj.occlusionShadingOn;
+    ambientIntensity = obj.ambientIntensity;
+    ambientAngle = obj.ambientAngle;
 
     VolumeAttributes::SelectAll();
 }
@@ -651,7 +658,10 @@ VolumeAttributes::operator == (const VolumeAttributes &obj) const
             (lowGradientLightingReduction == obj.lowGradientLightingReduction) &&
             (lowGradientLightingClampFlag == obj.lowGradientLightingClampFlag) &&
             (lowGradientLightingClampValue == obj.lowGradientLightingClampValue) &&
-            materialProperties_equal);
+            materialProperties_equal &&
+            (occlusionShadingOn == obj.occlusionShadingOn) &&
+            (ambientIntensity == obj.ambientIntensity) &&
+            (ambientAngle == obj.ambientAngle));
 }
 
 // ****************************************************************************
@@ -830,6 +840,9 @@ VolumeAttributes::SelectAll()
     Select(ID_lowGradientLightingClampFlag,  (void *)&lowGradientLightingClampFlag);
     Select(ID_lowGradientLightingClampValue, (void *)&lowGradientLightingClampValue);
     Select(ID_materialProperties,            (void *)materialProperties, 4);
+    Select(ID_occlusionShadingOn,            (void *)&occlusionShadingOn);
+    Select(ID_ambientIntensity,              (void *)&ambientIntensity);
+    Select(ID_ambientAngle,                  (void *)&ambientAngle);
 }
 
 // ****************************************************************************
@@ -1106,6 +1119,24 @@ VolumeAttributes::CreateNode(DataNode *parentNode, bool completeSave, bool force
         node->AddNode(new DataNode("materialProperties", materialProperties, 4));
     }
 
+    if(completeSave || !FieldsEqual(ID_occlusionShadingOn, &defaultObject))
+    {
+        addToParent = true;
+        node->AddNode(new DataNode("occlusionShadingOn", occlusionShadingOn));
+    }
+
+    if(completeSave || !FieldsEqual(ID_ambientIntensity, &defaultObject))
+    {
+        addToParent = true;
+        node->AddNode(new DataNode("ambientIntensity", ambientIntensity));
+    }
+
+    if(completeSave || !FieldsEqual(ID_ambientAngle, &defaultObject))
+    {
+        addToParent = true;
+        node->AddNode(new DataNode("ambientAngle", ambientAngle));
+    }
+
 
     // Add the node to the parent node.
     if(addToParent || forceAdd)
@@ -1273,7 +1304,7 @@ VolumeAttributes::SetFromNode(DataNode *parentNode)
         if(node->GetNodeType() == INT_NODE)
         {
             int ival = node->AsInt();
-            if(ival >= 0 && ival < 2)
+            if(ival >= 0 && ival < 3)
                 SetSampling(SamplingType(ival));
         }
         else if(node->GetNodeType() == STRING_NODE)
@@ -1333,6 +1364,12 @@ VolumeAttributes::SetFromNode(DataNode *parentNode)
         SetLowGradientLightingClampValue(node->AsDouble());
     if((node = searchNode->GetNode("materialProperties")) != 0)
         SetMaterialProperties(node->AsDoubleArray());
+    if((node = searchNode->GetNode("occlusionShadingOn")) != 0)
+        SetOcclusionShadingOn(node->AsBool());
+    if((node = searchNode->GetNode("ambientIntensity")) != 0)
+        SetAmbientIntensity(node->AsDouble());
+    if((node = searchNode->GetNode("ambientAngle")) != 0)
+        SetAmbientAngle(node->AsDouble());
     if(colorControlPoints.GetNumControlPoints() < 2)
          SetDefaultColorControlPoints();
 
@@ -1589,6 +1626,27 @@ VolumeAttributes::SetMaterialProperties(const double *materialProperties_)
     Select(ID_materialProperties, (void *)materialProperties, 4);
 }
 
+void
+VolumeAttributes::SetOcclusionShadingOn(bool occlusionShadingOn_)
+{
+    occlusionShadingOn = occlusionShadingOn_;
+    Select(ID_occlusionShadingOn, (void *)&occlusionShadingOn);
+}
+
+void
+VolumeAttributes::SetAmbientIntensity(double ambientIntensity_)
+{
+    ambientIntensity = ambientIntensity_;
+    Select(ID_ambientIntensity, (void *)&ambientIntensity);
+}
+
+void
+VolumeAttributes::SetAmbientAngle(double ambientAngle_)
+{
+    ambientAngle = ambientAngle_;
+    Select(ID_ambientAngle, (void *)&ambientAngle);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Get property methods
 ///////////////////////////////////////////////////////////////////////////////
@@ -1843,6 +1901,24 @@ double *
 VolumeAttributes::GetMaterialProperties()
 {
     return materialProperties;
+}
+
+bool
+VolumeAttributes::GetOcclusionShadingOn() const
+{
+    return occlusionShadingOn;
+}
+
+double
+VolumeAttributes::GetAmbientIntensity() const
+{
+    return ambientIntensity;
+}
+
+double
+VolumeAttributes::GetAmbientAngle() const
+{
+    return ambientAngle;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2147,6 +2223,9 @@ VolumeAttributes::GetFieldName(int index) const
     case ID_lowGradientLightingClampFlag:  return "lowGradientLightingClampFlag";
     case ID_lowGradientLightingClampValue: return "lowGradientLightingClampValue";
     case ID_materialProperties:            return "materialProperties";
+    case ID_occlusionShadingOn:            return "occlusionShadingOn";
+    case ID_ambientIntensity:              return "ambientIntensity";
+    case ID_ambientAngle:                  return "ambientAngle";
     default:  return "invalid index";
     }
 }
@@ -2206,6 +2285,9 @@ VolumeAttributes::GetFieldType(int index) const
     case ID_lowGradientLightingClampFlag:  return FieldType_bool;
     case ID_lowGradientLightingClampValue: return FieldType_double;
     case ID_materialProperties:            return FieldType_doubleArray;
+    case ID_occlusionShadingOn:            return FieldType_bool;
+    case ID_ambientIntensity:              return FieldType_double;
+    case ID_ambientAngle:                  return FieldType_double;
     default:  return FieldType_unknown;
     }
 }
@@ -2265,6 +2347,9 @@ VolumeAttributes::GetFieldTypeName(int index) const
     case ID_lowGradientLightingClampFlag:  return "bool";
     case ID_lowGradientLightingClampValue: return "double";
     case ID_materialProperties:            return "doubleArray";
+    case ID_occlusionShadingOn:            return "bool";
+    case ID_ambientIntensity:              return "double";
+    case ID_ambientAngle:                  return "double";
     default:  return "invalid index";
     }
 }
@@ -2483,6 +2568,21 @@ VolumeAttributes::FieldsEqual(int index_, const AttributeGroup *rhs) const
             materialProperties_equal = (materialProperties[i] == obj.materialProperties[i]);
 
         retval = materialProperties_equal;
+        }
+        break;
+    case ID_occlusionShadingOn:
+        {  // new scope
+        retval = (occlusionShadingOn == obj.occlusionShadingOn);
+        }
+        break;
+    case ID_ambientIntensity:
+        {  // new scope
+        retval = (ambientIntensity == obj.ambientIntensity);
+        }
+        break;
+    case ID_ambientAngle:
+        {  // new scope
+        retval = (ambientAngle == obj.ambientAngle);
         }
         break;
     default: retval = false;

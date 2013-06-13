@@ -189,6 +189,7 @@ protected:
     QWidget *Create2DTransferFunctionGroup();
     QWidget *CreateRendererOptionsGroup(int);
     void CreateMatLightGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth);
+    void CreateOccShGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth);
     void CreateColorGroup(QWidget *, QVBoxLayout *, int);
     void CreateOpacityGroup(QWidget *, QVBoxLayout *, int);
 private slots:
@@ -239,6 +240,9 @@ private slots:
     void setMaterialKd(double val);
     void setMaterialKs(double val);
     void setMaterialN(double val);
+    void setAmbIntensity(double val);
+    void setAngleFac(double val);
+    void occlusionToggled(bool value);
 private:
     int                      plotType;
     VolumeAttributes         *volumeAtts;
@@ -307,6 +311,7 @@ private:
     QRadioButton             *twoDimButton;
     QRadioButton             *rasterizationButton;
     QRadioButton             *kernelButton;
+    QRadioButton             *trilinearButton;
     QRadioButton             *centeredDiffButton;
     QRadioButton             *sobelButton;
     QLabel                   *resampleTargetLabel;
@@ -323,5 +328,15 @@ private:
     QDoubleSpinBox           *matKd; // diffuse
     QDoubleSpinBox           *matKs; // specular
     QDoubleSpinBox           *matN;  // specularPower
+    QLabel                   *Ka;
+    QLabel                   *Kd;
+    QLabel                   *Ks;
+    QLabel                   *specPow;
+    QGroupBox                *ambOccPropGroup;
+    QCheckBox                *occlusionShadingToggle;
+    QDoubleSpinBox           *ambIntensity;
+    QDoubleSpinBox           *angleFac;
+    QLabel* ambientIntensityLabel;
+    QLabel* angleLabel;
 };
 #endif

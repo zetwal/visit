@@ -92,7 +92,8 @@ public:
     enum SamplingType
     {
         KernelBased,
-        Rasterization
+        Rasterization,
+        Trilinear
     };
     enum OpacityModes
     {
@@ -180,6 +181,9 @@ public:
     void SetLowGradientLightingClampFlag(bool lowGradientLightingClampFlag_);
     void SetLowGradientLightingClampValue(double lowGradientLightingClampValue_);
     void SetMaterialProperties(const double *materialProperties_);
+    void SetOcclusionShadingOn(bool occlusionShadingOn_);
+    void SetAmbientIntensity(double ambientIntensity_);
+    void SetAmbientAngle(double ambientAngle_);
 
     // Property getting methods
     bool                           GetLegendFlag() const;
@@ -224,6 +228,9 @@ public:
     double                         GetLowGradientLightingClampValue() const;
     const double                   *GetMaterialProperties() const;
           double                   *GetMaterialProperties();
+    bool                           GetOcclusionShadingOn() const;
+    double                         GetAmbientIntensity() const;
+    double                         GetAmbientAngle() const;
 
     // Persistence methods
     virtual bool CreateNode(DataNode *node, bool completeSave, bool forceAdd);
@@ -333,6 +340,9 @@ public:
         ID_lowGradientLightingClampFlag,
         ID_lowGradientLightingClampValue,
         ID_materialProperties,
+        ID_occlusionShadingOn,
+        ID_ambientIntensity,
+        ID_ambientAngle,
         ID__LAST
     };
 
@@ -374,11 +384,14 @@ private:
     bool                     lowGradientLightingClampFlag;
     double                   lowGradientLightingClampValue;
     double                   materialProperties[4];
+    bool                     occlusionShadingOn;
+    double                   ambientIntensity;
+    double                   ambientAngle;
 
     // Static class format string for type map.
     static const char *TypeMapFormatString;
     static const private_tmfs_t TmfsStruct;
 };
-#define VOLUMEATTRIBUTES_TMFS "bbafiabissUbfbfbfbfbiiiiidiifa*iibdD"
+#define VOLUMEATTRIBUTES_TMFS "bbafiabissUbfbfbfbfbiiiiidiifa*iibdDbdd"
 
 #endif
