@@ -399,7 +399,8 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     unsigned char vtf[4*256];
     atts.GetTransferFunction(vtf);
     avtOpacityMap om(256);
-    if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR){
+    if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
+       ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear))){
         om.SetTable(vtf, 256, atts.GetOpacityAttenuation()*2.0 - 1.0, atts.GetRendererSamples());
         om.SetTableFloat(vtf, 256, atts.GetOpacityAttenuation()*2.0 - 1.0, atts.GetRendererSamples());
     }
@@ -647,7 +648,8 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         // LEAK!!
     }
     avtCompositeRF *compositeRF = new avtCompositeRF(lm, &om, om2);
-    if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR){
+    if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
+       ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear))){
         compositeRF->SetRaycastingSLIVR(true);
         double *matProp = atts.GetMaterialProperties();
         double materialPropArray[4];
@@ -674,9 +676,16 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     }
 
     if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
-        software->SetTrilinear(true);
+        software->SetRaycasterSLIVR(true);
     else
-        software->SetTrilinear(false);
+        software->SetRaycasterSLIVR(false);
+
+    if (atts.GetRendererType() == VolumeAttributes::RayCasting){
+        if (atts.GetSampling() == VolumeAttributes::Trilinear)
+            software->SetTrilinear(true);
+        else
+            software->SetTrilinear(false);
+    }
 
     software->SetTransferFn(&om);
     
@@ -708,7 +717,8 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         GetLogicalBounds(inputData, width_,height_,depth_);
         numSlices = (width_*viewDirection[0] + height_*viewDirection[1] + depth_*viewDirection[2]) * atts.GetRendererSamples();
 
-        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+        if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) || 
+            ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear)))
             software->SetSamplesPerRay(numSlices);
 
         debug5<<"RayCastingSLIVR - slices: "<<numSlices<<endl;
@@ -957,7 +967,8 @@ avtVolumeFilter::ModifyContract(avtContract_p contract)
     if (atts.GetScaling() == VolumeAttributes::Linear)
     {
 #ifdef HAVE_LIBSLIVR
-        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+        if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
+            ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear)))
             ds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
 #endif
         newcontract = new avtContract(contract, ds);
@@ -981,7 +992,8 @@ avtVolumeFilter::ModifyContract(avtContract_p contract)
                                ds->GetTimestep(), ds->GetRestriction());
         nds->AddSecondaryVariable(var);
 #ifdef HAVE_LIBSLIVR
-        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+        if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
+            ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear)))
             nds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
 #endif
         newcontract = new avtContract(contract, nds);
@@ -998,7 +1010,8 @@ avtVolumeFilter::ModifyContract(avtContract_p contract)
                                ds->GetTimestep(), ds->GetRestriction());
         nds->AddSecondaryVariable(var);
 #ifdef HAVE_LIBSLIVR
-        if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
+        if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
+            ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear)))
             nds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
 #endif
         newcontract = new avtContract(contract, nds);
