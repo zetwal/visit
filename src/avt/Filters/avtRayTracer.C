@@ -169,7 +169,7 @@ avtRayTracer::avtRayTracer()
     kernelBasedSampling = false;
     
     trilinearInterpolation = false;
-    raycasterSLIVR = false;
+    rayCastingSLIVR = false;
 
     lighting = false;
     lightPosition[0] = lightPosition[1] = lightPosition[2] = 0.0;   lightPosition[3] = 1.0;
@@ -474,7 +474,9 @@ avtRayTracer::Execute(void)
     extractor.RegisterRayFunction(rayfoo);
     extractor.SetJittering(true);
     extractor.SetInput(trans.GetOutput());
+
     extractor.SetTrilinear(trilinearInterpolation);
+    extractor.SetRayCastingSLIVR(rayCastingSLIVR);
     extractor.SetLighting(lighting);
     extractor.SetTransferFn(transferFn1D);
 
@@ -492,6 +494,100 @@ avtRayTracer::Execute(void)
 
     avtDataObject_p samples = extractor.GetOutput();
 
+    if (rayCastingSLIVR == true){
+        extractor.delImgPatches();
+
+        int size;
+        extractor.getImgPatchSize(size);
+
+        imgPatch *imgPatchAll;
+        imgPatchAll = new imgPatch[size];   
+
+        extractor.getImgPatches(imgPatchAll);
+
+        // int specialCount = 0;
+        // if (PAR_Rank() == 0){
+        // std::cout << "\n" << PAR_Rank() << "  Num patches: " << size << std::endl;
+        // for (int i=0; i<size; i++){
+        //     std::cout << PAR_Rank() << "\n  patch: " << i << std::endl
+        //      << "\t  dims: " << imgPatchAll[i].dims[0] << ", " << imgPatchAll[i].dims[1] << std::endl
+        //      << "\t  screen_ll: " << imgPatchAll[i].screen_ll[0] << ", " << imgPatchAll[i].screen_ll[1] << std::endl
+        //      << "\t  screen_ur: " << imgPatchAll[i].screen_ur[0] << ", " << imgPatchAll[i].screen_ur[1] << std::endl
+        //      << "\t  avg_z: " << imgPatchAll[i].avg_z << std::endl 
+        //      << "\t  used: " << ((imgPatchAll[i].inUse == true)? 1: 0) << std::endl;
+
+
+        //     if (imgPatchAll[i].inUse == true){
+        //         printf("\n\n Rank: %d  patch: %d \n dims: %d %d \n screen_ll: %d %d \n screen_ur: %d %d  \n avg_z: %f \n used: %d",PAR_Rank(),i,imgPatchAll[i].dims[0],imgPatchAll[i].dims[1],imgPatchAll[i].screen_ll[0],imgPatchAll[i].screen_ll[1],imgPatchAll[i].screen_ur[0],imgPatchAll[i].screen_ur[1],imgPatchAll[i].avg_z,((imgPatchAll[i].inUse == true)? 1: 0));
+
+        //         specialCount = specialCount +1;
+        //         if (specialCount < 25){
+        //             std::cout << "\n(" << imgPatchAll[i].dims[1] << " , " << imgPatchAll[i].dims[0] << ")\n";
+
+
+        //             for (int k=0; k<imgPatchAll[i].dims[1]; k++){
+        //                 for (int j=0; j<imgPatchAll[i].dims[0]; j++){
+        //                     int index = (k*(4*imgPatchAll[i].dims[0])) + j*4;
+        //                     //std::cout << imgPatchAll[i].imagePatch[index]<< ", " << imgPatchAll[i].imagePatch[index+1] << ", " << imgPatchAll[i].imagePatch[index+2] << ", " << imgPatchAll[i].imagePatch[index+3] << "  -  ";
+        //                     printf("%.2f ,  %.2f ,  %.2f ,  %.2f     ~    ",imgPatchAll[i].imagePatch[index+0],imgPatchAll[i].imagePatch[index+1],imgPatchAll[i].imagePatch[index+2],imgPatchAll[i].imagePatch[index+3]);
+        //                 }
+        //                 std::cout << "\n(" << k << " , " << j << ")";
+        //                 printf("\n");
+        //             }
+        //             printf("\n");
+        //             //std::cout << "\n";
+        //         }
+        //     }
+        //     std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inRayTracer_Rank_" + NumbToString(PAR_Rank()) + "_ item_" + NumbToString(i) +  ".ppm";
+        //     std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inRayTracer.ppm";
+        //     createPpm(imgPatchAll, size, imgFilename);
+        // }
+        
+
+        // std::cout << "Finished getting all patches\n";
+        // std::cout << "Hello rayTracer 999" << std::endl;
+        // int specialCount = 0;
+        // if (PAR_Rank() == 0){
+        //     std::cout << "\n" << PAR_Rank() << "  Num patches: " << size << std::endl;
+        //     for (int i=0; i<size; i++){
+        //         std::cout << PAR_Rank() << "\n  patch: " << i << std::endl
+        //          << "\t  dims: " << imgPatchAll[i].dims[0] << ", " << imgPatchAll[i].dims[1] << std::endl
+        //          << "\t  screen_ll: " << imgPatchAll[i].screen_ll[0] << ", " << imgPatchAll[i].screen_ll[1] << std::endl
+        //          << "\t  screen_ur: " << imgPatchAll[i].screen_ur[0] << ", " << imgPatchAll[i].screen_ur[1] << std::endl
+        //          << "\t  avg_z: " << imgPatchAll[i].avg_z << std::endl 
+        //          << "\t  used: " << ((imgPatchAll[i].inUse == true)? 1: 0) << std::endl;
+
+
+        //         if (imgPatchAll[i].inUse == true){
+        //             printf("\n\n Rank: %d  patch: %d \n dims: %d %d \n screen_ll: %d %d \n screen_ur: %d %d  \n avg_z: %f \n used: %d",PAR_Rank(),i,imgPatchAll[i].dims[0],imgPatchAll[i].dims[1],imgPatchAll[i].screen_ll[0],imgPatchAll[i].screen_ll[1],imgPatchAll[i].screen_ur[0],imgPatchAll[i].screen_ur[1],imgPatchAll[i].avg_z,((imgPatchAll[i].inUse == true)? 1: 0));
+
+        //             specialCount = specialCount +1;
+        //             if (specialCount < 25){
+        //                 std::cout << "\n(" << imgPatchAll[i].dims[1] << " , " << imgPatchAll[i].dims[0] << ")\n";
+
+
+        //                 for (int k=0; k<imgPatchAll[i].dims[1]; k++){
+        //                     for (int j=0; j<imgPatchAll[i].dims[0]; j++){
+        //                         int index = (k*(4*imgPatchAll[i].dims[0])) + j*4;
+        //                         //std::cout << imgPatchAll[i].imagePatch[index]<< ", " << imgPatchAll[i].imagePatch[index+1] << ", " << imgPatchAll[i].imagePatch[index+2] << ", " << imgPatchAll[i].imagePatch[index+3] << "  -  ";
+        //                         printf("%.2f ,  %.2f ,  %.2f ,  %.2f     ~    ",imgPatchAll[i].imagePatch[index+0],imgPatchAll[i].imagePatch[index+1],imgPatchAll[i].imagePatch[index+2],imgPatchAll[i].imagePatch[index+3]);
+        //                     }
+        //                     std::cout << "\n(" << k << " , " << j << ")";
+        //                     printf("\n");
+        //                 }
+        //                 printf("\n");
+        //                 //std::cout << "\n";
+        //             }
+        //         }
+        //         std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inRayTracer_Rank_" + NumbToString(PAR_Rank()) + "_ item_" + NumbToString(i) +  ".ppm";
+        //         std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inRayTracer.ppm";
+        //         createPpm(imgPatchAll, size, imgFilename);
+        //     }
+        // }
+        // std::cout << "Finished getting all patches\n";
+        return;
+    }
+
 #ifdef PARALLEL
     //
     // Tell the sample point extractor that we would like to send cells
@@ -508,7 +604,7 @@ avtRayTracer::Execute(void)
 
     samples = sampleCommunicator.GetOutput();
 #endif
- 
+    
     //
     // Perform compositing on the rays to get the final image.
     //
@@ -556,18 +652,6 @@ avtRayTracer::Execute(void)
     avtImage_p image = rc.GetTypedOutput();
     image->Update(GetGeneralContract());
 
-    // std::cout << "Getting stuff from avtSamplePointExtractor\n";
-    // int size;
-    // extractor.getImgPatchSize(size);
-
-    // imgPatch *imgPatchAll;
-    // imgPatchAll = new imgPatch[size];
-
-    // extractor.getImgPatches(imgPatchAll);
-
-    // std::cout << "Finished getting all patches\n";
-
-    //std::cout << "Hello rayTracer 0" << std::endl;
 #ifdef PARALLEL
     //
     // Communicate the screen to the root processor.
@@ -578,15 +662,12 @@ avtRayTracer::Execute(void)
     imageCommunicator.SetInput(dob);
     image = imageCommunicator.GetTypedOutput();
 #endif
-    //std::cout << "Hello rayTracer 1" << std::endl;
-    //
     // Update the pipeline several times, once for each tile.
     // The tiles are important to make sure that we never need too much
     // memory.
     //
-
     int numDivisions = GetNumberOfDivisions(screen[0],screen[1],samplesPerRay);
-    numDivisions = 1;
+    // numDivisions = 1;
 
     int IStep = screen[0] / numDivisions;
     int JStep = screen[1] / numDivisions;
@@ -600,7 +681,6 @@ avtRayTracer::Execute(void)
         img->Delete();
     }
 
-    //std::cout << "Hello rayTracer 3" << std::endl;
     for (int i = 0 ; i < numDivisions ; i++)
         for (int j = 0 ; j < numDivisions ; j++)
         {
@@ -620,101 +700,9 @@ avtRayTracer::Execute(void)
             imageCommunicator.SetImagePartition(&imagePartition);
 #endif
             extractor.RestrictToTile(IStart, IEnd, JStart, JEnd);
-            std::cout << "Hello rayTracer 888" << std::endl;
+
             image->Update(GetGeneralContract());                    // execution happens here - identified with gdb
 
-
-            //std::cout << "Getting stuff from avtSamplePointExtractor\n";
-            int size;
-            extractor.getImgPatchSize(size);
-
-            imgPatch *imgPatchAll;
-            imgPatchAll = new imgPatch[size];   
-
-
-            extractor.getImgPatches(imgPatchAll);
-
-            int specialCount = 0;
-            if (PAR_Rank() == 0){
-            std::cout << "\n" << PAR_Rank() << "  Num patches: " << size << std::endl;
-            for (int i=0; i<size; i++){
-                // std::cout << PAR_Rank() << "\n  patch: " << i << std::endl
-                //  << "\t  dims: " << imgPatchAll[i].dims[0] << ", " << imgPatchAll[i].dims[1] << std::endl
-                //  << "\t  screen_ll: " << imgPatchAll[i].screen_ll[0] << ", " << imgPatchAll[i].screen_ll[1] << std::endl
-                //  << "\t  screen_ur: " << imgPatchAll[i].screen_ur[0] << ", " << imgPatchAll[i].screen_ur[1] << std::endl
-                //  << "\t  avg_z: " << imgPatchAll[i].avg_z << std::endl 
-                //  << "\t  used: " << ((imgPatchAll[i].inUse == true)? 1: 0) << std::endl;
-
-
-                // if (imgPatchAll[i].inUse == true){
-                //     printf("\n\n Rank: %d  patch: %d \n dims: %d %d \n screen_ll: %d %d \n screen_ur: %d %d  \n avg_z: %f \n used: %d",PAR_Rank(),i,imgPatchAll[i].dims[0],imgPatchAll[i].dims[1],imgPatchAll[i].screen_ll[0],imgPatchAll[i].screen_ll[1],imgPatchAll[i].screen_ur[0],imgPatchAll[i].screen_ur[1],imgPatchAll[i].avg_z,((imgPatchAll[i].inUse == true)? 1: 0));
-
-                //     specialCount = specialCount +1;
-                //     if (specialCount < 25){
-                //         std::cout << "\n(" << imgPatchAll[i].dims[1] << " , " << imgPatchAll[i].dims[0] << ")\n";
-
-
-                //         for (int k=0; k<imgPatchAll[i].dims[1]; k++){
-                //             for (int j=0; j<imgPatchAll[i].dims[0]; j++){
-                //                 int index = (k*(4*imgPatchAll[i].dims[0])) + j*4;
-                //                 //std::cout << imgPatchAll[i].imagePatch[index]<< ", " << imgPatchAll[i].imagePatch[index+1] << ", " << imgPatchAll[i].imagePatch[index+2] << ", " << imgPatchAll[i].imagePatch[index+3] << "  -  ";
-                //                 printf("%.2f ,  %.2f ,  %.2f ,  %.2f     ~    ",imgPatchAll[i].imagePatch[index+0],imgPatchAll[i].imagePatch[index+1],imgPatchAll[i].imagePatch[index+2],imgPatchAll[i].imagePatch[index+3]);
-                //             }
-                //             std::cout << "\n(" << k << " , " << j << ")";
-                //             printf("\n");
-                //         }
-                //         printf("\n");
-                //         //std::cout << "\n";
-                //     }
-                // }
-                //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inRayTracer_Rank_" + NumbToString(PAR_Rank()) + "_ item_" + NumbToString(i) +  ".ppm";
-                //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inRayTracer.ppm";
-                //createPpm(imgPatchAll, size, imgFilename);
-            }
-            }
-
-            std::cout << "Finished getting all patches\n";
-
-            std::cout << "Hello rayTracer 999" << std::endl;
-            // int specialCount = 0;
-            // if (PAR_Rank() == 0){
-            //     std::cout << "\n" << PAR_Rank() << "  Num patches: " << size << std::endl;
-            //     for (int i=0; i<size; i++){
-            //         // std::cout << PAR_Rank() << "\n  patch: " << i << std::endl
-            //         //  << "\t  dims: " << imgPatchAll[i].dims[0] << ", " << imgPatchAll[i].dims[1] << std::endl
-            //         //  << "\t  screen_ll: " << imgPatchAll[i].screen_ll[0] << ", " << imgPatchAll[i].screen_ll[1] << std::endl
-            //         //  << "\t  screen_ur: " << imgPatchAll[i].screen_ur[0] << ", " << imgPatchAll[i].screen_ur[1] << std::endl
-            //         //  << "\t  avg_z: " << imgPatchAll[i].avg_z << std::endl 
-            //         //  << "\t  used: " << ((imgPatchAll[i].inUse == true)? 1: 0) << std::endl;
-
-
-            //         // if (imgPatchAll[i].inUse == true){
-            //         //     printf("\n\n Rank: %d  patch: %d \n dims: %d %d \n screen_ll: %d %d \n screen_ur: %d %d  \n avg_z: %f \n used: %d",PAR_Rank(),i,imgPatchAll[i].dims[0],imgPatchAll[i].dims[1],imgPatchAll[i].screen_ll[0],imgPatchAll[i].screen_ll[1],imgPatchAll[i].screen_ur[0],imgPatchAll[i].screen_ur[1],imgPatchAll[i].avg_z,((imgPatchAll[i].inUse == true)? 1: 0));
-
-            //         //     specialCount = specialCount +1;
-            //         //     if (specialCount < 25){
-            //         //         std::cout << "\n(" << imgPatchAll[i].dims[1] << " , " << imgPatchAll[i].dims[0] << ")\n";
-
-
-            //         //         for (int k=0; k<imgPatchAll[i].dims[1]; k++){
-            //         //             for (int j=0; j<imgPatchAll[i].dims[0]; j++){
-            //         //                 int index = (k*(4*imgPatchAll[i].dims[0])) + j*4;
-            //         //                 //std::cout << imgPatchAll[i].imagePatch[index]<< ", " << imgPatchAll[i].imagePatch[index+1] << ", " << imgPatchAll[i].imagePatch[index+2] << ", " << imgPatchAll[i].imagePatch[index+3] << "  -  ";
-            //         //                 printf("%.2f ,  %.2f ,  %.2f ,  %.2f     ~    ",imgPatchAll[i].imagePatch[index+0],imgPatchAll[i].imagePatch[index+1],imgPatchAll[i].imagePatch[index+2],imgPatchAll[i].imagePatch[index+3]);
-            //         //             }
-            //         //             std::cout << "\n(" << k << " , " << j << ")";
-            //         //             printf("\n");
-            //         //         }
-            //         //         printf("\n");
-            //         //         //std::cout << "\n";
-            //         //     }
-            //         // }
-            //         //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inRayTracer_Rank_" + NumbToString(PAR_Rank()) + "_ item_" + NumbToString(i) +  ".ppm";
-            //         //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inRayTracer.ppm";
-            //         //createPpm(imgPatchAll, size, imgFilename);
-            //     }
-            // }
-            // std::cout << "Finished getting all patches\n";
 
             if (PAR_Rank() == 0)    // stage 8 of 9
             {
@@ -733,7 +721,7 @@ avtRayTracer::Execute(void)
                     }
             }
         }
-    //std::cout << "Hello rayTracer 4" << std::endl;
+
     if (PAR_Rank() == 0)
         image->Copy(*whole_image);
 
@@ -741,7 +729,9 @@ avtRayTracer::Execute(void)
     // Make our output image look the same as the ray compositer's.
     //
     SetOutput(image);
-    extractor.delImgPatches();
+
+    if (rayCastingSLIVR)
+        extractor.delImgPatches();
 
     visitTimer->StopTimer(timingIndex, "Ray Tracing");
     visitTimer->DumpTimings();

@@ -443,7 +443,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     }
     om.SetMin(range[0]);
     om.SetMax(range[1]);
-
+    
     if (atts.GetRendererType() == VolumeAttributes::RayCastingIntegration)
     {
         if (!artificialMin)
@@ -650,7 +650,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     avtCompositeRF *compositeRF = new avtCompositeRF(lm, &om, om2);
     if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
        ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear))){
-        compositeRF->SetRaycastingSLIVR(true);
+        compositeRF->SetCompositingLikeSLIVR(true);
         double *matProp = atts.GetMaterialProperties();
         double materialPropArray[4];
         materialPropArray[0] = matProp[0];
@@ -660,7 +660,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         compositeRF->SetMaterial(materialPropArray);
     }
     else
-        compositeRF->SetRaycastingSLIVR(false);
+        compositeRF->SetCompositingLikeSLIVR(false);
     avtIntegrationRF *integrateRF = new avtIntegrationRF(lm);
 
     compositeRF->SetColorVariableIndex(primIndex);
@@ -676,9 +676,9 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     }
 
     if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
-        software->SetRaycasterSLIVR(true);
+        software->SetRayCastingSLIVR(true);
     else
-        software->SetRaycasterSLIVR(false);
+        software->SetRayCastingSLIVR(false);
 
     if (atts.GetRendererType() == VolumeAttributes::RayCasting){
         if (atts.GetSampling() == VolumeAttributes::Trilinear)
@@ -721,7 +721,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
             ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear)))
             software->SetSamplesPerRay(numSlices);
 
-        debug5<<"RayCastingSLIVR - slices: "<<numSlices<<endl;
+        debug5 << "RayCastingSLIVR - slices: "<< numSlices << endl;
     }
 
     software->SetView(vi);

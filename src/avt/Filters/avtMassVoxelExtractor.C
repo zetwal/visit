@@ -138,6 +138,7 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     gridsAreInWorldSpace = false;
     pretendGridsAreInWorldSpace = false;
     trilinearInterpolation = false;
+    rayCastingSLIVR = false;
     aspect = 1;
     view_to_world_transform = vtkMatrix4x4::New();
     world_to_view_transform = vtkMatrix4x4::New();
@@ -335,7 +336,10 @@ avtMassVoxelExtractor::Extract(vtkRectilinearGrid *rgrid,
                 std::vector<std::string> &varnames, std::vector<int> &varsizes)
 {
     if (gridsAreInWorldSpace || pretendGridsAreInWorldSpace)
-        ExtractWorldSpaceGrid(rgrid, varnames, varsizes);
+        if (rayCastingSLIVR || trilinearInterpolation)
+            simpleExtractWorldSpaceGrid(rgrid, varnames, varsizes);
+        else
+            ExtractWorldSpaceGrid(rgrid, varnames, varsizes);
     else
         ExtractImageSpaceGrid(rgrid, varnames, varsizes);
 }
@@ -469,12 +473,11 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     // Some of our sampling routines need a chance to pre-process the data.
     // Register the grid here so we can do that.
     //
-    RegisterGrid(rgrid, varnames, varsize);   // stores the values in a structure so that it can be used
+    RegisterGrid(rgrid, varnames, varsize);
 
     //
     // Set up a list of ranges to look at.
     //
-
     const int max_ranges = 100; // this should be bigger than log(max(W,H))
     int width_min[max_ranges];
     int width_max[max_ranges];
@@ -486,8 +489,6 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     height_min[curRange] = restrictedMinHeight;
     height_max[curRange] = restrictedMaxHeight+1;
     curRange++;
-
-    patchDrawn = false;
 
     while (curRange > 0)
     {
@@ -509,8 +510,7 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             continue;
         }
 
-        int num_rays = (w_max-w_min)*(h_max-h_min); // compute an area
-        /*
+        int num_rays = (w_max-w_min)*(h_max-h_min);
         if (num_rays > 5)
         {
             //
@@ -532,112 +532,138 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             curRange++;
         }
         else
-        */
         {
-            //int xMin, xMax, yMin, yMax;
-            float coordinates[8][3];
-            coordinates[0][0] = X[0];           coordinates[0][1] = Y[0];           coordinates[0][2] = Z[0];
-            coordinates[1][0] = X[dims[0]-1];   coordinates[1][1] = Y[0];           coordinates[1][2] = Z[0];
-            coordinates[2][0] = X[dims[0]-1];   coordinates[2][1] = Y[dims[1]-1];   coordinates[2][2] = Z[0];
-            coordinates[3][0] = X[0];           coordinates[3][1] = Y[dims[1]-1];   coordinates[3][2] = Z[0];
-
-            coordinates[4][0] = X[0];           coordinates[4][1] = Y[0];           coordinates[4][2] = Z[dims[2]-1];
-            coordinates[5][0] = X[dims[0]-1];   coordinates[5][1] = Y[0];           coordinates[5][2] = Z[dims[2]-1];
-            coordinates[6][0] = X[dims[0]-1];   coordinates[6][1] = Y[dims[1]-1];   coordinates[6][2] = Z[dims[2]-1];
-            coordinates[7][0] = X[0];           coordinates[7][1] = Y[dims[1]-1];   coordinates[7][2] = Z[dims[2]-1];
-
-            //std::cout << "\n\ncoordinates: " << std::endl;
-            //for (int i=0; i<8; i++){
-            //    std::cout << "i: " << coordinates[i][0] << " ,  " << coordinates[i][1] << " ,  " << coordinates[i][2] << std::endl; 
-            //}
-            
-
-            xMin = yMin = 1000000;
-            xMax = yMax = -1000000;
-            double _world[4], _view[4];
-            _world[3] = 1.0;
-            imgDepth = 0;
-            for (int i=0; i<8; i++){
-                _world[0] = coordinates[i][0];
-                _world[1] = coordinates[i][1];
-                _world[2] = coordinates[i][2];
-
-                world_to_view_transform->MultiplyPoint(_world, _view);
-
-                if (_view[3] != 0.){
-                    _view[0] /= _view[3];
-                    _view[1] /= _view[3];
-                    _view[2] /= _view[3];
-                }
-
-                //std::cout << i << " ~ " << _view[0] << " ,  " << _view[1] << " ,  " << _view[2] << std::endl; 
-                _view[0] = _view[0]*(fullImgWidth/2.) + (fullImgWidth/2.);
-                _view[1] = _view[1]*(fullImgHeight/2.) + (fullImgHeight/2.);
-
-                if (xMin > _view[0])
-                    xMin = _view[0];
-
-                if (xMax < _view[0])
-                    xMax = _view[0];
-
-                if (yMin > _view[1])
-                    yMin = _view[1];
-
-                if (yMax < _view[1])
-                    yMax = _view[1];
-
-                imgDepth += _view[2]; 
-            }
-            imgDepth = imgDepth/8.0;
-
-            float error_correction = 1.f;
-            xMin = xMin + error_correction;
-            yMin = yMin + error_correction;
-            xMax = xMax + error_correction;
-            yMax = yMax + error_correction;
-
-            float offset = 2.0;
-
-            xMin = xMin - offset;
-            xMax = xMax + offset;
-            yMin = yMin - offset;
-            yMax = yMax + offset;
-
-
-            imgWidth = xMax - xMin;
-            imgHeight = yMax - yMin;
-
-            imgArray = new float[((imgWidth)*4) * imgHeight];
-            printf("\n----------New image array created");
-
-
-
-
-            for (int i=0; i<imgHeight * imgWidth * 4; i++)
-                imgArray[i] = 0.0;
-
-            imgDims[0] = imgWidth;       imgDims[1] = imgHeight;
-            imgLowerLeft[0] = xMin;         imgLowerLeft[1] = yMin;
-            imgUpperRight[0] = xMax;         imgUpperRight[1] = yMax;
-
-            
+            //
             // We have a small amount of rays, so just evaluate them.
             //
-
-            //for (int i = w_min ; i < w_max ; i++)
-            //    for (int j = h_min ; j < h_max ; j++)
-            for (int i = xMin ; i < xMax ; i++)
-                for (int j = yMin ; j < yMax ; j++)
+            for (int i = w_min ; i < w_max ; i++)
+                for (int j = h_min ; j < h_max ; j++)
                 {
-                    double origin[4];       // starting point where we start sampling
-                    double terminus[4];     // ending point where we stop sampling
-                    GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
-                    SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
+                    double origin[4];
+                    double terminus[4];
+                    GetSegment(i, j, origin, terminus);
+                    SampleAlongSegment(origin, terminus, i, j);
                 }
-
-            //std::cout << "Done ExtractWorldSpaceGrid!" << std::endl;
         }
     }
+}
+
+
+
+void
+avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
+                 std::vector<std::string> &varnames, std::vector<int> &varsize)
+{
+    patchDrawn = false;
+
+    //
+    // Some of our sampling routines need a chance to pre-process the data.
+    // Register the grid here so we can do that.
+    //
+    RegisterGrid(rgrid, varnames, varsize);   // stores the values in a structure so that it can be used
+
+    //
+    // Determine what range we are dealing with on this iteration.
+    //
+    int w_min = restrictedMinWidth;
+    int w_max = restrictedMaxWidth+1;
+    int h_min = restrictedMinHeight;
+    int h_max = restrictedMaxHeight+1;
+
+    //
+    // Let's find out if this range can even intersect the dataset.
+    // If not, just skip it.
+    //
+    if (!FrustumIntersectsGrid(w_min, w_max, h_min, h_max))
+        return;
+        
+    //
+    // Determine the screen size of the patch being processed
+    //
+    xMin = yMin = 1000000;
+    xMax = yMax = -1000000;
+
+    float coordinates[8][3];
+    coordinates[0][0] = X[0];           coordinates[0][1] = Y[0];           coordinates[0][2] = Z[0];
+    coordinates[1][0] = X[dims[0]-1];   coordinates[1][1] = Y[0];           coordinates[1][2] = Z[0];
+    coordinates[2][0] = X[dims[0]-1];   coordinates[2][1] = Y[dims[1]-1];   coordinates[2][2] = Z[0];
+    coordinates[3][0] = X[0];           coordinates[3][1] = Y[dims[1]-1];   coordinates[3][2] = Z[0];
+
+    coordinates[4][0] = X[0];           coordinates[4][1] = Y[0];           coordinates[4][2] = Z[dims[2]-1];
+    coordinates[5][0] = X[dims[0]-1];   coordinates[5][1] = Y[0];           coordinates[5][2] = Z[dims[2]-1];
+    coordinates[6][0] = X[dims[0]-1];   coordinates[6][1] = Y[dims[1]-1];   coordinates[6][2] = Z[dims[2]-1];
+    coordinates[7][0] = X[0];           coordinates[7][1] = Y[dims[1]-1];   coordinates[7][2] = Z[dims[2]-1];
+
+    double _world[4], _view[4];
+    _world[3] = 1.0;
+    imgDepth = 0;
+
+    for (int i=0; i<8; i++){
+        _world[0] = coordinates[i][0];
+        _world[1] = coordinates[i][1];
+        _world[2] = coordinates[i][2];
+
+        world_to_view_transform->MultiplyPoint(_world, _view);
+
+        if (_view[3] != 0.){
+            _view[0] /= _view[3];
+            _view[1] /= _view[3];
+            _view[2] /= _view[3];
+        }
+
+        _view[0] = _view[0]*(fullImgWidth/2.) + (fullImgWidth/2.);
+        _view[1] = _view[1]*(fullImgHeight/2.) + (fullImgHeight/2.);
+
+        if (xMin > _view[0])
+            xMin = _view[0];
+
+        if (xMax < _view[0])
+            xMax = _view[0];
+
+        if (yMin > _view[1])
+            yMin = _view[1];
+
+        if (yMax < _view[1])
+            yMax = _view[1];
+
+        imgDepth += _view[2]; 
+    }
+    imgDepth = imgDepth/8.0;
+
+    float error_correction = 1.f;
+    xMin = xMin + error_correction;
+    yMin = yMin + error_correction;
+    xMax = xMax + error_correction;
+    yMax = yMax + error_correction;
+
+    float offset = 2.0;
+    xMin = xMin - offset;
+    xMax = xMax + offset;
+    yMin = yMin - offset;
+    yMax = yMax + offset;
+
+    imgWidth = xMax - xMin;
+    imgHeight = yMax - yMin;
+
+    if (rayCastingSLIVR == true){
+        imgArray = new float[((imgWidth)*4) * imgHeight];
+
+        for (int i=0; i<imgHeight * imgWidth * 4; i++)
+            imgArray[i] = 0.0;
+
+        imgDims[0] = imgWidth;       imgDims[1] = imgHeight;
+        imgLowerLeft[0] = xMin;         imgLowerLeft[1] = yMin;
+        imgUpperRight[0] = xMax;         imgUpperRight[1] = yMax;
+    }
+
+    for (int i = xMin ; i < xMax ; i++)
+        for (int j = yMin ; j < yMax ; j++)
+        {
+            double origin[4];       // starting point where we start sampling
+            double terminus[4];     // ending point where we stop sampling
+            GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
+            SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
+        }
 }
 
 
@@ -659,8 +685,6 @@ avtMassVoxelExtractor::getImageDimensions(bool &inUse, int &patchNumber, int dim
     screen_ur[1] = imgUpperRight[1];
 
     avg_z = imgDepth;
-
-    //cout << "\ndims: " << imgDims[0] << " " << imgDims[1] ;
 }
 
 
@@ -684,12 +708,8 @@ avtMassVoxelExtractor::getComputedImage(float *image)
     //     cout << "\n\n";
     // }
 
-
-    printf("\n-------------Image array deleted");
-
     for (int i=0; i< imgDims[0]*4*imgDims[1]; i++)
         image[i] = imgArray[i];
-
 
     delete []imgArray;
 }
@@ -1458,7 +1478,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
             dist_from_front = 1.0 - dist_from_back;
         }
 
-        if (trilinearInterpolation){
+        if (trilinearInterpolation || rayCastingSLIVR){
             // Checking for ghost cells
             if (((newInd[0] <= 0)||(newInd[1] <= 0))||(newInd[2] <= 0))
                 valid_sample[i] = false;
@@ -1507,14 +1527,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
                         tmpSampleList[count][cell_index[l]+m] = val;  
 
-                        computePixelColor(val, dest_rgb);
-
-                        //float scalar[4];
-                        //for (int i=0; i<4; i++)
-                        //    scalar[i] = val;
-                        //imgArray[h*(fullImgWidth*3) + w*3 + 0] = 1.f-val;
-                        //imgArray[h*(fullImgWidth*3) + w*3 + 1] = 1.f-val;
-                        //imgArray[h*(fullImgWidth*3) + w*3 + 2] = 1.f-val;
+                        if (rayCastingSLIVR)
+                            computePixelColor(val, dest_rgb);
                     }
                 }
             }
@@ -1578,11 +1592,13 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         count++;
     }
 
-    // copyt the color generated by one ray through the volume to the image
-    imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = dest_rgb[0]*dest_rgb[3];
-    imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = dest_rgb[1]*dest_rgb[3];
-    imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = dest_rgb[2]*dest_rgb[3];
-    imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = dest_rgb[3];
+    if (rayCastingSLIVR){
+        // copyt the color generated by one ray through the volume to the image
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = dest_rgb[0]*dest_rgb[3];
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = dest_rgb[1]*dest_rgb[3];
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = dest_rgb[2]*dest_rgb[3];
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = dest_rgb[3];
+    }
 
     //
     // Make sure we get runs at the end.

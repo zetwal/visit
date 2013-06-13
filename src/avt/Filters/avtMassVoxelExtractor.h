@@ -110,6 +110,8 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
                                              const double *);
     void             SetVariableInformation(std::vector<std::string> &names,
                                             std::vector<int> varsize);
+
+    void             SetRayCastingSLIVR(bool s) {rayCastingSLIVR = s;   };
     void             SetTrilinear(bool t) {trilinearInterpolation = t;   };
     void             SetLighting(bool l) {lighting = l; };
     void             SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
@@ -147,6 +149,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     int             *ind_buffer;
     bool            *valid_sample;
     bool            trilinearInterpolation;
+    bool            rayCastingSLIVR;
 
     // We repeatedly divide by the term (X[i+1]-X[i]).  In the interest of
     // performance, cache the term 1./(X[i+1]-X[i]) and use that for faster
@@ -174,6 +177,9 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
                              std::vector<std::string> &varnames,
                              std::vector<int> &varsize);
     void             ExtractWorldSpaceGrid(vtkRectilinearGrid *,
+                             std::vector<std::string> &varnames,
+                             std::vector<int> &varsize);
+    void             simpleExtractWorldSpaceGrid(vtkRectilinearGrid *,
                              std::vector<std::string> &varnames,
                              std::vector<int> &varsize);
 

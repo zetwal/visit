@@ -139,7 +139,7 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     void                  SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void                  SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
     void                  SetTrilinear(bool t) {trilinearInterpolation = t; };
-    void                  SetRaycasterSLIVR(bool _raycasterSLIVR){ raycasterSLIVR = _raycasterSLIVR; };
+    void                  SetRayCastingSLIVR(bool _rayCastingSLIVR){ rayCastingSLIVR = _rayCastingSLIVR; };
 
   protected:
     avtViewInfo           view;
@@ -158,7 +158,7 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     double                materialProperties[4];
     avtOpacityMap         *transferFn1D;
     bool                  trilinearInterpolation;
-    bool                  raycasterSLIVR;
+    bool                  rayCastingSLIVR;
     std::multimap<float, imagePatch> patches;
     
     avtImage_p            opaqueImage;

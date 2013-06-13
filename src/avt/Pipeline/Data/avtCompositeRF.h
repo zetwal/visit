@@ -103,7 +103,7 @@ class PIPELINE_API avtCompositeRF : public avtRayFunction
     virtual bool       CanContributeToPicture(int,
                                           const double (*)[AVT_VARIABLE_LIMIT]);
 
-    void               SetRaycastingSLIVR(bool r) { raycastingSLIVR = r; };
+    void               SetCompositingLikeSLIVR(bool val) { compositingLikeSLIVR = val; };
     void               SetMaterial(double mat[4]){for (int i=0; i<4; i++) matProperties[i]=mat[i];}
 
   protected:
@@ -116,7 +116,7 @@ class PIPELINE_API avtCompositeRF : public avtRayFunction
     int                weightVariableIndex;
 
     avtRangeMaxTable   rangeMaxTable;
-    bool               raycastingSLIVR;
+    bool               compositingLikeSLIVR;
     double             matProperties[4];  //ambient, diffuse, specular, shininess
 };
 

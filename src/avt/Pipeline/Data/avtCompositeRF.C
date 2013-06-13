@@ -82,7 +82,7 @@ avtCompositeRF::avtCompositeRF(avtLightingModel *l, avtOpacityMap *m,
     colorVariableIndex   = 0;
     opacityVariableIndex = 0;
     weightVariableIndex  = -1;
-    raycastingSLIVR = false;
+    compositingLikeSLIVR = false;
 
     int entries = secondaryMap->GetNumberOfTableEntries();
     double *opacities = new double[entries];
@@ -217,7 +217,7 @@ avtCompositeRF::GetRayValue(const avtRay *ray,
             float opacityValue, value, diffRGB, diffAlpha;
             RGBA colorLow, colorHigh, opacLow, opacHigh;
 
-            if (raycastingSLIVR == true){
+            if (compositingLikeSLIVR == true){
                 value = map->QuantizeValF(sample[z]);
                 diffRGB = value - ((int)value);
                 colorLow = table[(int)value];
@@ -232,7 +232,7 @@ avtCompositeRF::GetRayValue(const avtRay *ray,
             const RGBA &color = table[map->Quantize(sample[z])];
             const RGBA &opac = secondaryTable[secondaryMap->Quantize(sample2[z])];
 
-            if (raycastingSLIVR == false)
+            if (compositingLikeSLIVR == false)
                 opacityValue = opac.A;
             else
                 opacityValue = (1.0-diffAlpha)*opacLow.A + diffAlpha*opacHigh.A;
@@ -249,7 +249,7 @@ avtCompositeRF::GetRayValue(const avtRay *ray,
                         tableOpac *= weight[z]*min_weight_denom;
                 }
                 double samplesOpacity = tableOpac;
-                if (raycastingSLIVR == false){
+                if (compositingLikeSLIVR == false){
                     samplesOpacity = tableOpac * oneSamplesContribution;
                     samplesOpacity = (samplesOpacity > 1. ? 1. : samplesOpacity);
                 }
@@ -258,7 +258,7 @@ avtCompositeRF::GetRayValue(const avtRay *ray,
                 unsigned char rgbHigh[3] = { colorHigh.R, colorHigh.G, colorHigh.B };
                 unsigned char rgb[3];
 
-                if (raycastingSLIVR == true){
+                if (compositingLikeSLIVR == true){
                     rgb[0] = (1.0-diffRGB)*rgbLow[0] + diffRGB*rgbHigh[0];
                     rgb[1] = (1.0-diffRGB)*rgbLow[1] + diffRGB*rgbHigh[1];
                     rgb[2] = (1.0-diffRGB)*rgbLow[2] + diffRGB*rgbHigh[2];
@@ -269,7 +269,7 @@ avtCompositeRF::GetRayValue(const avtRay *ray,
                 }
                 double ff = (1-opacity)*samplesOpacity;
 
-                if (raycastingSLIVR == true)
+                if (compositingLikeSLIVR == true)
                     lighting->AddLightingHeadlight(z, ray, rgb, 1.0, matProperties);
                 else
                     lighting->AddLighting(z, ray, rgb);

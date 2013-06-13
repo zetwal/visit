@@ -174,6 +174,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     void                      SetUpArbitrator(std::string &name, bool min);
 
     void                      SetTrilinear(bool t) {trilinearInterpolation = t;  };
+    void                      SetRayCastingSLIVR(bool s) {rayCastingSLIVR = s;  };
     void                      SetLighting(bool l) {lighting = l; };
     void                      SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void                      SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
@@ -196,6 +197,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     double                    point_radius;
 
     bool                      trilinearInterpolation;
+    bool                      rayCastingSLIVR;
 
     bool                      shouldSetUpArbitrator;
     std::string               arbitratorVarName;
@@ -263,7 +265,7 @@ class AVTFILTERS_API avtSamplePointExtractor
                                            LoadingInfo &);
 
     void                      KernelBasedSample(vtkDataSet *);
-    void                      RasterBasedSample(vtkDataSet *, int);
+    void                      RasterBasedSample(vtkDataSet *, int num = 0);
 
     virtual bool              FilterUnderstandsTransformedRectMesh();
 

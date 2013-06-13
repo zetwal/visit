@@ -205,6 +205,8 @@ avtSamplePointExtractor::avtSamplePointExtractor(int w, int h, int d)
     arbitratorPrefersMinimum = false;
     arbitrator               = NULL;
 
+    trilinearInterpolation = false;
+    rayCastingSLIVR = false;
     lighting = false;
     lightPosition[0] = lightPosition[1] = lightPosition[2] = 0.0;   lightPosition[3] = 1.0;
     materialProperties[0] = 0.4; materialProperties[1] = 0.75; materialProperties[3] = 0.0; materialProperties[3] = 15.0;
@@ -381,9 +383,6 @@ avtSamplePointExtractor::RestrictToTile(int wmin, int wmax, int hmin, int hmax)
 void
 avtSamplePointExtractor::Execute(void)
 {
-
-    //printf("In avtSamplePointExtractor:365\n");
-
     int timingsIndex = visitTimer->StartTimer();
 
     SetUpExtractors();
@@ -495,6 +494,7 @@ avtSamplePointExtractor::SetUpExtractors(void)
     pyramidExtractor = new avtPyramidExtractor(width, height, depth,volume,cl);
 
     massVoxelExtractor->SetTrilinear(trilinearInterpolation);
+    massVoxelExtractor->SetRayCastingSLIVR(rayCastingSLIVR);
 
     hexExtractor->SendCellsMode(sendCells);
     hex20Extractor->SendCellsMode(sendCells);
@@ -730,78 +730,79 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     }
 
     imgPatchSize = dt->GetNChildren();
-    imagePatchArray = new imgPatch[imgPatchSize];   // get the number of children and create patches for them
-    for (int i=0; i<imgPatchSize; i++)
-        imagePatchArray[i] = initPatch();
 
+    if (rayCastingSLIVR == true){
+        imagePatchArray = new imgPatch[imgPatchSize];   // get the number of children and create patches for them
+        for (int i=0; i<imgPatchSize; i++)
+            imagePatchArray[i] = initPatch();
+    }
 
     for (int i = 0; i < imgPatchSize; i++) {
         if (dt->ChildIsPresent(i) && !( *(dt->GetChild(i)) == NULL))
         {
-
             avtDataTree_p child = dt->GetChild(i);
-            double bounds[6];
 
             //
             // Get the dataset for this leaf in the tree.
             //
             vtkDataSet *ds = child->GetDataRepresentation().GetDataVTK();
-            ds->GetBounds(bounds);
 
             //
             // Iterate over all cells in the mesh and call the appropriate 
             // extractor for each cell to get the sample points.
             //
-            //std::cout << "before if (kernelBasedSampling)" << std::endl;
             if (kernelBasedSampling)
                 KernelBasedSample(ds);
             else
                 RasterBasedSample(ds, i);
 
-            //std::cout << "after if (kernelBasedSampling)" << std::endl;
             UpdateProgress(10*currentNode+9, 10*totalNodes);
             currentNode++;
         }
     }
-
-    // if (dt->GetNChildren() != 0)
-    // {
-    //     printf("%d\n", dt->GetNChildren());
-    //     for (int i = 0; i < dt->GetNChildren(); i++)
-    //     {
-    //         if (dt->ChildIsPresent(i))
-    //             ExecuteTree(dt->GetChild(i));
-    //     }
-
-    //     return;
-    // }
-
-    // double bounds[6];
-    
-
-    // // the file is read and 
-
-
-    // //
-    // // Get the dataset for this leaf in the tree.
-    // //
-    // vtkDataSet *ds = dt->GetDataRepresentation().GetDataVTK();
-    // ds->GetBounds(bounds);
-    // //std::cout << "avtSamplePointExtractor::ExecuteTree " << PAR_Rank() << "   currentNode: " << currentNode << "   totalNodes: " << totalNodes << "         bounds: " << bounds[0] << " ,  " << bounds[1] << "    |  " << bounds[2] << " ,  " << bounds[3] << "   |   " << bounds[4] << " , " << bounds[5] << std::endl;
-    // //std::cout << "PAR_Rank(): " << PAR_Rank() << "    PAR_Size(): " << PAR_Size() << std::endl;
-
-    // //
-    // // Iterate over all cells in the mesh and call the appropriate 
-    // // extractor for each cell to get the sample points.
-    // //
-    // if (kernelBasedSampling)
-    //     KernelBasedSample(ds);
-    // else
-    //     RasterBasedSample(ds);
-
-    // UpdateProgress(10*currentNode+9, 10*totalNodes);
-    // currentNode++;
 }
+
+
+// void
+// avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
+// {
+//     if (*dt == NULL)
+//     {
+//         return;
+//     }
+//     if (dt->GetNChildren() <= 0 && (!(dt->HasData())))
+//     {
+//         return;
+//     }
+
+//     if (dt->GetNChildren() != 0)
+//     {
+//         for (int i = 0; i < dt->GetNChildren(); i++)
+//         {
+//             if (dt->ChildIsPresent(i))
+//                 ExecuteTree(dt->GetChild(i));
+//         }
+
+//         return;
+//     }
+
+//     //
+//     // Get the dataset for this leaf in the tree.
+//     //
+//     vtkDataSet *ds = dt->GetDataRepresentation().GetDataVTK();
+
+//     //
+//     // Iterate over all cells in the mesh and call the appropriate 
+//     // extractor for each cell to get the sample points.
+//     //
+//     if (kernelBasedSampling)
+//         KernelBasedSample(ds);
+//     else
+//         RasterBasedSample(ds);
+
+//     UpdateProgress(10*currentNode+9, 10*totalNodes);
+//     currentNode++;
+// }
 
 
 
@@ -996,15 +997,13 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
 
-debug5 << "RasterBasedSample." << endl;
-        if (trilinearInterpolation == true){
+        if (rayCastingSLIVR == true){
             massVoxelExtractor->getImageDimensions(imagePatchArray[num].inUse, imagePatchArray[num].patchNumber, imagePatchArray[num].dims, imagePatchArray[num].screen_ll, imagePatchArray[num].screen_ur, imagePatchArray[num].avg_z);
             imagePatchArray[num].imagePatch = new float [(imagePatchArray[num].dims[0]*4)*imagePatchArray[num].dims[1]];
             massVoxelExtractor->getComputedImage(imagePatchArray[num].imagePatch);
 
-
-             debug5 << "RasterBasedSample." << endl;
-             //std::cout << "imgDims:" << imagePatchArray[num].dims[0] << ", " << imagePatchArray[num].dims[1] << std::endl;
+            debug5 << "RasterBasedSample - rayCastingSLIVR" << endl;
+            //std::cout << "imgDims:" << imagePatchArray[num].dims[0] << ", " << imagePatchArray[num].dims[1] << std::endl;
             // std::cout << "screen_ll:" << imagePatchArray[num].screen_ll[0] << ", " << imagePatchArray[num].screen_ll[1] << std::endl;
             // std::cout << "screen_ur:" << imagePatchArray[num].screen_ur[0] << ", " << imagePatchArray[num].screen_ur[1] << std::endl;
             // std::cout << "avg_z:" << imagePatchArray[num].avg_z << std::endl;
