@@ -647,32 +647,36 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         om2->SetMax(range[1]);
         // LEAK!!
     }
-    avtCompositeRF *compositeRF = new avtCompositeRF(lm, &om, om2);
-    if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
-       ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear))){
-        compositeRF->SetCompositingLikeSLIVR(true);
-        double *matProp = atts.GetMaterialProperties();
-        double materialPropArray[4];
-        materialPropArray[0] = matProp[0];
-        materialPropArray[1] = matProp[1];
-        materialPropArray[2] = matProp[2];
-        materialPropArray[3] = matProp[3];
-        compositeRF->SetMaterial(materialPropArray);
-    }
-    else
-        compositeRF->SetCompositingLikeSLIVR(false);
-    avtIntegrationRF *integrateRF = new avtIntegrationRF(lm);
 
-    compositeRF->SetColorVariableIndex(primIndex);
-    compositeRF->SetOpacityVariableIndex(opacIndex);
-    if (atts.GetLightingFlag())
-        compositeRF->SetGradientVariableIndex(gradIndex);
-    integrateRF->SetPrimaryVariableIndex(primIndex);
-    integrateRF->SetRange(range[0], range[1]);
-    if (atts.GetSampling() == VolumeAttributes::KernelBased)
-    {
-        software->SetKernelBasedSampling(true);
-        compositeRF->SetWeightVariableIndex(count);
+    if (atts.GetRendererType() != VolumeAttributes::RayCastingSLIVR){
+        avtCompositeRF *compositeRF = new avtCompositeRF(lm, &om, om2);
+        if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
+           ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear))){
+            compositeRF->SetCompositingLikeSLIVR(true);
+            double *matProp = atts.GetMaterialProperties();
+            double materialPropArray[4];
+            materialPropArray[0] = matProp[0];
+            materialPropArray[1] = matProp[1];
+            materialPropArray[2] = matProp[2];
+            materialPropArray[3] = matProp[3];
+            compositeRF->SetMaterial(materialPropArray);
+        }
+        else
+            compositeRF->SetCompositingLikeSLIVR(false);
+
+        avtIntegrationRF *integrateRF = new avtIntegrationRF(lm);
+
+        compositeRF->SetColorVariableIndex(primIndex);
+        compositeRF->SetOpacityVariableIndex(opacIndex);
+        if (atts.GetLightingFlag())
+            compositeRF->SetGradientVariableIndex(gradIndex);
+        integrateRF->SetPrimaryVariableIndex(primIndex);
+        integrateRF->SetRange(range[0], range[1]);
+        if (atts.GetSampling() == VolumeAttributes::KernelBased)
+        {
+            software->SetKernelBasedSampling(true);
+            compositeRF->SetWeightVariableIndex(count);
+        }
     }
 
     if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
@@ -692,7 +696,8 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     if (atts.GetRendererType() == VolumeAttributes::RayCastingIntegration)
         software->SetRayFunction(integrateRF);
     else
-        software->SetRayFunction(compositeRF);
+        if (atts.GetRendererType() != VolumeAttributes::RayCastingSLIVR)
+            software->SetRayFunction(compositeRF);            // unsure about this one. RayFunction seems important
 
     software->SetSamplesPerRay(atts.GetSamplesPerRay());
 
@@ -771,7 +776,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     avtRay::SetArbitrator(&arb);
 
     //
-    // Do the funny business to force an update.
+    // Do the funny business to force an update. ... and called avtDataObject
     //
     avtDataObject_p dob = software->GetOutput();
     dob->Update(GetGeneralContract());
@@ -784,7 +789,9 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     //
     delete software;
     avtRay::SetArbitrator(NULL);
-    delete compositeRF;
+
+    if (atts.GetRendererType() != VolumeAttributes::RayCastingSLIVR)
+        delete compositeRF;
     delete integrateRF;
 
     //

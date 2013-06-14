@@ -181,7 +181,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     void                      SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
 
     //
-    void                      getImgPatchSize(int& size);
+    int                       getImgPatchSize();
     void                      getImgPatches(imgPatch *image);
     void                      delImgPatches();
 

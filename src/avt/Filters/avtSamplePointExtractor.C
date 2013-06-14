@@ -806,9 +806,9 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
 
 
 
-void
-avtSamplePointExtractor::getImgPatchSize(int &size){
-    size = imgPatchSize;
+int 
+avtSamplePointExtractor::getImgPatchSize(){
+    return imgPatchSize;
 }
 
 void

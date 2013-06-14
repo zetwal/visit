@@ -492,18 +492,31 @@ avtRayTracer::Execute(void)
         extractor.SetRectilinearGridsAreInWorldSpace(true, view, aspect);
     }
 
+    std::cout << "avtRayTracer::Execute 0" << std::endl;
     avtDataObject_p samples = extractor.GetOutput();
 
+    std::cout << "avtRayTracer::Execute 1" << std::endl;
     if (rayCastingSLIVR == true){
-        extractor.delImgPatches();
+        int size = extractor.getImgPatchSize();
 
-        int size;
-        extractor.getImgPatchSize(size);
-
+        std::cout << "avtRayTracer::Execute 2" << std::endl;
         imgPatch *imgPatchAll;
         imgPatchAll = new imgPatch[size];   
 
+        std::cout << "avtRayTracer::Execute 3" << std::endl;
         extractor.getImgPatches(imgPatchAll);
+
+        std::cout << "avtRayTracer::Execute 4" << std::endl;
+
+        extractor.GetOutput();
+        std::cout << "avtRayTracer::Execute 5" << std::endl;
+
+
+        extractor.delImgPatches();
+        std::cout << "avtRayTracer::Execute 6" << std::endl;
+
+
+
 
         // int specialCount = 0;
         // if (PAR_Rank() == 0){
@@ -604,7 +617,7 @@ avtRayTracer::Execute(void)
 
     samples = sampleCommunicator.GetOutput();
 #endif
-    
+
     //
     // Perform compositing on the rays to get the final image.
     //
@@ -699,7 +712,7 @@ avtRayTracer::Execute(void)
             sampleCommunicator.SetImagePartition(&imagePartition);
             imageCommunicator.SetImagePartition(&imagePartition);
 #endif
-            extractor.RestrictToTile(IStart, IEnd, JStart, JEnd);
+            //extractor.RestrictToTile(IStart, IEnd, JStart, JEnd);
 
             image->Update(GetGeneralContract());                    // execution happens here - identified with gdb
 
@@ -729,9 +742,6 @@ avtRayTracer::Execute(void)
     // Make our output image look the same as the ray compositer's.
     //
     SetOutput(image);
-
-    if (rayCastingSLIVR)
-        extractor.delImgPatches();
 
     visitTimer->StopTimer(timingIndex, "Ray Tracing");
     visitTimer->DumpTimings();
