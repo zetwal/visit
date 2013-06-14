@@ -1002,7 +1002,8 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             imagePatchArray[num].imagePatch = new float [(imagePatchArray[num].dims[0]*4)*imagePatchArray[num].dims[1]];
             massVoxelExtractor->getComputedImage(imagePatchArray[num].imagePatch);
 
-            debug5 << "RasterBasedSample - rayCastingSLIVR" << endl;
+            //debug5 << "RasterBasedSample - rayCastingSLIVR" << endl;
+            //std::cout << "RasterBasedSample - rayCastingSLIVR" << endl;
             //std::cout << "imgDims:" << imagePatchArray[num].dims[0] << ", " << imagePatchArray[num].dims[1] << std::endl;
             // std::cout << "screen_ll:" << imagePatchArray[num].screen_ll[0] << ", " << imagePatchArray[num].screen_ll[1] << std::endl;
             // std::cout << "screen_ur:" << imagePatchArray[num].screen_ur[0] << ", " << imagePatchArray[num].screen_ur[1] << std::endl;

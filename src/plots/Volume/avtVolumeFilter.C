@@ -648,8 +648,10 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         // LEAK!!
     }
 
-    if (atts.GetRendererType() != VolumeAttributes::RayCastingSLIVR){
-        avtCompositeRF *compositeRF = new avtCompositeRF(lm, &om, om2);
+    avtCompositeRF *compositeRF = new avtCompositeRF(lm, &om, om2);
+    
+    //if (atts.GetRendererType() != VolumeAttributes::RayCastingSLIVR){
+        
         if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
            ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear))){
             compositeRF->SetCompositingLikeSLIVR(true);
@@ -677,7 +679,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
             software->SetKernelBasedSampling(true);
             compositeRF->SetWeightVariableIndex(count);
         }
-    }
+    //}
 
     if (atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)
         software->SetRayCastingSLIVR(true);
@@ -696,7 +698,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     if (atts.GetRendererType() == VolumeAttributes::RayCastingIntegration)
         software->SetRayFunction(integrateRF);
     else
-        if (atts.GetRendererType() != VolumeAttributes::RayCastingSLIVR)
+        //if (atts.GetRendererType() != VolumeAttributes::RayCastingSLIVR)
             software->SetRayFunction(compositeRF);            // unsure about this one. RayFunction seems important
 
     software->SetSamplesPerRay(atts.GetSamplesPerRay());
@@ -790,8 +792,8 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     delete software;
     avtRay::SetArbitrator(NULL);
 
-    if (atts.GetRendererType() != VolumeAttributes::RayCastingSLIVR)
-        delete compositeRF;
+    
+    delete compositeRF;
     delete integrateRF;
 
     //

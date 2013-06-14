@@ -430,6 +430,7 @@ avtRayTracer::GetNumberOfDivisions(int screenX, int screenY, int screenZ)
 void
 avtRayTracer::Execute(void)
 {
+    std::cout << "avtRayTracer::Execute" << std::endl;
     int  timingIndex = visitTimer->StartTimer();
 
     if (rayfoo == NULL)
@@ -437,8 +438,7 @@ avtRayTracer::Execute(void)
         debug1 << "Never set ray function for ray tracer." << endl;
         EXCEPTION0(ImproperUseException);
     }
-
-    //
+    std::cout << PAR_Rank() << "   avtRayTracer::Execute 0.2" << std::endl;
     // First we need to transform all of domains into camera space.
     //
     double aspect = 1.;
@@ -492,32 +492,50 @@ avtRayTracer::Execute(void)
         extractor.SetRectilinearGridsAreInWorldSpace(true, view, aspect);
     }
 
-    std::cout << "avtRayTracer::Execute 0" << std::endl;
+    std::cout << PAR_Rank() << "   avtRayTracer::Execute 0" << std::endl;
     avtDataObject_p samples = extractor.GetOutput();
 
-    std::cout << "avtRayTracer::Execute 1" << std::endl;
+    std::cout << PAR_Rank() << "   avtRayTracer::Execute 1" << std::endl;
     if (rayCastingSLIVR == true){
+
+#ifdef PARALLEL
+        //
+        // Tell the sample point extractor that we would like to send cells
+        // instead of sample points when appropriate.
+        //
+        //extractor.SendCellsMode(true);
+
+        //
+        // Communicate the samples to the other processors.
+        //
+        avtSamplePointCommunicator sampleCommunicator;
+        sampleCommunicator.SetInput(extractor.GetOutput());
+
+        samples = sampleCommunicator.GetOutput();
+#endif
+        avtRayCompositer rc(rayfoo);
+        rc.SetInput(samples);
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 1.2" << std::endl;
+        avtImage_p image  = rc.GetTypedOutput();
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 1.4" << std::endl;
+        image->Update(GetGeneralContract());
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 1.6" << std::endl;
+
+
+
+
         int size = extractor.getImgPatchSize();
 
-        std::cout << "avtRayTracer::Execute 2" << std::endl;
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 2 - size: " << size << std::endl;
         imgPatch *imgPatchAll;
         imgPatchAll = new imgPatch[size];   
 
-        std::cout << "avtRayTracer::Execute 3" << std::endl;
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 3" << std::endl;
         extractor.getImgPatches(imgPatchAll);
 
-        std::cout << "avtRayTracer::Execute 4" << std::endl;
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4" << std::endl;
 
-        extractor.GetOutput();
-        std::cout << "avtRayTracer::Execute 5" << std::endl;
-
-
-        extractor.delImgPatches();
-        std::cout << "avtRayTracer::Execute 6" << std::endl;
-
-
-
-
+       
         // int specialCount = 0;
         // if (PAR_Rank() == 0){
         // std::cout << "\n" << PAR_Rank() << "  Num patches: " << size << std::endl;
@@ -529,14 +547,12 @@ avtRayTracer::Execute(void)
         //      << "\t  avg_z: " << imgPatchAll[i].avg_z << std::endl 
         //      << "\t  used: " << ((imgPatchAll[i].inUse == true)? 1: 0) << std::endl;
 
-
         //     if (imgPatchAll[i].inUse == true){
         //         printf("\n\n Rank: %d  patch: %d \n dims: %d %d \n screen_ll: %d %d \n screen_ur: %d %d  \n avg_z: %f \n used: %d",PAR_Rank(),i,imgPatchAll[i].dims[0],imgPatchAll[i].dims[1],imgPatchAll[i].screen_ll[0],imgPatchAll[i].screen_ll[1],imgPatchAll[i].screen_ur[0],imgPatchAll[i].screen_ur[1],imgPatchAll[i].avg_z,((imgPatchAll[i].inUse == true)? 1: 0));
 
         //         specialCount = specialCount +1;
         //         if (specialCount < 25){
         //             std::cout << "\n(" << imgPatchAll[i].dims[1] << " , " << imgPatchAll[i].dims[0] << ")\n";
-
 
         //             for (int k=0; k<imgPatchAll[i].dims[1]; k++){
         //                 for (int j=0; j<imgPatchAll[i].dims[0]; j++){
@@ -598,6 +614,33 @@ avtRayTracer::Execute(void)
         //     }
         // }
         // std::cout << "Finished getting all patches\n";
+
+
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.6...................................................................." << std::endl;
+        avtImage_p whole_image;
+    if (PAR_Rank() == 0)
+    {
+        whole_image = new avtImage(this);
+        vtkImageData *img = avtImageRepresentation::NewImage(screen[0], 
+                                                             screen[1]);
+        whole_image->GetImage() = img;
+        img->Delete();
+    }
+
+
+
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.7...................................................................." << std::endl;
+        avtImage_p tempImage;
+ std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.75...................................................................." << std::endl;
+        if (PAR_Rank() == 0)
+            tempImage->Copy(*whole_image);
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.8...................................................................." << std::endl;
+        SetOutput(tempImage);
+
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.9...................................................................." << std::endl;
+         extractor.delImgPatches();
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 5" << std::endl;
+
         return;
     }
 
@@ -661,9 +704,15 @@ avtRayTracer::Execute(void)
             }
         }
     }
+
+std::cout << "after GetGeneralContract" << std::endl;
     rc.SetInput(samples);
+std::cout << "before  rc.GetTypedOutput() ++++++++++++++++++++++++++++++++++" << std::endl;
     avtImage_p image = rc.GetTypedOutput();
+std::cout << "after  rc.GetTypedOutput() -----------------------------------" << std::endl;
     image->Update(GetGeneralContract());
+std::cout << "after  image->Update(GetGeneralContract()) ===================" << std::endl;
+
 
 #ifdef PARALLEL
     //

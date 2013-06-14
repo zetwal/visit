@@ -555,7 +555,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                  std::vector<std::string> &varnames, std::vector<int> &varsize)
 {
     patchDrawn = false;
-
+    //std::cout << "avtMassVoxelExtractor::simpleExtractWorldSpaceGrid" << std::endl;
     //
     // Some of our sampling routines need a chance to pre-process the data.
     // Register the grid here so we can do that.
