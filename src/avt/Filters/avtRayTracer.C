@@ -631,6 +631,7 @@ avtRayTracer::Execute(void)
 
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.7...................................................................." << std::endl;
         avtImage_p tempImage;
+        tempImage = new avtImage(this);
  std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.75...................................................................." << std::endl;
         if (PAR_Rank() == 0)
             tempImage->Copy(*whole_image);
