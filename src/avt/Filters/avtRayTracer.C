@@ -572,7 +572,6 @@ avtRayTracer::Execute(void)
         //     createPpm(imgPatchAll, size, imgFilename);
         // }
         
-
         // std::cout << "Finished getting all patches\n";
         // std::cout << "Hello rayTracer 999" << std::endl;
         // int specialCount = 0;
@@ -615,32 +614,136 @@ avtRayTracer::Execute(void)
         // }
         // std::cout << "Finished getting all patches\n";
 
-
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.6...................................................................." << std::endl;
         avtImage_p whole_image;
-    if (PAR_Rank() == 0)
-    {
-        whole_image = new avtImage(this);
-        vtkImageData *img = avtImageRepresentation::NewImage(screen[0], 
-                                                             screen[1]);
-        whole_image->GetImage() = img;
-        img->Delete();
-    }
+        avtImage_p whole_temp_image;
+        avtImage_p tempImage;
+        tempImage = new avtImage(this);
+        unsigned char *imgTest;
+        unsigned char *imgtempTest;
 
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.6.1..................................................................." << std::endl;
+        whole_temp_image = new avtImage(this);
+        vtkImageData *fullImg = avtImageRepresentation::NewImage(screen[0]/2, screen[1]/2);
+        whole_temp_image->GetImage() = fullImg;
+       // int* tempDims;
+        //tempDims = fullImg->GetDimensions();
+
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.6.2..................................................................." << screen[0]/2 << " , " << screen[1]/2 << std::endl;
+       int tempDims[2];
+        tempDims[0] = screen[0]/2;
+        tempDims[1] = screen[1]/2;
+
+        unsigned char paintColor[3];
+        if (PAR_Rank() == 0){
+            paintColor[0] = 0;
+            paintColor[1] = 255;
+            paintColor[2] = 0;
+            //fullImg->SetOrigin(0,0)
+        }
+        if (PAR_Rank() == 1){
+            paintColor[0] = 255;
+            paintColor[1] = 0;
+            paintColor[2] = 0;
+        }
+        if (PAR_Rank() == 2){
+            paintColor[0] = 0;
+            paintColor[1] = 0;
+            paintColor[2] = 255;
+        }
+        if (PAR_Rank() == 3){
+            paintColor[0] = 255;
+            paintColor[1] = 255;
+            paintColor[2] = 0;
+        }
+
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.6.3..................................................................." << std::endl;
+
+        imgtempTest = whole_temp_image->GetImage().GetRGBBuffer();
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.6.4..................................................." << tempDims[0] << " ,  " << tempDims[1] << std::endl;
+            for (int i=0; i<tempDims[1]; i++)
+                for (int j=0; j<tempDims[0]; j++){
+                    int index = i*tempDims[0] * 3 + j*3;
+                    imgtempTest[index] = paintColor[0];
+                    imgtempTest[index+1] = paintColor[1];
+                    imgtempTest[index+2] = paintColor[2];
+                }
+            std::cout << "tempDims: " << tempDims[0] << " ,  " << tempDims[1] << std::endl;
+            
 
 
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.7...................................................................." << std::endl;
-        avtImage_p tempImage;
-        tempImage = new avtImage(this);
- std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.75...................................................................." << std::endl;
+       
+        if (PAR_Rank() == 0)
+        {
+            int* dims;
+            whole_image = new avtImage(this);
+
+            vtkImageData *img = avtImageRepresentation::NewImage(screen[0], screen[1]);
+            whole_image->GetImage() = img;
+
+            dims = img->GetDimensions();
+
+            //unsigned char *imgTest = new unsigned char[dims[0] * dims[1] * 3];
+            imgTest = whole_image->GetImage().GetRGBBuffer();
+            for (int i=0; i<dims[1]; i++)
+                for (int j=0; j<dims[0]; j++){
+                    int index = i*dims[0] * 3 + j*3;
+                    imgTest[index] = 128;
+                    imgTest[index+1] = 0;
+                    imgTest[index+2] = 128;
+                }
+            std::cout << "dims: " << dims[0] << " ,  " << dims[1] << std::endl;
+            
+            img->Delete();
+
+            int origins[2];
+            whole_image->GetImage().GetOrigin(&origins[0], &origins[1]);
+
+            std::cout << PAR_Rank() << "   origins: " << origins[0] << " ,  " << origins[1] << std::endl;
+       
+        }
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.75...................................................................." << std::endl;
+       
+
+        
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.77...................................................................." << std::endl;
         if (PAR_Rank() == 0)
             tempImage->Copy(*whole_image);
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.8...................................................................." << std::endl;
+        
         SetOutput(tempImage);
-
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.9...................................................................." << std::endl;
-         extractor.delImgPatches();
+        
+
+        fullImg->Delete();
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.65...................................................................." << std::endl;
+       
+
+        extractor.delImgPatches();
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 5" << std::endl;
+
+// nothing that's worth having comes easy.
+// if (PAR_Rank() == 0)    // stage 8 of 9
+//             {
+//                 unsigned char *whole_rgb = 
+//                                         whole_image->GetImage().GetRGBBuffer();
+//                 unsigned char *tile = image->GetImage().GetRGBBuffer();
+
+//                 for (int jj = JStart ; jj < JEnd ; jj++)
+//                     for (int ii = IStart ; ii < IEnd ; ii++)
+//                     {
+//                         int index = screen[0]*jj + ii;
+//                         int index2 = (IEnd-IStart)*(jj-JStart) + (ii-IStart);
+//                         whole_rgb[3*index+0] = tile[3*index2+0];
+//                         whole_rgb[3*index+1] = tile[3*index2+1];
+//                         whole_rgb[3*index+2] = tile[3*index2+2];
+//                     }
+//             }
+//         }
+
+//     if (PAR_Rank() == 0)
+//         image->Copy(*whole_image);
 
         return;
     }
@@ -765,6 +868,11 @@ std::cout << "after  image->Update(GetGeneralContract()) ===================" <<
             //extractor.RestrictToTile(IStart, IEnd, JStart, JEnd);
 
             image->Update(GetGeneralContract());                    // execution happens here - identified with gdb
+
+            int origins[2];
+            image->GetImage().GetOrigin(&origins[0], &origins[1]);
+
+            std::cout << PAR_Rank() << "   origins: " << origins[0] << " ,  " << origins[1] << std::endl;
 
 
             if (PAR_Rank() == 0)    // stage 8 of 9

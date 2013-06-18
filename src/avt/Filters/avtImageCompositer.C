@@ -128,7 +128,9 @@ void avtImageCompositer::AddImageInput(avtImage_p image,
    if ((imageRows + rowOffset > outRows) || (imageCols + colOffset > outCols))
       EXCEPTION0(ImproperUseException);
    imageRep.SetOrigin(rowOffset, colOffset);
+   std::cout << "++++++++++++++ +++++++++++ avtImageCompositer::AddImageInput ++++++++++++++ ++++++++++++++: " << rowOffset << " ,  "<< colOffset << std::endl;
    inputImages.push_back(image);
+
 }
 
 // ****************************************************************************
