@@ -195,10 +195,12 @@ IceTNetworkManager::IceTNetworkManager(void): NetworkManager(), renderings(0)
 
     DEBUG_ONLY(ICET(icetDiagnostics(ICET_DIAG_FULL)));
 
-    ICET(icetStrategy(ICET_STRATEGY_REDUCE));
+    ICET(icetStrategy(ICET_STRATEGY_REDUCE));   // provides alllround good performance - reduce to single tile strategy
+    // processes are partitioned into groups, each of which is responsible for compositing the image of one of the tiles
+    // 
     ICET(icetDrawFunc(render));
 
-    ICET(icetDisable(ICET_DISPLAY));
+    ICET(icetDisable(ICET_DISPLAY));    //z-buffer compositing
     ICET(icetInputOutputBuffers(
             ICET_COLOR_BUFFER_BIT | ICET_DEPTH_BUFFER_BIT, /* inputs */
             ICET_COLOR_BUFFER_BIT | ICET_DEPTH_BUFFER_BIT  /* outputs */
@@ -242,6 +244,8 @@ IceTNetworkManager::TileLayout(size_t width, size_t height) const
     ICET(icetResetTiles());
     const GLint this_mpi_rank_gets_an_image = 0;
     ICET(icetAddTile(0,0, width, height, this_mpi_rank_gets_an_image));
+
+    std::cout << "      IceTNetworkManager::TileLayout End!!!" << std::endl;
 }
 
 // ****************************************************************************
@@ -307,7 +311,7 @@ avtDataObject_p
 IceTNetworkManager::Render(bool, intVector networkIds, bool getZBuffer,
                            int annotMode, int windowID, bool leftEye)
 {
-    std::cout << "IceTNetworkManager::Render" << std::endl;
+    std::cout << "IceTNetworkManager::Render 0" << std::endl;
     int t0 = visitTimer->StartTimer();
     DataNetwork *origWorkingNet = workingNet;
     avtDataObject_p retval;
@@ -419,7 +423,7 @@ IceTNetworkManager::Render(bool, intVector networkIds, bool getZBuffer,
                                  this->r_mgmt.viewportedMode);
         
         this->TileLayout(width, height);
-
+        std::cout << " width: " << width << "   height: " << height << std::endl;
         CallInitializeProgressCallback(this->RenderingStages(windowID));
 
         // IceT mode is different from the standard network manager; we don't
@@ -482,6 +486,8 @@ IceTNetworkManager::Render(bool, intVector networkIds, bool getZBuffer,
 
     workingNet = origWorkingNet;
     visitTimer->StopTimer(t0, "Ice-T Render");
+
+    std::cout << "      IceTNetworkManager::Render End!!!" << std::endl;
     return retval;
 }
 
@@ -537,6 +543,8 @@ IceTNetworkManager::RealRender()
         this->DumpImage(dob, "icet-render-translucent");
     }
     this->renderings++;
+
+    std::cout << "      IceTNetworkManager::RealRender End!!" << std::endl;
 }
 
 // ****************************************************************************
@@ -569,6 +577,8 @@ IceTNetworkManager::RenderGeometry()
     CallProgressCallback("IceTNetworkManager", "Render geometry", 0, 1);
         viswin->ScreenRender(this->r_mgmt.viewportedMode, true);
     CallProgressCallback("IceTNetworkManager", "Render geometry", 0, 1);
+
+    std::cout << "     IceTNetworkManager::RenderGeometry End!!!" << std::endl;
     return NULL;
 }
 
@@ -620,6 +630,8 @@ IceTNetworkManager::RenderTranslucent(int windowID, const avtImage_p& input)
     // In this implementation, the user should never use the return value --
     // read it back from IceT instead!
     //
+
+    std::cout << "     IceTNetworkManager::RenderTranslucent End!!!" << std::endl;
     return NULL;
 }
 
@@ -754,6 +766,7 @@ IceTNetworkManager::Readback(VisWindow * const viswin,
 
     debug3 << "Readback complete." << std::endl;
 
+    std::cout << "IceTNetworkManager::Readback End!!!" << std::endl;
     return visit_img;
 }
 
@@ -824,6 +837,7 @@ void IceTNetworkManager::FormatDebugImage(char* out, size_t len,
 void
 IceTNetworkManager::VerifyColorFormat() const
 {
+    std::cout << "IceTNetworkManager VerifyColorFormat" << std::endl;
     GLint color_format;
     ICET(icetGetIntegerv(ICET_COLOR_FORMAT, &color_format));
     if(color_format != GL_RGBA)
@@ -838,6 +852,7 @@ IceTNetworkManager::VerifyColorFormat() const
         }
         EXCEPTION2(UnexpectedValueException, "GL_RGBA", std::string(str));
     }
+    std::cout << "IceTNetworkManager VerifyColorFormat End!!!" << std::endl;
 }
 
 // ****************************************************************************
@@ -862,6 +877,8 @@ render()
 
     net_mgr = dynamic_cast<IceTNetworkManager*>(engy->GetNetMgr());
     net_mgr->RealRender();
+
+    std::cout << "     IceTNetworkManager render End!!!" << std::endl;
 }
 
 // ****************************************************************************
@@ -885,6 +902,7 @@ SendImageToRenderNodes(int width, int height, bool Z,
                        GLubyte * const pixels,
                        GLuint * const depth)
 {
+    std::cout << " SendImageToRenderNodes() " << std::endl;
     GLint n_tiles, n_procs, rank;
     GLboolean have_image;
 
@@ -893,9 +911,12 @@ SendImageToRenderNodes(int width, int height, bool Z,
     ICET(icetGetIntegerv(ICET_RANK, &rank));
     ICET(icetGetBooleanv(ICET_COLOR_BUFFER_VALID, &have_image));
 
+    std::cout << "\n n_tiles: " << n_tiles << "   n_procs: " << n_procs << "  rank: " << rank << "   have_image: " << have_image << std::endl;
     //              4: assuming GL_RGBA.
     MPI_Bcast(pixels, 4*width*height, MPI_BYTE, 0, VISIT_MPI_COMM);
     if(Z) {
         MPI_Bcast(depth, width*height, MPI_UNSIGNED, 0, VISIT_MPI_COMM);
     }
+
+    std::cout << " SendImageToRenderNodes() End!!!" << std::endl;
 }

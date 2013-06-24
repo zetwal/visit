@@ -117,8 +117,11 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void             SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void             SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
+
+    // Getting the image
     void             getImageDimensions(bool &used, int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
-    void             getComputedImage(float *image);
+    void             getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
+    void           getComputedImage(float *image);
  
   protected:
     bool             gridsAreInWorldSpace;
@@ -162,12 +165,14 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           lightPosition[4];
     double           materialProperties[4];
     avtOpacityMap    *transferFn1D;
-    bool             patchDrawn;
-    int              imgDims[2];
-    int              imgLowerLeft[2];
-    int              imgUpperRight[2];
-    float            imgDepth;
-    float            *imgArray;
+
+    // patch details for one image
+    bool             patchDrawn;        // whether the patch is drawn or not
+    int              imgDims[2];        // size of the patch
+    int              imgLowerLeft[2];   // coordinates in the whole image
+    int              imgUpperRight[2];  //
+    float            imgDepth;          // from the depth buffer
+    float            *imgArray;         // the image data
  
     int              imgWidth, imgHeight;
     int              fullImgWidth, fullImgHeight;

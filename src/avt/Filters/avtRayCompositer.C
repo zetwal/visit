@@ -485,7 +485,7 @@ avtRayCompositer::Execute(void)
     // Create an image that we can place each pixel into.
     //
     vtkImageData *image = avtImageRepresentation::NewImage(width, height);
-
+    std::cout << "  width: " << width << "   height: " << height << std::endl;
     //
     // Populate an initial image, either with the background or with an
     // opaque image that is to be inserted into the middle of the rendering.
@@ -509,12 +509,14 @@ avtRayCompositer::Execute(void)
                                           fullImage->GetScalarPointer(0, 0, 0);
     FillBackground(fulldata, fullWidth, fullHeight);
 
+    std::cout << "  fullWidth: " << fullWidth << "   fullHeight: " << fullHeight << std::endl;
     //
     // Now that we have the background in the full image, copy it into what
     // we need for this image.
     //
     int minWidth  = volume->GetRestrictedMinWidth();
     int minHeight = volume->GetRestrictedMinHeight();
+    std::cout << "  minWidth: " << minWidth << "   minHeight: " << minHeight << std::endl;
     for (i = 0 ; i < nPixels ; i++)
     {
         int restrictedWidth  = i % width;

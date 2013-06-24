@@ -102,6 +102,7 @@ void          QuicksortTuple3(Tuple3 *, int);
 
 avtImagePartition::avtImagePartition(int w, int h, int np, int tp)
 {
+    std::cout << " avtImagePartition::avtImagePartition " << std::endl;
     int   i;
 
     width  = w;
@@ -147,6 +148,7 @@ avtImagePartition::avtImagePartition(int w, int h, int np, int tp)
     establishedPartitionBoundaries = false;
     shouldDoTiling = false;
     shouldProduceOverlaps = false;
+    std::cout << " avtImagePartition::avtImagePartition End!!!" << std::endl;
 }
 
 
@@ -250,6 +252,7 @@ void
 avtImagePartition::GetPartition(int part, int &minW, int &maxW, int &minH,
                                 int &maxH)
 {
+    std::cout << " avtImagePartition::GetPartition" << std::endl;
     minW = 0;
     maxW = width-1;
     if (shouldDoTiling)
@@ -263,6 +266,7 @@ avtImagePartition::GetPartition(int part, int &minW, int &maxW, int &minH,
         if (minH > 0)
             minH--;
     maxH = partitionStopsOnScanline[part];
+    std::cout << " avtImagePartition::GetPartition End!!!" << std::endl;
 }
 
 
@@ -306,6 +310,7 @@ avtImagePartition::GetPartition(int part, int &minW, int &maxW, int &minH,
 void
 avtImagePartition::EstablishPartitionBoundaries(int *samples)
 {
+    std::cout << " avtImagePartition::EstablishPartitionBoundaries   " << std::endl;
     int i, j;
 
     int first_scanline = (shouldDoTiling ? tile_height_min : 0);
@@ -437,6 +442,7 @@ avtImagePartition::EstablishPartitionBoundaries(int *samples)
     }
 
     establishedPartitionBoundaries = true;
+    std::cout << " avtImagePartition::EstablishPartitionBoundaries End!!!" << std::endl;
 }
 
 
@@ -478,6 +484,7 @@ avtImagePartition::EstablishPartitionBoundaries(int *samples)
 void
 avtImagePartition::DetermineAssignments(int *amount)
 {
+    std::cout << " avtImagePartition::DetermineAssignments   " << std::endl;
     if (!establishedPartitionBoundaries)
     {
         //
@@ -622,6 +629,8 @@ avtImagePartition::DetermineAssignments(int *amount)
             usedPartition[lastPartition] = true;
         }
     }
+
+    std::cout << " avtImagePartition::DetermineAssignments  End!!! " << std::endl;
 
     //
     // Clean up memory

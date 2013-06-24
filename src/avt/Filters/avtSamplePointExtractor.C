@@ -105,16 +105,31 @@ std::string NumToString ( int Number )
 }
 
 imgPatch
-initPatch(){
+initPatch(int id){
     imgPatch temp;
     temp.inUse = false;
-    temp.patchNumber = -1;
+    temp.patchNumber = id;
     temp.dims[0] = temp.dims[1] = -1;
     temp.screen_ll[0] = temp.screen_ll[1] = -1;
     temp.screen_ur[0] = temp.screen_ur[1] = -1;
     temp.avg_z = -1.0;
     temp.imagePatch = NULL;
 
+    return temp;
+}
+
+
+imgMetaData
+initMetaPatch(int id){
+    imgMetaData temp;
+    temp.inUse = 0;
+    temp.procId = PAR_Rank();
+    temp.patchNumber = id;
+    temp.dims[0] = temp.dims[1] = -1;
+    temp.screen_ll[0] = temp.screen_ll[1] = -1;
+    temp.screen_ur[0] = temp.screen_ur[1] = -1;
+    temp.avg_z = -1.0;
+    
     return temp;
 }
 
@@ -732,9 +747,16 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     imgPatchSize = dt->GetNChildren();
 
     if (rayCastingSLIVR == true){
-        imagePatchArray = new imgPatch[imgPatchSize];   // get the number of children and create patches for them
-        for (int i=0; i<imgPatchSize; i++)
-            imagePatchArray[i] = initPatch();
+        imagePatchArray = new imgPatch[imgPatchSize];       // get the number of children and create patches for them
+        imageMetaPatchArray = new imgMetaData[imgPatchSize];   // get the number of children and create patches for them
+
+        for (int i=0; i<imgPatchSize; i++){
+            imagePatchArray[i] = initPatch(i);
+            imageMetaPatchArray[i] = initMetaPatch(i);
+
+           // if (PAR_Rank() == 4)
+           ///     cout << "ID: " << i << std::endl;
+        }
     }
 
     for (int i = 0; i < imgPatchSize; i++) {
@@ -762,7 +784,9 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     }
 }
 
-
+//
+// Previous recursive equivalent
+//
 // void
 // avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
 // {
@@ -819,11 +843,31 @@ avtSamplePointExtractor::getImgPatches(imgPatch *image){
     }
 }
 
+void
+avtSamplePointExtractor::getImgMetaPatches(imgMetaData *image){
+
+    for (int i = 0; i < imgPatchSize; i++) {
+        image[i] = imageMetaPatchArray[i];
+    }
+}
+
+
+int
+avtSamplePointExtractor::getImgPatch(imgPatch image, int id){
+    if (id < imgPatchSize){
+        image = imagePatchArray[id];
+        return 0;
+    }else
+        return -1;  // to indicate failure
+}
+
 
 void
 avtSamplePointExtractor::delImgPatches(){
     delete []imagePatchArray;
 }
+
+
 
 // ****************************************************************************
 //  Method: avtSamplePointExtractor::KernelBasedSample
@@ -1001,6 +1045,21 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             massVoxelExtractor->getImageDimensions(imagePatchArray[num].inUse, imagePatchArray[num].patchNumber, imagePatchArray[num].dims, imagePatchArray[num].screen_ll, imagePatchArray[num].screen_ur, imagePatchArray[num].avg_z);
             imagePatchArray[num].imagePatch = new float [(imagePatchArray[num].dims[0]*4)*imagePatchArray[num].dims[1]];
             massVoxelExtractor->getComputedImage(imagePatchArray[num].imagePatch);
+/*
+struct imgMetaData{
+  int inUse;        // 1: in use/ 0:not in use
+  int procId;       // to be removed!!!!!
+  int patchNumber;
+  int dims[2];      // height, width
+  int screen_ll[2];
+  int screen_ur[2];
+  float avg_z;
+};
+*/
+            massVoxelExtractor->getImageDimensions(imageMetaPatchArray[num].inUse, imageMetaPatchArray[num].dims, imageMetaPatchArray[num].screen_ll, imageMetaPatchArray[num].screen_ur, imageMetaPatchArray[num].avg_z);
+            //imageMetaPatchArray[num].imagePatch = new float [(imageMetaPatchArray[num].dims[0]*4)*imageMetaPatchArray[num].dims[1]];
+            //massVoxelExtractor->getComputedImage(imageMetaPatchArray[num].imagePatch);
+
 
             //debug5 << "RasterBasedSample - rayCastingSLIVR" << endl;
             //std::cout << "RasterBasedSample - rayCastingSLIVR" << endl;

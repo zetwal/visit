@@ -6721,7 +6721,7 @@ NetworkManager::RenderPostProcess(std::vector<avtPlot_p>& image_plots,
                                                         windowAttributes);
             visitTimer->StopTimer(t1, 
                          "Image Execute method (often volume rendering)");
-            compositedImage = newImage;
+            compositedImage = newImage; // subcomposited image
         }
         CopyTo(input_as_dob, compositedImage);
     }

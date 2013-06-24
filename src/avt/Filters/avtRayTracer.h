@@ -49,6 +49,8 @@
 #include <avtViewInfo.h>
 #include <avtOpacityMap.h>
 #include <map>
+#include <avtImgCommunicator.h>
+
 
 struct imagePatch{
     int patchNumber;
@@ -142,6 +144,8 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     void                  SetRayCastingSLIVR(bool _rayCastingSLIVR){ rayCastingSLIVR = _rayCastingSLIVR; };
 
   protected:
+    avtImgCommunicator    imgComm;
+
     avtViewInfo           view;
 
     int                   screen[2];

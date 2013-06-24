@@ -61,4 +61,19 @@
 # endif
 #endif
 
+struct imgMetaData{
+  int inUse;        // 1: in use/ 0:not in use
+  int procId;       // to be removed!!!!!
+  int patchNumber;
+  int dims[2];      // height, width
+  int screen_ll[2];
+  int screen_ur[2];
+  float avg_z;
+};
+
+struct imgData{
+  float patchNumber;
+  float *imagePatch;
+};
+
 #endif

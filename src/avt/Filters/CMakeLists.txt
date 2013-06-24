@@ -79,6 +79,7 @@ avtGhostZoneFilter.C
 avtICAlgorithm.C
 avtImageCommunicator.C
 avtImageCompositer.C
+avtImgCommunicator.C
 avtLinearTransformFilter.C
 avtLineoutFilter.C
 avtLineScanFilter.C

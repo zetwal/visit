@@ -122,6 +122,7 @@ class PIPELINE_API avtImageRepresentation
     void                 ReleaseData(void);
 
     static vtkImageData *NewImage(int, int);
+    static vtkImageData *NewRGBAImage(int, int);
 
   protected:
     vtkImageData        *asVTK;

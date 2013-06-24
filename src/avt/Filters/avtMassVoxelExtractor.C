@@ -550,6 +550,17 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
 
 
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::simpleExtractWorldSpaceGrid
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 void
 avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                  std::vector<std::string> &varnames, std::vector<int> &varsize)
@@ -668,25 +679,60 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
 
 
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::getImageDimensions
+//
+//  Purpose:
+//      transfers the metadata of the patch
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 void
 avtMassVoxelExtractor::getImageDimensions(bool &inUse, int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z)
 {
     inUse = patchDrawn;
-
-    dims[0] = imgDims[0];
-    dims[1] = imgDims[1];
-
     patchNumber = 0;
 
-    screen_ll[0] = imgLowerLeft[0];
-    screen_ll[1] = imgLowerLeft[1];
+    dims[0] = imgDims[0];    dims[1] = imgDims[1];
 
-    screen_ur[0] = imgUpperRight[1];
-    screen_ur[1] = imgUpperRight[1];
+    screen_ll[0] = imgLowerLeft[0];     screen_ll[1] = imgLowerLeft[1];
+    screen_ur[0] = imgUpperRight[1];    screen_ur[1] = imgUpperRight[1];
 
     avg_z = imgDepth;
 }
 
+
+void
+avtMassVoxelExtractor::getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z)
+{
+    inUse = (patchDrawn==true)?1:0;
+   // patchNumber = 0;
+
+    dims[0] = imgDims[0];    dims[1] = imgDims[1];
+
+    screen_ll[0] = imgLowerLeft[0];     screen_ll[1] = imgLowerLeft[1];
+    screen_ur[0] = imgUpperRight[0];    screen_ur[1] = imgUpperRight[1];
+
+    avg_z = imgDepth;
+}
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::getComputedImage
+//
+//  Purpose:
+//      allocates space to the pointer address and copy the image generated to it
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 
 void
 avtMassVoxelExtractor::getComputedImage(float *image)
@@ -697,7 +743,6 @@ avtMassVoxelExtractor::getComputedImage(float *image)
     // std::cout << "\nIn avtMassVoxelExtractor::getComputedImage" << std::endl;
     // std::cout << "\n\n" << std::endl;
 
-
     // for (int j = 0; j < imgDims[1]; ++j){
     //     for (int i = 0; i < imgDims[0]; ++i){
     //         printf("%.2f ,  %.2f ,  %.2f ,  %.2f     ~    ", imgArray[j*(imgDims[0]*4) + i*4 + 0],  // red
@@ -707,9 +752,6 @@ avtMassVoxelExtractor::getComputedImage(float *image)
     //     }
     //     cout << "\n\n";
     // }
-
-    for (int i=0; i< imgDims[0]*4*imgDims[1]; i++)
-        image[i] = imgArray[i];
 
     delete []imgArray;
 }

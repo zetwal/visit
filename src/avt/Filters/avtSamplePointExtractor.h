@@ -53,6 +53,8 @@
 #include <avtOpacityMap.h>
 #include <fstream>
 
+#include <avtImgCommunicator.h>
+
 class  vtkDataArray;
 class  vtkDataSet;
 class  vtkHexahedron;
@@ -74,8 +76,7 @@ class  avtSamplePointArbitrator;
 class  avtTetrahedronExtractor;
 class  avtWedgeExtractor;
 
-class  avtRayFunction;
-
+ 
 
 struct imgPatch{
     bool inUse;
@@ -87,8 +88,19 @@ struct imgPatch{
     float *imagePatch;      // height x width x 4 (RGBA)
 };
 
+/*
+struct imgMetaData{
+  int inUse;        // 1: in use/ 0:not in use
+  int procId;       // to be removed!!!!!
+  int patchNumber;
+  int dims[2];      // height, width
+  int screen_ll[2];
+  int screen_ur[2];
+  float avg_z;
+};
+/*
 
-
+*/
 // ****************************************************************************
 //  Class: avtSamplePointExtractor
 //
@@ -183,7 +195,9 @@ class AVTFILTERS_API avtSamplePointExtractor
     //
     int                       getImgPatchSize();
     void                      getImgPatches(imgPatch *image);
+    int                       getImgPatch(imgPatch image, int id);
     void                      delImgPatches();
+    void                      getImgMetaPatches(imgMetaData *image);
 
   protected:
     int                       width, height, depth;
@@ -233,6 +247,9 @@ class AVTFILTERS_API avtSamplePointExtractor
 
     imgPatch                  *imagePatchArray;   // all the patches generated
     int                       imgPatchSize;
+    imgMetaData               tempMeta;
+
+    imgMetaData               *imageMetaPatchArray;
 
     typedef struct 
     {

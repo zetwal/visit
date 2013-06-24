@@ -604,6 +604,23 @@ avtImageRepresentation::NewImage(int width, int height)
 }
 
 
+vtkImageData *
+avtImageRepresentation::NewRGBAImage(int width, int height)
+{
+    vtkImageData *image = vtkImageData::New();
+    image->SetWholeExtent(0, width-1, 0, height-1, 0, 0);
+    image->SetUpdateExtent(0, width-1, 0, height-1, 0, 0);
+    image->SetExtent(0, width-1, 0, height-1, 0, 0);
+    image->SetSpacing(1., 1., 1.);
+    image->SetOrigin(0., 0., 0.);
+    image->SetNumberOfScalarComponents(4);
+    image->SetScalarType(VTK_UNSIGNED_CHAR);
+    image->AllocateScalars();
+
+    return image;
+}
+
+
 // ****************************************************************************
 //  Function: CreateStringFromInput
 //
