@@ -598,81 +598,81 @@ avtRayTracer::Execute(void)
         avtImage_p whole_image;
         unsigned char *imgTemp;
         whole_image = new avtImage(this);
-        if (PAR_Rank() == 0)
-        {
-            /*
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.1a......................................................." << std::endl;
-            //
-            //  Compose the image and get it back
-            //
-            imgComm.composeImages(screen[0], screen[1], imgTemp); // to change
+        // if (PAR_Rank() == 0)
+        // {
+        //     /*
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.1a......................................................." << std::endl;
+        //     //
+        //     //  Compose the image and get it back
+        //     //
+        //     imgComm.composeImages(screen[0], screen[1], imgTemp); // to change
 
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.2a......................................................." << std::endl;
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.2a......................................................." << std::endl;
 
             
-            std::cout << " Screen[0]: " << screen[0] << "    screen[1]: " << screen[1] << std::endl;
-            vtkImageData *img = avtImageRepresentation::NewImage(screen[0], screen[1]);
+        //     std::cout << " Screen[0]: " << screen[0] << "    screen[1]: " << screen[1] << std::endl;
+        //     vtkImageData *img = avtImageRepresentation::NewImage(screen[0], screen[1]);
 
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.3a ......................................................." << std::endl;
-            whole_image->GetImage() = img;
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.3a ......................................................." << std::endl;
+        //     whole_image->GetImage() = img;
 
-            int* dims;
-            dims = img->GetDimensions();
+        //     int* dims;
+        //     dims = img->GetDimensions();
 
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.4a ......................................................." << std::endl;
-            //unsigned char *imgTest = new unsigned char[dims[0] * dims[1] * 3];
-            imgTemp = whole_image->GetImage().GetRGBBuffer();
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.4a ......................................................." << std::endl;
+        //     //unsigned char *imgTest = new unsigned char[dims[0] * dims[1] * 3];
+        //     imgTemp = whole_image->GetImage().GetRGBBuffer();
            
-            img->Delete();
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.5a ......................................................." << std::endl;
-            int origins[2];
-            whole_image->GetImage().GetOrigin(&origins[0], &origins[1]);
+        //     img->Delete();
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.5a ......................................................." << std::endl;
+        //     int origins[2];
+        //     whole_image->GetImage().GetOrigin(&origins[0], &origins[1]);
 
-            std::cout << PAR_Rank() << "   origins: " << origins[0] << " ,  " << origins[1] << std::endl;
-            img->Delete();
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.6a ......................................................." << std::endl;
-            */
+        //     std::cout << PAR_Rank() << "   origins: " << origins[0] << " ,  " << origins[1] << std::endl;
+        //     img->Delete();
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.6a ......................................................." << std::endl;
+        //     */
 
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.1a......................................................." << std::endl;
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.1a......................................................." << std::endl;
             
-            imgTemp = new unsigned char[screen[0] * screen[1] *3];
-            imgTemp = whole_image->GetImage().GetRGBBuffer();
+        //     imgTemp = new unsigned char[screen[0] * screen[1] *3];
+        //     imgTemp = whole_image->GetImage().GetRGBBuffer();
 
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.2a......................................................." << std::endl;
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.2a......................................................." << std::endl;
             
-            int tempDims[2];
-            tempDims[0] = screen[0];    tempDims[1] = screen[1];
+        //     int tempDims[2];
+        //     tempDims[0] = screen[0];    tempDims[1] = screen[1];
 
-            for (int i=0; i<tempDims[1]; i++)
-                for (int j=0; j<tempDims[0]; j++){
-                    int index = i*tempDims[0] * 3 + j*3;
-                    imgTemp[index] = 0;
-                    imgTemp[index+1] = 0;
-                    imgTemp[index+2] = 0;
-                }
+        //     for (int i=0; i<tempDims[1]; i++)
+        //         for (int j=0; j<tempDims[0]; j++){
+        //             int index = i*tempDims[0] * 3 + j*3;
+        //             imgTemp[index] = 0;
+        //             imgTemp[index+1] = 0;
+        //             imgTemp[index+2] = 0;
+        //         }
 
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.3a......................................................." << std::endl;
-        }
-        else
-        {
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.1b......................................................." << std::endl;
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.3a......................................................." << std::endl;
+        // }
+        // else
+        // {
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.1b......................................................." << std::endl;
             
-            imgTemp = whole_image->GetImage().GetRGBBuffer();
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.2b......................................................." << std::endl;
-             imgTemp = new unsigned char[screen[0] * screen[1] *3];
-            int tempDims[2];
-            tempDims[0] = screen[0];    tempDims[1] = screen[1];
+        //     imgTemp = whole_image->GetImage().GetRGBBuffer();
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.2b......................................................." << std::endl;
+        //      imgTemp = new unsigned char[screen[0] * screen[1] *3];
+        //     int tempDims[2];
+        //     tempDims[0] = screen[0];    tempDims[1] = screen[1];
 
-            for (int i=0; i<tempDims[1]; i++)
-                for (int j=0; j<tempDims[0]; j++){
-                    int index = i*tempDims[0] * 3 + j*3;
-                    imgTemp[index] = 0;
-                    imgTemp[index+1] = 0;
-                    imgTemp[index+2] = 0;
-                }
+        //     for (int i=0; i<tempDims[1]; i++)
+        //         for (int j=0; j<tempDims[0]; j++){
+        //             int index = i*tempDims[0] * 3 + j*3;
+        //             imgTemp[index] = 0;
+        //             imgTemp[index+1] = 0;
+        //             imgTemp[index+2] = 0;
+        //         }
 
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.3b......................................................." << std::endl;
-        }
+        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.3b......................................................." << std::endl;
+        // }
 
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.5 ......................................................." << std::endl;
 
