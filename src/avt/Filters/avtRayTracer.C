@@ -503,178 +503,82 @@ avtRayTracer::Execute(void)
 
         // only required to force an update
         // Need to find a way to get rid of that!!!!
-//         avtRayCompositer rc(rayfoo);
-//         rc.SetInput(samples);
-//         avtImage_p image  = rc.GetTypedOutput();
-//         image->Update(GetGeneralContract());
+        avtRayCompositer rc(rayfoo);
+        rc.SetInput(samples);
+        avtImage_p image  = rc.GetTypedOutput();
+        image->Update(GetGeneralContract());
 
 
-//         // Getting the patches
-//         int numPatches = extractor.getImgPatchSize();     // get the number of patches - Brown /8 procs / 100 each
-//         std::cout << "the number of patches: " << numPatches << std::endl;
+        // Getting the patches
+        int numPatches = extractor.getImgPatchSize();     // get the number of patches - Brown /8 procs / 100 each
+        std::cout << "the number of patches: " << numPatches << std::endl;
 
+        imgComm.sendNumPatches(0,numPatches);
+        if (PAR_Rank() == 0)
+            imgComm.masterRecvNumPatches();
 
+        imgComm.syncAllProcs();
 
-//         //
-//         // Tell proc 0 how many patches are being sent & proc 0 receives them
-//         //
-//         imgComm.sendNumPatches(0,numPatches);
-//         if (PAR_Rank() == 0)
-//             imgComm.masterRecvNumPatches();
-
-//         imgComm.syncAllProcs();
-
-//         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4 .........................................................." << std::endl;
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4 .........................................................." << std::endl;
 
 
 
-// /*
-//         imgPatch *imgPatchAll;
-//         imgPatchAll = new imgPatch[numPatches];   
-//         extractor.getImgPatches(imgPatchAll);
-// */
+/*
+        imgPatch *imgPatchAll;
+        imgPatchAll = new imgPatch[numPatches];   
+        extractor.getImgPatches(imgPatchAll);
+*/
 
-//         //
-//         //  Sends the patches metadata to proc 0
-//         //
-//         imgMetaData *imgAllPatches;
-//         imgAllPatches= new imgMetaData[numPatches];
-//         extractor.getImgMetaPatches(imgAllPatches);
+        imgMetaData *imgAllPatches;
+        imgAllPatches= new imgMetaData[numPatches];
+        extractor.getImgMetaPatches(imgAllPatches);
 
-//         for (int i=0; i<numPatches; i++){
-//             imgComm.sendPatchMetaData(0,imgAllPatches[i]);
-//         }
+        for (int i=0; i<numPatches; i++){
+            imgComm.sendPatchMetaData(0,imgAllPatches[i]);
+        }
 
-//         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.1 ......................................................." << std::endl;
-//         if (PAR_Rank() == 0)
-//             imgComm.masterRecvPatchMetaData();
-
-//         imgComm.syncAllProcs();
-
-//         //if (PAR_Rank() == 0)
-//         //    imgComm.printPatches();
-//         //imgComm.syncAllProcs();
-
-//         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.2 ......................................................." << std::endl;
-
-
-//         //
-//         //  Sends the patches image data to proc 0
-//         //
-//         //std::cout << "PAR_Rank(): " << PAR_Rank() << "   numPatches: " << numPatches << std::endl;
-//         for (int i=0; i<numPatches; i++){
-//             imgData tempImgData = extractor.getImgData(i);
-//             //std::cout << "PAR_Rank(): " << PAR_Rank() << "   i: " << i << std::endl;
-
-//             // creating a buffer for the img data
-//             float *sendMsgBuffer = new float[(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]) + 1];
-
-//             //std::cout << "PAR_Rank(): " << PAR_Rank() << "   imgAllPatches[i].dims[0]: " << imgAllPatches[i].dims[0] << "   imgAllPatches[i].dims[1]: " << imgAllPatches[i].dims[1] << std::endl;
-
-//             sendMsgBuffer[0] = (float)imgAllPatches[i].patchNumber;
-//            //std::cout << "PAR_Rank(): " << PAR_Rank() << "   sendMsgBuffer[0]: " << sendMsgBuffer[0]  << std::endl;
-
-
-//             for (int j=0; j<(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]); j++)
-//                 sendMsgBuffer[j+1] = tempImgData.imagePatch[j];
-
-//             imgComm.sendPatchImgData(0,(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]) + 1,sendMsgBuffer);
-
-//             delete []sendMsgBuffer;
-//         }
-
-//         imgComm.syncAllProcs();
-//         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.3 ......................................................." << std::endl;
-
-
-//         if (PAR_Rank() == 0)
-//             imgComm.masterRecvPatchImgData();
-
-//         imgComm.syncAllProcs();
-
-//         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4 ......................................................." << std::endl;
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.1 ......................................................." << std::endl;
+        if (PAR_Rank() == 0)
+            imgComm.masterRecvPatchMetaData();
 
         
-        avtImage_p whole_image;
-        unsigned char *imgTemp;
-        whole_image = new avtImage(this);
-        // if (PAR_Rank() == 0)
-        // {
-        //     /*
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.1a......................................................." << std::endl;
-        //     //
-        //     //  Compose the image and get it back
-        //     //
-        //     imgComm.composeImages(screen[0], screen[1], imgTemp); // to change
+        imgComm.syncAllProcs();
 
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.2a......................................................." << std::endl;
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.2 ......................................................." << std::endl;
 
-            
-        //     std::cout << " Screen[0]: " << screen[0] << "    screen[1]: " << screen[1] << std::endl;
-        //     vtkImageData *img = avtImageRepresentation::NewImage(screen[0], screen[1]);
 
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.3a ......................................................." << std::endl;
-        //     whole_image->GetImage() = img;
+        //  Sends the patches image data to proc 0
+        //
+        //std::cout << "PAR_Rank(): " << PAR_Rank() << "   numPatches: " << numPatches << std::endl;
+        for (int i=0; i<numPatches; i++){
+            imgData tempImgData = extractor.getImgData(i);
+            //std::cout << "PAR_Rank(): " << PAR_Rank() << "   i: " << i << std::endl;
 
-        //     int* dims;
-        //     dims = img->GetDimensions();
+            // creating a buffer for the img data
+            float *sendMsgBuffer = new float[(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]) + 1];
 
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.4a ......................................................." << std::endl;
-        //     //unsigned char *imgTest = new unsigned char[dims[0] * dims[1] * 3];
-        //     imgTemp = whole_image->GetImage().GetRGBBuffer();
-           
-        //     img->Delete();
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.5a ......................................................." << std::endl;
-        //     int origins[2];
-        //     whole_image->GetImage().GetOrigin(&origins[0], &origins[1]);
+            //std::cout << "PAR_Rank(): " << PAR_Rank() << "   imgAllPatches[i].dims[0]: " << imgAllPatches[i].dims[0] << "   imgAllPatches[i].dims[1]: " << imgAllPatches[i].dims[1] << std::endl;
 
-        //     std::cout << PAR_Rank() << "   origins: " << origins[0] << " ,  " << origins[1] << std::endl;
-        //     img->Delete();
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.6a ......................................................." << std::endl;
-        //     */
+            sendMsgBuffer[0] = (float)imgAllPatches[i].patchNumber;
+           //std::cout << "PAR_Rank(): " << PAR_Rank() << "   sendMsgBuffer[0]: " << sendMsgBuffer[0]  << std::endl;
 
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.1a......................................................." << std::endl;
-            
-        //     imgTemp = new unsigned char[screen[0] * screen[1] *3];
-        //     imgTemp = whole_image->GetImage().GetRGBBuffer();
 
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.2a......................................................." << std::endl;
-            
-        //     int tempDims[2];
-        //     tempDims[0] = screen[0];    tempDims[1] = screen[1];
+            for (int j=0; j<(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]); j++)
+                sendMsgBuffer[j+1] = tempImgData.imagePatch[j];
 
-        //     for (int i=0; i<tempDims[1]; i++)
-        //         for (int j=0; j<tempDims[0]; j++){
-        //             int index = i*tempDims[0] * 3 + j*3;
-        //             imgTemp[index] = 0;
-        //             imgTemp[index+1] = 0;
-        //             imgTemp[index+2] = 0;
-        //         }
+            imgComm.sendPatchImgData(0,(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]) + 1,sendMsgBuffer);
 
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.3a......................................................." << std::endl;
-        // }
-        // else
-        // {
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.1b......................................................." << std::endl;
-            
-        //     imgTemp = whole_image->GetImage().GetRGBBuffer();
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.2b......................................................." << std::endl;
-        //      imgTemp = new unsigned char[screen[0] * screen[1] *3];
-        //     int tempDims[2];
-        //     tempDims[0] = screen[0];    tempDims[1] = screen[1];
+            delete []sendMsgBuffer;
+        }
 
-        //     for (int i=0; i<tempDims[1]; i++)
-        //         for (int j=0; j<tempDims[0]; j++){
-        //             int index = i*tempDims[0] * 3 + j*3;
-        //             imgTemp[index] = 0;
-        //             imgTemp[index+1] = 0;
-        //             imgTemp[index+2] = 0;
-        //         }
+        imgComm.syncAllProcs();
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.3 ......................................................." << std::endl;
 
-        //     std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4.3b......................................................." << std::endl;
-        // }
 
-        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.5 ......................................................." << std::endl;
+        if (PAR_Rank() == 0)
+            imgComm.masterRecvPatchImgData();
+
+        imgComm.syncAllProcs();
 
 
         // store each patch as a vtkImage
@@ -691,7 +595,7 @@ avtRayTracer::Execute(void)
 
 
         
-/*
+
     
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.6...................................................................." << std::endl;
         avtImage_p whole_image;
@@ -784,21 +688,19 @@ avtRayTracer::Execute(void)
         }
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.75...................................................................." << std::endl;
        
-        
+
         
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.77...................................................................." << std::endl;
         if (PAR_Rank() == 0)
             tempImage->Copy(*whole_image);
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.8...................................................................." << std::endl;
-        */
-
-
-        SetOutput(whole_image);
+        
+        SetOutput(tempImage);
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.9...................................................................." << std::endl;
         
 
-        //fullImg->Delete();
-       // std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.65...................................................................." << std::endl;
+        fullImg->Delete();
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.65...................................................................." << std::endl;
        
 
         extractor.delImgPatches();
@@ -1367,5 +1269,4 @@ avtRayTracer::TightenClippingPlanes(const avtViewInfo &view,
     if (farthest < view.farPlane)
         newFarPlane = farthest;
 }
-
 
