@@ -747,8 +747,9 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     imgPatchSize = dt->GetNChildren();
 
     if (rayCastingSLIVR == true){
-        imagePatchArray = new imgPatch[imgPatchSize];       // get the number of children and create patches for them
+        imagePatchArray = new imgPatch[imgPatchSize];           // get the number of children and create patches for them
         imageMetaPatchArray = new imgMetaData[imgPatchSize];   // get the number of children and create patches for them
+        imageData = new imgData[imgPatchSize];                  // get the number of children and create patches for them
 
         for (int i=0; i<imgPatchSize; i++){
             imagePatchArray[i] = initPatch(i);
@@ -834,7 +835,7 @@ int
 avtSamplePointExtractor::getImgPatchSize(){
     return imgPatchSize;
 }
-
+ 
 void
 avtSamplePointExtractor::getImgPatches(imgPatch *image){
 
@@ -843,13 +844,7 @@ avtSamplePointExtractor::getImgPatches(imgPatch *image){
     }
 }
 
-void
-avtSamplePointExtractor::getImgMetaPatches(imgMetaData *image){
 
-    for (int i = 0; i < imgPatchSize; i++) {
-        image[i] = imageMetaPatchArray[i];
-    }
-}
 
 
 int
@@ -860,6 +855,20 @@ avtSamplePointExtractor::getImgPatch(imgPatch image, int id){
     }else
         return -1;  // to indicate failure
 }
+
+
+imgData
+avtSamplePointExtractor::getImgData(int patchId){
+    return imageData[patchId];
+}
+
+void
+avtSamplePointExtractor::getImgMetaPatches(imgMetaData *image){
+    for (int i = 0; i < imgPatchSize; i++) {
+        image[i] = imageMetaPatchArray[i];
+    }
+}
+
 
 
 void
@@ -1045,6 +1054,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             massVoxelExtractor->getImageDimensions(imagePatchArray[num].inUse, imagePatchArray[num].patchNumber, imagePatchArray[num].dims, imagePatchArray[num].screen_ll, imagePatchArray[num].screen_ur, imagePatchArray[num].avg_z);
             imagePatchArray[num].imagePatch = new float [(imagePatchArray[num].dims[0]*4)*imagePatchArray[num].dims[1]];
             massVoxelExtractor->getComputedImage(imagePatchArray[num].imagePatch);
+
 /*
 struct imgMetaData{
   int inUse;        // 1: in use/ 0:not in use
@@ -1056,10 +1066,12 @@ struct imgMetaData{
   float avg_z;
 };
 */
-            massVoxelExtractor->getImageDimensions(imageMetaPatchArray[num].inUse, imageMetaPatchArray[num].dims, imageMetaPatchArray[num].screen_ll, imageMetaPatchArray[num].screen_ur, imageMetaPatchArray[num].avg_z);
-            //imageMetaPatchArray[num].imagePatch = new float [(imageMetaPatchArray[num].dims[0]*4)*imageMetaPatchArray[num].dims[1]];
-            //massVoxelExtractor->getComputedImage(imageMetaPatchArray[num].imagePatch);
 
+            massVoxelExtractor->getImageDimensions(imageMetaPatchArray[num].inUse, imageMetaPatchArray[num].dims, imageMetaPatchArray[num].screen_ll, imageMetaPatchArray[num].screen_ur, imageMetaPatchArray[num].avg_z);
+            
+            imageData[num].patchNumber = imageMetaPatchArray[num].patchNumber;
+            imageData[num].imagePatch = new float [(imageMetaPatchArray[num].dims[0]*4)*imageMetaPatchArray[num].dims[1]];
+            massVoxelExtractor->getComputedImage(imageData[num].imagePatch);
 
             //debug5 << "RasterBasedSample - rayCastingSLIVR" << endl;
             //std::cout << "RasterBasedSample - rayCastingSLIVR" << endl;

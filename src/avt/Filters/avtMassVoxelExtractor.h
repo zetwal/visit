@@ -153,7 +153,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     bool            *valid_sample;
     bool            trilinearInterpolation;
     bool            rayCastingSLIVR;
-
+ 
     // We repeatedly divide by the term (X[i+1]-X[i]).  In the interest of
     // performance, cache the term 1./(X[i+1]-X[i]) and use that for faster
     // multiplication.  This sped up total performance by about 5%.

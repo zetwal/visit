@@ -198,6 +198,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     int                       getImgPatch(imgPatch image, int id);
     void                      delImgPatches();
     void                      getImgMetaPatches(imgMetaData *image);
+    imgData                   getImgData(int patchId);
 
   protected:
     int                       width, height, depth;
@@ -250,6 +251,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     imgMetaData               tempMeta;
 
     imgMetaData               *imageMetaPatchArray;
+    imgData                   *imageData;
 
     typedef struct 
     {
