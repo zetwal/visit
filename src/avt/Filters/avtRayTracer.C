@@ -503,96 +503,96 @@ avtRayTracer::Execute(void)
 
         // only required to force an update
         // Need to find a way to get rid of that!!!!
-        avtRayCompositer rc(rayfoo);
-        rc.SetInput(samples);
-        avtImage_p image  = rc.GetTypedOutput();
-        image->Update(GetGeneralContract());
+//         avtRayCompositer rc(rayfoo);
+//         rc.SetInput(samples);
+//         avtImage_p image  = rc.GetTypedOutput();
+//         image->Update(GetGeneralContract());
 
 
-        // Getting the patches
-        int numPatches = extractor.getImgPatchSize();     // get the number of patches - Brown /8 procs / 100 each
-        std::cout << "the number of patches: " << numPatches << std::endl;
-
-
-
-        //
-        // Tell proc 0 how many patches are being sent & proc 0 receives them
-        //
-        imgComm.sendNumPatches(0,numPatches);
-        if (PAR_Rank() == 0)
-            imgComm.masterRecvNumPatches();
-
-        imgComm.syncAllProcs();
-
-        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4 .........................................................." << std::endl;
+//         // Getting the patches
+//         int numPatches = extractor.getImgPatchSize();     // get the number of patches - Brown /8 procs / 100 each
+//         std::cout << "the number of patches: " << numPatches << std::endl;
 
 
 
-/*
-        imgPatch *imgPatchAll;
-        imgPatchAll = new imgPatch[numPatches];   
-        extractor.getImgPatches(imgPatchAll);
-*/
+//         //
+//         // Tell proc 0 how many patches are being sent & proc 0 receives them
+//         //
+//         imgComm.sendNumPatches(0,numPatches);
+//         if (PAR_Rank() == 0)
+//             imgComm.masterRecvNumPatches();
 
-        //
-        //  Sends the patches metadata to proc 0
-        //
-        imgMetaData *imgAllPatches;
-        imgAllPatches= new imgMetaData[numPatches];
-        extractor.getImgMetaPatches(imgAllPatches);
+//         imgComm.syncAllProcs();
 
-        for (int i=0; i<numPatches; i++){
-            imgComm.sendPatchMetaData(0,imgAllPatches[i]);
-        }
-
-        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.1 ......................................................." << std::endl;
-        if (PAR_Rank() == 0)
-            imgComm.masterRecvPatchMetaData();
-
-        imgComm.syncAllProcs();
-
-        //if (PAR_Rank() == 0)
-        //    imgComm.printPatches();
-        //imgComm.syncAllProcs();
-
-        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.2 ......................................................." << std::endl;
+//         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4 .........................................................." << std::endl;
 
 
-        //
-        //  Sends the patches image data to proc 0
-        //
-        //std::cout << "PAR_Rank(): " << PAR_Rank() << "   numPatches: " << numPatches << std::endl;
-        for (int i=0; i<numPatches; i++){
-            imgData tempImgData = extractor.getImgData(i);
-            //std::cout << "PAR_Rank(): " << PAR_Rank() << "   i: " << i << std::endl;
 
-            // creating a buffer for the img data
-            float *sendMsgBuffer = new float[(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]) + 1];
+// /*
+//         imgPatch *imgPatchAll;
+//         imgPatchAll = new imgPatch[numPatches];   
+//         extractor.getImgPatches(imgPatchAll);
+// */
 
-            //std::cout << "PAR_Rank(): " << PAR_Rank() << "   imgAllPatches[i].dims[0]: " << imgAllPatches[i].dims[0] << "   imgAllPatches[i].dims[1]: " << imgAllPatches[i].dims[1] << std::endl;
+//         //
+//         //  Sends the patches metadata to proc 0
+//         //
+//         imgMetaData *imgAllPatches;
+//         imgAllPatches= new imgMetaData[numPatches];
+//         extractor.getImgMetaPatches(imgAllPatches);
 
-            sendMsgBuffer[0] = (float)imgAllPatches[i].patchNumber;
-           //std::cout << "PAR_Rank(): " << PAR_Rank() << "   sendMsgBuffer[0]: " << sendMsgBuffer[0]  << std::endl;
+//         for (int i=0; i<numPatches; i++){
+//             imgComm.sendPatchMetaData(0,imgAllPatches[i]);
+//         }
+
+//         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.1 ......................................................." << std::endl;
+//         if (PAR_Rank() == 0)
+//             imgComm.masterRecvPatchMetaData();
+
+//         imgComm.syncAllProcs();
+
+//         //if (PAR_Rank() == 0)
+//         //    imgComm.printPatches();
+//         //imgComm.syncAllProcs();
+
+//         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.2 ......................................................." << std::endl;
 
 
-            for (int j=0; j<(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]); j++)
-                sendMsgBuffer[j+1] = tempImgData.imagePatch[j];
+//         //
+//         //  Sends the patches image data to proc 0
+//         //
+//         //std::cout << "PAR_Rank(): " << PAR_Rank() << "   numPatches: " << numPatches << std::endl;
+//         for (int i=0; i<numPatches; i++){
+//             imgData tempImgData = extractor.getImgData(i);
+//             //std::cout << "PAR_Rank(): " << PAR_Rank() << "   i: " << i << std::endl;
 
-            imgComm.sendPatchImgData(0,(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]) + 1,sendMsgBuffer);
+//             // creating a buffer for the img data
+//             float *sendMsgBuffer = new float[(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]) + 1];
 
-            delete []sendMsgBuffer;
-        }
+//             //std::cout << "PAR_Rank(): " << PAR_Rank() << "   imgAllPatches[i].dims[0]: " << imgAllPatches[i].dims[0] << "   imgAllPatches[i].dims[1]: " << imgAllPatches[i].dims[1] << std::endl;
 
-        imgComm.syncAllProcs();
-        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.3 ......................................................." << std::endl;
+//             sendMsgBuffer[0] = (float)imgAllPatches[i].patchNumber;
+//            //std::cout << "PAR_Rank(): " << PAR_Rank() << "   sendMsgBuffer[0]: " << sendMsgBuffer[0]  << std::endl;
 
 
-        if (PAR_Rank() == 0)
-            imgComm.masterRecvPatchImgData();
+//             for (int j=0; j<(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]); j++)
+//                 sendMsgBuffer[j+1] = tempImgData.imagePatch[j];
 
-        imgComm.syncAllProcs();
+//             imgComm.sendPatchImgData(0,(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]) + 1,sendMsgBuffer);
 
-        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4 ......................................................." << std::endl;
+//             delete []sendMsgBuffer;
+//         }
+
+//         imgComm.syncAllProcs();
+//         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.3 ......................................................." << std::endl;
+
+
+//         if (PAR_Rank() == 0)
+//             imgComm.masterRecvPatchImgData();
+
+//         imgComm.syncAllProcs();
+
+//         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.4 ......................................................." << std::endl;
 
         
         avtImage_p whole_image;
