@@ -121,9 +121,13 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     // Getting the image
     void             getImageDimensions(bool &used, int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
     void             getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
-    void           getComputedImage(float *image);
+    void             getComputedImage(float *image);
+    void             setProcIdPatchID(int _proc, int _patch){ proc = _proc; patch = _patch; }
+    
  
   protected:
+    int proc;
+    int patch;
     bool             gridsAreInWorldSpace;
     bool             pretendGridsAreInWorldSpace;
     avtViewInfo      view;

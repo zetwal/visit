@@ -547,27 +547,45 @@ avtRayTracer::Execute(void)
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.2 ......................................................." << std::endl;
 
 
+
         //  Sends the patches image data to proc 0
         //
         //std::cout << "PAR_Rank(): " << PAR_Rank() << "   numPatches: " << numPatches << std::endl;
         for (int i=0; i<numPatches; i++){
             imgData tempImgData = extractor.getImgData(i);
-            //std::cout << "PAR_Rank(): " << PAR_Rank() << "   i: " << i << std::endl;
+            int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);
 
             // creating a buffer for the img data
-            float *sendMsgBuffer = new float[(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]) + 1];
+            float *sendMsgBuffer = new float[imgSize + 1];
 
-            //std::cout << "PAR_Rank(): " << PAR_Rank() << "   imgAllPatches[i].dims[0]: " << imgAllPatches[i].dims[0] << "   imgAllPatches[i].dims[1]: " << imgAllPatches[i].dims[1] << std::endl;
-
+            // populating info in the buffer
             sendMsgBuffer[0] = (float)imgAllPatches[i].patchNumber;
-           //std::cout << "PAR_Rank(): " << PAR_Rank() << "   sendMsgBuffer[0]: " << sendMsgBuffer[0]  << std::endl;
-
-
-            for (int j=0; j<(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]); j++)
+            for (int j=0; j<imgSize; j++)
                 sendMsgBuffer[j+1] = tempImgData.imagePatch[j];
+            
 
-            imgComm.sendPatchImgData(0,(imgAllPatches[i].dims[0]*imgAllPatches[i].dims[1]) + 1,sendMsgBuffer);
 
+           // if (imgAllPatches[i].procId == 0 && imgAllPatches[i].patchNumber == 0){
+            if (imgAllPatches[i].procId == 5 && imgAllPatches[i].patchNumber == 49){
+                std::cout << "Screen[0]: " << screen[0] << "   screen[1]: " <<screen[1] << std::endl;
+                std::cout << "Par_Rank(): " << imgAllPatches[i].procId << "   patch: " << imgAllPatches[i].patchNumber << std::endl;
+                std::cout << "avtRayTracer height: " << imgAllPatches[i].dims[1] << "   width: " << imgAllPatches[i].dims[0] << std::endl;
+
+                for (int l=0; l<imgAllPatches[i].dims[1]; l++){
+                    for (int m=0; m<imgAllPatches[i].dims[0]; m++){
+
+                        int index = l*(4*imgAllPatches[i].dims[0]) + m*4;
+                        std::cout << index/4 << " _ _ "  << tempImgData.imagePatch[index]<< ", " << tempImgData.imagePatch[index+1] << ", " << tempImgData.imagePatch[index+2] << ", " << tempImgData.imagePatch[index+3] << "  \n  ";
+                    }
+                    std::cout << "\n";
+                }
+                std::cout << "\n";
+                std::cout << "Ready to send ... \n";
+            }
+
+            //printf("\n\n Sending patch %d of %d ... ",i,numPatches);
+            imgComm.sendPatchImgData(0, imgSize + 1,sendMsgBuffer);
+            //printf(" ... %d sent!!!",i);
             delete []sendMsgBuffer;
         }
 
@@ -609,52 +627,28 @@ avtRayTracer::Execute(void)
         whole_temp_image = new avtImage(this);
         vtkImageData *fullImg = avtImageRepresentation::NewImage(screen[0]/2, screen[1]/2);
         whole_temp_image->GetImage() = fullImg;
-       // int* tempDims;
-        //tempDims = fullImg->GetDimensions();
 
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.6.2..................................................................." << screen[0]/2 << " , " << screen[1]/2 << std::endl;
-       int tempDims[2];
-        tempDims[0] = screen[0]/2;
-        tempDims[1] = screen[1]/2;
+        int tempDims[2];
+        tempDims[0] = screen[0]/2;       tempDims[1] = screen[1]/2;
 
         unsigned char paintColor[3];
-        if (PAR_Rank() == 0){
-            paintColor[0] = 0;
-            paintColor[1] = 255;
-            paintColor[2] = 0;
-            //fullImg->SetOrigin(0,0)
-        }
-        if (PAR_Rank() == 1){
-            paintColor[0] = 255;
-            paintColor[1] = 0;
-            paintColor[2] = 0;
-        }
-        if (PAR_Rank() == 2){
-            paintColor[0] = 0;
-            paintColor[1] = 0;
-            paintColor[2] = 255;
-        }
-        if (PAR_Rank() == 3){
-            paintColor[0] = 255;
-            paintColor[1] = 255;
-            paintColor[2] = 0;
-        }
+        paintColor[0] = paintColor[1] = paintColor[2] = 0;
 
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.6.3..................................................................." << std::endl;
 
         imgtempTest = whole_temp_image->GetImage().GetRGBBuffer();
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.6.4..................................................." << tempDims[0] << " ,  " << tempDims[1] << std::endl;
-            for (int i=0; i<tempDims[1]; i++)
-                for (int j=0; j<tempDims[0]; j++){
-                    int index = i*tempDims[0] * 3 + j*3;
-                    imgtempTest[index] = paintColor[0];
-                    imgtempTest[index+1] = paintColor[1];
-                    imgtempTest[index+2] = paintColor[2];
-                }
-            std::cout << "tempDims: " << tempDims[0] << " ,  " << tempDims[1] << std::endl;
-            
 
+        for (int i=0; i<tempDims[1]; i++)
+            for (int j=0; j<tempDims[0]; j++){
+                int index = i*tempDims[0] * 3 + j*3;
+                imgtempTest[index] = paintColor[0];
+                imgtempTest[index+1] = paintColor[1];
+                imgtempTest[index+2] = paintColor[2];
+            }
 
+        std::cout << "tempDims: " << tempDims[0] << " ,  " << tempDims[1] << std::endl;
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.7...................................................................." << std::endl;
        
         if (PAR_Rank() == 0)
@@ -668,42 +662,31 @@ avtRayTracer::Execute(void)
             dims = img->GetDimensions();
 
             //unsigned char *imgTest = new unsigned char[dims[0] * dims[1] * 3];
+            imgTest = new unsigned char[dims[0] * dims[1] * 3];
             imgTest = whole_image->GetImage().GetRGBBuffer();
-            for (int i=0; i<dims[1]; i++)
-                for (int j=0; j<dims[0]; j++){
-                    int index = i*dims[0] * 3 + j*3;
-                    imgTest[index] = 128;
-                    imgTest[index+1] = 0;
-                    imgTest[index+2] = 128;
-                }
+
+            imgComm.composeImages(screen[0], screen[1], imgTest); // to change
+
             std::cout << "dims: " << dims[0] << " ,  " << dims[1] << std::endl;
             
             img->Delete();
 
             int origins[2];
             whole_image->GetImage().GetOrigin(&origins[0], &origins[1]);
-
-            std::cout << PAR_Rank() << "   origins: " << origins[0] << " ,  " << origins[1] << std::endl;
-       
         }
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.75...................................................................." << std::endl;
        
+        imgComm.syncAllProcs();
 
-        
-        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.77...................................................................." << std::endl;
         if (PAR_Rank() == 0)
             tempImage->Copy(*whole_image);
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.8...................................................................." << std::endl;
         
         SetOutput(tempImage);
-        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.9...................................................................." << std::endl;
-        
 
         fullImg->Delete();
-        std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.65...................................................................." << std::endl;
-       
-
         extractor.delImgPatches();
+
         std::cout << PAR_Rank() << "   avtRayTracer::Execute 5" << std::endl;
 
         return;

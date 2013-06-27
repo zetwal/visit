@@ -510,6 +510,7 @@ avtSamplePointExtractor::SetUpExtractors(void)
 
     massVoxelExtractor->SetTrilinear(trilinearInterpolation);
     massVoxelExtractor->SetRayCastingSLIVR(rayCastingSLIVR);
+    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! rayCastingSLIVR: " << rayCastingSLIVR << std::endl;
 
     hexExtractor->SendCellsMode(sendCells);
     hex20Extractor->SendCellsMode(sendCells);
@@ -1045,15 +1046,17 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             varnames.push_back(samples->GetVariableName(i));
             varsizes.push_back(samples->GetVariableSize(i));
         }
+        massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
         massVoxelExtractor->SetLighting(lighting);
         massVoxelExtractor->SetTransferFn(transferFn1D);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
 
         if (rayCastingSLIVR == true){
-            massVoxelExtractor->getImageDimensions(imagePatchArray[num].inUse, imagePatchArray[num].patchNumber, imagePatchArray[num].dims, imagePatchArray[num].screen_ll, imagePatchArray[num].screen_ur, imagePatchArray[num].avg_z);
-            imagePatchArray[num].imagePatch = new float [(imagePatchArray[num].dims[0]*4)*imagePatchArray[num].dims[1]];
-            massVoxelExtractor->getComputedImage(imagePatchArray[num].imagePatch);
+
+          //  massVoxelExtractor->getImageDimensions(imagePatchArray[num].inUse, imagePatchArray[num].patchNumber, imagePatchArray[num].dims, imagePatchArray[num].screen_ll, imagePatchArray[num].screen_ur, imagePatchArray[num].avg_z);
+          //  imagePatchArray[num].imagePatch = new float [(imagePatchArray[num].dims[0]*4)*imagePatchArray[num].dims[1]];
+           // massVoxelExtractor->getComputedImage(imagePatchArray[num].imagePatch);
 
 /*
 struct imgMetaData{
@@ -1081,13 +1084,22 @@ struct imgMetaData{
             // std::cout << "avg_z:" << imagePatchArray[num].avg_z << std::endl;
             // std::cout << "Done extracting" << std::endl;
 
-            // for (int i=0; i<thePatch.dims[1]; i++){
-            //     for (int j=0; j<thePatch.dims[0]; j++){
-            //          int index = i*(3*thePatch.dims[0]) + j;
-            //          std::cout << thePatch.imagePatch[index]<< ", " << thePatch.imagePatch[index+1] << ", " << thePatch.imagePatch[index+2] << ", " << thePatch.imagePatch[index+3] << "  -  ";
-            //     }
-            //     std::cout << "\n";
-            //  }
+
+            //if (PAR_Rank() == 0 && num == 0){
+             if (PAR_Rank() == 5 && num == 49){
+                std::cout << "Par_Rank(): " << imageMetaPatchArray[num].procId << "   patch: " << imageMetaPatchArray[num].patchNumber << std::endl;
+                std::cout << "avtSamplePointExtractor height: " << imageMetaPatchArray[num].dims[1] << "   width: " << imageMetaPatchArray[num].dims[0] << std::endl;
+
+                for (int i=0; i<imageMetaPatchArray[num].dims[1]; i++){
+                    for (int j=0; j<imageMetaPatchArray[num].dims[0]; j++){
+
+                        int index = i*(4*imageMetaPatchArray[num].dims[0]) + j*4;
+                        std::cout << index/4 << " : "  << imageData[num].imagePatch[index]<< ", " << imageData[num].imagePatch[index+1] << ", " << imageData[num].imagePatch[index+2] << ", " << imageData[num].imagePatch[index+3] << "  \n  ";
+                    }
+                    std::cout << "\n";
+                }
+                std::cout << "\n";
+            }
 
             //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx" + NumToString(PAR_Rank()) + ".ppm";
             //createPpm3(imagePatchArray[num].imagePatch, imagePatchArray[num].dims[0], imagePatchArray[num].dims[1], imgFilename);

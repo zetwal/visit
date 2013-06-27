@@ -289,8 +289,10 @@ void avtImgCommunicator::masterRecvPatchImgData(){
 
 	for (int i=0; i<num_procs; i++){ // start from 1 to ignore self
 		for (int j=0; j<processorPatchesCount[i]; j++){
+
+
 			//printf("\n proc: %d  			processor patch count: %d     patchID: %d    dims: %d, %d ",i, processorPatchesCount[i], patchId, allRecvPatches[patchId].dims[0], allRecvPatches[patchId].dims[1]);
-			int imgSize = (allRecvPatches[patchId].dims[0] * allRecvPatches[patchId].dims[1]);
+			int imgSize = (allRecvPatches[patchId].dims[0] * allRecvPatches[patchId].dims[1] * 4);
 
 			float *recvMsgBuffer = new float[imgSize + 1];
 			MPI_Recv(recvMsgBuffer,imgSize + 1, MPI_FLOAT, i, MSG_DATA, MPI_COMM_WORLD, &status);
@@ -302,6 +304,32 @@ void avtImgCommunicator::masterRecvPatchImgData(){
 				allRecvImgData[patchId].imagePatch[k] = recvMsgBuffer[k+1];
 			}
 			patchId++;
+
+
+
+
+
+
+
+			//if (i==0 && j ==0){
+			if (i==5 && j ==49){
+				std::cout << "Par_Rank(): " << allRecvPatches[i].procId << "   patch: " << allRecvPatches[i].patchNumber << std::endl;
+
+                std::cout << "avtImgCommunicator height: " << allRecvPatches[i].dims[1] << "   width: " << allRecvPatches[i].dims[0] << std::endl;
+                std::cout << "avtImgCommunicator screen_ll[0]: " << allRecvPatches[i].screen_ll[0] << "   screen_ll[1]: " << allRecvPatches[i].screen_ll[1] << std::endl;
+                std::cout << "avtImgCommunicator screen_ur[0]: " << allRecvPatches[i].screen_ur[0] << "   screen_ur[1]: " << allRecvPatches[i].screen_ur[1] << std::endl;
+                std::cout << "avtImgCommunicator avg_z: " << allRecvPatches[i].avg_z << std::endl;
+
+				for (int l=0; l<allRecvPatches[0].dims[1]; l++){
+	                for (int m=0; m<allRecvPatches[0].dims[0]; m++){
+
+	                    int index = l*(4*allRecvPatches[0].dims[0]) + m*4;
+	                    std::cout << index/4 << " ~ "  << allRecvImgData[0].imagePatch[index]<< ", " << allRecvImgData[0].imagePatch[index+1] << ", " << allRecvImgData[0].imagePatch[index+2] << ", " << allRecvImgData[0].imagePatch[index+3] << "  \n  ";
+	                }
+	                std::cout << "\n";
+	            }
+	            std::cout << "\n";
+        	}
 
 			//printf("\ntotal patches: %d    patchID: %d    dims: %d, %d ",totalPatches, patchId, allRecvPatches[patchId].dims[0], allRecvPatches[patchId].dims[1]);
 
@@ -335,36 +363,106 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 	// sort the images by depth
 	std::sort(allRecvPatches, allRecvPatches + totalPatches, &sortImgByDepth);
 
-	// compose
-	float *buffer = new float[imgBufferWidth * imgBufferHeight * 4];
-	wholeImage = new unsigned char[imgBufferWidth * imgBufferHeight];
+	// Compose
 
+	// Create a buffer to store the compositing
+	float *buffer = new float[imgBufferWidth * imgBufferHeight * 4];
 	for (int i=0; i<(imgBufferWidth * imgBufferHeight * 4); i++)
 		buffer[i] = 0.0;
-
-	for (int i=0; i<totalPatches; i++){
-		int startingY = allRecvPatches[i].screen_ur[1];
+/*
+	for (int i=0; i<1; i++){
+		//int startingY = allRecvPatches[i].screen_ur[1];
+		int startingY = allRecvPatches[i].screen_ll[1];  // need to invert
 		int startingX = allRecvPatches[i].screen_ll[0];
 
 		int patchIndex = allRecvPatches[i].procId * processorPatchesCount[allRecvPatches[i].procId] + allRecvPatches[i].patchNumber;
 
-		for (int j=0; j<allRecvPatches[i].dims[1]; j++)
-			for (int k=0; k<allRecvPatches[i].dims[0]; k++){
-				int subImgIndex = allRecvPatches[i].dims[0]*4*j +  k*4;
-				int indexBuffer = (imgBufferWidth*4*startingY +  imgBufferWidth*4*j) + (startingX*4) + k*4;
+		int subImg_k = 0, subImg_j = 0;
 
-				//Front to back compositing: composited = source * (1.0 - destination.a) + destination; 
-				for (int color=0; color<4; color++)
-					buffer[indexBuffer+color] = allRecvImgData[indexBuffer].imagePatch[subImgIndex+color] * (1.0 - buffer[indexBuffer+3]) + buffer[indexBuffer+color];
+		for (int j=startingY; j<startingY + allRecvPatches[i].dims[1]; j++, subImg_j++)
+			for (int k=startingX; k< startingX + allRecvPatches[i].dims[0]; k++, subImg_k++){
 				
+				int subImgIndex = allRecvPatches[i].dims[0]*4*subImg_j +  subImg_k*4;
+				int indexRGBABuffer = allRecvPatches[i].dims[0]*4*j +  k*4;
+				int indexRGBBuffer = allRecvPatches[i].dims[0]*3*j +  k*3;
+
+				for (int color=0; color<4; color++){
+					//Front to back compositing: composited = source * (1.0 - destination.a) + destination; 
+					buffer[indexRGBABuffer+color] = allRecvImgData[patchIndex].imagePatch[subImgIndex+color] * (1.0 - buffer[indexRGBABuffer+3]) + buffer[indexRGBABuffer+color];
+					//printf("\n Color %d - patch %d: %.2f = %.2f * (1.0-%.2f)", color, patchIndex, buffer[indexRGBABuffer+color], allRecvImgData[patchIndex].imagePatch[subImgIndex+color],buffer[indexRGBABuffer+3]);
+					
+				}
+				//printf("\n");
+
+
 
 				// convert the image to unsigned char to send back
 				for (int color=0; color<3; color++)
-					wholeImage[indexBuffer+color] = (255 * buffer[indexBuffer+color]) *  buffer[indexBuffer+3];
-				
+					wholeImage[indexRGBBuffer+color] = (255 * buffer[indexRGBABuffer+color]) *  buffer[indexRGBABuffer+3];
 			}
 		
 	}
+	*/
+
+	//for (int i=0; i<1; i++){
+	for (int i=0; i<totalPatches; i++){
+		if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==49){
+			int startingY = allRecvPatches[i].screen_ll[1];  // need to invert
+			int startingX = allRecvPatches[i].screen_ll[0];
+
+			//printf("\n startingX %d - startingY %d \n", allRecvPatches[i].screen_ll[0], allRecvPatches[i].screen_ll[1]);
+
+			for (int j=0; j<allRecvPatches[i].dims[1]; j++){
+				for (int k=0; k<allRecvPatches[i].dims[0]; k++){
+					int subImgIndex = allRecvPatches[i].dims[0]*j*4 + k*4;
+					int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);
+
+					if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==49)
+						printf("\n j: %d, k: %d,   subImgIndex: %d   bufferIndex: %d  - rgb %.2f  %.2f  %.2f  %.2f,",j,k,subImgIndex,bufferIndex, allRecvImgData[0].imagePatch[subImgIndex+0], allRecvImgData[0].imagePatch[subImgIndex+1], allRecvImgData[0].imagePatch[subImgIndex+2], allRecvImgData[0].imagePatch[subImgIndex+3]);
+
+					//Front to back compositing: 
+					//composited = source * (1.0 - destination.a) + destination; 
+					buffer[bufferIndex+0] = allRecvImgData[0].imagePatch[subImgIndex+0] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+0];
+					buffer[bufferIndex+1] = allRecvImgData[0].imagePatch[subImgIndex+1] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+1];
+					buffer[bufferIndex+2] = allRecvImgData[0].imagePatch[subImgIndex+2] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+2];
+					buffer[bufferIndex+3] = allRecvImgData[0].imagePatch[subImgIndex+3] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+3];
+
+					//std::cout << index/4 << " : "  << imageData[num].imagePatch[index]<< ", " << imageData[num].imagePatch[index+1] << ", " << imageData[num].imagePatch[index+2] << ", " << imageData[num].imagePatch[index+3] << "  \n  ";
+					/*
+					buffer[bufferIndex+0] = allRecvImgData[0].imagePatch[subImgIndex+0];
+					buffer[bufferIndex+1] = allRecvImgData[0].imagePatch[subImgIndex+1];
+					buffer[bufferIndex+2] = allRecvImgData[0].imagePatch[subImgIndex+2];
+					buffer[bufferIndex+3] = allRecvImgData[0].imagePatch[subImgIndex+3];
+					*/
+				}
+			}
+		}
+	}
+
+
+	//copy to main buffer
+	for (int i=0; i< imgBufferHeight; i++)
+		for (int j=0; j<imgBufferWidth; j++){
+			int bufferIndex = (imgBufferWidth*4*i) + (j*4);
+			int wholeImgIndex = (imgBufferWidth*3*i) + (j*3);
+
+
+
+			//wholeImage[wholeImgIndex+0] = (int)buffer[bufferIndex+0]*buffer[bufferIndex+3]*255;
+			//wholeImage[wholeImgIndex+1] = (int)buffer[bufferIndex+1]*buffer[bufferIndex+3]*255;
+			//wholeImage[wholeImgIndex+2] = (int)buffer[bufferIndex+2]*buffer[bufferIndex+3]*255;
+
+			wholeImage[wholeImgIndex+0] = (int)buffer[bufferIndex+0]*255;
+			wholeImage[wholeImgIndex+1] = (int)buffer[bufferIndex+1]*255;
+			wholeImage[wholeImgIndex+2] = (int)buffer[bufferIndex+2]*255;
+
+
+			//printf("\n i: %d, j: %d,   bufferIndex: %d   wholeImgIndex: %d  - rgb %.2f  %.2f  %.2f    -  rgb %d %d %d",i,j,bufferIndex,wholeImgIndex, 
+			//	buffer[bufferIndex+0]*buffer[bufferIndex+3]*255, buffer[bufferIndex+1]*buffer[bufferIndex+3]*255, buffer[bufferIndex+2]*buffer[bufferIndex+3]*255,
+			//	 					wholeImage[wholeImgIndex+0],					 wholeImage[wholeImgIndex+1],						wholeImage[wholeImgIndex+2]);
+
+		}
+
 	delete []buffer;
 }
 
