@@ -1053,23 +1053,6 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                                     varnames, varsizes);
 
         if (rayCastingSLIVR == true){
-
-          //  massVoxelExtractor->getImageDimensions(imagePatchArray[num].inUse, imagePatchArray[num].patchNumber, imagePatchArray[num].dims, imagePatchArray[num].screen_ll, imagePatchArray[num].screen_ur, imagePatchArray[num].avg_z);
-          //  imagePatchArray[num].imagePatch = new float [(imagePatchArray[num].dims[0]*4)*imagePatchArray[num].dims[1]];
-           // massVoxelExtractor->getComputedImage(imagePatchArray[num].imagePatch);
-
-/*
-struct imgMetaData{
-  int inUse;        // 1: in use/ 0:not in use
-  int procId;       // to be removed!!!!!
-  int patchNumber;
-  int dims[2];      // height, width
-  int screen_ll[2];
-  int screen_ur[2];
-  float avg_z;
-};
-*/
-
             massVoxelExtractor->getImageDimensions(imageMetaPatchArray[num].inUse, imageMetaPatchArray[num].dims, imageMetaPatchArray[num].screen_ll, imageMetaPatchArray[num].screen_ur, imageMetaPatchArray[num].avg_z);
             
             imageData[num].patchNumber = imageMetaPatchArray[num].patchNumber;

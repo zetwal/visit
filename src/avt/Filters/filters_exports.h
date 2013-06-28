@@ -72,6 +72,7 @@ struct imgMetaData{
 };
 
 struct imgData{
+  float procId;
   float patchNumber;
   float *imagePatch;
 };

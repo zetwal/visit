@@ -41,6 +41,7 @@ public:
 	void syncAllProcs();
 
 	void composeImages(int width, int height, unsigned char *wholeImage);
+	void setPatchImg(int procId, int patchNumber, int bufferSize, float buffer[]);
 
 	void printPatches();
 

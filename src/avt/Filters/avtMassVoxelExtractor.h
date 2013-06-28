@@ -126,8 +126,6 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     
  
   protected:
-    int proc;
-    int patch;
     bool             gridsAreInWorldSpace;
     bool             pretendGridsAreInWorldSpace;
     avtViewInfo      view;
@@ -177,6 +175,9 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     int              imgUpperRight[2];  //
     float            imgDepth;          // from the depth buffer
     float            *imgArray;         // the image data
+
+    int              proc;
+    int              patch;
  
     int              imgWidth, imgHeight;
     int              fullImgWidth, fullImgHeight;

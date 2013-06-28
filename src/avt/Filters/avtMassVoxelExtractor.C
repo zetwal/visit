@@ -77,7 +77,6 @@ std::string NumberToString ( int Number )
      return ss.str();
 }
 
-
 void createPpm2(float array[], int dimx, int dimy, std::string filename){
     int i, j;
     std::cout << "createPpm2  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
@@ -742,27 +741,9 @@ avtMassVoxelExtractor::getComputedImage(float *image)
         image[i] = imgArray[i];
 
     // std::cout << "\nIn avtMassVoxelExtractor::getComputedImage" << std::endl;
-    // std::cout << "\n\n" << std::endl;
 
     //if (proc == 0 && patch == 0){
     if (proc == 5 && patch == 49){
-
-        /*
-         for (int j = 0; j < imgDims[1]; ++j){
-             for (int i = 0; i < imgDims[0]; ++i){
-                int index = j*(4*imgDims[0]) + i;
-
-                 printf("%d  -  %.2f ,  %.2f ,  %.2f ,  %.2f     ~    ",index,
-                  imgArray[j*(imgDims[0]*4) + i*4 + 0],  // red
-                  imgArray[j*(imgDims[0]*4) + i*4 + 1],  // green
-                  imgArray[j*(imgDims[0]*4) + i*4 + 2],  // blue 
-                  imgArray[j*(imgDims[0]*4) + i*4 + 3]); // alpha 
-                 cout << "\n";
-             }
-             cout << "\n\n";
-         }
-        */
-
         std::cout << "avtMassVoxelExtractor height: " << imgDims[1] << "   width: " << imgDims[0] << std::endl;
         for (int i=0; i<imgDims[1]; i++){
             for (int j=0; j<imgDims[0]; j++){
