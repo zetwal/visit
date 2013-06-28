@@ -131,11 +131,12 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     void                  SetGradientBackgroundColors(const double [3],
                                                       const double [3]);
     int                   GetSamplesPerRay(void)  { return samplesPerRay; };
-    const int            *GetScreen(void)         { return screen; };
+    const int             *GetScreen(void)        { return screen; };
 
     void                  SetKernelBasedSampling(bool v)
                                     { kernelBasedSampling = v; };
 
+    // Raycasting SLIVR stuff
     void                  SetLighting(bool l) {lighting = l; };
     void                  SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void                  SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
@@ -157,6 +158,7 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     double                gradBG2[3];
     avtRayFunction       *rayfoo;
 
+    // Raycasting SLIVR stuff
     bool                  lighting;
     double                lightPosition[4];
     double                materialProperties[4];

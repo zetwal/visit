@@ -111,20 +111,20 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetVariableInformation(std::vector<std::string> &names,
                                             std::vector<int> varsize);
 
-    void             SetRayCastingSLIVR(bool s) {rayCastingSLIVR = s;   };
-    void             SetTrilinear(bool t) {trilinearInterpolation = t;   };
+    // Raycasting SLIVR
+    void             SetRayCastingSLIVR(bool s) {rayCastingSLIVR = s; };
+    void             SetTrilinear(bool t) {trilinearInterpolation = t; };
     void             SetLighting(bool l) {lighting = l; };
     void             SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void             SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
-    void             SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
+    void             SetTransferFn(avtOpacityMap *_transferFn1D) { transferFn1D = _transferFn1D; };
 
     // Getting the image
-    void             getImageDimensions(bool &used, int &patchNumber, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
     void             getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
     void             getComputedImage(float *image);
     void             setProcIdPatchID(int _proc, int _patch){ proc = _proc; patch = _patch; }
     
- 
+
   protected:
     bool             gridsAreInWorldSpace;
     bool             pretendGridsAreInWorldSpace;
@@ -168,7 +168,8 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           materialProperties[4];
     avtOpacityMap    *transferFn1D;
 
-    // patch details for one image
+
+    // Patch details for one image
     bool             patchDrawn;        // whether the patch is drawn or not
     int              imgDims[2];        // size of the patch
     int              imgLowerLeft[2];   // coordinates in the whole image
@@ -176,8 +177,9 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     float            imgDepth;          // from the depth buffer
     float            *imgArray;         // the image data
 
-    int              proc;
-    int              patch;
+    int              proc;              // id of the processor
+    int              patch;             // id of the patch
+
  
     int              imgWidth, imgHeight;
     int              fullImgWidth, fullImgHeight;
@@ -189,7 +191,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             ExtractWorldSpaceGrid(vtkRectilinearGrid *,
                              std::vector<std::string> &varnames,
                              std::vector<int> &varsize);
-    void             simpleExtractWorldSpaceGrid(vtkRectilinearGrid *,
+    void             simpleExtractWorldSpaceGrid(vtkRectilinearGrid *,  // added for raycasting slivr
                              std::vector<std::string> &varnames,
                              std::vector<int> &varsize);
 
@@ -205,6 +207,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     bool             FindSegmentIntersections(const double *, const double *, 
                                               int &, int &);
 
+    // Computes a pixel color
     void             computePixelColor(double scalarValue, double dest_rgb[4]);
     
 };

@@ -192,14 +192,13 @@ class AVTFILTERS_API avtSamplePointExtractor
     void                      SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void                      SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
 
-    //
-    int                       getImgPatchSize();
-    void                      getImgPatches(imgPatch *image);
-    int                       getImgPatch(imgPatch image, int id);
-    void                      delImgPatches();
-    void                      getImgMetaPatches(imgMetaData *image);
-    imgData                   getImgData(int patchId);
-
+    // Getting image information
+    imgMetaData               initMetaPatch(int id);                                  // initialize a patch
+    int                       getImgPatchSize(){return imgPatchSize;};                // gets the number of patches
+    void                      getImgMetaPatches(imgMetaData *image);                  // gets the metadata
+    imgData                   getImgData(int patchId){return imageData[patchId]; };   // gets the image
+    void                      delImgPatches();                                        // deletes patches
+    
   protected:
     int                       width, height, depth;
     int                       currentNode, totalNodes;
@@ -210,9 +209,6 @@ class AVTFILTERS_API avtSamplePointExtractor
     bool                      modeIs3D;
     bool                      kernelBasedSampling;
     double                    point_radius;
-
-    bool                      trilinearInterpolation;
-    bool                      rayCastingSLIVR;
 
     bool                      shouldSetUpArbitrator;
     std::string               arbitratorVarName;
@@ -235,6 +231,19 @@ class AVTFILTERS_API avtSamplePointExtractor
     avtViewInfo               viewInfo;
     double                    aspect;
 
+
+    // RaycastingSLIVR
+
+    // Information about the patches
+    int                       imgPatchSize;
+    imgMetaData               *imageMetaPatchArray;   // metadata for patches
+    imgData                   *imageData;             // images for patches
+
+    // triliniear / raycastin SLIVR
+    bool                      trilinearInterpolation;
+    bool                      rayCastingSLIVR;
+
+    // lighting & material
     bool                      lighting;
     double                    lightPosition[4];
     double                    materialProperties[4];
@@ -246,13 +255,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     virtual void              ExecuteTree(avtDataTree_p);
     void                      SetUpExtractors(void);
 
-    imgPatch                  *imagePatchArray;   // all the patches generated
-    int                       imgPatchSize;
-    imgMetaData               tempMeta;
-
-    imgMetaData               *imageMetaPatchArray;
-    imgData                   *imageData;
-
+    
     typedef struct 
     {
       std::vector<int>                  cellDataIndex;

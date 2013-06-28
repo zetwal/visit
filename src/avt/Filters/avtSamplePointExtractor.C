@@ -104,34 +104,8 @@ std::string NumToString ( int Number )
      return ss.str();
 }
 
-imgPatch
-initPatch(int id){
-    imgPatch temp;
-    temp.inUse = false;
-    temp.patchNumber = id;
-    temp.dims[0] = temp.dims[1] = -1;
-    temp.screen_ll[0] = temp.screen_ll[1] = -1;
-    temp.screen_ur[0] = temp.screen_ur[1] = -1;
-    temp.avg_z = -1.0;
-    temp.imagePatch = NULL;
-
-    return temp;
-}
 
 
-imgMetaData
-initMetaPatch(int id){
-    imgMetaData temp;
-    temp.inUse = 0;
-    temp.procId = PAR_Rank();
-    temp.patchNumber = id;
-    temp.dims[0] = temp.dims[1] = -1;
-    temp.screen_ll[0] = temp.screen_ll[1] = -1;
-    temp.screen_ur[0] = temp.screen_ur[1] = -1;
-    temp.avg_z = -1.0;
-    
-    return temp;
-}
 
 // ****************************************************************************
 //  Method: avtSamplePointExtractor constructor
@@ -510,7 +484,7 @@ avtSamplePointExtractor::SetUpExtractors(void)
 
     massVoxelExtractor->SetTrilinear(trilinearInterpolation);
     massVoxelExtractor->SetRayCastingSLIVR(rayCastingSLIVR);
-    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! rayCastingSLIVR: " << rayCastingSLIVR << std::endl;
+    //std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! rayCastingSLIVR: " << rayCastingSLIVR << std::endl;
 
     hexExtractor->SendCellsMode(sendCells);
     hex20Extractor->SendCellsMode(sendCells);
@@ -748,12 +722,10 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     imgPatchSize = dt->GetNChildren();
 
     if (rayCastingSLIVR == true){
-        imagePatchArray = new imgPatch[imgPatchSize];           // get the number of children and create patches for them
-        imageMetaPatchArray = new imgMetaData[imgPatchSize];   // get the number of children and create patches for them
+        imageMetaPatchArray = new imgMetaData[imgPatchSize];    // get the number of children and create patches for them
         imageData = new imgData[imgPatchSize];                  // get the number of children and create patches for them
 
         for (int i=0; i<imgPatchSize; i++){
-            imagePatchArray[i] = initPatch(i);
             imageMetaPatchArray[i] = initMetaPatch(i);
 
            // if (PAR_Rank() == 4)
@@ -832,52 +804,74 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
 
 
 
-int 
-avtSamplePointExtractor::getImgPatchSize(){
-    return imgPatchSize;
-}
- 
-void
-avtSamplePointExtractor::getImgPatches(imgPatch *image){
-
-    for (int i = 0; i < imgPatchSize; i++) {
-        image[i] = imagePatchArray[i];
-    }
-}
-
-
-
-
-int
-avtSamplePointExtractor::getImgPatch(imgPatch image, int id){
-    if (id < imgPatchSize){
-        image = imagePatchArray[id];
-        return 0;
-    }else
-        return -1;  // to indicate failure
-}
-
-
-imgData
-avtSamplePointExtractor::getImgData(int patchId){
-    return imageData[patchId];
-}
-
+// ****************************************************************************
+//  Method: avtSamplePointExtractor::
+//
+//  Purpose:
+//      allocates space to the pointer address and copy the image generated to it
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 void
 avtSamplePointExtractor::getImgMetaPatches(imgMetaData *image){
-    for (int i = 0; i < imgPatchSize; i++) {
+    for (int i = 0; i < imgPatchSize; i++)
         image[i] = imageMetaPatchArray[i];
-    }
 }
 
 
 
+// ****************************************************************************
+//  Method: avtSamplePointExtractor::delImgPatches
+//
+//  Purpose:
+//      allocates space to the pointer address and copy the image generated to it
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 void
 avtSamplePointExtractor::delImgPatches(){
-    delete []imagePatchArray;
+    // delete []imageMetaPatchArray;
+
+    // for (int i=0; i<imgPatchSize; i++)
+    //     delete imageData[i].imagePatch;
+
+    // delete []imageData;
 }
 
 
+// ****************************************************************************
+//  Method: avtSamplePointExtractor::
+//
+//  Purpose:
+//      allocates space to the pointer address and copy the image generated to it
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+imgMetaData
+avtSamplePointExtractor::initMetaPatch(int id){
+    imgMetaData temp;
+    temp.inUse = 0;
+    temp.procId = PAR_Rank();
+    temp.patchNumber = id;
+    temp.dims[0] = temp.dims[1] = -1;
+    temp.screen_ll[0] = temp.screen_ll[1] = -1;
+    temp.screen_ur[0] = temp.screen_ur[1] = -1;
+    temp.avg_z = -1.0;
+    
+    return temp;
+}
 
 // ****************************************************************************
 //  Method: avtSamplePointExtractor::KernelBasedSample
@@ -1061,13 +1055,10 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             //debug5 << "RasterBasedSample - rayCastingSLIVR" << endl;
             //std::cout << "RasterBasedSample - rayCastingSLIVR" << endl;
-            //std::cout << "imgDims:" << imagePatchArray[num].dims[0] << ", " << imagePatchArray[num].dims[1] << std::endl;
-            // std::cout << "screen_ll:" << imagePatchArray[num].screen_ll[0] << ", " << imagePatchArray[num].screen_ll[1] << std::endl;
-            // std::cout << "screen_ur:" << imagePatchArray[num].screen_ur[0] << ", " << imagePatchArray[num].screen_ur[1] << std::endl;
-            // std::cout << "avg_z:" << imagePatchArray[num].avg_z << std::endl;
             // std::cout << "Done extracting" << std::endl;
 
 
+            /*
             //if (PAR_Rank() == 0 && num == 0){
              if (PAR_Rank() == 5 && num == 49){
                 std::cout << "Par_Rank(): " << imageMetaPatchArray[num].procId << "   patch: " << imageMetaPatchArray[num].patchNumber << std::endl;
@@ -1083,6 +1074,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 }
                 std::cout << "\n";
             }
+            */
 
             //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx" + NumToString(PAR_Rank()) + ".ppm";
             //createPpm3(imagePatchArray[num].imagePatch, imagePatchArray[num].dims[0], imagePatchArray[num].dims[1], imgFilename);

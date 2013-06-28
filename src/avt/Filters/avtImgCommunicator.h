@@ -4,6 +4,7 @@
 #include <filters_exports.h>
 #include <pipeline_exports.h>
 #include <avtSamplePointExtractor.h>
+#include <algorithm>
 
 #ifdef PARALLEL
 #   include <mpi.h>
@@ -25,6 +26,8 @@ class avtImgCommunicator
     int 		my_id;
 
     imgMetaData setImg(int _inUse, int _procId, int _patchNumber, float dim_x, float dim_y, float screen_ll_x, float screen_ll_y, float screen_ur_x, float screen_ur_y, float _avg_z);
+
+   
 
 public:
 	avtImgCommunicator();

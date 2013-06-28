@@ -40,19 +40,19 @@
 #define AVTFILTERS_EXPORTS_H
 
 #if defined(_WIN32)
-#if defined(AVTFILTERS_EXPORTS) || defined(avtfilters_ser_EXPORTS) || defined(avtfilters_par_EXPORTS)
-#define AVTFILTERS_API __declspec(dllexport)
-#else
-#define AVTFILTERS_API __declspec(dllimport)
-#endif
-#if defined(_MSC_VER)
+# if defined(AVTFILTERS_EXPORTS) || defined(avtfilters_ser_EXPORTS) || defined(avtfilters_par_EXPORTS)
+#   define AVTFILTERS_API __declspec(dllexport)
+# else
+#   define AVTFILTERS_API __declspec(dllimport)
+# endif
+# if defined(_MSC_VER)
 // Turn off warning about lack of DLL interface
-#pragma warning(disable:4251)
+#   pragma warning(disable:4251)
 // Turn off warning non-dll class is base for dll-interface class.
-#pragma warning(disable:4275)
+#   pragma warning(disable:4275)
 // Turn off warning about identifier truncation
-#pragma warning(disable:4786)
-#endif
+#   pragma warning(disable:4786)
+# endif
 #else
 # if __GNUC__ >= 4 && (defined(AVTFILTERS_EXPORTS) || defined(avtfilters_ser_EXPORTS) || defined(avtfilters_par_EXPORTS))
 #   define AVTFILTERS_API __attribute__ ((visibility("default")))
@@ -61,20 +61,45 @@
 # endif
 #endif
 
+
+
+// ****************************************************************************
+//  Struct:  imgMetaData
+//
+//  Purpose:
+//    Holds information about patches but not the image 
+//
+//  Programmer:  
+//  Creation:   
+//
+// ****************************************************************************
 struct imgMetaData{
-  int inUse;        // 1: in use/ 0:not in use
-  int procId;       // to be removed!!!!!
-  int patchNumber;
+  int procId;       // processor that produced the patch
+  int patchNumber;  // id of the patch on that processor - with procId, acts as a key
+
+  int inUse;        // whether it is in use of not
   int dims[2];      // height, width
-  int screen_ll[2];
+  int screen_ll[2]; // position in the final image
   int screen_ur[2];
-  float avg_z;
+  float avg_z;      // depth of the patch
 };
 
+
+// ****************************************************************************
+//  Struct:  imgData
+//
+//  Purpose:
+//    Holds the image data generated
+//
+//  Programmer:  
+//  Creation:    
+//
+// ****************************************************************************
 struct imgData{
-  float procId;
-  float patchNumber;
-  float *imagePatch;
+  int procId;         // processor that produced the patch
+  int patchNumber;    // id of the patch on that processor  - with procId, acts as a key
+
+  float *imagePatch;  // the image data - RGBA
 };
 
 #endif
