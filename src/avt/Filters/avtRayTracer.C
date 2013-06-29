@@ -573,7 +573,7 @@ avtRayTracer::Execute(void)
         
             std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.3.0 b................................" << std::endl;
             for (int i=0; i<numPatches; i++){
-                std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.3.1 b................................ " << i << std::endl;
+                //std::cout << PAR_Rank() << "   avtRayTracer::Execute 4.3.1 b................................ " << i << std::endl;
                 
                 imgData tempImgData = extractor.getImgData(i);
                 int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);

@@ -426,10 +426,10 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 					int subImgIndex = allRecvPatches[i].dims[0]*j*4 + k*4;
 					int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);
 
-					if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==49)
-						printf("\n j: %d, k: %d,   subImgIndex: %d   bufferIndex: %d  - rgb %.6f  %.6f  %.6f  %.6f,",j,k,subImgIndex,bufferIndex, 
-											allRecvImgData[patchId].imagePatch[subImgIndex+0], allRecvImgData[patchId].imagePatch[subImgIndex+1],
-							 				allRecvImgData[patchId].imagePatch[subImgIndex+2], allRecvImgData[patchId].imagePatch[subImgIndex+3]);
+					//if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==49)
+					//	printf("\n j: %d, k: %d,   subImgIndex: %d   bufferIndex: %d  - rgb %.6f  %.6f  %.6f  %.6f,",j,k,subImgIndex,bufferIndex, 
+					//						allRecvImgData[patchId].imagePatch[subImgIndex+0], allRecvImgData[patchId].imagePatch[subImgIndex+1],
+					//		 				allRecvImgData[patchId].imagePatch[subImgIndex+2], allRecvImgData[patchId].imagePatch[subImgIndex+3]);
 
 					//Front to back compositing: 
 					//composited = source * (1.0 - destination.a) + destination; 

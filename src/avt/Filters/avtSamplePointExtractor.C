@@ -838,12 +838,12 @@ avtSamplePointExtractor::getImgMetaPatches(imgMetaData *image){
 // ****************************************************************************
 void
 avtSamplePointExtractor::delImgPatches(){
-    // delete []imageMetaPatchArray;
+    delete []imageMetaPatchArray;
 
-    // for (int i=0; i<imgPatchSize; i++)
-    //     delete imageData[i].imagePatch;
+    for (int i=0; i<imgPatchSize; i++)
+        delete imageData[i].imagePatch;
 
-    // delete []imageData;
+    delete []imageData;
 }
 
 
