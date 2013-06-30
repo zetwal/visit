@@ -473,10 +473,12 @@ avtRayTracer::Execute(void)
     extractor.SetJittering(true);
     extractor.SetInput(trans.GetOutput());
 
-    extractor.SetTrilinear(trilinearInterpolation);
-    extractor.SetRayCastingSLIVR(rayCastingSLIVR);
-    extractor.SetLighting(lighting);
-    extractor.SetTransferFn(transferFn1D);
+    if (trilinearInterpolation || rayCastingSLIVR){
+        extractor.SetTrilinear(trilinearInterpolation);
+        extractor.SetRayCastingSLIVR(rayCastingSLIVR);
+        extractor.SetLighting(lighting);
+        extractor.SetTransferFn(transferFn1D);
+    }
 
     //
     // For curvilinear and unstructured meshes, it makes sense to convert the
@@ -496,6 +498,8 @@ avtRayTracer::Execute(void)
     std::cout << PAR_Rank() << "   avtRayTracer::Execute 1" << std::endl;
 
     if (rayCastingSLIVR == true){
+        imgComm.init();
+
         // only required to force an update - Need to find a way to get rid of that!!!!
         avtRayCompositer rc(rayfoo);
         rc.SetInput(samples);
@@ -731,12 +735,9 @@ avtRayTracer::Execute(void)
 
 std::cout << "after GetGeneralContract" << std::endl;
     rc.SetInput(samples);
-std::cout << "before  rc.GetTypedOutput() ++++++++++++++++++++++++++++++++++" << std::endl;
     avtImage_p image = rc.GetTypedOutput();
 std::cout << "after  rc.GetTypedOutput() -----------------------------------" << std::endl;
-    image->Update(GetGeneralContract());
-std::cout << "after  image->Update(GetGeneralContract()) ===================" << std::endl;
-
+ 
 
 #ifdef PARALLEL
     //
@@ -755,7 +756,6 @@ std::cout << "after  image->Update(GetGeneralContract()) ===================" <<
     // memory.
     //
     int numDivisions = GetNumberOfDivisions(screen[0],screen[1],samplesPerRay);
-    // numDivisions = 1;
 
     int IStep = screen[0] / numDivisions;
     int JStep = screen[1] / numDivisions;
@@ -788,15 +788,8 @@ std::cout << "after  image->Update(GetGeneralContract()) ===================" <<
             sampleCommunicator.SetImagePartition(&imagePartition);
             imageCommunicator.SetImagePartition(&imagePartition);
 #endif
-            //extractor.RestrictToTile(IStart, IEnd, JStart, JEnd);
-
+            extractor.RestrictToTile(IStart, IEnd, JStart, JEnd);
             image->Update(GetGeneralContract());                    // execution happens here - identified with gdb
-
-            int origins[2];
-            image->GetImage().GetOrigin(&origins[0], &origins[1]);
-
-            std::cout << PAR_Rank() << "   origins: " << origins[0] << " ,  " << origins[1] << std::endl;
-
 
             if (PAR_Rank() == 0)    // stage 8 of 9
             {
@@ -827,82 +820,6 @@ std::cout << "after  image->Update(GetGeneralContract()) ===================" <<
     visitTimer->StopTimer(timingIndex, "Ray Tracing");
     visitTimer->DumpTimings();
 }
-
-
-// ****************************************************************************
-//  Method: avtRayTracer::Composite
-//
-//  Purpose:
-//      Composites the different patches rendered by the volume renderer.  
-//      It takes in the image each sub 3D volume outputs and copites them into an image
-//
-//  Arguments:
-//      v       The view info.
-//
-//  Programmer: Pascal Grosset
-//  Creation:   June 5, 2013
-//
-//  Modifications:
-//
-// ****************************************************************************
-
-/*
-
-void
-avtRayTracer::AddImageComposite(void)
-{
-    imgPatch tempPatch;
-    tempPatch.patchNumber;
-    int height, width;
-    int screen_ul[2];
-    int screen_lr[2];
-    float avg_z;            // in eye view
-    float *imagePatch;      //height x width x 4 (RGBA)
-
-}
-void
-avtRayTracer::Composite(void)
-{
-    // size of the whole image
-    float *compositeStageImage;
-    compositeStageImage = new float[screen[0]*4 * screen[1]];
-    for (int i=0; i<screen[0]*4 * screen[1]; i++)
-        compositeStageImage[i] = 0.0;
-
-    int numPatches = 800;   // should be equal to the number of leaves in the tree
-
-    // Get each patch
-    for (int np=0; np<numPatches; np++){
-
-
-        // each patch has a certain height and width
-        for (int i=0; i<patchHeight; i++){
-            for (int j=0; j<patchWidth; j++){
-                index = (patchWidth*4)*i + j*4;
-
-                compositeImage[index+0] = compositeImage[index+0]*compositeImage[index+3] + background[index+0]*(1.0 - compositeImage[index+3]);
-                compositeImage[index+1] = compositeImage[index+1]*compositeImage[index+3] + background[index+1]*(1.0 - compositeImage[index+3]);
-                compositeImage[index+2] = compositeImage[index+2]*compositeImage[index+3] + background[index+2]*(1.0 - compositeImage[index+3]);
-            }
-        }
-    }
-
-
-    float *compositeImage;
-    compositeImage = new float[screen[0]*3 * screen[1]];
-
-    // Merge the final image with the background
-    for (int i=0; i<screen[1]; i++)
-         for (int j=0; j<screen[0]; j++){
-            index = (screen[0]*3)*i + j*3;
-            compositeImage[index+0] = compositeImage[index+0]*compositeImage[index+3] + background[index+0]*(1.0 - compositeStageImage[index+3]);
-            compositeImage[index+1] = compositeImage[index+1]*compositeImage[index+3] + background[index+1]*(1.0 - compositeStageImage[index+3]);
-            compositeImage[index+2] = compositeImage[index+2]*compositeImage[index+3] + background[index+2]*(1.0 - compositeStageImage[index+3]);
-         }
-         // color = color1 + backColor*(1.0-color1.a);
-
-}
-*/
 
 // ****************************************************************************
 //  Method: avtRayTracer::SetView

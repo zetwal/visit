@@ -78,10 +78,11 @@ avtImgCommunicator::avtImgCommunicator(){
     
     std::cout << "!!! Id: " << my_id << "   Total: : " << num_procs << std::endl;
 
-    if (my_id == 0){
-		processorPatchesCount = new int[num_procs];
-		totalPatches = 0;
-	}
+    totalPatches = 0;
+
+    processorPatchesCount = NULL;
+	allRecvImgData= NULL;
+	allRecvPatches= NULL;
 }
 
 
@@ -99,13 +100,35 @@ avtImgCommunicator::avtImgCommunicator(){
 // ****************************************************************************
 avtImgCommunicator::~avtImgCommunicator(){
 	if (my_id == 0){
-		delete []processorPatchesCount;
-		delete []allRecvImgData;
-		delete []allRecvPatches;
+		if (processorPatchesCount != NULL)
+			delete []processorPatchesCount;
+
+		if (allRecvImgData != NULL)
+			delete []allRecvImgData;
+
+		if (allRecvPatches != NULL)
+			delete []allRecvPatches;
 	}
 }
 
 
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::init(){
+
+	if (my_id == 0)
+		processorPatchesCount = new int[num_procs];
+}
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::waitToSync

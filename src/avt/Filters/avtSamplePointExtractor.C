@@ -503,7 +503,7 @@ avtSamplePointExtractor::SetUpExtractors(void)
 
     if (shouldDoTiling)
     {
-        hexExtractor->Restrict(height, width_max-1, 
+        hexExtractor->Restrict(width_min, width_max-1, 
                                height_min, height_max-1);
         hex20Extractor->Restrict(width_min, width_max-1, 
                                  height_min, height_max-1);
@@ -725,12 +725,13 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
         imageMetaPatchArray = new imgMetaData[imgPatchSize];    // get the number of children and create patches for them
         imageData = new imgData[imgPatchSize];                  // get the number of children and create patches for them
 
-        for (int i=0; i<imgPatchSize; i++){
-            imageMetaPatchArray[i] = initMetaPatch(i);
+        if (rayCastingSLIVR == true)
+            for (int i=0; i<imgPatchSize; i++){
+                imageMetaPatchArray[i] = initMetaPatch(i);
 
-           // if (PAR_Rank() == 4)
-           ///     cout << "ID: " << i << std::endl;
-        }
+            // if (PAR_Rank() == 4)
+            ///     cout << "ID: " << i << std::endl;
+            }
     }
 
     for (int i = 0; i < imgPatchSize; i++) {
@@ -1045,7 +1046,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         massVoxelExtractor->SetTransferFn(transferFn1D);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
-
+ 
         if (rayCastingSLIVR == true){
             massVoxelExtractor->getImageDimensions(imageMetaPatchArray[num].inUse, imageMetaPatchArray[num].dims, imageMetaPatchArray[num].screen_ll, imageMetaPatchArray[num].screen_ur, imageMetaPatchArray[num].avg_z);
             
@@ -1076,8 +1077,10 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             }
             */
 
-            //std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx" + NumToString(PAR_Rank()) + ".ppm";
-            //createPpm3(imagePatchArray[num].imagePatch, imagePatchArray[num].dims[0], imagePatchArray[num].dims[1], imgFilename);
+            if (PAR_Rank() == 5 && num == 49){
+                std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx.ppm";
+                createPpm3(imageData[num].imagePatch, imageMetaPatchArray[num].dims[0], imageMetaPatchArray[num].dims[1], imgFilename);
+            }
         }
 
         return;

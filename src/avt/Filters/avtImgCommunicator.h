@@ -33,6 +33,8 @@ public:
 	avtImgCommunicator();
 	~avtImgCommunicator();
 
+	void init();
+
 	void sendNumPatches(int destId, int numPatches);
 	void sendPatchMetaData(int destId, imgMetaData tempImg);
 	void sendPatchImgData(int destId, int arraySize, float *sendMsgBuffer);
