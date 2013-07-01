@@ -212,4 +212,6 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     
 };
 
+std::string NumberToString ( int Number );
+void createPpm2(float array[], int dimx, int dimy, std::string filename);
 #endif

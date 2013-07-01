@@ -63,6 +63,11 @@
 
 
 
+
+#include <stdio.h>
+#include <string>
+#include <iostream>
+
 // ****************************************************************************
 //  Struct:  imgMetaData
 //
@@ -102,4 +107,7 @@ struct imgData{
   float *imagePatch;  // the image data - RGBA
 };
 
+
 #endif
+
+

@@ -5,6 +5,7 @@
 #include <pipeline_exports.h>
 #include <avtSamplePointExtractor.h>
 #include <algorithm>
+#include <string>
 
 #ifdef PARALLEL
 #   include <mpi.h>
@@ -62,4 +63,8 @@ public:
 #endif
 };
 
+
+
+void createPpm(float array[], int dimx, int dimy, std::string filename);
+std::string NumbToString (int Number);
 #endif

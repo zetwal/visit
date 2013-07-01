@@ -76,44 +76,6 @@
 
 using     std::vector;
 
-void createPpm(imgPatch *image, int size, std::string filename){
-    int i, j;
-    std::cout << "createPpm "; //dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
-    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
-
-    int dimx = 0, dimy = 0;
-
-    dimx = image[0].dims[0];
-    dimy = image[0].dims[1];
-  
-    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
-
-    for(int n = 0; n < 1; n++){
-
-        for (j = 0; j < dimx; ++j){
-            for (i = 0; i < dimy; ++i){
-                static unsigned char color[3];
-                color[0] = image[n].imagePatch[j*(dimx*3) + i*3 + 0] * 255;  // red
-                color[1] = image[n].imagePatch[j*(dimx*3) + i*3 + 1] * 255;  // green
-                color[2] = image[n].imagePatch[j*(dimx*3) + i*3 + 2] * 255;  // blue 
-                (void) fwrite(color, 1, 3, fp);
-            }
-        }
-    }
-
-    (void) fclose(fp);
-    std::cout << "End createPpm: " << std::endl;
-}
-
-
-std::string NumbToString ( int Number )
-{
-     std::ostringstream ss;
-     ss << Number;
-     return ss.str();
-}
-
-
 // ****************************************************************************
 //  Method: avtRayTracer constructor
 //
@@ -592,8 +554,13 @@ avtRayTracer::Execute(void)
                     sendMsgBuffer[j+2] = tempImgData.imagePatch[j];
                 
 
+                if (imgAllPatches[i].procId == 5 && imgAllPatches[i].patchNumber == 35){
+                    std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtRayTracer.ppm";
+                    createPpm(tempImgData.imagePatch, imgAllPatches[i].dims[0], imgAllPatches[i].dims[1], imgFilename);
+                }
+                
                 /*
-                if (imgAllPatches[i].procId == 5 && imgAllPatches[i].patchNumber == 49){
+                if (imgAllPatches[i].procId == 5 && imgAllPatches[i].patchNumber == 35){
                     std::cout << "Screen[0]: " << screen[0] << "   screen[1]: " <<screen[1] << std::endl;
                     std::cout << "Par_Rank(): " << imgAllPatches[i].procId << "   patch: " << imgAllPatches[i].patchNumber << std::endl;
                     std::cout << "avtRayTracer height: " << imgAllPatches[i].dims[1] << "   width: " << imgAllPatches[i].dims[0] << std::endl;

@@ -79,34 +79,6 @@
 #include <TimingsManager.h>
 
 
-void createPpm3(float array[], int dimx, int dimy, std::string filename){
-    int i, j;
-    std::cout << "createPpm3  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
-    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
-    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
-    for (j = 0; j < dimy; ++j){
-        for (i = 0; i < dimx; ++i){
-            static unsigned char color[3];
-            color[0] = array[j*(dimx*3) + i*3 + 0] * 255;  // red
-            color[1] = array[j*(dimx*3) + i*3 + 1] * 255;  // green
-            color[2] = array[j*(dimx*3) + i*3 + 2] * 255;  // blue 
-            (void) fwrite(color, 1, 3, fp);
-        }
-    }
-    (void) fclose(fp);
-    std::cout << "End createPpm: " << std::endl;
-}
-
-std::string NumToString ( int Number )
-{
-     std::ostringstream ss;
-     ss << Number;
-     return ss.str();
-}
-
-
-
-
 // ****************************************************************************
 //  Method: avtSamplePointExtractor constructor
 //
@@ -1061,7 +1033,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             /*
             //if (PAR_Rank() == 0 && num == 0){
-             if (PAR_Rank() == 5 && num == 49){
+             if (PAR_Rank() == 5 && num == 35){
                 std::cout << "Par_Rank(): " << imageMetaPatchArray[num].procId << "   patch: " << imageMetaPatchArray[num].patchNumber << std::endl;
                 std::cout << "avtSamplePointExtractor height: " << imageMetaPatchArray[num].dims[1] << "   width: " << imageMetaPatchArray[num].dims[0] << std::endl;
 
@@ -1077,10 +1049,10 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             }
             */
 
-            if (PAR_Rank() == 5 && num == 49){
-                std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx.ppm";
-                createPpm3(imageData[num].imagePatch, imageMetaPatchArray[num].dims[0], imageMetaPatchArray[num].dims[1], imgFilename);
-            }
+            //if (PAR_Rank() == 5 && num == 35){
+            //    std::string imgFilename = "/home/pascal/Desktop/examplePtEx_inSamplePtEx.ppm";
+            //     createPpm2(imageData[num].imagePatch, imageMetaPatchArray[num].dims[0], imageMetaPatchArray[num].dims[1], imgFilename);
+            //}
         }
 
         return;

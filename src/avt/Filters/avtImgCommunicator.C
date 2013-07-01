@@ -48,7 +48,8 @@ void displayStruct_meta(imgMetaData temp){
 }
 
 
- bool sortImgByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z < after.avg_z; }
+ //bool sortImgByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z < after.avg_z; }
+bool sortImgByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z < after.avg_z; }
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::
@@ -172,55 +173,6 @@ void avtImgCommunicator::sendNumPatches(int destId, int numPatches){
 
 }
 
-// ****************************************************************************
-//  Method: avtImgCommunicator::
-//
-//  Purpose:
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-void avtImgCommunicator::sendPatchMetaData(int destId, imgMetaData tempImg){
-
-#ifdef PARALLEL
-	MPI_Send(&tempImg, 1, _img_mpi, 0, MSG_DATA, MPI_COMM_WORLD);
-
-	//if (PAR_Rank() == 4)
-	//	displayStruct_imgSend(PAR_Rank(),destId,tempImg);
-#endif
-}
-
-
-
-// ****************************************************************************
-//  Method: avtImgCommunicator::
-//
-//  Purpose:
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-void avtImgCommunicator::sendPatchImgData(int destId, int arraySize, float *sendMsgBuffer){
-#ifdef PARALLEL
-
-	//MPI_Send(&curLength, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
-	//		MPI_Send(pszFileBuffer+curStartNum, curLength, MPI_CHAR, i, 2, MPI_COMM_WORLD);
-	MPI_Send(&arraySize, 1, MPI_INT, destId, 1, MPI_COMM_WORLD);
-	MPI_Send(sendMsgBuffer, arraySize, MPI_FLOAT, destId, 2, MPI_COMM_WORLD);
-
-	//if ((int)sendMsgBuffer[0] == 49){
-	//	for (int i=1; i<arraySize; i+=4)
-	//		printf("\n 49: %d <> %.6f %.6f %.6f %.6f \n",i/4, sendMsgBuffer[i],sendMsgBuffer[i+1],sendMsgBuffer[i+2],sendMsgBuffer[i+3]);
-	//}
-#endif
-}
-
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::
@@ -249,6 +201,29 @@ void avtImgCommunicator::masterRecvNumPatches(){
 	}
 #endif
 
+}
+
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::sendPatchMetaData(int destId, imgMetaData tempImg){
+
+#ifdef PARALLEL
+	MPI_Send(&tempImg, 1, _img_mpi, 0, MSG_DATA, MPI_COMM_WORLD);
+
+	//if (PAR_Rank() == 4)
+	//	displayStruct_imgSend(PAR_Rank(),destId,tempImg);
+#endif
 }
 
 
@@ -284,6 +259,33 @@ void avtImgCommunicator::masterRecvPatchMetaData(){
 	allRecvImgData = new imgData[totalPatches];
 }
 
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::sendPatchImgData(int destId, int arraySize, float *sendMsgBuffer){
+#ifdef PARALLEL
+
+	//MPI_Send(&curLength, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
+	//		MPI_Send(pszFileBuffer+curStartNum, curLength, MPI_CHAR, i, 2, MPI_COMM_WORLD);
+	MPI_Send(&arraySize, 1, MPI_INT, destId, 1, MPI_COMM_WORLD);
+	MPI_Send(sendMsgBuffer, arraySize, MPI_FLOAT, destId, 2, MPI_COMM_WORLD);
+
+	//if ((int)sendMsgBuffer[0] == 35){
+	//	for (int i=1; i<arraySize; i+=4)
+	//		printf("\n 35: %d <> %.6f %.6f %.6f %.6f \n",i/4, sendMsgBuffer[i],sendMsgBuffer[i+1],sendMsgBuffer[i+2],sendMsgBuffer[i+3]);
+	//}
+#endif
+}
 
 
 // ****************************************************************************
@@ -355,28 +357,32 @@ void avtImgCommunicator::masterRecvPatchImgData(){
 			}
 			
 
-
 			
 			//
 			// Debug
 			// 
 			/*
-			if ((int)recvMsgBuffer[0] == 5 && (int)recvMsgBuffer[1] == 49){
+			if ((int)recvMsgBuffer[0] == 5 && (int)recvMsgBuffer[1] == 35){
 				printf("\n");
 				printf("\n Recv Proc: %d    Patch: %d    PatchId: %d",                 (int)recvMsgBuffer[0],               (int)recvMsgBuffer[1], patchId);
 				printf("\n Img  Proc: %d    Patch: %d    PatchId: %d",        allRecvImgData[patchId].procId, allRecvImgData[patchId].patchNumber, patchId);
 				printf("\n Meta Proc: %d    Patch: %d    PatchId: %d \n",     allRecvPatches[patchId].procId, allRecvPatches[patchId].patchNumber, patchId);
 				for (int i=2; i<bufferSize-2; i+=4)
-					printf("\n 49: %d ** %.6f %.6f %.6f %.6f \n",i/4, recvMsgBuffer[i],recvMsgBuffer[i+1],recvMsgBuffer[i+2],recvMsgBuffer[i+3]);
+					printf("\n 35: %d ** %.6f %.6f %.6f %.6f \n",i/4, recvMsgBuffer[i],recvMsgBuffer[i+1],recvMsgBuffer[i+2],recvMsgBuffer[i+3]);
 
 				//spPatchId = patchId;
 			}
 			*/
 
+			if (allRecvPatches[patchId].procId == 5 && allRecvPatches[patchId].patchNumber == 35){
+                std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtImgComm.ppm";
+                createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[patchId].dims[0], allRecvPatches[patchId].dims[1], imgFilename);
+            }
+
 			/*
 			//if (i==0 && j ==0){
-			//if (i==5 && j ==49){
-			if (allRecvPatches[i].procId == 5 && allRecvPatches[i].patchNumber == 49){
+			//if (i==5 && j ==35){
+			if (allRecvPatches[i].procId == 5 && allRecvPatches[i].patchNumber == 35){
 				std::cout << "\n\nPar_Rank(): " << allRecvPatches[i].procId << "   patch: " << allRecvPatches[i].patchNumber << std::endl;
 
                 std::cout << "avtImgCommunicator height: " << allRecvPatches[i].dims[1] << "   width: " << allRecvPatches[i].dims[0] << std::endl;
@@ -432,7 +438,7 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 
 	//for (int i=0; i<1; i++){
 	for (int i=0; i<totalPatches; i++){
-		//if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==49){
+		//if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==35){
 			int startingY = allRecvPatches[i].screen_ll[1];  // need to invert
 			int startingX = allRecvPatches[i].screen_ll[0];
 
@@ -444,15 +450,25 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 
 			//printf("\n startingX %d - startingY %d \n", allRecvPatches[i].screen_ll[0], allRecvPatches[i].screen_ll[1]);
 
+			if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==35){
+                std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtImgComm_compose.ppm";
+                createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[i].dims[0], allRecvPatches[i].dims[1], imgFilename);
+            }	
+
+
 			for (int j=0; j<allRecvPatches[i].dims[1]; j++){
 				for (int k=0; k<allRecvPatches[i].dims[0]; k++){
 					int subImgIndex = allRecvPatches[i].dims[0]*j*4 + k*4;
 					int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);
 
-					//if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==49)
+					//if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==35)
 					//	printf("\n j: %d, k: %d,   subImgIndex: %d   bufferIndex: %d  - rgb %.6f  %.6f  %.6f  %.6f,",j,k,subImgIndex,bufferIndex, 
 					//						allRecvImgData[patchId].imagePatch[subImgIndex+0], allRecvImgData[patchId].imagePatch[subImgIndex+1],
 					//		 				allRecvImgData[patchId].imagePatch[subImgIndex+2], allRecvImgData[patchId].imagePatch[subImgIndex+3]);
+
+
+					
+
 
 					//Front to back compositing: 
 					//composited = source * (1.0 - destination.a) + destination; 
@@ -460,6 +476,17 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 					buffer[bufferIndex+1] = allRecvImgData[patchId].imagePatch[subImgIndex+1] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+1];
 					buffer[bufferIndex+2] = allRecvImgData[patchId].imagePatch[subImgIndex+2] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+2];
 					buffer[bufferIndex+3] = allRecvImgData[patchId].imagePatch[subImgIndex+3] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+3];
+
+
+					//Back to Front compositing: 
+					//composited_i = composited_i-1 * (1.0 - alpha_i) + incoming
+					//alpha = alpha_i-1 * (1- alpha_i)
+					//buffer[bufferIndex+0] = (buffer[bufferIndex+0] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+0];
+					//buffer[bufferIndex+0] = (buffer[bufferIndex+1] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+1];
+					//buffer[bufferIndex+0] = (buffer[bufferIndex+2] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+2];
+
+					//buffer[bufferIndex+3] = buffer[bufferIndex+3]  *(1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3]);
+				
 				}
 			}
 		//}
@@ -480,6 +507,11 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 			//	 					wholeImage[wholeImgIndex+0],					 wholeImage[wholeImgIndex+1],						wholeImage[wholeImgIndex+2]);
 
 		}
+
+
+    std::string imgFilenameFinal = "/home/pascal/Desktop/FinalBuffer.ppm";
+    createPpm(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal);
+  
 
 	delete []buffer;
 }
@@ -578,4 +610,30 @@ void avtImgCommunicator::printPatches(){
 
 	for (int i=0; i<num_procs; i++)
 		printf("\n Processor: %d   Patch count: %d \n",i,processorPatchesCount[i]);
+}
+
+
+void createPpm(float array[], int dimx, int dimy, std::string filename){
+    int i, j;
+    std::cout << "createPpm2  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    for (j = 0; j < dimy; ++j){
+        for (i = 0; i < dimx; ++i){
+            static unsigned char color[3];
+            color[0] = array[j*(dimx*4) + i*4 + 0] * 255;  // red
+            color[1] = array[j*(dimx*4) + i*4 + 1] * 255;  // green
+            color[2] = array[j*(dimx*4) + i*4 + 2] * 255;  // blue 
+            (void) fwrite(color, 1, 3, fp);
+        }
+    }
+    (void) fclose(fp);
+    std::cout << "End createPpm: " << std::endl;
+}
+
+std::string NumbToString (int Number)
+{
+     std::ostringstream ss;
+     ss << Number;
+     return ss.str();
 }
