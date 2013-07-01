@@ -665,6 +665,8 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         imgDims[0] = imgWidth;       imgDims[1] = imgHeight;
         imgLowerLeft[0] = xMin;         imgLowerLeft[1] = yMin;
         imgUpperRight[0] = xMax;         imgUpperRight[1] = yMax;
+
+       // std::cout << "\n\n imgWidth: " << imgWidth << "   imgHeight: " << imgHeight << std::endl;
     }
 
     for (int i = xMin ; i < xMax ; i++)
@@ -1353,7 +1355,7 @@ avtMassVoxelExtractor::FindSegmentIntersections(const double *origin,
 //
 // ****************************************************************************
 void
-avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4]){
+avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4], int show){
     double source_rgb[4];
     transferFn1D->QueryTF(scalarValue,source_rgb);
     //source_rgb[0] = source_rgb[1] = source_rgb[2] = source_rgb[3] = 1.0-scalarValue;
@@ -1363,12 +1365,16 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4])
     //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
     //source_rgb[3] = alpha;
  
-    //std::cout << " source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " ,  " << source_rgb[2] << " ,  " << source_rgb[3] << std::endl;
-    //std::cout << " dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
     
+
     for (int i=0; i<4; i++)
     // front to back
         dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
+
+
+    //if (show == 1){
+    //    std::cout << "\n\n scalarValue: " << scalarValue << "    source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " ,  " << source_rgb[2] << " ,  " << source_rgb[3] << "    dest_rgb: " << dest_rgb[0] << " , " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
+    //}
     
     // back to front
     //    dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
@@ -1428,6 +1434,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 {
     bool inrun = false;
     int  count = 0;
+    int stepsZ = 0;
     avtRay *ray = volume->GetRay(w, h);
     int myInd[3];
     bool calc_cell_index = ((ncell_arrays > 0) || (ghosts != NULL));
@@ -1559,12 +1566,16 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
                         tmpSampleList[count][cell_index[l]+m] = val;  
 
+                        int show = 0;
+                        if (proc == 5 && patch == 49)
+                            show = 1;
+                        stepsZ++;
                         if (rayCastingSLIVR){
-                            computePixelColor(val, dest_rgb);
+                            computePixelColor(val, dest_rgb, show);
 
                             // debug
-                            //if (proc == 5 && patch == 49)
-                            //  std::cout << "val: " << val << "    | rgba: "  << dest_rgb[0] << " ,  " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
+                           // if (proc == 5 && patch == 49)
+                           //   std::cout << "val: " << val << "    | rgba: "  << dest_rgb[0] << " ,  " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
                         } 
                     }
                 }
@@ -1636,8 +1647,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = dest_rgb[3];
 
         // Debug
-        //if (proc == 5 && patch == 49)
-        //     std::cout << "    | rgba h : " << h << "   yMin: " << yMin << "   imgWidth: " << imgWidth << "  w: " << w << "  xMin: " << xMin << "  - " << (h-yMin)*(imgWidth*4) + (w-xMin)*4 << " : "  << dest_rgb[0] << " ,  " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3]  <<  std::endl;
+        if (proc == 5 && patch == 49)
+             std::cout << "    | rgba h : " << h << "   yMin: " << yMin << "   imgWidth: " << imgWidth << "  w: " << w << "  xMin: " << xMin << "    imgHeight: " << imgHeight <<  "     stepsZ: " << stepsZ << "  ~  " << (h-yMin)*(imgWidth*4) + (w-xMin)*4 << " : "  << dest_rgb[0] << " ,  " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3]  <<  std::endl;
     }
 
     //

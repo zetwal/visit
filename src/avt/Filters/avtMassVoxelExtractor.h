@@ -208,7 +208,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
                                               int &, int &);
 
     // Computes a pixel color
-    void             computePixelColor(double scalarValue, double dest_rgb[4]);
+    void             computePixelColor(double scalarValue, double dest_rgb[4], int show = 0);
     
 };
 

@@ -257,7 +257,7 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
 
     //std::cout << "\nscalarValue min: " << min << std::endl;
     //std::cout << "scalarValue max: " << max << std::endl;
-    //std::cout << "tableEntries: " << tableEntries << std::endl;
+   // std::cout << "tableEntries: " << tableEntries << std::endl;
 
     int indexLow, indexHigh;
     _RGBA colorRGBALow, colorRGBAHigh;

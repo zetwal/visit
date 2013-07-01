@@ -699,7 +699,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         software->SetRayFunction(integrateRF);
     else
         //if (atts.GetRendererType() != VolumeAttributes::RayCastingSLIVR)
-            software->SetRayFunction(compositeRF);            // unsure about this one. RayFunction seems important
+        software->SetRayFunction(compositeRF);            // unsure about this one. RayFunction seems important
 
     software->SetSamplesPerRay(atts.GetSamplesPerRay());
 
