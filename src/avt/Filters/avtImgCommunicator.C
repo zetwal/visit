@@ -48,7 +48,6 @@ void displayStruct_meta(imgMetaData temp){
 }
 
 
- //bool sortImgByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z < after.avg_z; }
 bool sortImgByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z < after.avg_z; }
 
 // ****************************************************************************
@@ -374,10 +373,10 @@ void avtImgCommunicator::masterRecvPatchImgData(){
 			}
 			*/
 
-			if (allRecvPatches[patchId].procId == 5 && allRecvPatches[patchId].patchNumber == 35){
-                std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtImgComm.ppm";
-                createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[patchId].dims[0], allRecvPatches[patchId].dims[1], imgFilename);
-            }
+			//if (allRecvPatches[patchId].procId == 5 && allRecvPatches[patchId].patchNumber == 35){
+            //    std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtImgComm.ppm";
+            //    createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[patchId].dims[0], allRecvPatches[patchId].dims[1], imgFilename);
+            //}
 
 			/*
 			//if (i==0 && j ==0){
@@ -438,58 +437,44 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 
 	//for (int i=0; i<1; i++){
 	for (int i=0; i<totalPatches; i++){
+		int startingY = allRecvPatches[i].screen_ll[1];  // need to invert
+		int startingX = allRecvPatches[i].screen_ll[0];
+
+		int patchId = 0;
+		for (int k=0; k<allRecvPatches[i].procId; k++)
+			patchId += processorPatchesCount[k];
+		patchId += allRecvPatches[i].patchNumber;
+
+		//printf("\n startingX %d - startingY %d \n", allRecvPatches[i].screen_ll[0], allRecvPatches[i].screen_ll[1]);
+
 		//if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==35){
-			int startingY = allRecvPatches[i].screen_ll[1];  // need to invert
-			int startingX = allRecvPatches[i].screen_ll[0];
+        //    std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtImgComm_compose.ppm";
+        //    createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[i].dims[0], allRecvPatches[i].dims[1], imgFilename);
+        //}	
 
 
-			int patchId = 0;
-			for (int k=0; k<allRecvPatches[i].procId; k++)
-				patchId += processorPatchesCount[k];
-			patchId += allRecvPatches[i].patchNumber;
+		for (int j=0; j<allRecvPatches[i].dims[1]; j++){
+			for (int k=0; k<allRecvPatches[i].dims[0]; k++){
+				int subImgIndex = allRecvPatches[i].dims[0]*j*4 + k*4;
+				int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);
 
-			//printf("\n startingX %d - startingY %d \n", allRecvPatches[i].screen_ll[0], allRecvPatches[i].screen_ll[1]);
+				//Front to back compositing: 
+				//composited = source * (1.0 - destination.a) + destination; 
+				buffer[bufferIndex+0] = allRecvImgData[patchId].imagePatch[subImgIndex+0] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+0];
+				buffer[bufferIndex+1] = allRecvImgData[patchId].imagePatch[subImgIndex+1] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+1];
+				buffer[bufferIndex+2] = allRecvImgData[patchId].imagePatch[subImgIndex+2] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+2];
+				buffer[bufferIndex+3] = allRecvImgData[patchId].imagePatch[subImgIndex+3] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+3];
 
-			if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==35){
-                std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtImgComm_compose.ppm";
-                createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[i].dims[0], allRecvPatches[i].dims[1], imgFilename);
-            }	
-
-
-			for (int j=0; j<allRecvPatches[i].dims[1]; j++){
-				for (int k=0; k<allRecvPatches[i].dims[0]; k++){
-					int subImgIndex = allRecvPatches[i].dims[0]*j*4 + k*4;
-					int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);
-
-					//if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==35)
-					//	printf("\n j: %d, k: %d,   subImgIndex: %d   bufferIndex: %d  - rgb %.6f  %.6f  %.6f  %.6f,",j,k,subImgIndex,bufferIndex, 
-					//						allRecvImgData[patchId].imagePatch[subImgIndex+0], allRecvImgData[patchId].imagePatch[subImgIndex+1],
-					//		 				allRecvImgData[patchId].imagePatch[subImgIndex+2], allRecvImgData[patchId].imagePatch[subImgIndex+3]);
-
-
-					
-
-
-					//Front to back compositing: 
-					//composited = source * (1.0 - destination.a) + destination; 
-					buffer[bufferIndex+0] = allRecvImgData[patchId].imagePatch[subImgIndex+0] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+0];
-					buffer[bufferIndex+1] = allRecvImgData[patchId].imagePatch[subImgIndex+1] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+1];
-					buffer[bufferIndex+2] = allRecvImgData[patchId].imagePatch[subImgIndex+2] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+2];
-					buffer[bufferIndex+3] = allRecvImgData[patchId].imagePatch[subImgIndex+3] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+3];
-
-
-					//Back to Front compositing: 
-					//composited_i = composited_i-1 * (1.0 - alpha_i) + incoming
-					//alpha = alpha_i-1 * (1- alpha_i)
-					//buffer[bufferIndex+0] = (buffer[bufferIndex+0] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+0];
-					//buffer[bufferIndex+0] = (buffer[bufferIndex+1] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+1];
-					//buffer[bufferIndex+0] = (buffer[bufferIndex+2] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+2];
-
-					//buffer[bufferIndex+3] = buffer[bufferIndex+3]  *(1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3]);
-				
-				}
+				//Back to Front compositing: 
+				//composited_i = composited_i-1 * (1.0 - alpha_i) + incoming
+				//alpha = alpha_i-1 * (1- alpha_i)
+				//buffer[bufferIndex+0] = (buffer[bufferIndex+0] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+0];
+				//buffer[bufferIndex+0] = (buffer[bufferIndex+1] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+1];
+				//buffer[bufferIndex+0] = (buffer[bufferIndex+2] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+2];
+				//buffer[bufferIndex+3] = buffer[bufferIndex+3]  *(1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3]);
+			
 			}
-		//}
+		}
 	}
 
 	//copy to main buffer
@@ -498,14 +483,13 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 			int bufferIndex = (imgBufferWidth*4*i) + (j*4);
 			int wholeImgIndex = (imgBufferWidth*3*i) + (j*3);
 
-			wholeImage[wholeImgIndex+0] = (int)buffer[bufferIndex+0]*255;
-			wholeImage[wholeImgIndex+1] = (int)buffer[bufferIndex+1]*255;
-			wholeImage[wholeImgIndex+2] = (int)buffer[bufferIndex+2]*255;
+			wholeImage[wholeImgIndex+0] = (buffer[bufferIndex+0]*255);
+			wholeImage[wholeImgIndex+1] = (buffer[bufferIndex+1]*255);
+			wholeImage[wholeImgIndex+2] = (buffer[bufferIndex+2]*255);
 
 			//printf("\n i: %d, j: %d,   bufferIndex: %d   wholeImgIndex: %d  - rgb %.2f  %.2f  %.2f    -  rgb %d %d %d",i,j,bufferIndex,wholeImgIndex, 
 			//	buffer[bufferIndex+0]*buffer[bufferIndex+3]*255, buffer[bufferIndex+1]*buffer[bufferIndex+3]*255, buffer[bufferIndex+2]*buffer[bufferIndex+3]*255,
 			//	 					wholeImage[wholeImgIndex+0],					 wholeImage[wholeImgIndex+1],						wholeImage[wholeImgIndex+2]);
-
 		}
 
 
@@ -611,6 +595,8 @@ void avtImgCommunicator::printPatches(){
 	for (int i=0; i<num_procs; i++)
 		printf("\n Processor: %d   Patch count: %d \n",i,processorPatchesCount[i]);
 }
+
+
 
 
 void createPpm(float array[], int dimx, int dimy, std::string filename){

@@ -347,7 +347,7 @@ avtOpacityMap::SetTableFloat(unsigned char *arr, int te, double attenuation, flo
         transferFn1D[i].B = (float)arr[i*4+2]/255.*alpha;
         transferFn1D[i].A = alpha;
 
-        std::cout << i << " : " << transferFn1D[i].R << " ,  " << transferFn1D[i].G << " ,  " << transferFn1D[i].B << " ,  " << transferFn1D[i].A << std::endl;
+        //std::cout << i << " : " << transferFn1D[i].R << " ,  " << transferFn1D[i].G << " ,  " << transferFn1D[i].B << " ,  " << transferFn1D[i].A << std::endl;
     }
 
     //

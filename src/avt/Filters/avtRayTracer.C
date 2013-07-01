@@ -554,10 +554,10 @@ avtRayTracer::Execute(void)
                     sendMsgBuffer[j+2] = tempImgData.imagePatch[j];
                 
 
-                if (imgAllPatches[i].procId == 5 && imgAllPatches[i].patchNumber == 35){
-                    std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtRayTracer.ppm";
-                    createPpm(tempImgData.imagePatch, imgAllPatches[i].dims[0], imgAllPatches[i].dims[1], imgFilename);
-                }
+                //if (imgAllPatches[i].procId == 5 && imgAllPatches[i].patchNumber == 35){
+                //    std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtRayTracer.ppm";
+                //    createPpm(tempImgData.imagePatch, imgAllPatches[i].dims[0], imgAllPatches[i].dims[1], imgFilename);
+                //}
                 
                 /*
                 if (imgAllPatches[i].procId == 5 && imgAllPatches[i].patchNumber == 35){

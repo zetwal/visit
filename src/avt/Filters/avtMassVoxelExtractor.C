@@ -1573,7 +1573,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         if (rayCastingSLIVR){
                             computePixelColor(val, dest_rgb, show);
 
-                            // debug
+                           // debug
                            // if (proc == 5 && patch == 35)
                            //   std::cout << "val: " << val << "    | rgba: "  << dest_rgb[0] << " ,  " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3] << std::endl;
                         } 
@@ -1647,8 +1647,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = dest_rgb[3];
 
         // Debug
-        if (proc == 5 && patch == 35)
-             std::cout << "    | rgba h : " << h << "   yMin: " << yMin << "   imgWidth: " << imgWidth << "  w: " << w << "  xMin: " << xMin << "    imgHeight: " << imgHeight <<  "     stepsZ: " << stepsZ << "  ~  " << (h-yMin)*(imgWidth*4) + (w-xMin)*4 << " : "  << dest_rgb[0] << " ,  " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3]  <<  std::endl;
+        //if (proc == 5 && patch == 35)
+        //     std::cout << "    | rgba h : " << h << "   yMin: " << yMin << "   imgWidth: " << imgWidth << "  w: " << w << "  xMin: " << xMin << "    imgHeight: " << imgHeight <<  "     stepsZ: " << stepsZ << "  ~  " << (h-yMin)*(imgWidth*4) + (w-xMin)*4 << " : "  << dest_rgb[0] << " ,  " << dest_rgb[1] << " ,  " << dest_rgb[2] << " ,  " << dest_rgb[3]  <<  std::endl;
     }
 
     //
