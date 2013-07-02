@@ -902,7 +902,7 @@ SendImageToRenderNodes(int width, int height, bool Z,
                        GLubyte * const pixels,
                        GLuint * const depth)
 {
-    std::cout << " SendImageToRenderNodes() " << std::endl;
+    std::cout << " IceTNetworkManager - SendImageToRenderNodes() " << std::endl;
     GLint n_tiles, n_procs, rank;
     GLboolean have_image;
 
@@ -918,5 +918,5 @@ SendImageToRenderNodes(int width, int height, bool Z,
         MPI_Bcast(depth, width*height, MPI_UNSIGNED, 0, VISIT_MPI_COMM);
     }
 
-    std::cout << " SendImageToRenderNodes() End!!!" << std::endl;
+    std::cout << " IceTNetworkManager - SendImageToRenderNodes() End!!!" << std::endl;
 }

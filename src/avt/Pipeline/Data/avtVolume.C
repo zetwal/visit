@@ -255,8 +255,8 @@ avtVolume::GetPixels(avtRayFunction *rayfoo,unsigned char *data,double *zbuffer)
     int currentTenth = 0;
     bool needPixelIndices = rayfoo->NeedPixelIndices();
 
-    std::cout << "  restrictedMinHeight: " << restrictedMinHeight << "   restrictedMaxHeight: " << restrictedMaxHeight << std::endl;
-    std::cout << "  restrictedMinWidth: " << restrictedMinWidth << "   restrictedMaxWidth: " << restrictedMaxWidth << std::endl;
+    std::cout << "\n avtVolume.C restrictedMinHeight: " << restrictedMinHeight << "   restrictedMaxHeight: " << restrictedMaxHeight << std::endl;
+    std::cout << "\n avtVolume.C restrictedMinWidth: " << restrictedMinWidth << "   restrictedMaxWidth: " << restrictedMaxWidth << std::endl;
     for (int i = restrictedMinHeight ; i <= restrictedMaxHeight ; i++)
     {
         if (rays[i] != NULL)

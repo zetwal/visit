@@ -423,7 +423,7 @@ void avtImgCommunicator::masterRecvPatchImgData(){
 //  Modifications:
 //
 // ****************************************************************************
-void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage){
+void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage, unsigned char background[3]){
 	// sort the images by depth
 	std::sort(allRecvPatches, allRecvPatches + totalPatches, &sortImgByDepth);
 
@@ -483,20 +483,19 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 			int bufferIndex = (imgBufferWidth*4*i) + (j*4);
 			int wholeImgIndex = (imgBufferWidth*3*i) + (j*3);
 
-			wholeImage[wholeImgIndex+0] = (buffer[bufferIndex+0]*255);
-			wholeImage[wholeImgIndex+1] = (buffer[bufferIndex+1]*255);
-			wholeImage[wholeImgIndex+2] = (buffer[bufferIndex+2]*255);
+			wholeImage[wholeImgIndex+0] = (buffer[bufferIndex+0] + (background[0]/255.0)*(1.0-buffer[bufferIndex+3])) * 255;
+			wholeImage[wholeImgIndex+1] = (buffer[bufferIndex+1] + (background[1]/255.0)*(1.0-buffer[bufferIndex+3])) * 255;
+			wholeImage[wholeImgIndex+2] = (buffer[bufferIndex+2] + (background[2]/255.0)*(1.0-buffer[bufferIndex+3])) * 255;
+
 
 			//printf("\n i: %d, j: %d,   bufferIndex: %d   wholeImgIndex: %d  - rgb %.2f  %.2f  %.2f    -  rgb %d %d %d",i,j,bufferIndex,wholeImgIndex, 
 			//	buffer[bufferIndex+0]*buffer[bufferIndex+3]*255, buffer[bufferIndex+1]*buffer[bufferIndex+3]*255, buffer[bufferIndex+2]*buffer[bufferIndex+3]*255,
 			//	 					wholeImage[wholeImgIndex+0],					 wholeImage[wholeImgIndex+1],						wholeImage[wholeImgIndex+2]);
 		}
 
-
-    std::string imgFilenameFinal = "/home/pascal/Desktop/FinalBuffer.ppm";
-    createPpm(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal);
+    //std::string imgFilenameFinal = "/home/pascal/Desktop/FinalBuffer.ppm";
+    //createPpm(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal);
   
-
 	delete []buffer;
 }
 

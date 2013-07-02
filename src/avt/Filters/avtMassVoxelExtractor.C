@@ -1366,10 +1366,10 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
     //source_rgb[3] = alpha;
  
     
-
     for (int i=0; i<4; i++)
     // front to back
         dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
+
 
 
     //if (show == 1){
@@ -1409,7 +1409,34 @@ float cubicfilter(float x){
 }
 
 
+void getIndexandDist(float dist, int index, float offset,    int &index_left, int &index_right,    float &dist_left, float &dist_right){
+    if (dist < offset){
+        index_left = index-1;
+        index_right = index;
+        dist_left = dist + 0.5;
+        dist_right = 1.0 - dist_left;
+    }else{
+        index_left = index;
+        index_right = index+1;
+        dist_left = dist - 0.5;
+        dist_right = 1.0 - dist_left;
+    }
+}
 
+// back: 0, front: 1,  top:2, bottom:3,  ;left:4, right: 5
+void computeIndices(int dims[3], int indices[6], int returnIndices[8]){
+    returnIndices[0] = (indices[0]) *((dims[0]-1)*(dims[1]-1)) + (indices[3])   *(dims[0]-1) + (indices[4]);
+    returnIndices[1] = (indices[0]) *((dims[0]-1)*(dims[1]-1)) + (indices[3])   *(dims[0]-1) + (indices[5]);
+
+    returnIndices[2] = (indices[0]) *((dims[0]-1)*(dims[1]-1)) + (indices[2])   *(dims[0]-1) + (indices[4]);
+    returnIndices[3] = (indices[0]) *((dims[0]-1)*(dims[1]-1)) + (indices[2])   *(dims[0]-1) + (indices[5]);
+
+    returnIndices[4] = (indices[1]) *((dims[0]-1)*(dims[1]-1)) + (indices[3])   *(dims[0]-1) + (indices[4]);
+    returnIndices[5] = (indices[1]) *((dims[0]-1)*(dims[1]-1)) + (indices[3])   *(dims[0]-1) + (indices[5]);
+
+    returnIndices[6] = (indices[1]) *((dims[0]-1)*(dims[1]-1)) + (indices[2])   *(dims[0]-1) + (indices[4]);
+    returnIndices[7] = (indices[1]) *((dims[0]-1)*(dims[1]-1)) + (indices[2])   *(dims[0]-1) + (indices[5]);
+}
 
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor::SampleVariable
@@ -1479,43 +1506,18 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         int index_left, index_right,                index_top, index_bottom,            index_front, index_back;
         float dist_from_left, dist_from_right,      dist_from_top,dist_from_bottom,     dist_from_front, dist_from_back;
 
-        if (x_right < 0.5){
-            index_left = newInd[0]-1;
-            index_right = newInd[0];
-            dist_from_left = x_right + 0.5;
-            dist_from_right = 1.0 - dist_from_left;
-        }else{
-            index_left = newInd[0];
-            index_right = newInd[0]+1;
-            dist_from_left = x_right - 0.5;
-            dist_from_right = 1.0 - dist_from_left;
-        }
+        
 
-        if (y_top < 0.5){
-            index_bottom = newInd[1]-1;
-            index_top = newInd[1];
-            dist_from_bottom = y_top + 0.5;
-            dist_from_top = 1.0 - dist_from_bottom;
-        }else{
-            index_bottom = newInd[1];
-            index_top = newInd[1]+1;
-            dist_from_bottom = y_top - 0.5;
-            dist_from_top = 1.0 - dist_from_bottom;
-        }
+        getIndexandDist(x_right, newInd[0], 0.5,   index_left, index_right,   dist_from_left, dist_from_right);
+        getIndexandDist(y_top, newInd[1], 0.5,   index_bottom, index_top,   dist_from_bottom, dist_from_top);
+        getIndexandDist(z_back, newInd[2], 0.5,   index_back, index_front,   dist_from_back, dist_from_front);
 
-        if (z_back < 0.5){
-            index_back = newInd[2]-1;
-            index_front = newInd[2];
+        // back: 0, front: 1,  top:2, bottom:3,  ;left:4, right: 5
+        int indices[6];
+        indices[0] = index_back;    indices[1] = index_back;
+        indices[2] = index_top;    indices[3] = index_bottom;
+        indices[4] = index_left;    indices[5] = index_right;
 
-            dist_from_back = z_back + 0.5;
-            dist_from_front = 1.0 - dist_from_back;
-        }else{
-            index_back = newInd[2];
-            index_front = newInd[2]+1;
-
-            dist_from_back = z_back - 0.5;
-            dist_from_front = 1.0 - dist_from_back;
-        }
 
         if (trilinearInterpolation || rayCastingSLIVR){
             // Checking for ghost cells
@@ -1534,20 +1536,9 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         if (trilinearInterpolation || rayCastingSLIVR){
             if (ncell_arrays > 0){
                 int indexT[8];
-                int offset = 1;
-                indexT[0] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_left);
-                indexT[1] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_right);
-
-                indexT[2] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_left);
-                indexT[3] = (index_back) *((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_right);
-
-                indexT[4] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_left);
-                indexT[5] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_bottom)   *(dims[0]-1) + (index_right);
-
-                indexT[6] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_left);
-                indexT[7] = (index_front)*((dims[0]-1)*(dims[1]-1)) + (index_top)      *(dims[0]-1) + (index_right);
-
-                for (l = 0 ; l < ncell_arrays ; l++)
+                computeIndices(dims, indices, indexT);
+                
+                for (l = 0 ; l < ncell_arrays ; l++)    // ncell_arrays: usually 1
                 {
                     void  *cell_array = cell_arrays[l];
                     double vals[8];
@@ -1564,14 +1555,14 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                         dist_from_right     * dist_from_bottom      * dist_from_back *vals[6] +
                                         dist_from_left      * dist_from_bottom      * dist_from_back *vals[7];
 
-                        tmpSampleList[count][cell_index[l]+m] = val;  
+                        tmpSampleList[count][cell_index[l]+m] = val;   
 
-                        int show = 0;
-                        if (proc == 5 && patch == 35)
-                            show = 1;
+                        //int show = 0;
+                        //if (proc == 5 && patch == 35)
+                        //    show = 1;
                         stepsZ++;
                         if (rayCastingSLIVR){
-                            computePixelColor(val, dest_rgb, show);
+                            computePixelColor(val, dest_rgb, 0);
 
                            // debug
                            // if (proc == 5 && patch == 35)
