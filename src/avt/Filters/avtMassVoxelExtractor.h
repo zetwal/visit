@@ -167,6 +167,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           lightPosition[4];
     double           materialProperties[4];
     avtOpacityMap    *transferFn1D;
+    double           gradient[3];
 
 
     // Patch details for one image
