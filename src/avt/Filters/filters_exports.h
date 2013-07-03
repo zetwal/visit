@@ -108,6 +108,23 @@ struct imgData{
 };
 
 
+// ****************************************************************************
+//  Struct:  iotaMeta
+//
+//  Purpose:
+//    Holds the image data generated
+//
+//  Programmer:  
+//  Creation:    
+//
+// ****************************************************************************
+struct iotaMeta{
+  int procId;  
+  int patchNumber; 
+  
+  float avg_z;   
+};
+
 #endif
 
 
