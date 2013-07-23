@@ -52,6 +52,7 @@
 
 #include <avtOpacityMap.h>
 #include <fstream>
+#include <vector>
 
 #include <avtImgCommunicator.h>
 
@@ -170,11 +171,11 @@ class AVTFILTERS_API avtSamplePointExtractor
     void                      SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
 
     // Getting image information
-    imgMetaData               initMetaPatch(int id);                                  // initialize a patch
-    int                       getImgPatchSize(){return imgPatchSize;};                // gets the number of patches
-    void                      getImgMetaPatches(imgMetaData *image);                  // gets the metadata
-    imgData                   getImgData(int patchId){return imageData[patchId]; };   // gets the image
-    void                      delImgPatches();                                        // deletes patches
+    imgMetaData               initMetaPatch(int id);                                            // initialize a patch
+    void                      getImgMetaPatches(imgMetaData *image);                            // gets the metadata
+    int                       getImgPatchSize(){ return patchCount;};                           // gets the number of patches
+    imgData                   getImgData(int patchId){ return imageDataVector.at(patchId); };   // gets the image
+    void                      delImgPatches();                                                  // deletes patches
     
   protected:
     int                       width, height, depth;
@@ -212,9 +213,13 @@ class AVTFILTERS_API avtSamplePointExtractor
     // RaycastingSLIVR
 
     // Information about the patches
-    int                       imgPatchSize;
-    imgMetaData               *imageMetaPatchArray;   // metadata for patches
-    imgData                   *imageData;             // images for patches
+    //int                       imgPatchSize;
+
+    int                       patchCount;
+    int                       totalAssignedPatches;
+
+    std::vector<imgMetaData>  imageMetaPatchVector;
+    std::vector<imgData>      imageDataVector;
 
     // triliniear / raycastin SLIVR
     bool                      trilinearInterpolation;

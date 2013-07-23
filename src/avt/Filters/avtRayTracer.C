@@ -458,7 +458,6 @@ avtRayTracer::Execute(void)
     avtDataObject_p samples = extractor.GetOutput();
 
     
-
     if (rayCastingSLIVR == true){
         std::cout << PAR_Rank() << "   avtRayTracer::Execute     starting RayCasting SLIVR  ...... " << std::endl;
         imgComm.init();
@@ -475,6 +474,8 @@ avtRayTracer::Execute(void)
         // Getting the patches
         //
         int numPatches = extractor.getImgPatchSize();     // get the number of patches - Brown /8 procs / 100 each
+
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute     numPatches: " << numPatches << std::endl;
         
 
         //
@@ -491,7 +492,8 @@ avtRayTracer::Execute(void)
         // Send the patches metadata
         //
         imgMetaData *imgAllPatches;
-        imgAllPatches= new imgMetaData[numPatches];
+        imgAllPatches = NULL;
+        imgAllPatches = new imgMetaData[numPatches];
         extractor.getImgMetaPatches(imgAllPatches);
 
         for (int i=0; i<numPatches; i++)
@@ -507,11 +509,11 @@ avtRayTracer::Execute(void)
         //  Sends the patches image data to proc 0
         //
         if (PAR_Rank() == 0){
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute  Proc 0 Receives patches..... " << std::endl;
+
             // Tell Proc 0 about its own patches
             for (int i=0; i<numPatches; i++){
-                 imgData tempImgData = extractor.getImgData(i);
-                 int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);
+                imgData tempImgData = extractor.getImgData(i);
+                int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);
 
                 // creating a buffer for the img data & populating it
                 float *msgBuffer = new float[imgSize + 2];
@@ -520,22 +522,17 @@ avtRayTracer::Execute(void)
                 for (int j=0; j<imgSize; j++)
                     msgBuffer[j+2] = tempImgData.imagePatch[j];
 
+                imgComm.setPatchImg(imgAllPatches[i].procId, imgAllPatches[i].patchNumber, imgSize+2, msgBuffer);
 
-                // memory leak here
-                imgComm.setPatchImg(imgAllPatches[i].procId, imgAllPatches[i].patchNumber, imgSize+1, msgBuffer);
-
+                delete []tempImgData.imagePatch;
                 delete []msgBuffer;
             } 
-        
-            // Receive the other patches
+
+            // Receive the other patches from the other processors
             imgComm.masterRecvPatchImgData();
-            std::cout << "........... " << PAR_Rank() << "   avtRayTracer::Execute Proc 0 done receiving patches!" << std::endl;
         }
         else{       
-            std::cout << PAR_Rank() << "   avtRayTracer::Execute procs sending patches .........." << std::endl;
-
             for (int i=0; i<numPatches; i++){
-                
                 imgData tempImgData = extractor.getImgData(i);
                 int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);
 
@@ -548,37 +545,18 @@ avtRayTracer::Execute(void)
                 for (int j=0; j<imgSize; j++)
                     sendMsgBuffer[j+2] = tempImgData.imagePatch[j];
                 
+                imgComm.sendPatchImgData(0, imgSize+2, sendMsgBuffer);
 
-                //if (imgAllPatches[i].procId == 5 && imgAllPatches[i].patchNumber == 35){
-                //    std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtRayTracer.ppm";
-                //    createPpm(tempImgData.imagePatch, imgAllPatches[i].dims[0], imgAllPatches[i].dims[1], imgFilename);
-                //}
-                
-                // if (imgAllPatches[i].procId == 5 && imgAllPatches[i].patchNumber == 35){
-                //     std::cout << "Screen[0]: " << screen[0] << "   screen[1]: " <<screen[1] << std::endl;
-                //     std::cout << "Par_Rank(): " << imgAllPatches[i].procId << "   patch: " << imgAllPatches[i].patchNumber << std::endl;
-                //     std::cout << "avtRayTracer height: " << imgAllPatches[i].dims[1] << "   width: " << imgAllPatches[i].dims[0] << std::endl;
-
-                //     for (int l=0; l<imgAllPatches[i].dims[1]; l++){
-                //         for (int m=0; m<imgAllPatches[i].dims[0]; m++){
-
-                //             int index = l*(4*imgAllPatches[i].dims[0]) + m*4;
-                //             std::cout << index/4 << " _ _ _ "  << tempImgData.imagePatch[index]<< ", " <<                               tempImgData.imagePatch[index+1] << ", " << tempImgData.imagePatch[index+2] << ", " << tempImgData.imagePatch[index+3] << "  \n  ";
-                //             printf("%d _ _ %.6f  %.6f  %.6f  %.6f  -  %.6f   %.6f  %.6f  %.6f\n",index/4,tempImgData.imagePatch[index], tempImgData.imagePatch[index+1],tempImgData.imagePatch[index+2],tempImgData.imagePatch[index+3], sendMsgBuffer[index+2],sendMsgBuffer[index+3],sendMsgBuffer[index+4],sendMsgBuffer[index+5]);
-                //         }
-                //         std::cout << "\n";
-                //     }
-                //     std::cout << "\n";
-                //     std::cout << "Ready to send ... \n";
-                // }
-                
-                imgComm.sendPatchImgData(0, imgSize +2,sendMsgBuffer);
+                delete []tempImgData.imagePatch;
                 delete []sendMsgBuffer;
             }
-
-            std::cout << "........... " << PAR_Rank() << "   avtRayTracer::Execute Proc done sending patches!" << std::endl;
         }
+        if (imgAllPatches != NULL)
+            delete []imgAllPatches;
+
+
         imgComm.syncAllProcs();
+        
         
         visitTimer->StopTimer(timingComm, "Communicating");
         visitTimer->DumpTimings();
@@ -590,7 +568,8 @@ avtRayTracer::Execute(void)
 
         // create images structures to hold these
         avtImage_p whole_image, tempImage;
-        unsigned char *imgTest, *imgtempTest;
+        unsigned char *imgTest;
+        imgTest = NULL;
 
         tempImage = new avtImage(this);
         
@@ -619,10 +598,7 @@ avtRayTracer::Execute(void)
             tempImage->Copy(*whole_image);
         SetOutput(tempImage);
 
-        extractor.delImgPatches();
-
         std::cout << "....... " << PAR_Rank() << "   avtRayTracer::Execute  ~  done RayCasting SLIVR!!!!" << std::endl;
-
 
         visitTimer->StopTimer(timingCompositinig, "Compositing");
         visitTimer->DumpTimings();
@@ -630,6 +606,10 @@ avtRayTracer::Execute(void)
         visitTimer->StopTimer(timingIndex, "Ray Tracing");
         visitTimer->DumpTimings();
 
+        //if (imgTest != NULL)
+        //    delete []imgTest;
+
+        extractor.delImgPatches();
 
         return;
     }

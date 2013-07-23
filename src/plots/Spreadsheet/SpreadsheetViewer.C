@@ -1089,8 +1089,13 @@ SpreadsheetViewer::displayStructuredGrid(int meshDims[3])
 
         // Try to get a pointer to the ghost zones array.
         ghostArray = input->GetCellData()->GetArray("avtGhostZones");
-        if(ghostArray != 0 && ghostArray->GetDataType() != VTK_UNSIGNED_CHAR)
+        if(ghostArray != 0 && ghostArray->GetDataType() != VTK_UNSIGNED_CHAR){
+            std::cout << " SpreadsheetViewer::displayStructuredGrid  ghostArray != 0 " << std::endl;
             ghostArray = 0;
+        }else{
+            std::cout << " SpreadsheetViewer::displayStructuredGrid  ghostArray @##$ 0 " << std::endl;
+        }
+
 
         // Try to get a pointer to the missing data array.
         missingDataArray = input->GetCellData()->GetArray("avtMissingData");

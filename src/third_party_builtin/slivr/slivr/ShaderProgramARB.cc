@@ -152,7 +152,7 @@ ShaderProgramARB::init_shaders_supported(std::string& error)
           break;
         }
       }
-      max_texture_size_1_ = Clamp(i, 64, i/2);
+      max_texture_size_1_ = Clamp(i, 64, i/2); //i/2);
 
 
       // Clear the OpenGL errors before checking for proxy textures.
@@ -174,7 +174,7 @@ ShaderProgramARB::init_shaders_supported(std::string& error)
           break;
         }
       }
-      max_texture_size_4_ = Clamp(i, 64, i/2);
+      max_texture_size_4_ = Clamp(i, 64, i/2); //i/2);
     }
 #endif // !sgi
 

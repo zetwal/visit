@@ -115,7 +115,7 @@ class PIPELINE_API avtOpacityMap
                                                       { return tableEntries; };
 
     float                        QuantizeValF(const double &val);
-    void                         QueryTF(double scalarValue, double color[4]);
+    int                         QueryTF(double scalarValue, double color[4]);
 
   protected:
     RGBA                        *table;
@@ -226,11 +226,12 @@ avtOpacityMap::QuantizeValF(const double &val){
 //  Modifications:
 //
 // ****************************************************************************
-inline void
+inline int
 avtOpacityMap::QueryTF(double scalarValue, double color[4]){
     //std::cout << "\n\n\nscalarValue: " << scalarValue << std::endl;
     if (scalarValue <= min){
         int index = 0;
+
         _RGBA colorRGBA = transferFn1D[index];
         color[0] = colorRGBA.R;
         color[1] = colorRGBA.G;
@@ -239,7 +240,7 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
 
     //std::cout << "min color: " << color[0] << " , " << color[1] << " ,  " << color[2] << " ,  " << color[3] << std::endl;
     //std::cout << "colorRGB: " << colorRGBA.R << " , " << colorRGBA.G << " ,  " << colorRGBA.B << " ,  " << colorRGBA.A << std::endl;
-        return;
+        return 0;
     }
 
     if (scalarValue >= max){
@@ -252,7 +253,7 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
 
     //std::cout << "max color: " << color[0] << " , " << color[1] << " ,  " << color[2] << " ,  " << color[3] << std::endl;
     //std::cout << "colorRGB: " << colorRGBA.R << " , " << colorRGBA.G << " ,  " << colorRGBA.B << " ,  " << colorRGBA.A << std::endl;
-        return;
+        return 0;
     }
 
     //std::cout << "\nscalarValue min: " << min << std::endl;
@@ -298,6 +299,8 @@ avtOpacityMap::QueryTF(double scalarValue, double color[4]){
     color[3] = (1.0-indexDiff)*colorLow[3] + indexDiff*colorHigh[3];
 
     //std::cout << "\n color: " << color[0] << " , " << color[1] << " ,  " << color[2] << " ,  " << color[3] << std::endl;
+
+    return 1;
 }
 
 #endif

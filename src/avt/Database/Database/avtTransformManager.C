@@ -1550,6 +1550,8 @@ avtTransformManager::CSGToDiscrete(avtDatabaseMetaData *md,
     vtkDataArray *ghostZones = dgrid->GetCellData()->GetArray("avtGhostZones");
     rv->GetCellData()->AddArray(ghostZones);
 
+    std::cout << "^^^^^ rv->GetCellData()->AddArray(ghostZones) ^^^^^^^ " << std::endl;
+
     std::string meshname = md->MeshForVar(vname);
     md->SetContainsGhostZones(meshname, AVT_CREATED_GHOSTS);
 

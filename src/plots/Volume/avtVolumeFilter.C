@@ -973,12 +973,17 @@ avtVolumeFilter::ModifyContract(avtContract_p contract)
     char exprDef[128];
     std::string exprName = (std::string)"_expr_" + (std::string)var;
 
+    // /spec->GetDataRequest()->SetDesiredGhostDataType(GHOST_ZONE_DATA);
+
     if (atts.GetScaling() == VolumeAttributes::Linear)
     {
 #ifdef HAVE_LIBSLIVR
         if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
             ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear)))
+            
             ds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
+
+        //std::cout << "Add ghosts 0" << std::endl;
 #endif
         newcontract = new avtContract(contract, ds);
         primaryVariable = new char[strlen(var)+1];
@@ -1004,6 +1009,8 @@ avtVolumeFilter::ModifyContract(avtContract_p contract)
         if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
             ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear)))
             nds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
+
+        std::cout << "Add ghosts1" << std::endl;
 #endif
         newcontract = new avtContract(contract, nds);
         primaryVariable = new char[exprName.size()+1];
@@ -1022,6 +1029,8 @@ avtVolumeFilter::ModifyContract(avtContract_p contract)
         if ((atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR) ||
             ((atts.GetRendererType() == VolumeAttributes::RayCasting) && (atts.GetSampling() == VolumeAttributes::Trilinear)))
             nds->SetDesiredGhostDataType(GHOST_ZONE_DATA);
+
+        std::cout << "Add ghosts2" << std::endl;
 #endif
         newcontract = new avtContract(contract, nds);
         primaryVariable = new char[strlen(exprName.c_str())+1];

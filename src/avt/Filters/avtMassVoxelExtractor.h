@@ -171,7 +171,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
 
 
     // Patch details for one image
-    bool             patchDrawn;        // whether the patch is drawn or not
+    int              patchDrawn;        // whether the patch is drawn or not
     int              imgDims[2];        // size of the patch
     int              imgLowerLeft[2];   // coordinates in the whole image
     int              imgUpperRight[2];  //

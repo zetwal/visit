@@ -13,6 +13,7 @@
 #endif
 
 #include <avtImgCommunicator.h>
+#include <fstream>
 
 
 
@@ -48,7 +49,7 @@ void displayStruct_meta(imgMetaData temp){
 }
 
 
-bool sortImgByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z < after.avg_z; }
+bool sortImgByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z > after.avg_z; }
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::
@@ -103,8 +104,12 @@ avtImgCommunicator::~avtImgCommunicator(){
 		if (processorPatchesCount != NULL)
 			delete []processorPatchesCount;
 
-		if (allRecvImgData != NULL)
+		if (allRecvImgData != NULL){
+			for (int i=0; i<totalPatches; i++)
+				delete []allRecvImgData[i].imagePatch;
+
 			delete []allRecvImgData;
+		}
 
 		if (allRecvPatches != NULL)
 			delete []allRecvPatches;
@@ -125,10 +130,10 @@ avtImgCommunicator::~avtImgCommunicator(){
 //
 // ****************************************************************************
 void avtImgCommunicator::init(){
-
 	if (my_id == 0)
 		processorPatchesCount = new int[num_procs];
 }
+
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::waitToSync
@@ -143,13 +148,10 @@ void avtImgCommunicator::init(){
 //
 // ****************************************************************************
 void avtImgCommunicator::syncAllProcs(){
-
 #ifdef PARALLEL
 	MPI_Barrier(MPI_COMM_WORLD);
 #endif
-
 }
-
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::
@@ -169,7 +171,6 @@ void avtImgCommunicator::sendNumPatches(int destId, int numPatches){
 #ifdef PARALLEL
 	MPI_Send(patchesProc, 2, MPI_INT, 0, MSG_DATA, MPI_COMM_WORLD);
 #endif
-
 }
 
 
@@ -189,11 +190,12 @@ void avtImgCommunicator::masterRecvNumPatches(){
 	if (my_id == 0){
 		int tempRecvBuffer[2];
 		for (int i=0; i<num_procs; i++){
-			MPI_Recv(&tempRecvBuffer, 2, MPI_INT, MPI_ANY_SOURCE, MSG_DATA, MPI_COMM_WORLD, &status);	// receive
+			MPI_Recv(&tempRecvBuffer, 2, MPI_INT, MPI_ANY_SOURCE, MSG_DATA, MPI_COMM_WORLD, &status);	
+			
 			processorPatchesCount[tempRecvBuffer[0]] = tempRecvBuffer[1];	// convert to the correct stucture
 			totalPatches += processorPatchesCount[tempRecvBuffer[0]];		// count the number of patches
 			
-			//std::cout << "!!! Recv: " << tempRecvBuffer[0] << "   Patch: " << processorPatchesCount[tempRecvBuffer[0]] << std::endl;
+			std::cout << "!!! Recv: " << tempRecvBuffer[0] << "   Patch: " << processorPatchesCount[tempRecvBuffer[0]] << std::endl;
 		}	
 		
 		allRecvPatches = new imgMetaData[totalPatches];
@@ -219,12 +221,18 @@ void avtImgCommunicator::sendPatchMetaData(int destId, imgMetaData tempImg){
 
 #ifdef PARALLEL
 	MPI_Send(&tempImg, 1, _img_mpi, 0, MSG_DATA, MPI_COMM_WORLD);
-
-	//if (PAR_Rank() == 4)
-	//	displayStruct_imgSend(PAR_Rank(),destId,tempImg);
 #endif
 }
 
+
+int avtImgCommunicator::getDataPatchID(int procID, int patchID){
+	int sumPatches = 0;
+	for (int i=0; i<procID; i++)
+		sumPatches += processorPatchesCount[i];
+	
+	return (sumPatches+patchID);
+
+}
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::
@@ -245,12 +253,9 @@ void avtImgCommunicator::masterRecvPatchMetaData(){
 		// Receive
 		MPI_Recv (&tempRecvImg, 1, _img_mpi, MPI_ANY_SOURCE, MSG_DATA, MPI_COMM_WORLD, &status);
 			
-		int patchIndex = tempRecvImg.procId * processorPatchesCount[tempRecvImg.procId] + tempRecvImg.patchNumber;
+		int patchIndex = getDataPatchID(tempRecvImg.procId, tempRecvImg.patchNumber);
 		allRecvPatches[patchIndex] = setImg(tempRecvImg.inUse, tempRecvImg.procId,  tempRecvImg.patchNumber, tempRecvImg.dims[0], tempRecvImg.dims[1],  
-							   tempRecvImg.screen_ll[0],tempRecvImg.screen_ll[1], tempRecvImg.screen_ur[0],tempRecvImg.screen_ur[1], tempRecvImg.avg_z);
-
-		//if (tempRecvImg.procId == 4)
-		//	displayStruct_imgRecv(0,tempRecvImg.procId, allRecvPatches[i]);
+							   				tempRecvImg.screen_ll[0],tempRecvImg.screen_ll[1], tempRecvImg.screen_ur[0],tempRecvImg.screen_ur[1], tempRecvImg.avg_z);
 	}
 	#endif
 
@@ -276,8 +281,11 @@ void avtImgCommunicator::sendPatchImgData(int destId, int arraySize, float *send
 
 	//MPI_Send(&curLength, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
 	//		MPI_Send(pszFileBuffer+curStartNum, curLength, MPI_CHAR, i, 2, MPI_COMM_WORLD);
+	//std::cout << " \n $ Sending arraysize " << std::endl;
 	MPI_Send(&arraySize, 1, MPI_INT, destId, 1, MPI_COMM_WORLD);
+	//std::cout << "Sending data " << std::endl;
 	MPI_Send(sendMsgBuffer, arraySize, MPI_FLOAT, destId, 2, MPI_COMM_WORLD);
+	//std::cout << "Sent arraysize + data " << std::endl;
 
 	//if ((int)sendMsgBuffer[0] == 35){
 	//	for (int i=1; i<arraySize; i+=4)
@@ -302,108 +310,26 @@ void avtImgCommunicator::masterRecvPatchImgData(){
 #ifdef PARALLEL
 	int startingProcessor = 1;
 	int patchId;
-	//allRecvImgData = new imgData[totalPatches];
 
 	for (int i=startingProcessor; i<num_procs; i++){ // start from 1 to ignore self
 		for (int j=0; j<processorPatchesCount[i]; j++){
-
-/*
-			printf("\n proc: %d  			processor patch count: %d     patchID: %d    dims: %d, %d ",i, processorPatchesCount[i], patchId, allRecvPatches[patchId].dims[0], allRecvPatches[patchId].dims[1]);
-			int imgSize = (allRecvPatches[patchId].dims[0] * allRecvPatches[patchId].dims[1] * 4);
-
-			float *recvMsgBuffer = new float[imgSize + 2];
-
-			int bufferSize;
-			MPI_Recv(&bufferSize, 1, MPI_INT, 0,1, MPI_COMM_WORLD, &status);
-			MPI_Recv(&bufferSize,imgSize + 1, MPI_FLOAT, i, 1, MPI_COMM_WORLD, &status);
-			MPI_Recv(recvMsgBuffer,imgSize + 1, MPI_FLOAT, i, 2, MPI_COMM_WORLD, &status);
-
-			allRecvImgData[patchId].imagePatch = new float[imgSize];
-
-			allRecvImgData[patchId].procId = (int)recvMsgBuffer[0];
-			allRecvImgData[patchId].patchNumber = (int)recvMsgBuffer[1];
-
-
-			for (int k=0; k<imgSize; k++){
-				allRecvImgData[patchId].imagePatch[k] = recvMsgBuffer[k+1];
-			}
-			patchId++;
-
-
-*/
-
-			//printf("\n proc: %d  			processor patch count: %d     patchID: %d    dims: %d, %d ",i, processorPatchesCount[i], patchId, allRecvPatches[patchId].dims[0], allRecvPatches[patchId].dims[1]);
-			//int imgSize = (allRecvPatches[patchId].dims[0] * allRecvPatches[patchId].dims[1] * 4);
-
-			//float *recvMsgBuffer = new float[imgSize + 2];
 
 			int bufferSize;
 			MPI_Recv(&bufferSize, 1, MPI_INT, i,1, MPI_COMM_WORLD, &status);
 			float *recvMsgBuffer = new float[bufferSize];
 			MPI_Recv(recvMsgBuffer,bufferSize, MPI_FLOAT, i, 2, MPI_COMM_WORLD, &status);
 
-			patchId = 0;
-			for (int k=0; k<((int)recvMsgBuffer[0]); k++)
-				patchId += processorPatchesCount[k];
-			patchId += ((int)recvMsgBuffer[1]);
+			patchId = getDataPatchID((int)recvMsgBuffer[0], (int)recvMsgBuffer[1]);
 
-			
 			allRecvImgData[patchId].procId = (int)recvMsgBuffer[0];
 			allRecvImgData[patchId].patchNumber = (int)recvMsgBuffer[1];
 			allRecvImgData[patchId].imagePatch = new float[bufferSize-2];
+
 			for (int k=0; k<bufferSize-2; k++){
 				allRecvImgData[patchId].imagePatch[k] = recvMsgBuffer[k+2];
 			}
 			
-
-			
-			//
-			// Debug
-			// 
-			/*
-			if ((int)recvMsgBuffer[0] == 5 && (int)recvMsgBuffer[1] == 35){
-				printf("\n");
-				printf("\n Recv Proc: %d    Patch: %d    PatchId: %d",                 (int)recvMsgBuffer[0],               (int)recvMsgBuffer[1], patchId);
-				printf("\n Img  Proc: %d    Patch: %d    PatchId: %d",        allRecvImgData[patchId].procId, allRecvImgData[patchId].patchNumber, patchId);
-				printf("\n Meta Proc: %d    Patch: %d    PatchId: %d \n",     allRecvPatches[patchId].procId, allRecvPatches[patchId].patchNumber, patchId);
-				for (int i=2; i<bufferSize-2; i+=4)
-					printf("\n 35: %d ** %.6f %.6f %.6f %.6f \n",i/4, recvMsgBuffer[i],recvMsgBuffer[i+1],recvMsgBuffer[i+2],recvMsgBuffer[i+3]);
-
-				//spPatchId = patchId;
-			}
-			*/
-
-			//if (allRecvPatches[patchId].procId == 5 && allRecvPatches[patchId].patchNumber == 35){
-            //    std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtImgComm.ppm";
-            //    createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[patchId].dims[0], allRecvPatches[patchId].dims[1], imgFilename);
-            //}
-
-			/*
-			//if (i==0 && j ==0){
-			//if (i==5 && j ==35){
-			if (allRecvPatches[i].procId == 5 && allRecvPatches[i].patchNumber == 35){
-				std::cout << "\n\nPar_Rank(): " << allRecvPatches[i].procId << "   patch: " << allRecvPatches[i].patchNumber << std::endl;
-
-                std::cout << "avtImgCommunicator height: " << allRecvPatches[i].dims[1] << "   width: " << allRecvPatches[i].dims[0] << std::endl;
-                std::cout << "avtImgCommunicator screen_ll[0]: " << allRecvPatches[i].screen_ll[0] << "   screen_ll[1]: " << allRecvPatches[i].screen_ll[1] << std::endl;
-                std::cout << "avtImgCommunicator screen_ur[0]: " << allRecvPatches[i].screen_ur[0] << "   screen_ur[1]: " << allRecvPatches[i].screen_ur[1] << std::endl;
-                std::cout << "avtImgCommunicator avg_z: " << allRecvPatches[i].avg_z << std::endl;
-
-				for (int l=0; l<allRecvPatches[0].dims[1]; l++){
-	                for (int m=0; m<allRecvPatches[0].dims[0]; m++){
-
-	                    int index = l*(4*allRecvPatches[0].dims[0]) + m*4;
-	                    std::cout << index/4 << " ~ "  << allRecvImgData[0].imagePatch[index]<< ", " << allRecvImgData[0].imagePatch[index+1] << ", " << allRecvImgData[0].imagePatch[index+2] << ", " << allRecvImgData[0].imagePatch[index+3] << "  \n  ";
-	                }
-	                std::cout << "\n";
-	            }
-	            std::cout << "\n";
-        	}
-        	
-			//printf("\ntotal patches: %d    patchID: %d    dims: %d, %d ",totalPatches, patchId, allRecvPatches[patchId].dims[0], allRecvPatches[patchId].dims[1]);
-	*/
 			delete []recvMsgBuffer;
-			//}
 		}
 	}
 #endif
@@ -424,57 +350,81 @@ void avtImgCommunicator::masterRecvPatchImgData(){
 //
 // ****************************************************************************
 void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage, unsigned char background[3]){
-	// sort the images by depth
+	// sort the metadata image array by depth
 	std::sort(allRecvPatches, allRecvPatches + totalPatches, &sortImgByDepth);
 
-	// Compose
-
-	// Create a buffer to store the compositing
+	// Create a buffer to store the composited image
 	float *buffer = new float[imgBufferWidth * imgBufferHeight * 4];
-	for (int i=0; i<(imgBufferWidth * imgBufferHeight * 4); i++)
-		buffer[i] = 0.0;
+	for (int i=0; i<(imgBufferWidth * imgBufferHeight * 4); i+=4){
+		buffer[i] = background[0]/255.0;	buffer[i+1] = background[1]/255.0; buffer[i+2] = background[2]/255.0; buffer[i+3] = 0.0;
+	}
 
-
-	//for (int i=0; i<1; i++){
+	int imgCount = 0;
 	for (int i=0; i<totalPatches; i++){
-		int startingY = allRecvPatches[i].screen_ll[1];  // need to invert
 		int startingX = allRecvPatches[i].screen_ll[0];
+		int startingY = allRecvPatches[i].screen_ll[1]; 
 
-		int patchId = 0;
-		for (int k=0; k<allRecvPatches[i].procId; k++)
-			patchId += processorPatchesCount[k];
-		patchId += allRecvPatches[i].patchNumber;
+		// get the patchId from the unsorted imageData array
+		int patchId = getDataPatchID(allRecvPatches[i].procId, allRecvPatches[i].patchNumber);
 
-		//printf("\n startingX %d - startingY %d \n", allRecvPatches[i].screen_ll[0], allRecvPatches[i].screen_ll[1]);
 
-		//if (allRecvPatches[i].procId==5 && allRecvPatches[i].patchNumber==35){
-        //    std::string imgFilename = "/home/pascal/Desktop/examplePtEx_in_avtImgComm_compose.ppm";
-        //    createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[i].dims[0], allRecvPatches[i].dims[1], imgFilename);
-        //}	
+		// DEBUG - save image
+		std::ofstream myfile;
+		if (imgCount == 0){
+  			myfile.open ("/home/pascal/Desktop/example0.txt");
+  			std::cout << " One " << allRecvPatches[i].dims[0] << " x " << allRecvPatches[i].dims[1] << " ~ " << allRecvPatches[i].screen_ll[0] << " , " << allRecvPatches[i].screen_ll[1] << "  ~  " << allRecvPatches[i].screen_ur[0] << " , " << allRecvPatches[i].screen_ur[1] << " ~ " << allRecvPatches[i].avg_z  << std::endl;
+  		}
+		else
+		 	if (imgCount == 1){
+		 		myfile.open ("/home/pascal/Desktop/example1.txt");
+		 		std::cout << " Two " << allRecvPatches[i].dims[0] << " x " << allRecvPatches[i].dims[1] << " ~ " << allRecvPatches[i].screen_ll[0] << " , " << allRecvPatches[i].screen_ll[1] << "  ~  " << allRecvPatches[i].screen_ur[0] << " , " << allRecvPatches[i].screen_ur[1] << " ~ " << allRecvPatches[i].avg_z  << std::endl;
+  			}
 
 
 		for (int j=0; j<allRecvPatches[i].dims[1]; j++){
 			for (int k=0; k<allRecvPatches[i].dims[0]; k++){
-				int subImgIndex = allRecvPatches[i].dims[0]*j*4 + k*4;
-				int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);
+
+				int subImgIndex = allRecvPatches[i].dims[0]*j*4 + k*4;										// index in the subimage 
+				int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);	// index in the big buffer
 
 				//Front to back compositing: 
 				//composited = source * (1.0 - destination.a) + destination; 
-				buffer[bufferIndex+0] = allRecvImgData[patchId].imagePatch[subImgIndex+0] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+0];
-				buffer[bufferIndex+1] = allRecvImgData[patchId].imagePatch[subImgIndex+1] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+1];
-				buffer[bufferIndex+2] = allRecvImgData[patchId].imagePatch[subImgIndex+2] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+2];
-				buffer[bufferIndex+3] = allRecvImgData[patchId].imagePatch[subImgIndex+3] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+3];
+				//buffer[bufferIndex+0] = allRecvImgData[patchId].imagePatch[subImgIndex+0] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+0];
+				//buffer[bufferIndex+1] = allRecvImgData[patchId].imagePatch[subImgIndex+1] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+1];
+				//buffer[bufferIndex+2] = allRecvImgData[patchId].imagePatch[subImgIndex+2] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+2];
+				//buffer[bufferIndex+3] = allRecvImgData[patchId].imagePatch[subImgIndex+3] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+3];
 
 				//Back to Front compositing: 
 				//composited_i = composited_i-1 * (1.0 - alpha_i) + incoming
 				//alpha = alpha_i-1 * (1- alpha_i)
-				//buffer[bufferIndex+0] = (buffer[bufferIndex+0] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+0];
-				//buffer[bufferIndex+0] = (buffer[bufferIndex+1] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+1];
-				//buffer[bufferIndex+0] = (buffer[bufferIndex+2] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+2];
-				//buffer[bufferIndex+3] = buffer[bufferIndex+3]  *(1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3]);
-			
+
+				//if (imgCount < 2){
+				//	std::cout << j << ",  " << k << "   Buffer: " << buffer[bufferIndex+0] << " ,  " << buffer[bufferIndex+1] << " , " << buffer[bufferIndex+2] << " ,  " << buffer[bufferIndex+3];
+				//	std::cout << "   incoming fragment: " << allRecvImgData[patchId].imagePatch[subImgIndex+0] << " ,  " << allRecvImgData[patchId].imagePatch[subImgIndex+1] << " ,  " << allRecvImgData[patchId].imagePatch[subImgIndex+2] << " ,  " << allRecvImgData[patchId].imagePatch[subImgIndex+3];
+				//} 
+				if (imgCount < 2){
+					myfile << allRecvImgData[patchId].imagePatch[subImgIndex+0] << " " << allRecvImgData[patchId].imagePatch[subImgIndex+1] << " " << allRecvImgData[patchId].imagePatch[subImgIndex+2] << " " << allRecvImgData[patchId].imagePatch[subImgIndex+3] << "\n";
+				}
+				
+				buffer[bufferIndex+0] = (buffer[bufferIndex+0] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+0];
+				buffer[bufferIndex+1] = (buffer[bufferIndex+1] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+1];
+				buffer[bufferIndex+2] = (buffer[bufferIndex+2] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+2];
+				buffer[bufferIndex+3] = (buffer[bufferIndex+3] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3]));
 			}
 		}
+		if (imgCount == 0 || imgCount == 1){
+  			myfile.close();
+  		}
+
+		if (imgCount == 0){
+  			createPpm(buffer, imgBufferWidth, imgBufferHeight, "/home/pascal/Desktop/one");
+  		}
+
+  		if (imgCount == 1){
+  			createPpm(buffer, imgBufferWidth, imgBufferHeight, "/home/pascal/Desktop/two");
+  		}
+
+		imgCount++;
 	}
 
 	//copy to main buffer
@@ -483,20 +433,35 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 			int bufferIndex = (imgBufferWidth*4*i) + (j*4);
 			int wholeImgIndex = (imgBufferWidth*3*i) + (j*3);
 
-			wholeImage[wholeImgIndex+0] = (buffer[bufferIndex+0] + (background[0]/255.0)*(1.0-buffer[bufferIndex+3])) * 255;
-			wholeImage[wholeImgIndex+1] = (buffer[bufferIndex+1] + (background[1]/255.0)*(1.0-buffer[bufferIndex+3])) * 255;
-			wholeImage[wholeImgIndex+2] = (buffer[bufferIndex+2] + (background[2]/255.0)*(1.0-buffer[bufferIndex+3])) * 255;
-
-
-			//printf("\n i: %d, j: %d,   bufferIndex: %d   wholeImgIndex: %d  - rgb %.2f  %.2f  %.2f    -  rgb %d %d %d",i,j,bufferIndex,wholeImgIndex, 
-			//	buffer[bufferIndex+0]*buffer[bufferIndex+3]*255, buffer[bufferIndex+1]*buffer[bufferIndex+3]*255, buffer[bufferIndex+2]*buffer[bufferIndex+3]*255,
-			//	 					wholeImage[wholeImgIndex+0],					 wholeImage[wholeImgIndex+1],						wholeImage[wholeImgIndex+2]);
+			wholeImage[wholeImgIndex+0] = (buffer[bufferIndex+0] ) * 255;
+			wholeImage[wholeImgIndex+1] = (buffer[bufferIndex+1] ) * 255;
+			wholeImage[wholeImgIndex+2] = (buffer[bufferIndex+2] ) * 255;
 		}
 
     //std::string imgFilenameFinal = "/home/pascal/Desktop/FinalBuffer.ppm";
     //createPpm(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal);
   
 	delete []buffer;
+	buffer = NULL;
+
+	if (my_id == 0){
+		if (processorPatchesCount != NULL)
+			delete []processorPatchesCount;
+		processorPatchesCount = NULL;
+
+		if (allRecvImgData != NULL){
+			for (int i=0; i<totalPatches; i++)
+				delete []allRecvImgData[i].imagePatch;
+
+			delete []allRecvImgData;
+		}
+		allRecvImgData = NULL;
+
+
+		if (allRecvPatches != NULL)
+			delete []allRecvPatches;
+		allRecvPatches = NULL;
+	}
 }
 
 
