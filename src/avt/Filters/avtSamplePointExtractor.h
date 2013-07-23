@@ -163,6 +163,7 @@ class AVTFILTERS_API avtSamplePointExtractor
 
     void                      SetUpArbitrator(std::string &name, bool min);
 
+    // Raycasting SLIVR
     void                      SetTrilinear(bool t) {trilinearInterpolation = t;  };
     void                      SetRayCastingSLIVR(bool s) {rayCastingSLIVR = s;  };
     void                      SetLighting(bool l) {lighting = l; };
@@ -171,10 +172,10 @@ class AVTFILTERS_API avtSamplePointExtractor
     void                      SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
 
     // Getting image information
-    imgMetaData               initMetaPatch(int id);                                            // initialize a patch
-    void                      getImgMetaPatches(imgMetaData *image);                            // gets the metadata
-    int                       getImgPatchSize(){ return patchCount;};                           // gets the number of patches
-    imgData                   getImgData(int patchId){ return imageDataVector.at(patchId); };   // gets the image
+    int                       getImgPatchSize(){ return patchCount;};                                 // gets the number of patches
+    imgMetaData               getImgMetaPatch(int patchId){ return imageMetaPatchVector.at(patchId);} // gets the metadata
+    imgData                   getImgData(int patchId){ return imageDataVector.at(patchId); };         // gets the image
+
     void                      delImgPatches();                                                  // deletes patches
     
   protected:
@@ -213,8 +214,6 @@ class AVTFILTERS_API avtSamplePointExtractor
     // RaycastingSLIVR
 
     // Information about the patches
-    //int                       imgPatchSize;
-
     int                       patchCount;
     int                       totalAssignedPatches;
 
@@ -237,6 +236,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     virtual void              ExecuteTree(avtDataTree_p);
     void                      SetUpExtractors(void);
 
+    imgMetaData               initMetaPatch(int id);    // initialize a patch
     
     typedef struct 
     {

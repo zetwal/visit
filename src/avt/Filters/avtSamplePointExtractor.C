@@ -446,8 +446,6 @@ avtSamplePointExtractor::SetUpExtractors(void)
         delete pyramidExtractor;
     }
 
-    //std::cout << "width: " << width << "  height: " << height << std::endl;
-    //std::cout << "width_min, max: "<< " : " << width_min << " ,  " << width_max << "  height_min, max:   " << height_min << " ,  " << height_max << std::endl;
     //
     // Set up the extractors and tell them which cell list to use.
     //
@@ -462,7 +460,6 @@ avtSamplePointExtractor::SetUpExtractors(void)
 
     massVoxelExtractor->SetTrilinear(trilinearInterpolation);
     massVoxelExtractor->SetRayCastingSLIVR(rayCastingSLIVR);
-    //std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! rayCastingSLIVR: " << rayCastingSLIVR << std::endl;
 
     hexExtractor->SendCellsMode(sendCells);
     hex20Extractor->SendCellsMode(sendCells);
@@ -697,16 +694,17 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
         return;
     }
 
+    
     unsigned long m_size, m_rss;
     GetMemorySize(m_size, m_rss);
-    std::cout << PAR_Rank() << "    Memory use before: " << m_size << "  rss: " << m_rss << std::endl;
+    std::cout << PAR_Rank() << "avtSamplePointExtractor::ExecuteTree  .. .  " 
+              << "    Memory use before: " << m_size << "  rss: " << m_rss << std::endl;
 
     totalAssignedPatches = dt->GetNChildren();
     patchCount = 0;
     imageDataVector.clear();
     imageMetaPatchVector.clear();
-
-    std::cout << PAR_Rank() << "avtSamplePointExtractor::ExecuteTree  .. .  " << std::endl;
+    
     if (rayCastingSLIVR == true)
         if ((totalAssignedPatches != 0) && (dt->ChildIsPresent(0) && !( *(dt->GetChild(0)) == NULL))){
         }else
@@ -737,8 +735,8 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     }
 
     GetMemorySize(m_size, m_rss);
-    std::cout << PAR_Rank() << "   Memory use after: " << m_size << "  rss: " << m_rss << std::endl;
-    std::cout << PAR_Rank() << "   ... avtSamplePointExtractor::ExecuteTree done@!!!" << std::endl;
+    std::cout << PAR_Rank() << "   Memory use after: " << m_size << "  rss: " << m_rss 
+              << "   ... avtSamplePointExtractor::ExecuteTree done@!!!" << std::endl;
 }
 
 //
@@ -785,25 +783,6 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
 //     currentNode++;
 // }
 
-
-
-// ****************************************************************************
-//  Method: avtSamplePointExtractor::
-//
-//  Purpose:
-//      copy the metadata for image generated
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-void
-avtSamplePointExtractor::getImgMetaPatches(imgMetaData *image){
-    for (int i = 0; i < patchCount; i++)
-        image[i] = imageMetaPatchVector.at(i);
-}
 
 
 // ****************************************************************************
@@ -1041,7 +1020,6 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 imageDataVector.push_back(tmpImageData);
 
                 patchCount++;
-                //delete []tmpImageData.imagePatch;
             }
         }
             

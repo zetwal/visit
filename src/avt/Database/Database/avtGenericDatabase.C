@@ -502,7 +502,7 @@ avtDataTree_p
 avtGenericDatabase::GetOutput(avtDataRequest_p spec,
                               avtSourceFromDatabase *src)
 {
-    std::cout << "avtGenericDatabase::GetOutput" << std::endl;
+    //std::cout << "avtGenericDatabase::GetOutput" << std::endl;
     avtDataValidity &validity = src->GetOutput()->GetInfo().GetValidity();
     bool canDoCollectiveCommunication = !validity.AreWeStreaming();
     Interface->DoingStreaming(validity.AreWeStreaming());
@@ -2947,7 +2947,7 @@ avtGenericDatabase::GetMesh(const char *meshname, int ts, int domain,
                             const avtDataRequest_p dataRequest)
 {
 
-    //std::cout << "&&&&&&&&&&&&&& avtGenericDatabase::GetMesh &&&&&&&&&&&&&&&&&" << std::endl;
+    ////std::cout << "&&&&&&&&&&&&&& avtGenericDatabase::GetMesh &&&&&&&&&&&&&&&&&" << std::endl;
     //
     // We have to be leery about doing any caching when the variables are
     // defined on sub-meshes.  This is because if we add new secondary
@@ -3068,10 +3068,10 @@ avtGenericDatabase::GetMesh(const char *meshname, int ts, int domain,
     // There are some mesh variables that we want to copy over -- namely
     // those with ghost information or global numbering information.
     //
-    //std::cout << "&&&&&&&&&&&&&& before (mesh->GetCellData()->GetArray(avtGhostZones)) ^^^^^^^^^^^^^^" << std::endl;
+    ////std::cout << "&&&&&&&&&&&&&& before (mesh->GetCellData()->GetArray(avtGhostZones)) ^^^^^^^^^^^^^^" << std::endl;
     if (mesh->GetCellData()->GetArray("avtGhostZones")){
     
-        std::cout << "&&&&&&&&&&&&&& (mesh->GetCellData()->GetArray(avtGhostZones)) &&&&&&&&&&&&&&&&&" << std::endl;
+        //std::cout << "&&&&&&&&&&&&&& (mesh->GetCellData()->GetArray(avtGhostZones)) &&&&&&&&&&&&&&&&&" << std::endl;
         rv->GetCellData()->AddArray(
             mesh->GetCellData()->GetArray("avtGhostZones"));
         GetMetaData(ts)->SetContainsGhostZones(meshname, AVT_HAS_GHOSTS);
@@ -5512,7 +5512,7 @@ avtGenericDatabase::CommunicateGhosts(avtGhostDataType ghostType,
                       avtDataRequest_p &spec, avtSourceFromDatabase *src,
                       intVector &allDomains, bool canDoCollectiveCommunication)
 {
-    std::cout << "avtGenericDatabase::CommunicateGhosts" << std::endl;
+    //std::cout << "avtGenericDatabase::CommunicateGhosts" << std::endl;
     int portion1 = visitTimer->StartTimer();
 
     int  i;
@@ -5532,7 +5532,7 @@ avtGenericDatabase::CommunicateGhosts(avtGhostDataType ghostType,
 #ifdef PARALLEL
     if (canDoCollectiveCommunication)
     {
-        std::cout << "avtGenericDatabase::CommunicateGhosts   canDoCollectiveCommunication 1" << std::endl;
+        ////std::cout << "avtGenericDatabase::CommunicateGhosts   canDoCollectiveCommunication 1" << std::endl;
         int  parallelShouldStop;
         MPI_Allreduce(&shouldStop, &parallelShouldStop, 1, MPI_INT, MPI_MAX,
                       VISIT_MPI_COMM);
@@ -5547,7 +5547,7 @@ avtGenericDatabase::CommunicateGhosts(avtGhostDataType ghostType,
 #ifdef PARALLEL
     if (canDoCollectiveCommunication)
     {
-        std::cout << "avtGenericDatabase::CommunicateGhosts   canDoCollectiveCommunication 2" << std::endl;
+        ////std::cout << "avtGenericDatabase::CommunicateGhosts   canDoCollectiveCommunication 2" << std::endl;
         int hdbi = (hasDomainBoundaryInfo ? 1 : 0);
         int phdbi;
         MPI_Allreduce(&hdbi, &phdbi, 1, MPI_INT, MPI_MIN, VISIT_MPI_COMM);
@@ -5561,7 +5561,7 @@ avtGenericDatabase::CommunicateGhosts(avtGhostDataType ghostType,
     //
     bool haveDomainWithoutGlobalNodeIds = false;
     bool haveGlobalNodeIdsForAtLeastOneDom = false;
-    std::cout << "avtGenericDatabase::CommunicateGhosts   doms.size()" << doms.size() << std::endl;
+    //std::cout << "avtGenericDatabase::CommunicateGhosts   doms.size()" << doms.size() << std::endl;
     for (i = 0 ; i < doms.size() ; i++)
     {
         if (GetGlobalNodeIds(doms[i], meshname.c_str(), ts) == NULL)
@@ -5572,7 +5572,7 @@ avtGenericDatabase::CommunicateGhosts(avtGhostDataType ghostType,
 #ifdef PARALLEL
     if (canDoCollectiveCommunication)
     {
-        std::cout << "avtGenericDatabase::CommunicateGhosts   canDoCollectiveCommunication 3" << std::endl;
+        //std::cout << "avtGenericDatabase::CommunicateGhosts   canDoCollectiveCommunication 3" << std::endl;
         int tmp1[2], tmp2[2];
         tmp1[0] = (haveDomainWithoutGlobalNodeIds ? 1 : 0);
         tmp1[1] = (haveGlobalNodeIdsForAtLeastOneDom ? 1 : 0);
@@ -5605,7 +5605,7 @@ avtGenericDatabase::CommunicateGhosts(avtGhostDataType ghostType,
     }
     if (ghostType == GHOST_ZONE_DATA)
     {
-        std::cout << "avtGenericDatabase::CommunicateGhosts   GHOST_ZONE_DATA" << std::endl;
+        //std::cout << "avtGenericDatabase::CommunicateGhosts   GHOST_ZONE_DATA" << std::endl;
         int tmp1[2], tmp2[2];
         if (hasDomainBoundaryInfo)
             if (dbi->CanOnlyCreateGhostNodes())
@@ -5625,7 +5625,7 @@ avtGenericDatabase::CommunicateGhosts(avtGhostDataType ghostType,
     if (spec->MustMaintainOriginalConnectivity() && 
         ghostType == GHOST_ZONE_DATA)
     {
-        std::cout << "avtGenericDatabase::CommunicateGhosts   spec->MustMaintainOriginalConnectivity()" << std::endl;
+        //std::cout << "avtGenericDatabase::CommunicateGhosts   spec->MustMaintainOriginalConnectivity()" << std::endl;
 
         const char *warning = "Because of the way VisIt organizes data, "
               "it is not possible to create ghost zones for this plot.  "
@@ -5664,7 +5664,7 @@ avtGenericDatabase::CommunicateGhosts(avtGhostDataType ghostType,
     }
     else if (ghostType == GHOST_ZONE_DATA)
     {
-        std::cout << "avtGenericDatabase::CommunicateGhosts   (ghostType == GHOST_ZONE_DATA)" << std::endl;
+        //std::cout << "avtGenericDatabase::CommunicateGhosts   (ghostType == GHOST_ZONE_DATA)" << std::endl;
         if (hasDomainBoundaryInfo)
             s = CommunicateGhostZonesFromDomainBoundariesFromFile(ds, doms, 
                                                                   spec, src);
@@ -5694,7 +5694,7 @@ avtGenericDatabase::CommunicateGhosts(avtGhostDataType ghostType,
     // if we have created ghost zones, add to present ghost types 
     if(madeNewZones){
         md->AddGhostZoneTypePresent(meshname, AVT_BOUNDARY_GHOST_ZONES);
-         std::cout << "avtGenericDatabase::CommunicateGhosts   md->AddGhostZoneTypePresent" << std::endl;
+         //std::cout << "avtGenericDatabase::CommunicateGhosts   md->AddGhostZoneTypePresent" << std::endl;
     }
     return madeNewZones;
 }
@@ -5865,7 +5865,7 @@ avtGenericDatabase::CommunicateGhostZonesFromDomainBoundariesFromFile(
                       avtDatasetCollection &ds, intVector &doms,
                       avtDataRequest_p &spec, avtSourceFromDatabase *src)
 {
-    std::cout << "avtGenericDatabase::CommunicateGhostZonesFromDomainBoundariesFromFil" << std::endl;
+    //std::cout << "avtGenericDatabase::CommunicateGhostZonesFromDomainBoundariesFromFil" << std::endl;
     //
     //  Setup
     //
@@ -5954,7 +5954,7 @@ avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries(
                       avtDatasetCollection &ds, intVector &doms,
                       avtDataRequest_p &spec, avtSourceFromDatabase *src)
 {
-    std::cout <<"avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries _ _ " << std::endl;
+    //std::cout <<"avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries _ _ " << std::endl;
     int   i, j, k;
 
     int t1 = visitTimer->StartTimer();
@@ -5987,7 +5987,7 @@ avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries(
         doms[0] = PAR_Rank();
     }
 
-    std::cout << " doms.size() " << doms.size() << std::endl;
+    //std::cout << " doms.size() " << doms.size() << std::endl;
     // Setup materials
     int anymats    = false;
     int allmats    = true; 
@@ -6091,7 +6091,7 @@ avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries(
         src->DatabaseProgress(localstage++, nlocalstage,
                               "Creating ghost zones for scalars");
 
-        std::cout <<"avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries (type == AVT_SCALAR_VAR || type == AVT_MATSPECIES)" << std::endl;
+        //std::cout <<"avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries (type == AVT_SCALAR_VAR || type == AVT_MATSPECIES)" << std::endl;
 
         avtCentering centering;
         if (type == AVT_MATSPECIES)
@@ -6179,7 +6179,7 @@ avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries(
     const vector<CharStrRef> &var2nd = 
                            spec->GetSecondaryVariablesWithoutDuplicates();
     avtDatabaseMetaData *metadata = GetMetaData(ts);
-    std::cout << "var2nd.size() " << var2nd.size() << std::endl;
+    //std::cout << "var2nd.size() " << var2nd.size() << std::endl;
     for (i = 0 ; i < var2nd.size() ; i++)
     {
         CharStrRef curVar  = var2nd[i];
@@ -6302,7 +6302,7 @@ avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries(
     if (anymats)
     {
         
-        std::cout << "if (anymats)" << std::endl;
+        //std::cout << "if (anymats)" << std::endl;
         src->DatabaseProgress(localstage++, nlocalstage,
                               "Creating ghost zones for materials");
 
@@ -6420,7 +6420,7 @@ avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries(
     //
     if (spec->NeedZoneNumbers() || spec->NeedStructuredIndices())
     {
-        std::cout <<"avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries (spec->NeedZoneNumbers() || spec->NeedStructuredIndices())" << std::endl;
+        //std::cout <<"avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries (spec->NeedZoneNumbers() || spec->NeedStructuredIndices())" << std::endl;
         vector<vtkDataArray *> cellNums;
         for (j = 0 ; j < doms.size() ; j++)
         {
@@ -6465,7 +6465,7 @@ avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries(
     //
     if (spec->NeedGlobalZoneNumbers())
     {
-        std::cout <<"avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries (spec->NeedGlobalZoneNumbers)" << std::endl;
+        //std::cout <<"avtGenericDatabase::CommunicateGhostZonesFromDomainBoundaries (spec->NeedGlobalZoneNumbers)" << std::endl;
         vector<vtkDataArray *> cellNums;
         for (j = 0 ; j < doms.size() ; j++)
         {
@@ -6628,7 +6628,7 @@ avtGenericDatabase::CommunicateGhostZonesFromGlobalNodeIds(
                       avtDataRequest_p &spec, avtSourceFromDatabase *src)
 {
     //
-    std::cout << "avtGenericDatabase::CommunicateGhostZonesFromGlobalNodeIds" << std::endl;
+    //std::cout << "avtGenericDatabase::CommunicateGhostZonesFromGlobalNodeIds" << std::endl;
     // The game plan here is to create a domain boundaries object using the
     // global node ids.
     //
@@ -7167,7 +7167,7 @@ avtGenericDatabase::CommunicateGhostZonesWhileStreaming(
                       avtDatasetCollection &ds, intVector &doms, 
                       avtDataRequest_p &spec, avtSourceFromDatabase *src)
 {
-    std::cout << "avtGenericDatabase::CommunicateGhostZonesWhileStreaming" << std::endl;
+    //std::cout << "avtGenericDatabase::CommunicateGhostZonesWhileStreaming" << std::endl;
     avtStreamingGhostGenerator *sgg = GetStreamingGhostGenerator();
     vtkDataSet *input  = ds.GetDataset(0, 0);
     vtkDataSet *output = sgg->StreamDataset(input);
@@ -7766,7 +7766,7 @@ avtGenericDatabase::CreateGlobalZones(avtDatasetCollection &ds,
                               intVector &domains, avtSourceFromDatabase *src,
                               avtDataRequest_p &spec)
 {
-    std::cout << "avtGenericDatabase::CreateGlobalZones" << std::endl;
+    //std::cout << "avtGenericDatabase::CreateGlobalZones" << std::endl;
     char  progressString[1024] = "Creating Global Zones Array";
     src->DatabaseProgress(0, 0, progressString);
     for (int i = 0 ; i < ds.GetNDomains() ; i++)
@@ -7961,7 +7961,7 @@ avtGenericDatabase::CreateSimplifiedNestingRepresentation(
                         avtStructuredDomainBoundaries *dbi,
                         avtGhostDataType gt)
 {
-    std::cout << "avtGenericDatabase::CreateSimplifiedNestingRepresentation" << std::endl;
+    //std::cout << "avtGenericDatabase::CreateSimplifiedNestingRepresentation" << std::endl;
     int   d, i, j, k, l;
 
     //
@@ -8632,7 +8632,7 @@ void
 avtGenericDatabase::CreateStructuredIndices(avtDatasetCollection &dsc, 
                                             avtSourceFromDatabase *src)
 {
-    std::cout << "avtGenericDatabase::CreateStructuredIndices" << std::endl;
+    //std::cout << "avtGenericDatabase::CreateStructuredIndices" << std::endl;
     char  progressString[1024] = "Creating Structured Indices";
     src->DatabaseProgress(0, 0, progressString);
     for (int i = 0 ; i < dsc.GetNDomains() ; i++)

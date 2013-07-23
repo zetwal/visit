@@ -469,10 +469,11 @@ avtRayTracer::Execute(void)
         image->Update(GetGeneralContract());
 
 
-        int  timingComm = visitTimer->StartTimer();
+       
         //
         // Getting the patches
         //
+        int  timingComm = visitTimer->StartTimer();
         int numPatches = extractor.getImgPatchSize();     // get the number of patches - Brown /8 procs / 100 each
 
         std::cout << PAR_Rank() << "   avtRayTracer::Execute     numPatches: " << numPatches << std::endl;
@@ -494,10 +495,11 @@ avtRayTracer::Execute(void)
         imgMetaData *imgAllPatches;
         imgAllPatches = NULL;
         imgAllPatches = new imgMetaData[numPatches];
-        extractor.getImgMetaPatches(imgAllPatches);
 
-        for (int i=0; i<numPatches; i++)
+        for (int i=0; i<numPatches; i++){
+            imgAllPatches[i] = extractor.getImgMetaPatch(i);
             imgComm.sendPatchMetaData(0,imgAllPatches[i]);
+        }
 
         if (PAR_Rank() == 0)
             imgComm.masterRecvPatchMetaData();
@@ -510,7 +512,7 @@ avtRayTracer::Execute(void)
         //
         if (PAR_Rank() == 0){
 
-            // Tell Proc 0 about its own patches
+             // Tell Proc 0 about its own patches
             for (int i=0; i<numPatches; i++){
                 imgData tempImgData = extractor.getImgData(i);
                 int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);
@@ -551,20 +553,20 @@ avtRayTracer::Execute(void)
                 delete []sendMsgBuffer;
             }
         }
+
         if (imgAllPatches != NULL)
             delete []imgAllPatches;
 
-
         imgComm.syncAllProcs();
-        
-        
+    
         visitTimer->StopTimer(timingComm, "Communicating");
         visitTimer->DumpTimings();
 
-        int  timingCompositinig = visitTimer->StartTimer();
+        
         //
         // Compositing
         //
+        int  timingCompositinig = visitTimer->StartTimer();
 
         // create images structures to hold these
         avtImage_p whole_image, tempImage;
@@ -600,6 +602,7 @@ avtRayTracer::Execute(void)
 
         std::cout << "....... " << PAR_Rank() << "   avtRayTracer::Execute  ~  done RayCasting SLIVR!!!!" << std::endl;
 
+
         visitTimer->StopTimer(timingCompositinig, "Compositing");
         visitTimer->DumpTimings();
 
@@ -607,7 +610,7 @@ avtRayTracer::Execute(void)
         visitTimer->DumpTimings();
 
         //if (imgTest != NULL)
-        //    delete []imgTest;
+        //   delete []imgTest;
 
         extractor.delImgPatches();
 
