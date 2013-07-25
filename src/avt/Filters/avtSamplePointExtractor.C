@@ -1013,7 +1013,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 tmpImageData.imagePatch = NULL;
                 tmpImageData.procId = tmpImageMetaPatch.procId;           tmpImageData.patchNumber = tmpImageMetaPatch.patchNumber;
 
-                tmpImageData.imagePatch = new float [(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
+                tmpImageData.imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
                 massVoxelExtractor->getComputedImage(tmpImageData.imagePatch);
 
                 imageMetaPatchVector.push_back(tmpImageMetaPatch);

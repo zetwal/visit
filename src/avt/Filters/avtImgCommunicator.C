@@ -394,6 +394,12 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 		for (int j=0; j<allRecvPatches[i].dims[1]; j++){
 			for (int k=0; k<allRecvPatches[i].dims[0]; k++){
 
+				if ((startingX + k) > imgBufferWidth)
+					continue;
+
+				if ((startingY + j) > imgBufferHeight)
+					continue;
+				
 				int subImgIndex = allRecvPatches[i].dims[0]*j*4 + k*4;										// index in the subimage 
 				int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);	// index in the big buffer
 
@@ -468,7 +474,7 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
     //createPpm(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal);
   	
   	//////////////////////////////////
-		
+
 	delete []buffer;
 	buffer = NULL;
 
@@ -588,9 +594,6 @@ void avtImgCommunicator::printPatches(){
 	for (int i=0; i<num_procs; i++)
 		printf("\n Processor: %d   Patch count: %d \n",i,processorPatchesCount[i]);
 }
-
-
-
 
 
 
