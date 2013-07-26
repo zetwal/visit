@@ -55,6 +55,7 @@ class     vtkMatrix4x4;
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <algorithm>    // std::max
 
 // ****************************************************************************
 //  Class: avtMassVoxelExtractor
@@ -115,9 +116,20 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetRayCastingSLIVR(bool s) {rayCastingSLIVR = s; };
     void             SetTrilinear(bool t) {trilinearInterpolation = t; };
     void             SetLighting(bool l) {lighting = l; };
+    void             SetLightDirection(double _lightDir[3]) { for (int i=0;i<3;i++) lightDirection[i]=_lightDir[i]; }
     void             SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void             SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void             SetTransferFn(avtOpacityMap *_transferFn1D) { transferFn1D = _transferFn1D; };
+
+    void                  SetViewDirection(double *vd)
+                             { view_direction[0] = vd[0];
+                               view_direction[1] = vd[1];
+                               view_direction[2] = vd[2]; };
+
+    void                  SetViewUp(double *vu)
+                             { view_up[0] = vu[0];
+                               view_up[1] = vu[1];
+                               view_up[2] = vu[2]; };
 
     // Getting the image
     void             getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
@@ -165,9 +177,15 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
 
     bool             lighting;
     double           lightPosition[4];
+    float            lightDirection[3];
     double           materialProperties[4];
     avtOpacityMap    *transferFn1D;
-    double           gradient[3];
+    float           gradient[3];
+
+    double                    view_direction[3];
+    double                    view_up[3];
+
+    int debugOn;
 
 
     // Patch details for one image

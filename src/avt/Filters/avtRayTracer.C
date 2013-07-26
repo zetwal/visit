@@ -439,8 +439,19 @@ avtRayTracer::Execute(void)
         extractor.SetTrilinear(trilinearInterpolation);
         extractor.SetRayCastingSLIVR(rayCastingSLIVR);
         extractor.SetLighting(lighting);
+        extractor.SetLightDirection(lightDirection);
+        extractor.SetMatProperties(materialProperties);
+        extractor.SetTransferFn(transferFn1D);
+        extractor.SetViewDirection(view_direction);
+        extractor.SetViewUp(view_up);
         extractor.SetTransferFn(transferFn1D);
     }
+
+    //std::cout << "lighting: " << lighting << std::endl;
+    //std::cout << "lightDirection: " << lightDirection[0] << " , " << lightDirection[1] << " , " << lightDirection[2] << std::endl;
+    //std::cout << "materialProperties: " << materialProperties[0] << " , " << materialProperties[1] << " , " << materialProperties[2]  << " , " << materialProperties[3] << std::endl; 
+    //std::cout << "view_up: " << view_up[0] << " , " << view_up[1] << " , " << view_up[2]  <<  std::endl; 
+    //std::cout << "view_direction: " << view_direction[0] << " , " << view_direction[1] << " , " << view_direction[2]  <<  std::endl; 
 
     //
     // For curvilinear and unstructured meshes, it makes sense to convert the

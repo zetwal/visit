@@ -750,6 +750,16 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         view_dir[1] /= mag;
         view_dir[2] /= mag;
     }
+    software->SetViewDirection(view_dir);
+    software->SetViewUp(vi.viewUp);
+    
+    double tempLightDir[3];
+    tempLightDir[0] = ((window.GetLights()).GetLight(0)).GetDirection()[0];
+    tempLightDir[1] = ((window.GetLights()).GetLight(0)).GetDirection()[1];
+    tempLightDir[2] = ((window.GetLights()).GetLight(0)).GetDirection()[2];
+    software->SetLightDirection(tempLightDir);
+
+
     lm->SetViewDirection(view_dir);
     lm->SetViewUp(vi.viewUp);
     lm->SetLightInfo(window.GetLights());

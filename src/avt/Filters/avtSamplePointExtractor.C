@@ -999,7 +999,11 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         }
         massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
         massVoxelExtractor->SetLighting(lighting);
+        massVoxelExtractor->SetLightDirection(lightDirection);
+        massVoxelExtractor->SetMatProperties(materialProperties);
         massVoxelExtractor->SetTransferFn(transferFn1D);
+        massVoxelExtractor->SetViewDirection(view_direction);
+        massVoxelExtractor->SetViewUp(view_up);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
  
