@@ -468,7 +468,6 @@ avtMassVoxelExtractor::SetGridsAreInWorldSpace(bool val, const avtViewInfo &v,
     cam->Delete();
 }
 
-
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor::ExtractWorldSpaceGrid
 //
@@ -601,8 +600,8 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     // Register the grid here so we can do that.
     //
 
-    if (proc == 0)
-        std::cout << " A. " << proc << " : " << patch << std::endl;
+    //if (proc == 0)
+    //    std::cout << " A. " << proc << " : " << patch << std::endl;
     RegisterGrid(rgrid, varnames, varsize);   // stores the values in a structure so that it can be used
 
     //
@@ -615,8 +614,8 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
     imgWidth = imgHeight = 0;
 
-    if (proc == 0)
-        std::cout << " B. " << proc << " : " << patch << std::endl;
+    //if (proc == 0)
+    //    std::cout << " B. " << proc << " : " << patch << std::endl;
 
     //
     // Let's find out if this range can even intersect the dataset.
@@ -628,8 +627,9 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     }
      
 
-     if (proc == 0)
-        std::cout << " C. " << proc << " : " << patch << std::endl;   
+    // if (proc == 0)
+    //    std::cout << " C. " << proc << " : " << patch << std::endl;   
+
     //
     // Determine the screen size of the patch being processed
     //
@@ -721,8 +721,8 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
     //std::cout << "!!!!! proc: " << proc << "  patch: " << patch << " |  dims: " << dims[0] << " , " << dims[1] << " , " << dims[2] <<  std::endl;
 
-    if (proc == 0)
-        std::cout << " D. " << proc << " : " << patch << std::endl;
+    //if (proc == 0)
+    //    std::cout << " D. " << proc << " : " << patch << std::endl;
     if (rayCastingSLIVR == true){
         imgArray = new float[((imgWidth)*4) * imgHeight];
 
@@ -1501,8 +1501,13 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
     if (source_rgb[3] == 0.0)
         return;
 
-    double opacityCorrection = 1.0;
-    source_rgb[3] = 1.0 - pow((1.0-source_rgb[3]), opacityCorrection);
+    //double opacityCorrection = 1.0;
+    //source_rgb[3] = 1.0 - pow((1.0-source_rgb[3]), opacityCorrection);
+
+    // head light
+    lightDirection[0] = view_direction[0];
+    lightDirection[1] = view_direction[1];
+    lightDirection[2] = view_direction[2];
 
 
     // Phong Shading
@@ -1537,47 +1542,78 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
         dir[2] = comp1[2] + comp2[2] + comp3[2];
         normalize(dir);
 
+         // head light
+        lightDirection[0] = dir[0];
+        lightDirection[1] = dir[1];
+        lightDirection[2] = dir[2];
 
 
+        // transform gradient
+        vtkMatrix3x3 *invTransModelView = vtkMatrix3x3::New();
+        invTransModelView->SetElement(0,0, world_to_view_transform->GetElement(0,0));
+        invTransModelView->SetElement(0,1, world_to_view_transform->GetElement(0,1));
+        invTransModelView->SetElement(0,2, world_to_view_transform->GetElement(0,2));
+
+        invTransModelView->SetElement(1,0, world_to_view_transform->GetElement(1,0));
+        invTransModelView->SetElement(1,1, world_to_view_transform->GetElement(1,1));
+        invTransModelView->SetElement(1,2, world_to_view_transform->GetElement(1,2));
+
+        invTransModelView->SetElement(2,0, world_to_view_transform->GetElement(2,0));
+        invTransModelView->SetElement(2,1, world_to_view_transform->GetElement(2,1));
+        invTransModelView->SetElement(2,2, world_to_view_transform->GetElement(2,2));
+
+
+        invTransModelView->Invert();
+        invTransModelView->Transpose();
+
+        double gradientDouble[3], transformedGradient[3];
+        for (int i=0; i<3; i++)
+            gradientDouble[i] = gradient[i];
+
+        invTransModelView->MultiplyPoint(gradientDouble, transformedGradient);
+
+        float transformedGradientFloat[3];
+        for (int i=0; i<3; i++)
+            transformedGradientFloat[i] = transformedGradient[i];
+
+        normalize(transformedGradientFloat);
+        invTransModelView->Delete();
 
         // cos(angle) = a.b;  angle between normal and light
-        float normal_dot_light = dot(gradient,dir);   // angle between light and normal;
+        float normal_dot_light = dot(transformedGradientFloat,dir);   // angle between light and normal;
         normal_dot_light = std::max( fabs(normal_dot_light), 1.0);    // clamping & abs: two-sided lighting
 
-        if (debugOn == true){
-        std::cout << "\n\nlighting: " << lighting << std::endl;
+/*
+        std::cout << "\nlighting: " << lighting << std::endl;
+        std::cout << "val: " << scalarValue <<  std::endl;
         std::cout << "lightDirection: " << lightDirection[0] << " , " << lightDirection[1] << " , " << lightDirection[2] << std::endl;
         std::cout << "materialProperties: " << materialProperties[0] << " , " << materialProperties[1] << " , " << materialProperties[2]  << " , " << materialProperties[3] << std::endl; 
         std::cout << "view_up: " << view_up[0] << " , " << view_up[1] << " , " << view_up[2]  <<  std::endl; 
         std::cout << "view_direction: " << view_direction[0] << " , " << view_direction[1] << " , " << view_direction[2]  <<  std::endl; 
         std::cout << "dir: " << dir[0] << " , " << dir[1] << " , " << dir[2]  <<  std::endl;
         std::cout << "gradient: " << gradient[0] << " , " << gradient[1] << " , " << gradient[2]  <<  std::endl;
+        std::cout << "gradient transformed: " << transformedGradientFloat[0] << " , " << transformedGradientFloat[1] << " , " << transformedGradientFloat[2]  <<  std::endl;
         std::cout << "normal_dot_light: " << normal_dot_light <<  std::endl;
-        std::cout << "source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl; 
-    }
+        std::cout << "back_rgba: " << dest_rgb[0] << " , " << dest_rgb[1] << " , " << dest_rgb[2]  << " , " << dest_rgb[3] << std::endl; 
+        std::cout << "source_rgba: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl; 
 
-
+*/
         // Calculate color using phong shading
         // I = (I  * ka) + (I  * kd*abs(cos(angle))) + (Ia * ks*abs(cos(angle))^ns)
         for (int i=0; i<3; i++)
             source_rgb[i] = source_rgb[i] * materialProperties[0];                       // I  * ka
 
-        if (debugOn == true)
-            std::cout << "After ambient source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
+         //   std::cout << "After ambient source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
 
         for (int i=0; i<3; i++)
             source_rgb[i] += source_rgb[i] * materialProperties[1] * normal_dot_light;   // I  * kd*abs(cos(angle))
 
-        if (debugOn == true)
-            std::cout << "After diffuse source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
+          // std::cout << "After diffuse source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
 
         for (int i=0; i<3; i++)
             source_rgb[i] += materialProperties[2] * pow(normal_dot_light,materialProperties[3]) * source_rgb[3];   // I  * kd*abs(cos(angle))
 
-        if (debugOn == true)
-            std::cout << "After specular source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
-
-
+       //   std::cout << "After specular source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
 
     }
 
@@ -1585,6 +1621,7 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
     for (int i=0; i<4; i++) 
         dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
 
+    //std::cout << "final_rgba: " << dest_rgb[0] << " , " << dest_rgb[1] << " , " << dest_rgb[2]  << " , " << dest_rgb[3] << std::endl; 
     
     // back to front
     //    dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
@@ -1802,7 +1839,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 
                 float distRight, distLeft, distTop, distBottom, distFront, distBack;
                 int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
-                float gradientOffset = 0.1;
+                float gradientOffset = 0.45;
 
                 int indexGrad[8];
                 double vals[6];
@@ -1945,19 +1982,19 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 if (vals[1] - vals[0] == 0)
                     gradient[0] = 0;
                 else
-                    gradient[0] = 1.0/(2.0*gradientOffset) * (vals[1] - vals[0]);
+                    gradient[0] = (1.0/(2.0*gradientOffset)) * (vals[1] - vals[0]);
 
                 if (vals[3] - vals[2] == 0)
-                    gradient[0] = 0;
+                    gradient[1] = 0;
                 else
-                    gradient[1] = 1.0/(2.0*gradientOffset) * (vals[3] - vals[2]);
+                    gradient[1] = (1.0/(2.0*gradientOffset)) * (vals[3] - vals[2]);
 
                 if (vals[5] - vals[4] == 0)
-                    gradient[0] = 0;
+                    gradient[2] = 0;
                 else
-                    gradient[2] = 1.0/(2.0*gradientOffset) * (vals[5] - vals[4]);
+                    gradient[2] = (1.0/(2.0*gradientOffset)) * (vals[5] - vals[4]);
 
-               // std::cout << "\n\n Vals: " << vals[0] << " , " << vals[1] << "      " << vals[2] << " , " << vals[3] << "     " << vals[4] << " , " << vals[5] << std::endl; 
+               // std::cout << "\n\n\nVals: " << vals[0] << " , " << vals[1] << "      " << vals[2] << " , " << vals[3] << "     " << vals[4] << " , " << vals[5] << std::endl; 
                // std::cout << "gradient: " << gradient[0] << " , " << gradient[1]  << " , " << gradient[2] << std::endl; 
 
                 normalize(gradient);
@@ -1972,11 +2009,11 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 for (int l = 0 ; l < ncell_arrays ; l++)    // ncell_arrays: usually 1
                 {
                     void  *cell_array = cell_arrays[l];
-                    double vals[8];
+                    double values[8];
                     for (int m = 0 ; m < cell_size[l] ; m++){       // cell_size[l] usually 1
-                        AssignEight(cell_vartypes[l], vals, indexT, cell_size[l], m, cell_array);
+                        AssignEight(cell_vartypes[l], values, indexT, cell_size[l], m, cell_array);
                         double val;
-                        val = trilinearInterpolate(vals, dist_from_right, dist_from_top, dist_from_front);
+                        val = trilinearInterpolate(values, dist_from_right, dist_from_top, dist_from_front);
                     
                         stepsZ++;
                         if (rayCastingSLIVR)

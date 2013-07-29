@@ -53,6 +53,7 @@
 class     vtkRectilinearGrid;
 class     vtkMatrix4x4;
 
+#include <vtkMatrix3x3.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <algorithm>    // std::max
