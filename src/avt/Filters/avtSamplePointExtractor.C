@@ -82,6 +82,8 @@
 #include <DebugStream.h>
 
 
+
+
 // ****************************************************************************
 //  Method: avtSamplePointExtractor constructor
 //
@@ -244,6 +246,8 @@ avtSamplePointExtractor::~avtSamplePointExtractor()
         delete arbitrator;
         arbitrator = NULL;
     }
+
+    delImgPatches();
 }
 
 
@@ -698,7 +702,7 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     unsigned long m_size, m_rss;
     GetMemorySize(m_size, m_rss);
     std::cout << PAR_Rank() << "avtSamplePointExtractor::ExecuteTree  .. .  " 
-              << "    Memory use before: " << m_size << "  rss: " << m_rss << std::endl;
+              << "    Memory use before: " << m_size << "  rss (MB): " << m_rss/(1024*1024) << std::endl;
 
     totalAssignedPatches = dt->GetNChildren();
     patchCount = 0;
@@ -735,8 +739,8 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     }
 
     GetMemorySize(m_size, m_rss);
-    std::cout << PAR_Rank() << "   Memory use after: " << m_size << "  rss: " << m_rss 
-              << "   ... avtSamplePointExtractor::ExecuteTree done@!!!" << std::endl;
+    std::cout << PAR_Rank() << "   Memory use after: " << m_size << "  rss (MB): " << m_rss/(1024*1024)
+              <<  "   ... avtSamplePointExtractor::ExecuteTree done@!!!" << std::endl;
 }
 
 //
@@ -799,8 +803,35 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
 // ****************************************************************************
 void
 avtSamplePointExtractor::delImgPatches(){
+    for (int i=0; i<imageDataVector.size(); i++){
+        if (imageDataVector[i].imagePatch != NULL){
+            delete [] imageDataVector[i].imagePatch;
+            imageDataVector[i].imagePatch = NULL;
+        }
+    }
+
     imageMetaPatchVector.clear();
     imageDataVector.clear();
+}
+
+
+
+// ****************************************************************************
+//  Method: avtSamplePointExtractor::getImgData
+//
+//  Purpose:
+//      copies a patchover
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtSamplePointExtractor::getImgData(int patchId, imgData &tempImgData){
+    tempImgData.procId = imageDataVector[patchId].procId;
+    tempImgData.patchNumber = imageDataVector[patchId].patchNumber;
+    memcpy(tempImgData.imagePatch,imageDataVector[patchId].imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1]*sizeof(float));
 }
 
 
@@ -1013,15 +1044,14 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
             if (tmpImageMetaPatch.inUse == 1){
-                imgData tmpImageData;
-                tmpImageData.imagePatch = NULL;
-                tmpImageData.procId = tmpImageMetaPatch.procId;           tmpImageData.patchNumber = tmpImageMetaPatch.patchNumber;
-
-                tmpImageData.imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
-                massVoxelExtractor->getComputedImage(tmpImageData.imagePatch);
-
                 imageMetaPatchVector.push_back(tmpImageMetaPatch);
+
+                imgData tmpImageData;
+                tmpImageData.procId = tmpImageMetaPatch.procId;           tmpImageData.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageData.imagePatch = NULL;
                 imageDataVector.push_back(tmpImageData);
+
+                imageDataVector[patchCount].imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
+                massVoxelExtractor->getComputedImage(imageDataVector[patchCount].imagePatch);
 
                 patchCount++;
             }

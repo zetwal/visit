@@ -185,9 +185,9 @@ class AVTFILTERS_API avtSamplePointExtractor
     // Getting image information
     int                       getImgPatchSize(){ return patchCount;};                                 // gets the number of patches
     imgMetaData               getImgMetaPatch(int patchId){ return imageMetaPatchVector.at(patchId);} // gets the metadata
-    imgData                   getImgData(int patchId){ return imageDataVector.at(patchId); };         // gets the image
+    void                      getImgData(int patchId, imgData &tempImgData);                          // gets the image
 
-    void                      delImgPatches();                                                  // deletes patches
+    void                      delImgPatches();                                                        // deletes patches
     
   protected:
     int                       width, height, depth;

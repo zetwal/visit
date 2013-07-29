@@ -465,9 +465,8 @@ avtRayTracer::Execute(void)
         extractor.SetRectilinearGridsAreInWorldSpace(true, view, aspect);
     }
 
-    //std::cout << PAR_Rank() << "   avtRayTracer::Execute 0" << std::endl;
+    std::cout << PAR_Rank() << "   avtRayTracer::Execute 0" << std::endl;
     avtDataObject_p samples = extractor.GetOutput();
-
     
     if (rayCastingSLIVR == true){
         std::cout << PAR_Rank() << "   avtRayTracer::Execute     starting RayCasting SLIVR  ...... " << std::endl;
@@ -525,7 +524,10 @@ avtRayTracer::Execute(void)
 
              // Tell Proc 0 about its own patches
             for (int i=0; i<numPatches; i++){
-                imgData tempImgData = extractor.getImgData(i);
+                //imgData tempImgData = extractor.getImgData(i, tempImgData);
+                imgData tempImgData;
+                tempImgData.imagePatch = new float[imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4];
+                extractor.getImgData(i, tempImgData);
                 int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);
 
                 // creating a buffer for the img data & populating it
@@ -546,7 +548,10 @@ avtRayTracer::Execute(void)
         }
         else{       
             for (int i=0; i<numPatches; i++){
-                imgData tempImgData = extractor.getImgData(i);
+                //imgData tempImgData = extractor.getImgData(i);
+                imgData tempImgData;
+                tempImgData.imagePatch = new float[imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4];
+                extractor.getImgData(i, tempImgData);
                 int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);
 
                 // creating a buffer for the img data
@@ -624,6 +629,8 @@ avtRayTracer::Execute(void)
         //   delete []imgTest;
 
         extractor.delImgPatches();
+
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute     done RayCasting SLIVR !!!!!!" << std::endl;
 
         return;
     }

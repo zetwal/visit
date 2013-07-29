@@ -180,10 +180,10 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     float            lightDirection[3];
     double           materialProperties[4];
     avtOpacityMap    *transferFn1D;
-    float           gradient[3];
+    float            gradient[3];
 
-    double                    view_direction[3];
-    double                    view_up[3];
+    double           view_direction[3];
+    double           view_up[3];
 
     int debugOn;
 
@@ -219,6 +219,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SampleAlongSegment(const double *, const double*, int, int);
     void             SampleVariable(int, int, int, int);
     bool             FrustumIntersectsGrid(int, int, int, int) const;
+    bool             FrustumIntersectsGridSLIVR(int, int, int, int) const;
     void             GetSegment(int, int, double *, double *) const;
     static void      FindPlaneNormal(const double *, const double *, 
                                      const double *, double *);

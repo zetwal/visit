@@ -109,11 +109,6 @@ float dot(float vecA[3], float vecB[3]){
     return ((vecA[0]*vecB[0]) + (vecA[1]*vecB[1]) + (vecA[2]*vecB[2]));
 }
 
-//double normalize(double vec[3]){
-//    return sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
-//}
-
-
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor constructor
 //
@@ -605,6 +600,9 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     // Some of our sampling routines need a chance to pre-process the data.
     // Register the grid here so we can do that.
     //
+
+    if (proc == 0)
+        std::cout << " A. " << proc << " : " << patch << std::endl;
     RegisterGrid(rgrid, varnames, varsize);   // stores the values in a structure so that it can be used
 
     //
@@ -617,15 +615,21 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
     imgWidth = imgHeight = 0;
 
+    if (proc == 0)
+        std::cout << " B. " << proc << " : " << patch << std::endl;
+
     //
     // Let's find out if this range can even intersect the dataset.
     // If not, just skip it.
     //
-    if (!FrustumIntersectsGrid(w_min, w_max, h_min, h_max)){
+    if (!FrustumIntersectsGridSLIVR(w_min, w_max, h_min, h_max)){
         //std::cout << "Proc: " << proc << "   patch: " << patch << "   returned!!!! " << std::endl;
         return;
     }
-        
+     
+
+     if (proc == 0)
+        std::cout << " C. " << proc << " : " << patch << std::endl;   
     //
     // Determine the screen size of the patch being processed
     //
@@ -668,15 +672,15 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         _view[0] = _view[0]*(fullImgWidth/2.) + (fullImgWidth/2.);
         _view[1] = _view[1]*(fullImgHeight/2.) + (fullImgHeight/2.);
 
-        if (proc == 0)
-            if (patch == 0){
-                std::cout << i  << "    _view[0]: " << _view[0] << "   ,   _view[1]: " << _view[1] << std::endl;
-            }
+        //if (proc == 0)
+        //    if (patch == 0){
+        //        std::cout << i  << "    _view[0]: " << _view[0] << "   ,   _view[1]: " << _view[1] << std::endl;
+        //    }
 
-        if (proc == 1)
-            if (patch == 0){
-                std::cout << i  << "    _view[0]: " << _view[0] << "   ,   _view[1]: " << _view[1] << std::endl;
-            }
+        //if (proc == 1)
+        //    if (patch == 0){
+        //        std::cout << i  << "    _view[0]: " << _view[0] << "   ,   _view[1]: " << _view[1] << std::endl;
+        //    }
 
         if (xMin > _view[0]+0.5)
             xMin = _view[0]+0.5;
@@ -698,15 +702,11 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
 
     }
-    //imgDepth = imgDepth/8.0;
-
     float error_correction = 0.0f;
     xMin = xMin - error_correction;
     yMin = yMin - error_correction;
     xMax = xMax + error_correction;
     yMax = yMax + error_correction;
-
-    
 
     float offset = 0.0;
     xMin = xMin - offset;
@@ -721,6 +721,8 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
     //std::cout << "!!!!! proc: " << proc << "  patch: " << patch << " |  dims: " << dims[0] << " , " << dims[1] << " , " << dims[2] <<  std::endl;
 
+    if (proc == 0)
+        std::cout << " D. " << proc << " : " << patch << std::endl;
     if (rayCastingSLIVR == true){
         imgArray = new float[((imgWidth)*4) * imgHeight];
 
@@ -789,27 +791,11 @@ avtMassVoxelExtractor::getImageDimensions(int &inUse, int dims[2], int screen_ll
 void
 avtMassVoxelExtractor::getComputedImage(float *image)
 {
-    for (int i=0; i< imgDims[0]*4*imgDims[1]; i++)
-        image[i] = imgArray[i];
-
-// Debug
-// std::cout << "\nIn avtMassVoxelExtractor::getComputedImage" << std::endl;
-
-/*
-    //if (proc == 0 && patch == 0){
-    if (proc == 5 && patch == 35){
-        std::cout << "avtMassVoxelExtractor height: " << imgDims[1] << "   width: " << imgDims[0] << std::endl;
-        for (int i=0; i<imgDims[1]; i++){
-            for (int j=0; j<imgDims[0]; j++){
-                int index = i*(4*imgDims[0]) + j*4;
-                std::cout << index/4 << " = "  << imgArray[index]<< ", " << imgArray[index+1] << ", " << imgArray[index+2] << ", " << imgArray[index+3] << "  \n  ";
-            }
-            std::cout << "\n";
-        }
-    }
-*/
+    memcpy(image,imgArray, imgDims[0]*4*imgDims[1]*sizeof(float));
    
-    delete []imgArray;
+    if (imgArray != NULL)
+        delete []imgArray;
+
     imgArray = NULL;
 }
 
@@ -1118,6 +1104,66 @@ avtMassVoxelExtractor::FrustumIntersectsGrid(int w_min, int w_max, int h_min,
     return true;
 }
 
+
+
+bool
+avtMassVoxelExtractor::FrustumIntersectsGridSLIVR(int w_min, int w_max, int h_min,
+                                             int h_max) const
+{
+    //
+    // Start off by getting the segments corresponding to the bottom left (bl),
+    // upper left (ul), bottom right (br), and upper right (ur) rays.
+    //
+    double bl_start[4];
+    double bl_end[4];
+    GetSegment(w_min, h_min, bl_start, bl_end);
+
+    double ul_start[4];
+    double ul_end[4];
+    GetSegment(w_min, h_max, ul_start, ul_end);
+
+    double br_start[4];
+    double br_end[4];
+    GetSegment(w_max, h_min, br_start, br_end);
+
+    double ur_start[4];
+    double ur_end[4];
+    GetSegment(w_max, h_max, ur_start, ur_end);
+
+    //
+    // Now use those segments to construct bounding planes.  If the grid is
+    // not on the plus side of the bounding planes, then none of the frustum
+    // will intersect the grid.
+    //
+    // Note: the plus side of the plane is dependent on the order that these
+    // points are sent into the routine "FindPlaneNormal".  There are some
+    // subtleties with putting the arguments in the right order.
+    //
+    double normal[3];
+    int count = 2;
+    FindPlaneNormal(bl_start, bl_end, ul_start, normal);
+    if (!GridOnPlusSideOfPlane(bl_start, normal))
+        count--;
+    FindPlaneNormal(bl_start, br_start, br_end, normal);
+    if (!GridOnPlusSideOfPlane(bl_start, normal))
+       count--;
+
+   if (count == 0)
+        return false;
+
+    count = 2;
+    FindPlaneNormal(ur_start, ul_start, ur_end, normal);
+    if (!GridOnPlusSideOfPlane(ur_start, normal))
+        count--;
+    FindPlaneNormal(ur_start, ur_end, br_start, normal);
+    if (!GridOnPlusSideOfPlane(ur_start, normal))
+        count--;
+
+    if (count == 0)
+        return false;
+
+    return true;
+}
 
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor::FindPlaneNormal
@@ -1795,33 +1841,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 vals[0] = trilinearInterpolate(gradVals, distRight, dist_from_top, dist_from_front);
 
 
-
-                //getIndexandDist(x_right, newInd[0], 0.45,   index_left, index_right,   dist_from_left, dist_from_right);
-                /*
-                float diff_sep = 0.005;
-        int  l;
-        if (trilinearInterpolation || rayCastingSLIVR){
-            if (ncell_arrays > 0){
-                int indexT[8];
-                computeIndices(dims, indices, indexT);
-                
-                for (l = 0 ; l < ncell_arrays ; l++)    // ncell_arrays: usually 1
-                {
-                    void  *cell_array = cell_arrays[l];
-                    double vals[8];
-                    for (int m = 0 ; m < cell_size[l] ; m++){       // cell_size[l] usually 1
-                        AssignEight(cell_vartypes[l], vals, indexT, cell_size[l], m, cell_array);
-                        double val;
-                        val = trilinearInterpolate(vals, dist_from_right, dist_from_top, dist_from_front);
-                    
-
-
-                    }
-                }
-            }
-                */
-
-
                 //
                 // find x-h
                 //
@@ -1837,8 +1856,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
                 vals[1] = trilinearInterpolate(gradVals, distRight, dist_from_top, dist_from_front);
                 
-
-
 
                 //
                 // Y
@@ -1880,8 +1897,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
                 vals[3] = trilinearInterpolate(gradVals, dist_from_right, distTop, dist_from_front);
-
-
 
 
 
@@ -1949,21 +1964,12 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
               // std::cout << "after normalize gradient: " << gradient[0] << " , " << gradient[1]  << " , " << gradient[2] << std::endl; 
             }
         
-
-// indices[0] = index_back;    indices[1] = index_front;
-  //      indices[2] = index_top;     indices[3] = index_bottom;
-    //    indices[4] = index_left;    indices[5] = index_right;
-
-        
-        
-        float diff_sep = 0.005;
-        int  l;
         if (trilinearInterpolation || rayCastingSLIVR){
             if (ncell_arrays > 0){
                 int indexT[8];
                 computeIndices(dims, indices, indexT);
                 
-                for (l = 0 ; l < ncell_arrays ; l++)    // ncell_arrays: usually 1
+                for (int l = 0 ; l < ncell_arrays ; l++)    // ncell_arrays: usually 1
                 {
                     void  *cell_array = cell_arrays[l];
                     double vals[8];
@@ -1972,39 +1978,17 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         double val;
                         val = trilinearInterpolate(vals, dist_from_right, dist_from_top, dist_from_front);
                     
-                        tmpSampleList[count][cell_index[l]+m] = val;   
-
                         stepsZ++;
                         if (rayCastingSLIVR)
                             computePixelColor(val, dest_rgb, 0);
-
-
+                        else
+                            tmpSampleList[count][cell_index[l]+m] = val; 
                     }
                 }
             }
-
-        /*
-            if (ncell_arrays > 0){
-                int indexT[8];
-                computeIndices(dims, indices, indexT);
-                
-                void  *cell_array = cell_arrays[l];
-                double vals[8];
-               
-                AssignEight(cell_vartypes[l], vals, indexT, cell_size[l], m, cell_array);
-                double val = trilinearInterpolate(vals, dist_from_right, dist_from_top, dist_from_front);
-                tmpSampleList[count][cell_index[l]+m] = val;   
-
-                stepsZ++;
-                if (rayCastingSLIVR)
-                    computePixelColor(val, dest_rgb, 0);
-
-            }
-        */
-
-
-        }else{
-            for (l = 0 ; l < ncell_arrays ; l++)
+        }
+        else{
+            for (int l = 0 ; l < ncell_arrays ; l++)
             {
                 for (int m = 0 ; m < cell_size[l] ; m++)
                     tmpSampleList[count][cell_index[l]+m] = 
@@ -2037,7 +2021,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
             double y_bottom = 1. - prop[1];
             double z_back = prop[2];
             double z_front = 1. - prop[2];
-            for (l = 0 ; l < npt_arrays ; l++)
+            for (int l = 0 ; l < npt_arrays ; l++)
             {
                 void  *pt_array = pt_arrays[l];
                 int    s = pt_size[l];
@@ -2063,18 +2047,18 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         count++;
     }
 
+    //
+    // Make sure we get runs at the end.
+    //
     if (rayCastingSLIVR){
         imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = dest_rgb[0];
         imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = dest_rgb[1];
         imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = dest_rgb[2];
         imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = dest_rgb[3];
     }
-
-    //
-    // Make sure we get runs at the end.
-    //
-    if (inrun)
-        ray->SetSamples(last-count, last-1, tmpSampleList);
+    else
+        if (inrun)
+            ray->SetSamples(last-count, last-1, tmpSampleList);
 }
 
 

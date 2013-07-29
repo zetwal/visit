@@ -184,7 +184,6 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     avtOpacityMap         *transferFn1D;
     bool                  trilinearInterpolation;
     bool                  rayCastingSLIVR;
-    std::multimap<float, imagePatch> patches;
     
     avtImage_p            opaqueImage;
 
