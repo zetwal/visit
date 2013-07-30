@@ -662,6 +662,8 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
             materialPropArray[2] = matProp[2];
             materialPropArray[3] = matProp[3];
             compositeRF->SetMaterial(materialPropArray);
+            software->SetMatProperties(materialPropArray);
+            //delete []matProp;
         }
         else
             compositeRF->SetCompositingLikeSLIVR(false);
@@ -758,16 +760,6 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     tempLightDir[1] = ((window.GetLights()).GetLight(0)).GetDirection()[1];
     tempLightDir[2] = ((window.GetLights()).GetLight(0)).GetDirection()[2];
     software->SetLightDirection(tempLightDir);
-
-    double *matProp = atts.GetMaterialProperties();
-            double materialPropArray[4];
-            materialPropArray[0] = matProp[0];
-            materialPropArray[1] = matProp[1];
-            materialPropArray[2] = matProp[2];
-            materialPropArray[3] = matProp[3];
-            compositeRF->SetMaterial(materialPropArray);
-    software->SetMatProperties(materialPropArray);
-
 
     lm->SetViewDirection(view_dir);
     lm->SetViewUp(vi.viewUp);

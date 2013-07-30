@@ -109,6 +109,11 @@ float dot(float vecA[3], float vecB[3]){
     return ((vecA[0]*vecB[0]) + (vecA[1]*vecB[1]) + (vecA[2]*vecB[2]));
 }
 
+
+float mangitude(float vec[3]){
+    return sqrt((vec[0]*vec[0]) + (vec[1]*vec[1]) + (vec[2]*vec[2]));
+}
+
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor constructor
 //
@@ -1504,14 +1509,13 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
     //double opacityCorrection = 1.0;
     //source_rgb[3] = 1.0 - pow((1.0-source_rgb[3]), opacityCorrection);
 
-    // head light
-    lightDirection[0] = view_direction[0];
-    lightDirection[1] = view_direction[1];
-    lightDirection[2] = view_direction[2];
-
 
     // Phong Shading
     if (lighting == true){
+
+        if (mangitude(gradient) < 0.01)
+            return;
+        
         float dir[3];          // The view "right" vector.
         double view_right[3];   // view_direction cross view_up
                                 
@@ -1561,7 +1565,6 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
         invTransModelView->SetElement(2,0, world_to_view_transform->GetElement(2,0));
         invTransModelView->SetElement(2,1, world_to_view_transform->GetElement(2,1));
         invTransModelView->SetElement(2,2, world_to_view_transform->GetElement(2,2));
-
 
         invTransModelView->Invert();
         invTransModelView->Transpose();
@@ -1741,6 +1744,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
     bool inrun = false;
     int  count = 0;
     int stepsZ = 0;
+    float trilinearOffset = 0.45;
     avtRay *ray = volume->GetRay(w, h);
     int myInd[3];
     bool calc_cell_index = ((ncell_arrays > 0) || (ghosts != NULL));
@@ -1789,9 +1793,9 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         int index_left, index_right,            index_top, index_bottom,         index_front, index_back;
         float dist_from_left, dist_from_right,  dist_from_top,dist_from_bottom,  dist_from_front, dist_from_back;
 
-        getIndexandDist(x_right, newInd[0], 0.45,   index_left, index_right,   dist_from_left, dist_from_right);
-        getIndexandDist(y_top,   newInd[1], 0.45,   index_bottom,index_top,    dist_from_bottom,dist_from_top);
-        getIndexandDist(z_back,  newInd[2], 0.45,   index_back, index_front,   dist_from_back, dist_from_front);
+        getIndexandDist(x_right, newInd[0], trilinearOffset,   index_left, index_right,   dist_from_left, dist_from_right);
+        getIndexandDist(y_top,   newInd[1], trilinearOffset,   index_bottom,index_top,    dist_from_bottom,dist_from_top);
+        getIndexandDist(z_back,  newInd[2], trilinearOffset,   index_back, index_front,   dist_from_back, dist_from_front);
 
         int indices[6];
         indices[0] = index_back;    indices[1] = index_front;
@@ -1839,7 +1843,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 
                 float distRight, distLeft, distTop, distBottom, distFront, distBack;
                 int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
-                float gradientOffset = 0.45;
+                float gradientOffset = 0.2;
 
                 int indexGrad[8];
                 double vals[6];
@@ -1871,7 +1875,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 else
                     xRight = xRight + gradientOffset;
                 
-                getIndexandDist(xRight, gradInd[0], 0.45,  indexLeft, indexRight,  distLeft, distRight);
+                getIndexandDist(xRight, gradInd[0], trilinearOffset,  indexLeft, indexRight,  distLeft, distRight);
                 gradIndices[0] = index_left;    gradIndices[1] = index_right;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -1887,11 +1891,13 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 }else
                     xRight = xRight - gradientOffset;
 
-                getIndexandDist(xRight, gradInd[0], 0.45,  indexLeft, indexRight,  distLeft, distRight);
+                getIndexandDist(xRight, gradInd[0], trilinearOffset,  indexLeft, indexRight,  distLeft, distRight);
                 gradIndices[0] = index_left;    gradIndices[1] = index_right;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
                 vals[1] = trilinearInterpolate(gradVals, distRight, dist_from_top, dist_from_front);
+
+                
                 
 
                 //
@@ -1914,7 +1920,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 else
                     yTop = yTop + gradientOffset;
                 
-                getIndexandDist(yTop, gradInd[1], 0.45,  indexBottom, indexTop,  distBottom, distTop);
+                getIndexandDist(yTop, gradInd[1], trilinearOffset,  indexBottom, indexTop,  distBottom, distTop);
                 gradIndices[2] = indexBottom;    gradIndices[3] = indexTop;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -1929,13 +1935,13 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 }else
                     yTop = yTop - gradientOffset;
 
-                getIndexandDist(yTop, gradInd[1], 0.45,  indexBottom, indexTop,  distBottom, distTop);
+                getIndexandDist(yTop, gradInd[1], trilinearOffset,  indexBottom, indexTop,  distBottom, distTop);
                 gradIndices[2] = indexBottom;    gradIndices[3] = indexTop;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
                 vals[3] = trilinearInterpolate(gradVals, dist_from_right, distTop, dist_from_front);
 
-
+                
 
                 //
                 // Z
@@ -1957,7 +1963,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 else
                     zBack = zBack + gradientOffset;
                 
-                getIndexandDist(zBack, gradInd[2], 0.45,  indexBack, indexFront,  distBack, distFront);
+                getIndexandDist(zBack, gradInd[2], trilinearOffset,  indexBack, indexFront,  distBack, distFront);
                 gradIndices[4] = indexBack;    gradIndices[5] = indexFront;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -1972,27 +1978,16 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 }else
                     zBack = zBack - gradientOffset;
 
-                getIndexandDist(zBack, gradInd[2], 0.45,  indexBack, indexFront,  distBack, distFront);
+                getIndexandDist(zBack, gradInd[2], trilinearOffset,  indexBack, indexFront,  distBack, distFront);
                 gradIndices[4] = indexBack;    gradIndices[5] = indexFront;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
                 vals[5] = trilinearInterpolate(gradVals, dist_from_right, dist_from_top, distBack);
 
 
-                if (vals[1] - vals[0] == 0)
-                    gradient[0] = 0;
-                else
-                    gradient[0] = (1.0/(2.0*gradientOffset)) * (vals[1] - vals[0]);
-
-                if (vals[3] - vals[2] == 0)
-                    gradient[1] = 0;
-                else
-                    gradient[1] = (1.0/(2.0*gradientOffset)) * (vals[3] - vals[2]);
-
-                if (vals[5] - vals[4] == 0)
-                    gradient[2] = 0;
-                else
-                    gradient[2] = (1.0/(2.0*gradientOffset)) * (vals[5] - vals[4]);
+                gradient[0] = (1.0/(2.0*gradientOffset)) * (vals[1] - vals[0]);
+                gradient[1] = (1.0/(2.0*gradientOffset)) * (vals[3] - vals[2]);
+                gradient[2] = (1.0/(2.0*gradientOffset)) * (vals[5] - vals[4]);
 
                // std::cout << "\n\n\nVals: " << vals[0] << " , " << vals[1] << "      " << vals[2] << " , " << vals[3] << "     " << vals[4] << " , " << vals[5] << std::endl; 
                // std::cout << "gradient: " << gradient[0] << " , " << gradient[1]  << " , " << gradient[2] << std::endl; 
