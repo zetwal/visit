@@ -434,6 +434,9 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 				buffer[bufferIndex+2] = (buffer[bufferIndex+2] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3])) + allRecvImgData[patchId].imagePatch[subImgIndex+2];
 				buffer[bufferIndex+3] = (buffer[bufferIndex+3] * (1.0 - allRecvImgData[patchId].imagePatch[subImgIndex+3]));
 			}
+			//if (imgCount < 2){
+			//		myfile <<  "\n ";
+			//}
 		}
 
 		//////////////////////////////////

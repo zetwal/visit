@@ -474,6 +474,14 @@ avtOpenGL3DTextureVolumeRenderer::Render(
     props.view.SetCameraFromView(camera);
     vtkMatrix4x4 *cameraMatrix = camera->GetViewTransformMatrix();
 
+    float mvmat[16];
+  glGetFloatv(GL_MODELVIEW_MATRIX, mvmat);
+  std::cout << "model view: \n";
+  std::cout << mvmat[ 0] << "  " << mvmat[ 1] << "  " << mvmat[ 2] << "  " << mvmat[ 3] << std::endl;
+  std::cout << mvmat[ 4] << "  " << mvmat[ 5] << "  " << mvmat[ 6] << "  " << mvmat[ 7] << std::endl;
+  std::cout << mvmat[ 8] << "  " << mvmat[ 9] << "  " << mvmat[10] << "  " << mvmat[11] << std::endl;
+  std::cout << mvmat[12] << "  " << mvmat[13] << "  " << mvmat[14] << "  " << mvmat[15] << std::endl << std::endl;
+
     //
     // Contour the bounding box at a user specified number of depths
     //

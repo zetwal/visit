@@ -1032,6 +1032,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         massVoxelExtractor->SetLighting(lighting);
         massVoxelExtractor->SetLightDirection(lightDirection);
         massVoxelExtractor->SetMatProperties(materialProperties);
+        massVoxelExtractor->SetModelViewMatrix(modelViewMatrix);
         massVoxelExtractor->SetTransferFn(transferFn1D);
         massVoxelExtractor->SetViewDirection(view_direction);
         massVoxelExtractor->SetViewUp(view_up);

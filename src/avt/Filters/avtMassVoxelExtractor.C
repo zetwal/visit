@@ -185,6 +185,7 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     imgUpperRight[0] = imgUpperRight[1] = 0;    //
     imgDepth = -1;                              // from the depth buffer
     imgArray = NULL;                            // the image data
+    countt = 0;
     
 }
 
@@ -455,6 +456,16 @@ avtMassVoxelExtractor::SetGridsAreInWorldSpace(bool val, const avtViewInfo &v,
     vtkMatrix4x4 *mat = cam->GetCompositeProjectionTransformMatrix(aspect,
                                          cur_clip_range[0], cur_clip_range[1]);
 
+/*
+    vtkMatrix4x4 *mat1 = cam->GetModelTransformMatrix();
+
+    std::cout << "Modelview mat1: \n";
+        std::cout << mat1->GetElement(0,0) << "  " << mat1->GetElement(0,1) << "  " << mat1->GetElement(0,2) << "  " << mat1->GetElement(0,3) << std::endl;
+        std::cout << mat1->GetElement(1,0) << "  " << mat1->GetElement(1,1) << "  " << mat1->GetElement(1,2) << "  " << mat1->GetElement(1,3) << std::endl;
+        std::cout << mat1->GetElement(2,0) << "  " << mat1->GetElement(2,1) << "  " << mat1->GetElement(2,2) << "  " << mat1->GetElement(2,3) << std::endl;
+        std::cout << mat1->GetElement(3,0) << "  " << mat1->GetElement(3,1) << "  " << mat1->GetElement(3,2) << "  " << mat1->GetElement(3,3) << std::endl;
+ */
+
     if (xform)
     {
         vtkMatrix4x4 *rectTrans = vtkMatrix4x4::New();
@@ -467,8 +478,29 @@ avtMassVoxelExtractor::SetGridsAreInWorldSpace(bool val, const avtViewInfo &v,
     else
     {
         // being executed for now for raycasting slivr
+        /*
+        std::cout << proc << "Modelview mat : \n";
+        std::cout << 
+        mat->GetElement(0,0) << "  " << mat->GetElement(0,1) << "  " << mat->GetElement(0,2) << "  " << mat->GetElement(0,3) << std::endl <<
+        mat->GetElement(1,0) << "  " << mat->GetElement(1,1) << "  " << mat->GetElement(1,2) << "  " << mat->GetElement(1,3) << std::endl << 
+        mat->GetElement(2,0) << "  " << mat->GetElement(2,1) << "  " << mat->GetElement(2,2) << "  " << mat->GetElement(2,3) << std::endl <<
+        mat->GetElement(3,0) << "  " << mat->GetElement(3,1) << "  " << mat->GetElement(3,2) << "  " << mat->GetElement(3,3) << std::endl;
+
+*/
+
         vtkMatrix4x4::Invert(mat, view_to_world_transform);
+/*
+         std::cout << proc << "Modelview mat view_to_world_transform: \n";
+        std::cout << 
+        view_to_world_transform->GetElement(0,0) << "  " << view_to_world_transform->GetElement(0,1) << "  " << view_to_world_transform->GetElement(0,2) << "  " << view_to_world_transform->GetElement(0,3) << std::endl <<
+        view_to_world_transform->GetElement(1,0) << "  " << view_to_world_transform->GetElement(1,1) << "  " << view_to_world_transform->GetElement(1,2) << "  " << view_to_world_transform->GetElement(1,3) << std::endl << 
+        view_to_world_transform->GetElement(2,0) << "  " << view_to_world_transform->GetElement(2,1) << "  " << view_to_world_transform->GetElement(2,2) << "  " << view_to_world_transform->GetElement(2,3) << std::endl <<
+        view_to_world_transform->GetElement(3,0) << "  " << view_to_world_transform->GetElement(3,1) << "  " << view_to_world_transform->GetElement(3,2) << "  " << view_to_world_transform->GetElement(3,3) << std::endl;
+*/
+
         world_to_view_transform->DeepCopy(mat);
+
+
     }
     cam->Delete();
 }
@@ -723,11 +755,11 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     imgHeight = yMax - yMin;
 
     //std::cout << "!!!!! proc: " << proc << "  patch: " << patch << " |  xMin: " << xMin << "    yMin: " << yMin << "    xMax: " << xMax << "   yMax: " << yMax << "  imgWidth: " << imgWidth << "    imgHeight: " << imgHeight <<  std::endl;
-
     //std::cout << "!!!!! proc: " << proc << "  patch: " << patch << " |  dims: " << dims[0] << " , " << dims[1] << " , " << dims[2] <<  std::endl;
 
     //if (proc == 0)
     //    std::cout << " D. " << proc << " : " << patch << std::endl;
+
     if (rayCastingSLIVR == true){
         imgArray = new float[((imgWidth)*4) * imgHeight];
 
@@ -735,10 +767,8 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             imgArray[i] = 0.0;
         
         imgDims[0] = imgWidth;       imgDims[1] = imgHeight;
-        imgLowerLeft[0] = xMin;         imgLowerLeft[1] = yMin;
-        imgUpperRight[0] = xMax;         imgUpperRight[1] = yMax;
-
-        // std::cout << "\n\n imgWidth: " << imgWidth << "   imgHeight: " << imgHeight << std::endl;
+        imgLowerLeft[0] = xMin;      imgLowerLeft[1] = yMin;
+        imgUpperRight[0] = xMax;     imgUpperRight[1] = yMax;
     }
 
     for (int i = xMin ; i < xMax ; i++)
@@ -1512,9 +1542,8 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
 
     // Phong Shading
     if (lighting == true){
-
-        if (mangitude(gradient) < 0.01)
-            return;
+       // if (mangitude(gradient) < 0.001)
+       //    return;
         
         float dir[3];          // The view "right" vector.
         double view_right[3];   // view_direction cross view_up
@@ -1553,6 +1582,7 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
 
 
         // transform gradient
+        /*
         vtkMatrix3x3 *invTransModelView = vtkMatrix3x3::New();
         invTransModelView->SetElement(0,0, world_to_view_transform->GetElement(0,0));
         invTransModelView->SetElement(0,1, world_to_view_transform->GetElement(0,1));
@@ -1581,10 +1611,100 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
 
         normalize(transformedGradientFloat);
         invTransModelView->Delete();
+        */
+
+
+        vtkMatrix3x3 *invTransModelView = vtkMatrix3x3::New();
+       //invTransModelView->DeepCopy(view_to_world_transform);
+        //vtkMatrix4x4::Invert(view_to_world_transform, invTransModelView);
+/*
+        std::cout << proc << " _ Modelview view_to_world_transform: \n";
+        std::cout << 
+        invTransModelView->GetElement(0,0) << "  " << invTransModelView->GetElement(0,1) << "  " << invTransModelView->GetElement(0,2) << "  " << invTransModelView->GetElement(0,3) << std::endl <<
+        invTransModelView->GetElement(1,0) << "  " << invTransModelView->GetElement(1,1) << "  " << invTransModelView->GetElement(1,2) << "  " << invTransModelView->GetElement(1,3) << std::endl << 
+        invTransModelView->GetElement(2,0) << "  " << invTransModelView->GetElement(2,1) << "  " << invTransModelView->GetElement(2,2) << "  " << invTransModelView->GetElement(2,3) << std::endl <<
+        invTransModelView->GetElement(3,0) << "  " << invTransModelView->GetElement(3,1) << "  " << invTransModelView->GetElement(3,2) << "  " << invTransModelView->GetElement(3,3) << std::endl;
+*/
+        //vtkMatrix4x4::Invert(view_to_world_transform, invTransModelView);
+
+        
+        // the incoming surface normals have to be
+        // transformed into eye space as well. You accomplish this by transforming surface normals by the
+        // inverse transpose of the upper leftmost 3 x 3 matrix taken from the modelview matrix
+/*
+        invTransModelView->SetElement(0,0, view_to_world_transform->GetElement(0,0));
+        invTransModelView->SetElement(0,1, view_to_world_transform->GetElement(0,1));
+        invTransModelView->SetElement(0,2, view_to_world_transform->GetElement(0,2));
+
+        invTransModelView->SetElement(1,0, view_to_world_transform->GetElement(1,0));
+        invTransModelView->SetElement(1,1, view_to_world_transform->GetElement(1,1));
+        invTransModelView->SetElement(1,2, view_to_world_transform->GetElement(1,2));
+
+        invTransModelView->SetElement(2,0, view_to_world_transform->GetElement(2,0));
+        invTransModelView->SetElement(2,1, view_to_world_transform->GetElement(2,1));
+        invTransModelView->SetElement(2,2, view_to_world_transform->GetElement(2,2));
+*/
+
+        invTransModelView->SetElement(0,0, modelViewMatrix[0]);
+        invTransModelView->SetElement(0,1, modelViewMatrix[1]);
+        invTransModelView->SetElement(0,2, modelViewMatrix[2]);
+
+        invTransModelView->SetElement(1,0, modelViewMatrix[3]);
+        invTransModelView->SetElement(1,1, modelViewMatrix[4]);
+        invTransModelView->SetElement(1,2, modelViewMatrix[5]);
+
+        invTransModelView->SetElement(2,0, modelViewMatrix[6]);
+        invTransModelView->SetElement(2,1, modelViewMatrix[7]);
+        invTransModelView->SetElement(2,2, modelViewMatrix[8]);
+
+        if (countt == 0){
+        std::cout << proc << " _ Modelview view_to_world_transform: \n";
+        std::cout << 
+        invTransModelView->GetElement(0,0) << "  " << invTransModelView->GetElement(0,1) << "  " << invTransModelView->GetElement(0,2) <<  std::endl <<
+        invTransModelView->GetElement(1,0) << "  " << invTransModelView->GetElement(1,1) << "  " << invTransModelView->GetElement(1,2) <<  std::endl << 
+        invTransModelView->GetElement(2,0) << "  " << invTransModelView->GetElement(2,1) << "  " << invTransModelView->GetElement(2,2) <<  std::endl << std::endl;
+    }
+        countt++;
+
+     //  invTransModelView->SetElement(3,0, 0);
+     //   invTransModelView->SetElement(3,1, 0);
+     //   invTransModelView->SetElement(3,2, 0);
+     //   invTransModelView->SetElement(3,3, 1);
+        invTransModelView->Invert();
+        invTransModelView->Transpose();
+        
+        
+
+
+        
+        double gradientDouble[3], transformedGradient[3];
+        for (int i=0; i<3; i++)
+            gradientDouble[i] = gradient[i];
+        //gradientDouble[3] = 1.0;
+
+        invTransModelView->MultiplyPoint(gradientDouble, transformedGradient);
+
+      // for (int i=0; i<4; i++)
+       //     transformedGradient[i] = transformedGradient[i]/transformedGradient[3];
+
+
+        float transformedGradientFloat[3];
+        for (int i=0; i<3; i++)
+            transformedGradientFloat[i] = transformedGradient[i];
+
+        normalize(transformedGradientFloat);
+        invTransModelView->Delete();
+
 
         // cos(angle) = a.b;  angle between normal and light
         float normal_dot_light = dot(transformedGradientFloat,dir);   // angle between light and normal;
-        normal_dot_light = std::max( fabs(normal_dot_light), 1.0);    // clamping & abs: two-sided lighting
+        if (normal_dot_light < 0.0)
+            normal_dot_light = -normal_dot_light;
+
+        if (normal_dot_light > 1.0)
+            normal_dot_light = 1.0;
+
+        //normal_dot_light = std::max( fabs(normal_dot_light), 1.0);    // clamping & abs: two-sided lighting
 
 /*
         std::cout << "\nlighting: " << lighting << std::endl;
@@ -1606,17 +1726,17 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
         for (int i=0; i<3; i++)
             source_rgb[i] = source_rgb[i] * materialProperties[0];                       // I  * ka
 
-         //   std::cout << "After ambient source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
+        //std::cout << "After ambient source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
 
         for (int i=0; i<3; i++)
             source_rgb[i] += source_rgb[i] * materialProperties[1] * normal_dot_light;   // I  * kd*abs(cos(angle))
 
-          // std::cout << "After diffuse source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
+        // std::cout << "After diffuse source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
 
         for (int i=0; i<3; i++)
             source_rgb[i] += materialProperties[2] * pow(normal_dot_light,materialProperties[3]) * source_rgb[3];   // I  * kd*abs(cos(angle))
 
-       //   std::cout << "After specular source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
+        //std::cout << "After specular source_rgb: " << source_rgb[0] << " , " << source_rgb[1] << " , " << source_rgb[2]  << " , " << source_rgb[3] << std::endl;
 
     }
 
@@ -1624,8 +1744,6 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
     for (int i=0; i<4; i++) 
         dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
 
-    //std::cout << "final_rgba: " << dest_rgb[0] << " , " << dest_rgb[1] << " , " << dest_rgb[2]  << " , " << dest_rgb[3] << std::endl; 
-    
     // back to front
     //    dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
 
@@ -1804,26 +1922,26 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
         
         if (trilinearInterpolation || rayCastingSLIVR){
-            if (indices[0] < 0 || indices[0]>dims[2]-2)
+            if (indices[0] < 2 || indices[0]>dims[2]-3)
                 valid_sample[i] = false;
 
-            if (indices[1] < 0 || indices[1]>dims[2]-2)
-                valid_sample[i] = false;
-
-
-
-            if (indices[2] < 0 || indices[2]>dims[1]-2)
-                valid_sample[i] = false;
-
-            if (indices[3] < 0 || indices[3]>dims[1]-2)
+            if (indices[1] < 2 || indices[1]>dims[2]-3)
                 valid_sample[i] = false;
 
 
 
-            if (indices[4] < 0 || indices[4]>dims[0]-2)
+            if (indices[2] < 2 || indices[2]>dims[1]-3)
                 valid_sample[i] = false;
 
-            if (indices[5] < 0 || indices[5]>dims[0]-2)
+            if (indices[3] < 2 || indices[3]>dims[1]-3)
+                valid_sample[i] = false;
+
+
+
+            if (indices[4] < 2 || indices[4]>dims[0]-3)
+                valid_sample[i] = false;
+
+            if (indices[5] < 2 || indices[5]>dims[0]-3)
                 valid_sample[i] = false;
         }
 
@@ -1843,7 +1961,9 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 
                 float distRight, distLeft, distTop, distBottom, distFront, distBack;
                 int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
-                float gradientOffset = 0.2;
+                float gradientOffset = 0.45;
+                float trilinearGradientOffset = 0.45;
+
 
                 int indexGrad[8];
                 double vals[6];
@@ -1875,7 +1995,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 else
                     xRight = xRight + gradientOffset;
                 
-                getIndexandDist(xRight, gradInd[0], trilinearOffset,  indexLeft, indexRight,  distLeft, distRight);
+                getIndexandDist(xRight, gradInd[0], trilinearGradientOffset,  indexLeft, indexRight,  distLeft, distRight);
                 gradIndices[0] = index_left;    gradIndices[1] = index_right;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -1891,7 +2011,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 }else
                     xRight = xRight - gradientOffset;
 
-                getIndexandDist(xRight, gradInd[0], trilinearOffset,  indexLeft, indexRight,  distLeft, distRight);
+                getIndexandDist(xRight, gradInd[0], trilinearGradientOffset,  indexLeft, indexRight,  distLeft, distRight);
                 gradIndices[0] = index_left;    gradIndices[1] = index_right;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -1920,7 +2040,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 else
                     yTop = yTop + gradientOffset;
                 
-                getIndexandDist(yTop, gradInd[1], trilinearOffset,  indexBottom, indexTop,  distBottom, distTop);
+                getIndexandDist(yTop, gradInd[1], trilinearGradientOffset,  indexBottom, indexTop,  distBottom, distTop);
                 gradIndices[2] = indexBottom;    gradIndices[3] = indexTop;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -1935,7 +2055,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 }else
                     yTop = yTop - gradientOffset;
 
-                getIndexandDist(yTop, gradInd[1], trilinearOffset,  indexBottom, indexTop,  distBottom, distTop);
+                getIndexandDist(yTop, gradInd[1], trilinearGradientOffset,  indexBottom, indexTop,  distBottom, distTop);
                 gradIndices[2] = indexBottom;    gradIndices[3] = indexTop;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -1963,7 +2083,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 else
                     zBack = zBack + gradientOffset;
                 
-                getIndexandDist(zBack, gradInd[2], trilinearOffset,  indexBack, indexFront,  distBack, distFront);
+                getIndexandDist(zBack, gradInd[2], trilinearGradientOffset,  indexBack, indexFront,  distBack, distFront);
                 gradIndices[4] = indexBack;    gradIndices[5] = indexFront;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -1978,7 +2098,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 }else
                     zBack = zBack - gradientOffset;
 
-                getIndexandDist(zBack, gradInd[2], trilinearOffset,  indexBack, indexFront,  distBack, distFront);
+                getIndexandDist(zBack, gradInd[2], trilinearGradientOffset,  indexBack, indexFront,  distBack, distFront);
                 gradIndices[4] = indexBack;    gradIndices[5] = indexFront;
                 computeIndices(dims, gradIndices, indexGrad);
                 AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -2083,10 +2203,10 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
     // Make sure we get runs at the end.
     //
     if (rayCastingSLIVR){
-        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = dest_rgb[0];
-        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = dest_rgb[1];
-        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = dest_rgb[2];
-        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = dest_rgb[3];
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = std::min(std::max(dest_rgb[0],0.0),1.0);
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = std::min(std::max(dest_rgb[1],0.0),1.0);
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = std::min(std::max(dest_rgb[2],0.0),1.0);
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = std::min(std::max(dest_rgb[3],0.0),1.0);
     }
     else
         if (inrun)

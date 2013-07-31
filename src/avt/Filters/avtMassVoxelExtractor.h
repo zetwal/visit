@@ -121,6 +121,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void             SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void             SetTransferFn(avtOpacityMap *_transferFn1D) { transferFn1D = _transferFn1D; };
+    void             SetModelViewMatrix(double _modelViewMatrix[9]) { for (int i=0;i<9;i++) modelViewMatrix[i]=_modelViewMatrix[i]; }
 
     void                  SetViewDirection(double *vd)
                              { view_direction[0] = vd[0];
@@ -146,6 +147,9 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           cur_clip_range[2];
     vtkMatrix4x4    *view_to_world_transform;
     vtkMatrix4x4    *world_to_view_transform;
+    vtkMatrix4x4    *modelView;
+    double                modelViewMatrix[9];
+
 
     double           *X;
     double           *Y;
@@ -187,6 +191,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           view_up[3];
 
     int debugOn;
+    int countt;
 
 
     // Patch details for one image

@@ -411,6 +411,14 @@ avtRayTracer::Execute(void)
     vtkMatrix4x4 *transform = vtkMatrix4x4::New();
     avtWorldSpaceToImageSpaceTransform::CalculateTransform(view, transform, 
                                                            scale, aspect);
+
+    std::cout << PAR_Rank() << "Modelview transform: \n";
+        std::cout << 
+        transform->GetElement(0,0) << "  " << transform->GetElement(0,1) << "  " << transform->GetElement(0,2) << "  " << transform->GetElement(0,3) << std::endl <<
+        transform->GetElement(1,0) << "  " << transform->GetElement(1,1) << "  " << transform->GetElement(1,2) << "  " << transform->GetElement(1,3) << std::endl << 
+        transform->GetElement(2,0) << "  " << transform->GetElement(2,1) << "  " << transform->GetElement(2,2) << "  " << transform->GetElement(2,3) << std::endl <<
+        transform->GetElement(3,0) << "  " << transform->GetElement(3,1) << "  " << transform->GetElement(3,2) << "  " << transform->GetElement(3,3) << std::endl;
+
     double newNearPlane, newFarPlane, oldNearPlane, oldFarPlane;
     TightenClippingPlanes(view, transform, newNearPlane, newFarPlane);
     oldNearPlane = view.nearPlane;
@@ -441,6 +449,7 @@ avtRayTracer::Execute(void)
         extractor.SetLighting(lighting);
         extractor.SetLightDirection(lightDirection);
         extractor.SetMatProperties(materialProperties);
+        extractor.SetModelViewMatrix(modelViewMatrix);
         extractor.SetTransferFn(transferFn1D);
         extractor.SetViewDirection(view_direction);
         extractor.SetViewUp(view_up);

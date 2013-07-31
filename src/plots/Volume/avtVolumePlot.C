@@ -631,8 +631,9 @@ avtVolumePlot::ApplyRenderingTransformation(avtDataObject_p input)
 #ifdef ENGINE
         // gradient calc for raycasting integration not needed, but
         // lighting flag may still be on
-        if ((atts.GetRendererType() == VolumeAttributes::RayCasting || atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)&&
-            atts.GetLightingFlag())
+        //if ((atts.GetRendererType() == VolumeAttributes::RayCasting || atts.GetRendererType() == VolumeAttributes::RayCastingSLIVR)&&
+        //    atts.GetLightingFlag())
+        if ( (atts.GetRendererType() == VolumeAttributes::RayCasting) && atts.GetLightingFlag() )
         {
             char gradName[128], gradName2[128];
             const char *gradvar = atts.GetOpacityVariable().c_str();

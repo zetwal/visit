@@ -342,6 +342,16 @@ avtOpenGLSplattingVolumeRenderer::Render(
     const avtVolumeRendererImplementation::RenderProperties &props,
     const avtVolumeRendererImplementation::VolumeData &volume)
 {
+
+     float mvmat[16];
+  glGetFloatv(GL_MODELVIEW_MATRIX, mvmat);
+  std::cout << "model view: \n";
+  std::cout << mvmat[ 0] << "  " << mvmat[ 1] << "  " << mvmat[ 2] << "  " << mvmat[ 3] << std::endl;
+  std::cout << mvmat[ 4] << "  " << mvmat[ 5] << "  " << mvmat[ 6] << "  " << mvmat[ 7] << std::endl;
+  std::cout << mvmat[ 8] << "  " << mvmat[ 9] << "  " << mvmat[10] << "  " << mvmat[11] << std::endl;
+  std::cout << mvmat[12] << "  " << mvmat[13] << "  " << mvmat[14] << "  " << mvmat[15] << std::endl << std::endl;
+
+
     // Create the texture for a gaussian splat
     const int GRIDSIZE=32;
     if (alphatex == NULL)
@@ -397,9 +407,21 @@ avtOpenGLSplattingVolumeRenderer::Render(
     vtkCamera *camera = vtkCamera::New();
     props.view.SetCameraFromView(camera);
     vtkMatrix4x4 *cameraMatrix = camera->GetViewTransformMatrix();
+
+    std::cout << " cameraMatrix: \n";
+        std::cout << 
+        cameraMatrix->GetElement(0,0) << "  " << cameraMatrix->GetElement(0,1) << "  " << cameraMatrix->GetElement(0,2) << "  " << cameraMatrix->GetElement(0,3) << std::endl <<
+        cameraMatrix->GetElement(1,0) << "  " << cameraMatrix->GetElement(1,1) << "  " << cameraMatrix->GetElement(1,2) << "  " << cameraMatrix->GetElement(1,3) << std::endl << 
+        cameraMatrix->GetElement(2,0) << "  " << cameraMatrix->GetElement(2,1) << "  " << cameraMatrix->GetElement(2,2) << "  " << cameraMatrix->GetElement(2,3) << std::endl <<
+        cameraMatrix->GetElement(3,0) << "  " << cameraMatrix->GetElement(3,1) << "  " << cameraMatrix->GetElement(3,2) << "  " << cameraMatrix->GetElement(3,3) << std::endl;
+
+
+
     vtkMatrix4x4 *I = vtkMatrix4x4::New();
     I->DeepCopy(cameraMatrix);
     I->Invert();
+
+
 
     // Set up splat size and the splat stuff
     float size = 0.0;

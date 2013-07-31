@@ -538,6 +538,13 @@ TextureRenderer::draw_polygons(vector<float>& vertex,
     glGetFloatv(GL_MODELVIEW_MATRIX, mvmat);
   }
 
+  glGetFloatv(GL_MODELVIEW_MATRIX, mvmat);
+  std::cout << "model view: \n";
+  std::cout << mvmat[ 0] << "  " << mvmat[ 1] << "  " << mvmat[ 2] << "  " << mvmat[ 3] << std::endl;
+  std::cout << mvmat[ 4] << "  " << mvmat[ 5] << "  " << mvmat[ 6] << "  " << mvmat[ 7] << std::endl;
+  std::cout << mvmat[ 8] << "  " << mvmat[ 9] << "  " << mvmat[10] << "  " << mvmat[11] << std::endl;
+  std::cout << mvmat[12] << "  " << mvmat[13] << "  " << mvmat[14] << "  " << mvmat[15] << std::endl << std::endl;
+
   for(unsigned int i=0, k=0; i<poly.size(); i++) {
     if (mask && shader) {
       int maskval = ((*mask)[i] << 1) + 1;

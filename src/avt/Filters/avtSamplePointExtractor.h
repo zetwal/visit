@@ -171,6 +171,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     void                      SetLightDirection(double _lightDir[3]) { for (int i=0;i<3;i++) lightDirection[i]=_lightDir[i]; }
     void                      SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void                      SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
+    void                      SetModelViewMatrix(double _modelViewMatrix[9]) { for (int i=0;i<9;i++) modelViewMatrix[i]=_modelViewMatrix[i]; }
 
     void                  SetViewDirection(double *vd)
                              { view_direction[0] = vd[0];
@@ -238,6 +239,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     // lighting & material
     double                    view_direction[3];
     double                    view_up[3];
+    double                modelViewMatrix[9];
 
     bool                      lighting;
     double                    lightPosition[4];

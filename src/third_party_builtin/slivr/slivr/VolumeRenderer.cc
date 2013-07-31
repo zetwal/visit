@@ -521,7 +521,7 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
 #endif
 
     vector<TextureBrick*>& bs  = bricks[0];
-    std::cout << "bs.size(): " << bs.size() << std::endl;
+    //std::cout << "bs.size(): " << bs.size() << std::endl;
     for (unsigned int i=0; i < bs.size(); i++) {
       TextureBrick* b = bs[i];
       if (!test_against_view(b->bbox())) continue; // Clip against view.
