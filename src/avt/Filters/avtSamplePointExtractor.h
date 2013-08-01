@@ -53,6 +53,10 @@
 #include <avtOpacityMap.h>
 #include <fstream>
 #include <vector>
+#include <map>
+#include <algorithm>
+#include <utility>
+#include <hash_map>
 
 #include <avtImgCommunicator.h>
 
@@ -171,23 +175,14 @@ class AVTFILTERS_API avtSamplePointExtractor
     void                      SetLightDirection(double _lightDir[3]) { for (int i=0;i<3;i++) lightDirection[i]=_lightDir[i]; }
     void                      SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void                      SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
-    void                      SetModelViewMatrix(double _modelViewMatrix[9]) { for (int i=0;i<9;i++) modelViewMatrix[i]=_modelViewMatrix[i]; }
-
-    void                  SetViewDirection(double *vd)
-                             { view_direction[0] = vd[0];
-                               view_direction[1] = vd[1];
-                               view_direction[2] = vd[2]; };
-
-    void                  SetViewUp(double *vu)
-                             { view_up[0] = vu[0];
-                               view_up[1] = vu[1];
-                               view_up[2] = vu[2]; };
+    void                      SetModelViewMatrix(double _modelViewMatrix[16]) { for (int i=0;i<16;i++) modelViewMatrix[i]=_modelViewMatrix[i]; }
+    void                      SetViewDirection(double *vd){ for (int i=0; i<3; i++) view_direction[i] = vd[i]; }
+    void                      SetViewUp(double *vu){ for (int i=0; i<3; i++) view_up[i] = vu[i]; }
 
     // Getting image information
     int                       getImgPatchSize(){ return patchCount;};                                 // gets the number of patches
     imgMetaData               getImgMetaPatch(int patchId){ return imageMetaPatchVector.at(patchId);} // gets the metadata
     void                      getImgData(int patchId, imgData &tempImgData);                          // gets the image
-
     void                      delImgPatches();                                                        // deletes patches
     
   protected:
@@ -229,8 +224,10 @@ class AVTFILTERS_API avtSamplePointExtractor
     int                       patchCount;
     int                       totalAssignedPatches;
 
-    std::vector<imgMetaData>  imageMetaPatchVector;
-    std::vector<imgData>      imageDataVector;
+    std::vector<imgMetaData>   imageMetaPatchVector;
+    std::vector<imgData>       imageDataVector;
+    std::multimap<int,imgData> imageDataMap;
+
 
     // triliniear / raycastin SLIVR
     bool                      trilinearInterpolation;
@@ -239,7 +236,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     // lighting & material
     double                    view_direction[3];
     double                    view_up[3];
-    double                modelViewMatrix[9];
+    double                    modelViewMatrix[16];
 
     bool                      lighting;
     double                    lightPosition[4];

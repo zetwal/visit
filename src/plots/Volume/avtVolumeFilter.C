@@ -645,16 +645,26 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
         cameraMatrix->GetElement(2,0) << "  " << cameraMatrix->GetElement(2,1) << "  " << cameraMatrix->GetElement(2,2) << "  " << cameraMatrix->GetElement(2,3) << std::endl <<
         cameraMatrix->GetElement(3,0) << "  " << cameraMatrix->GetElement(3,1) << "  " << cameraMatrix->GetElement(3,2) << "  " << cameraMatrix->GetElement(3,3) << std::endl;
 
-    double modelViewMatrix[9];
+    double modelViewMatrix[16];
     modelViewMatrix[0] = cameraMatrix->GetElement(0,0);
     modelViewMatrix[1] = cameraMatrix->GetElement(0,1);
     modelViewMatrix[2] = cameraMatrix->GetElement(0,2);
-    modelViewMatrix[3] = cameraMatrix->GetElement(1,0);
-    modelViewMatrix[4] = cameraMatrix->GetElement(1,1);
-    modelViewMatrix[5] = cameraMatrix->GetElement(1,2);
-    modelViewMatrix[6] = cameraMatrix->GetElement(2,0);
-    modelViewMatrix[7] = cameraMatrix->GetElement(2,1);
-    modelViewMatrix[8] = cameraMatrix->GetElement(2,2);
+    modelViewMatrix[3] = cameraMatrix->GetElement(0,3);
+
+    modelViewMatrix[4] = cameraMatrix->GetElement(1,0);
+    modelViewMatrix[5] = cameraMatrix->GetElement(1,1);
+    modelViewMatrix[6] = cameraMatrix->GetElement(1,2);
+    modelViewMatrix[7] = cameraMatrix->GetElement(1,3);
+
+    modelViewMatrix[8]  = cameraMatrix->GetElement(2,0);
+    modelViewMatrix[9]  = cameraMatrix->GetElement(2,1);
+    modelViewMatrix[10] = cameraMatrix->GetElement(2,2);
+    modelViewMatrix[11] = cameraMatrix->GetElement(2,3);
+
+    modelViewMatrix[12] = cameraMatrix->GetElement(3,0);
+    modelViewMatrix[13] = cameraMatrix->GetElement(3,1);
+    modelViewMatrix[14] = cameraMatrix->GetElement(3,2);
+    modelViewMatrix[15] = cameraMatrix->GetElement(3,3);
     software->SetModelViewMatrix(modelViewMatrix);
 
     //
@@ -721,6 +731,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     }
     else
         om.SetTable(vtf, 256, atts.GetOpacityAttenuation());
+
     double actualRange[2];
     bool artificialMin = atts.GetUseColorVarMin();
     bool artificialMax = atts.GetUseColorVarMax();
@@ -729,6 +740,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         GetDataExtents(actualRange, primaryVariable);
         UnifyMinMax(actualRange, 2);
     }
+    
     double range[2];
     range[0] = (artificialMin ? atts.GetColorVarMin() : actualRange[0]);
     range[1] = (artificialMax ? atts.GetColorVarMax() : actualRange[1]);

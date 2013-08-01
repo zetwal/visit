@@ -132,8 +132,6 @@ avtRayTracer::avtRayTracer()
     lighting = false;
     lightPosition[0] = lightPosition[1] = lightPosition[2] = 0.0;   lightPosition[3] = 1.0;
     materialProperties[0] = 0.4; materialProperties[1] = 0.75; materialProperties[3] = 0.0; materialProperties[3] = 15.0;
-
-    //std::cout << "############# ^^^^^^^^^^^^^^^ procs: " << imgComm.GetMyId() << std::endl;
 }
 
 
@@ -412,13 +410,6 @@ avtRayTracer::Execute(void)
     avtWorldSpaceToImageSpaceTransform::CalculateTransform(view, transform, 
                                                            scale, aspect);
 
-    std::cout << PAR_Rank() << "Modelview transform: \n";
-        std::cout << 
-        transform->GetElement(0,0) << "  " << transform->GetElement(0,1) << "  " << transform->GetElement(0,2) << "  " << transform->GetElement(0,3) << std::endl <<
-        transform->GetElement(1,0) << "  " << transform->GetElement(1,1) << "  " << transform->GetElement(1,2) << "  " << transform->GetElement(1,3) << std::endl << 
-        transform->GetElement(2,0) << "  " << transform->GetElement(2,1) << "  " << transform->GetElement(2,2) << "  " << transform->GetElement(2,3) << std::endl <<
-        transform->GetElement(3,0) << "  " << transform->GetElement(3,1) << "  " << transform->GetElement(3,2) << "  " << transform->GetElement(3,3) << std::endl;
-
     double newNearPlane, newFarPlane, oldNearPlane, oldFarPlane;
     TightenClippingPlanes(view, transform, newNearPlane, newFarPlane);
     oldNearPlane = view.nearPlane;
@@ -455,12 +446,6 @@ avtRayTracer::Execute(void)
         extractor.SetViewUp(view_up);
         extractor.SetTransferFn(transferFn1D);
     }
-
-    //std::cout << "lighting: " << lighting << std::endl;
-    //std::cout << "lightDirection: " << lightDirection[0] << " , " << lightDirection[1] << " , " << lightDirection[2] << std::endl;
-    //std::cout << "materialProperties: " << materialProperties[0] << " , " << materialProperties[1] << " , " << materialProperties[2]  << " , " << materialProperties[3] << std::endl; 
-    //std::cout << "view_up: " << view_up[0] << " , " << view_up[1] << " , " << view_up[2]  <<  std::endl; 
-    //std::cout << "view_direction: " << view_direction[0] << " , " << view_direction[1] << " , " << view_direction[2]  <<  std::endl; 
 
     //
     // For curvilinear and unstructured meshes, it makes sense to convert the
@@ -704,11 +689,8 @@ avtRayTracer::Execute(void)
             }
         }
     }
-
-std::cout << "after GetGeneralContract" << std::endl;
     rc.SetInput(samples);
     avtImage_p image = rc.GetTypedOutput();
-std::cout << "after  rc.GetTypedOutput() -----------------------------------" << std::endl;
  
 
 #ifdef PARALLEL
@@ -722,7 +704,6 @@ std::cout << "after  rc.GetTypedOutput() -----------------------------------" <<
     image = imageCommunicator.GetTypedOutput();
 #endif
 
-    std::cout << "before  numDivisions = GetNumberOfDivisions(screen[0],screen[1],samplesPerRay) ===================" << std::endl;
     // Update the pipeline several times, once for each tile.
     // The tiles are important to make sure that we never need too much
     // memory.
@@ -741,7 +722,6 @@ std::cout << "after  rc.GetTypedOutput() -----------------------------------" <<
         img->Delete();
     }
 
-    std::cout << "before  (int i = 0 ; i < numDivisions ; i++) ===================" << std::endl;
     for (int i = 0 ; i < numDivisions ; i++)
         for (int j = 0 ; j < numDivisions ; j++)
         {
@@ -1001,6 +981,7 @@ avtRayTracer::ModifyContract(avtContract_p spec)
 //  Creation:    February 15, 2007
 //
 // ****************************************************************************
+
 bool
 avtRayTracer::FilterUnderstandsTransformedRectMesh()
 {

@@ -708,6 +708,7 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     patchCount = 0;
     imageDataVector.clear();
     imageMetaPatchVector.clear();
+    imageDataMap.clear();
     
     if (rayCastingSLIVR == true)
         if ((totalAssignedPatches != 0) && (dt->ChildIsPresent(0) && !( *(dt->GetChild(0)) == NULL))){
@@ -812,6 +813,7 @@ avtSamplePointExtractor::delImgPatches(){
 
     imageMetaPatchVector.clear();
     imageDataVector.clear();
+    imageDataMap.clear();
 }
 
 
@@ -828,11 +830,13 @@ avtSamplePointExtractor::delImgPatches(){
 //  Modifications:
 //
 // ****************************************************************************
-void avtSamplePointExtractor::getImgData(int patchId, imgData &tempImgData){
+void 
+avtSamplePointExtractor::getImgData(int patchId, imgData &tempImgData){
     tempImgData.procId = imageDataVector[patchId].procId;
     tempImgData.patchNumber = imageDataVector[patchId].patchNumber;
     memcpy(tempImgData.imagePatch,imageDataVector[patchId].imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1]*sizeof(float));
 }
+
 
 
 // ****************************************************************************
@@ -860,6 +864,7 @@ avtSamplePointExtractor::initMetaPatch(int id){
     
     return temp;
 }
+
 
 // ****************************************************************************
 //  Method: avtSamplePointExtractor::KernelBasedSample

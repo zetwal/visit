@@ -121,17 +121,9 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void             SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void             SetTransferFn(avtOpacityMap *_transferFn1D) { transferFn1D = _transferFn1D; };
-    void             SetModelViewMatrix(double _modelViewMatrix[9]) { for (int i=0;i<9;i++) modelViewMatrix[i]=_modelViewMatrix[i]; }
-
-    void                  SetViewDirection(double *vd)
-                             { view_direction[0] = vd[0];
-                               view_direction[1] = vd[1];
-                               view_direction[2] = vd[2]; };
-
-    void                  SetViewUp(double *vu)
-                             { view_up[0] = vu[0];
-                               view_up[1] = vu[1];
-                               view_up[2] = vu[2]; };
+    void             SetModelViewMatrix(double _modelViewMatrix[16]) { for (int i=0;i<16;i++) modelViewMatrix[i]=_modelViewMatrix[i]; }
+    void             SetViewDirection(double *vd){ for (int i=0; i<3; i++) view_direction[i] = vd[i]; }
+    void             SetViewUp(double *vu){ for (int i=0; i<3; i++) view_up[i] = vu[i]; }
 
     // Getting the image
     void             getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
@@ -147,9 +139,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           cur_clip_range[2];
     vtkMatrix4x4    *view_to_world_transform;
     vtkMatrix4x4    *world_to_view_transform;
-    vtkMatrix4x4    *modelView;
-    double                modelViewMatrix[9];
-
+    double           modelViewMatrix[16];
 
     double           *X;
     double           *Y;
@@ -195,18 +185,20 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
 
 
     // Patch details for one image
-    int              patchDrawn;        // whether the patch is drawn or not
-    int              imgDims[2];        // size of the patch
-    int              imgLowerLeft[2];   // coordinates in the whole image
-    int              imgUpperRight[2];  //
-    float            imgDepth;          // from the depth buffer
-    float            *imgArray;         // the image data
+    int              patchDrawn;            // whether the patch is drawn or not
 
-    int              proc;              // id of the processor
-    int              patch;             // id of the patch
+    int              imgWidth, imgHeight;   
+    int              imgDims[2];            // size of the patch
 
- 
-    int              imgWidth, imgHeight;
+    int              imgLowerLeft[2];       // coordinates in the whole image
+    int              imgUpperRight[2];      //
+    float            imgDepth;              // from the depth buffer
+    float            *imgArray;             // the image data
+
+    int              proc;                  // id of the processor
+    int              patch;                 // id of the patch
+
+    
     int              fullImgWidth, fullImgHeight;
     int              xMin, xMax, yMin, yMax;
 
