@@ -721,7 +721,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
     imgWidth = xMax - xMin;
     imgHeight = yMax - yMin;
-   
+
     if (rayCastingSLIVR == true){
         imgArray = new float[((imgWidth)*4) * imgHeight];
 
@@ -1492,7 +1492,6 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
     //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
     //source_rgb[3] = alpha;
 
-
     if (retVal == 0)
         return;
 
@@ -1583,8 +1582,10 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
             invTransModelView->GetElement(2,0) << "  " << invTransModelView->GetElement(2,1) << "  " << invTransModelView->GetElement(2,2) <<  std::endl << std::endl;
         }
         countt++;
-        invTransModelView->Transpose();
+
         invTransModelView->Invert();
+        invTransModelView->Transpose();
+        
         
         
         double gradientDouble[3], transformedGradient[3];
@@ -1603,7 +1604,9 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
         normalize(transformedGradientFloat);
         invTransModelView->Delete();
 
-
+        dir[0] = 0;
+        dir[1] = 0;
+        dir[2] = -1;
         // cos(angle) = a.b;  angle between normal and light
         float normal_dot_light = dot(transformedGradientFloat,dir);   // angle between light and normal;
         if (normal_dot_light < 0.0)
@@ -1963,6 +1966,7 @@ avtMassVoxelExtractor::SampleAlongSegment(const double *origin,
         curZ = ind[2];
     }
 
+    patchDrawn = 1;
     if (hasSamples)
         SampleVariable(first, last, w, h);
 }
@@ -1992,6 +1996,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
     bool inrun = false;
     int  count = 0;
     int stepsZ = 0;
+
     avtRay *ray = volume->GetRay(w, h);
     int myInd[3];
     bool calc_cell_index = ((ncell_arrays > 0) || (ghosts != NULL));
@@ -2026,9 +2031,11 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
         if (!valid_sample[i] && inrun)
         {
-            ray->SetSamples(i-count, i-1, tmpSampleList);
-            inrun = false;
-            count = 0;
+            if (rayCastingSLIVR == false){
+                ray->SetSamples(i-count, i-1, tmpSampleList);
+                inrun = false;
+                count = 0;
+            }
         }
 
 
