@@ -481,6 +481,16 @@ avtRayTracer::Execute(void)
         int numPatches = extractor.getImgPatchSize();     // get the number of patches - Brown /8 procs / 100 each
 
         std::cout << PAR_Rank() << "   avtRayTracer::Execute     numPatches: " << numPatches << std::endl;
+
+
+        //
+        // Check for possibility of local compositing
+        //
+
+
+        //
+        // Get these patches and merge them (new patch created and old ones removed)
+        // 
         
 
         //
@@ -509,7 +519,45 @@ avtRayTracer::Execute(void)
             imgComm.masterRecvPatchMetaData();
 
         imgComm.syncAllProcs();
-        
+
+
+        //
+        // Call on proc 0 to decide who should be sent what
+        // 
+        if (PAR_Rank() == 0){
+
+
+
+            //
+            // Send info about which patch to receive and which patch to send
+            //
+        }
+
+
+        //
+        // Each proc receives info about which patch it needs to send and receive
+        //
+
+
+        //
+        // Each proc does the send and receive
+        //
+       
+
+        //
+        // Each proc does local compositing and then sends
+        //
+
+
+        //
+        // Proc 0 receicves and does the final assmebly
+        //
+        if (PAR_Rank() == 0){
+
+
+        }
+
+
 
         //
         //  Sends the patches image data to proc 0

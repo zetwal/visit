@@ -56,7 +56,9 @@
 #include <map>
 #include <algorithm>
 #include <utility>
-#include <hash_map>
+
+#include <ext/hash_map>
+  using namespace __gnu_cxx;
 
 #include <avtImgCommunicator.h>
 
@@ -225,8 +227,9 @@ class AVTFILTERS_API avtSamplePointExtractor
     int                       totalAssignedPatches;
 
     std::vector<imgMetaData>   imageMetaPatchVector;
-    std::vector<imgData>       imageDataVector;
-    std::multimap<int,imgData> imageDataMap;
+    //std::vector<imgData>       imageDataVector;
+    hash_multimap <int, imgData> imgDataHashMap;
+    hash_multimap <int, imgData>::iterator it;
 
 
     // triliniear / raycastin SLIVR

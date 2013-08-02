@@ -706,9 +706,9 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
 
     totalAssignedPatches = dt->GetNChildren();
     patchCount = 0;
-    imageDataVector.clear();
+    //imageDataVector.clear();
     imageMetaPatchVector.clear();
-    imageDataMap.clear();
+    imgDataHashMap.clear();
     
     if (rayCastingSLIVR == true)
         if ((totalAssignedPatches != 0) && (dt->ChildIsPresent(0) && !( *(dt->GetChild(0)) == NULL))){
@@ -804,16 +804,23 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
 // ****************************************************************************
 void
 avtSamplePointExtractor::delImgPatches(){
-    for (int i=0; i<imageDataVector.size(); i++){
-        if (imageDataVector[i].imagePatch != NULL){
-            delete [] imageDataVector[i].imagePatch;
-            imageDataVector[i].imagePatch = NULL;
-        }
-    }
+    //for (int i=0; i<imageDataVector.size(); i++){
+    //     if (imageDataVector[i].imagePatch != NULL){
+    //         delete [] imageDataVector[i].imagePatch;
+    //        imageDataVector[i].imagePatch = NULL;
+    //    }
+    //}
+    //imageDataVector.clear();
 
     imageMetaPatchVector.clear();
-    imageDataVector.clear();
-    imageDataMap.clear();
+
+    for (it=imgDataHashMap.begin(); it!=imgDataHashMap.end(); it++){
+        if ((*it).second.imagePatch != NULL)
+            delete [](*it).second.imagePatch;
+
+        (*it).second.imagePatch == NULL;
+    }
+    imgDataHashMap.clear();
 }
 
 
@@ -832,9 +839,19 @@ avtSamplePointExtractor::delImgPatches(){
 // ****************************************************************************
 void 
 avtSamplePointExtractor::getImgData(int patchId, imgData &tempImgData){
+    /*
     tempImgData.procId = imageDataVector[patchId].procId;
     tempImgData.patchNumber = imageDataVector[patchId].patchNumber;
     memcpy(tempImgData.imagePatch,imageDataVector[patchId].imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1]*sizeof(float));
+*/
+
+    it = imgDataHashMap.find(patchId);
+    tempImgData.procId = it->second.procId;
+    tempImgData.patchNumber = it->second.patchNumber;
+    memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1]*sizeof(float));
+
+    delete [](*it).second.imagePatch;
+    it->second.imagePatch = NULL;
 }
 
 
@@ -1051,13 +1068,21 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
             if (tmpImageMetaPatch.inUse == 1){
                 imageMetaPatchVector.push_back(tmpImageMetaPatch);
-
+/*
                 imgData tmpImageData;
                 tmpImageData.procId = tmpImageMetaPatch.procId;           tmpImageData.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageData.imagePatch = NULL;
                 imageDataVector.push_back(tmpImageData);
 
                 imageDataVector[patchCount].imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
                 massVoxelExtractor->getComputedImage(imageDataVector[patchCount].imagePatch);
+*/
+
+                imgData tmpImageDataHash;
+                tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;
+                tmpImageDataHash.imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
+
+                massVoxelExtractor->getComputedImage(tmpImageDataHash.imagePatch);
+                imgDataHashMap.insert( std::pair<int, imgData> (tmpImageDataHash.patchNumber , tmpImageDataHash) );
 
                 patchCount++;
             }

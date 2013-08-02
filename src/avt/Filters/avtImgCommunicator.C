@@ -372,20 +372,20 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 		//////////////////////////////////
 		////// DEBUG - save image
 
-		std::ofstream myfile;
-		if (imgCount == 0){
-  			myfile.open ("/home/pascal/Desktop/example0.txt");
-  			std::cout << " One " << allRecvPatches[i].dims[0] << " x " << allRecvPatches[i].dims[1] << " ~ " << allRecvPatches[i].screen_ll[0] << " , " << allRecvPatches[i].screen_ll[1] << "  ~  " << allRecvPatches[i].screen_ur[0] << " , " << allRecvPatches[i].screen_ur[1] << " ~ " << allRecvPatches[i].avg_z  << std::endl;
+		// std::ofstream myfile;
+		// if (imgCount == 0){
+  // 			myfile.open ("/home/pascal/Desktop/example0.txt");
+  // 			std::cout << " One " << allRecvPatches[i].dims[0] << " x " << allRecvPatches[i].dims[1] << " ~ " << allRecvPatches[i].screen_ll[0] << " , " << allRecvPatches[i].screen_ll[1] << "  ~  " << allRecvPatches[i].screen_ur[0] << " , " << allRecvPatches[i].screen_ur[1] << " ~ " << allRecvPatches[i].avg_z  << std::endl;
   		
-  			createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[i].dims[0], allRecvPatches[i].dims[1], "/home/pascal/Desktop/example0");
-  		}
-		else
-		 	if (imgCount == 1){
-		 		myfile.open ("/home/pascal/Desktop/example1.txt");
-		 		std::cout << " Two " << allRecvPatches[i].dims[0] << " x " << allRecvPatches[i].dims[1] << " ~ " << allRecvPatches[i].screen_ll[0] << " , " << allRecvPatches[i].screen_ll[1] << "  ~  " << allRecvPatches[i].screen_ur[0] << " , " << allRecvPatches[i].screen_ur[1] << " ~ " << allRecvPatches[i].avg_z  << std::endl;
+  // 			createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[i].dims[0], allRecvPatches[i].dims[1], "/home/pascal/Desktop/example0");
+  // 		}
+		// else
+		//  	if (imgCount == 1){
+		//  		myfile.open ("/home/pascal/Desktop/example1.txt");
+		//  		std::cout << " Two " << allRecvPatches[i].dims[0] << " x " << allRecvPatches[i].dims[1] << " ~ " << allRecvPatches[i].screen_ll[0] << " , " << allRecvPatches[i].screen_ll[1] << "  ~  " << allRecvPatches[i].screen_ur[0] << " , " << allRecvPatches[i].screen_ur[1] << " ~ " << allRecvPatches[i].avg_z  << std::endl;
   			
-  				createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[i].dims[0], allRecvPatches[i].dims[1], "/home/pascal/Desktop/example1");
-  			}
+  // 				createPpm(allRecvImgData[patchId].imagePatch, allRecvPatches[i].dims[0], allRecvPatches[i].dims[1], "/home/pascal/Desktop/example1");
+  // 			}
   			
   		//////////////////////////////////
 
@@ -419,9 +419,9 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 				//	std::cout << j << ",  " << k << "   Buffer: " << buffer[bufferIndex+0] << " ,  " << buffer[bufferIndex+1] << " , " << buffer[bufferIndex+2] << " ,  " << buffer[bufferIndex+3];
 				//	std::cout << "   incoming fragment: " << allRecvImgData[patchId].imagePatch[subImgIndex+0] << " ,  " << allRecvImgData[patchId].imagePatch[subImgIndex+1] << " ,  " << allRecvImgData[patchId].imagePatch[subImgIndex+2] << " ,  " << allRecvImgData[patchId].imagePatch[subImgIndex+3];
 				//} 
-				if (imgCount < 2){
-					myfile << allRecvImgData[patchId].imagePatch[subImgIndex+0] << " " << allRecvImgData[patchId].imagePatch[subImgIndex+1] << " " << allRecvImgData[patchId].imagePatch[subImgIndex+2] << " " << allRecvImgData[patchId].imagePatch[subImgIndex+3] << "\n";
-				}
+				//if (imgCount < 2){
+				//	myfile << allRecvImgData[patchId].imagePatch[subImgIndex+0] << " " << allRecvImgData[patchId].imagePatch[subImgIndex+1] << " " << allRecvImgData[patchId].imagePatch[subImgIndex+2] << " " << allRecvImgData[patchId].imagePatch[subImgIndex+3] << "\n";
+				//}
 				
 				//////////////////////////////////
 
@@ -442,17 +442,17 @@ void avtImgCommunicator::composeImages(int imgBufferWidth, int imgBufferHeight, 
 		//////////////////////////////////
 		////// DEBUG - save image
 		
-		if (imgCount == 0 || imgCount == 1){
-  			myfile.close();
-  		}
+		// if (imgCount == 0 || imgCount == 1){
+  // 			myfile.close();
+  // 		}
 
-		if (imgCount == 0){
-  			createPpm(buffer, imgBufferWidth, imgBufferHeight, "/home/pascal/Desktop/one");
-  		}
+		// if (imgCount == 0){
+  // 			createPpm(buffer, imgBufferWidth, imgBufferHeight, "/home/pascal/Desktop/one");
+  // 		}
 
-  		if (imgCount == 1){
-  			createPpm(buffer, imgBufferWidth, imgBufferHeight, "/home/pascal/Desktop/two");
-  		}
+  // 		if (imgCount == 1){
+  // 			createPpm(buffer, imgBufferWidth, imgBufferHeight, "/home/pascal/Desktop/two");
+  // 		}
 
   		imgCount++;
   		
