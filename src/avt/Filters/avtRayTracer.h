@@ -52,7 +52,6 @@
 #include <avtImgCommunicator.h>
 
 
-
 struct imagePatch{
     int patchNumber;
     int imgDims[2];

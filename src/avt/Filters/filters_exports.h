@@ -122,6 +122,7 @@ struct iotaMeta{
   int procId;  
   int patchNumber; 
   
+  int imgArea;
   float avg_z;   
 };
 

@@ -1068,6 +1068,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
             if (tmpImageMetaPatch.inUse == 1){
                 imageMetaPatchVector.push_back(tmpImageMetaPatch);
+                
 /*
                 imgData tmpImageData;
                 tmpImageData.procId = tmpImageMetaPatch.procId;           tmpImageData.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageData.imagePatch = NULL;
@@ -1076,7 +1077,6 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 imageDataVector[patchCount].imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
                 massVoxelExtractor->getComputedImage(imageDataVector[patchCount].imagePatch);
 */
-
                 imgData tmpImageDataHash;
                 tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;
                 tmpImageDataHash.imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];

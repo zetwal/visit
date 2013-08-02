@@ -464,7 +464,9 @@ avtRayTracer::Execute(void)
     
     if (rayCastingSLIVR == true){
         std::cout << PAR_Rank() << "   avtRayTracer::Execute     starting RayCasting SLIVR  ...... " << std::endl;
-        imgComm.init();
+
+        // creates a buffer to hold the number of patches per processor
+        imgComm.init();     
 
         // only required to force an update - Need to find a way to get rid of that!!!!
         avtRayCompositer rc(rayfoo);
@@ -494,17 +496,14 @@ avtRayTracer::Execute(void)
         
 
         //
-        // Send the number of patches that each has
+        // Send/Receive the number of patches that each has to 0
         //
-        imgComm.sendNumPatches(0,numPatches);
-        if (PAR_Rank() == 0)
-            imgComm.masterRecvNumPatches();
+        imgComm.gatherNumPatches(numPatches);
 
-        imgComm.syncAllProcs();
     
 
         //
-        // Send the patches metadata
+        // Send/Receive the patches metadata to proc 0
         //
         imgMetaData *imgAllPatches;
         imgAllPatches = NULL;

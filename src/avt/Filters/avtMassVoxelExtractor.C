@@ -1544,10 +1544,10 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
         dir[2] = comp1[2] + comp2[2] + comp3[2];
         normalize(dir);
 
-         // head light
-        lightDirection[0] = dir[0];
-        lightDirection[1] = dir[1];
-        lightDirection[2] = dir[2];
+        // head light
+        //lightDirection[0] = dir[0];
+        //lightDirection[1] = dir[1];
+        //lightDirection[2] = dir[2];
 
         //
         // Transform gradient
@@ -1584,11 +1584,20 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
         invTransModelView->SetElement(2,2, view_to_world_transform->GetElement(2,2));
 */
         if (countt == 0){
-            std::cout << proc << " _ Modelview: \n";
-            std::cout << 
-            invTransModelView->GetElement(0,0) << "  " << invTransModelView->GetElement(0,1) << "  " << invTransModelView->GetElement(0,2) <<  std::endl <<
-            invTransModelView->GetElement(1,0) << "  " << invTransModelView->GetElement(1,1) << "  " << invTransModelView->GetElement(1,2) <<  std::endl << 
-            invTransModelView->GetElement(2,0) << "  " << invTransModelView->GetElement(2,1) << "  " << invTransModelView->GetElement(2,2) <<  std::endl << std::endl;
+            
+            //std::cout << 
+            //invTransModelView->GetElement(0,0) << "  " << invTransModelView->GetElement(0,1) << "  " << invTransModelView->GetElement(0,2) <<  std::endl <<
+            //invTransModelView->GetElement(1,0) << "  " << invTransModelView->GetElement(1,1) << "  " << invTransModelView->GetElement(1,2) <<  std::endl << 
+            //invTransModelView->GetElement(2,0) << "  " << invTransModelView->GetElement(2,1) << "  " << invTransModelView->GetElement(2,2) <<  std::endl << std::endl;
+            std::cout << proc << " _ _ Modelview _ _ \n" <<
+            modelViewMatrix[0] << "  "  << modelViewMatrix[1] << "  "  << modelViewMatrix[2] << "  "  << modelViewMatrix[3] << "  " << std::endl <<     // view normal
+            modelViewMatrix[4] << "  "  << modelViewMatrix[5] << "  "  << modelViewMatrix[6] << "  "  << modelViewMatrix[7] << "  " << std::endl <<     //
+            modelViewMatrix[8] << "  "  << modelViewMatrix[9] << "  "  << modelViewMatrix[10] << "  " << modelViewMatrix[11] << "  " << std::endl <<    // Up Vector
+            modelViewMatrix[12] << "  " << modelViewMatrix[13] << "  " << modelViewMatrix[14] << "  " << modelViewMatrix[15] << "  " << std::endl << std::endl;
+
+            std::cout << proc << " _ _ view_direction : " << view_direction[0] << "  "  << view_direction[1] << "  "  << view_direction[2] <<     
+                  " \n _ _ transformed view direction : " << dir[0] << "  "  << dir[1] << "  "  << dir[2] <<
+                              " \n _ _ lightDirection : " << lightDirection[0] << "  "  << lightDirection[1] << "  "  << lightDirection[2] << std::endl << std::endl;
         }
         countt++;
 

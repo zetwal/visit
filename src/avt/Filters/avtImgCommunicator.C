@@ -172,6 +172,7 @@ void avtImgCommunicator::syncAllProcs(){
 }
 
 
+
 // ****************************************************************************
 //  Method: avtImgCommunicator::
 //
@@ -183,14 +184,38 @@ void avtImgCommunicator::syncAllProcs(){
 //  Modifications:
 //
 // ****************************************************************************
-void avtImgCommunicator::sendNumPatches(int destId, int numPatches){
+void avtImgCommunicator::gatherNumPatches(int numPatches){
 	int patchesProc[2];
 	patchesProc[0] = my_id;	patchesProc[1] = numPatches;
 
-#ifdef PARALLEL
-	MPI_Send(patchesProc, 2, MPI_INT, 0, MSG_DATA, MPI_COMM_WORLD);		// all send to proc 0
-#endif
+	#ifdef PARALLEL
+		int *tempRecvBuffer = NULL;
+		//std::cout << " " << my_id << "  num_procs: " << num_procs << "!!! Send: " << patchesProc[0] << " - " << patchesProc[1] << std::endl;
+
+		// Only proc 0 receives data
+		if (my_id == 0)		
+			tempRecvBuffer = new int[num_procs*2];
+
+		MPI_Gather(patchesProc, 2, MPI_INT,   tempRecvBuffer, 2,MPI_INT,         0, MPI_COMM_WORLD);		// all send to proc 0
+
+		if (my_id == 0){		
+			for (int i=0; i<num_procs; i++){
+				processorPatchesCount[tempRecvBuffer[i*2]] = tempRecvBuffer[i*2 + 1];	// enter the number of patches for each processor
+				totalPatches += processorPatchesCount[tempRecvBuffer[i*2]];				// count the number of patches
+
+				std::cout << "!!! Recv: " << tempRecvBuffer[i*2] << "   Patch: " << processorPatchesCount[tempRecvBuffer[i*2]] << std::endl;
+			}
+
+			allRecvPatches = new imgMetaData[totalPatches];
+
+			if (tempRecvBuffer != NULL)
+				delete []tempRecvBuffer;
+			tempRecvBuffer = NULL;
+		}
+
+	#endif
 }
+
 
 
 // ****************************************************************************
@@ -204,26 +229,10 @@ void avtImgCommunicator::sendNumPatches(int destId, int numPatches){
 //  Modifications:
 //
 // ****************************************************************************
-void avtImgCommunicator::masterRecvNumPatches(){
-#ifdef PARALLEL
-	if (my_id == 0){			// Only proc 0 receives data
-		int tempRecvBuffer[2];
-		for (int i=0; i<num_procs; i++){
-			MPI_Recv(&tempRecvBuffer, 2, MPI_INT, MPI_ANY_SOURCE, MSG_DATA, MPI_COMM_WORLD, &status);	
-			
-			processorPatchesCount[tempRecvBuffer[0]] = tempRecvBuffer[1];	// enter the number of patches for each processor
-			totalPatches += processorPatchesCount[tempRecvBuffer[0]];		// count the number of patches
-			
-			std::cout << "!!! Recv: " << tempRecvBuffer[0] << "   Patch: " << processorPatchesCount[tempRecvBuffer[0]] << std::endl;
-		}	
-		
-		allRecvPatches = new imgMetaData[totalPatches];
-	}
-#endif
+void avtImgCommunicator::gatherMetaData(){
 
+	
 }
-
-
 
 
 // ****************************************************************************
