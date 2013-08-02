@@ -520,6 +520,23 @@ avtRayTracer::Execute(void)
         imgComm.syncAllProcs();
 
 
+        float *tempSendBuffer;
+        tempSendBuffer = NULL;
+        tempSendBuffer = new float[numPatches*4];
+
+        for (int i=0; i<numPatches; i++){
+            tempSendBuffer[i*4 + 0] = imgAllPatches[i].procId;
+            tempSendBuffer[i*4 + 1] = imgAllPatches[i].patchNumber;
+            tempSendBuffer[i*4 + 2] = imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1];
+            tempSendBuffer[i*4 + 3] = imgAllPatches[i].avg_z;
+        }
+
+        imgComm.gatherMetaData(numPatches*4, tempSendBuffer);
+        
+        delete []tempSendBuffer;
+        tempSendBuffer = NULL;
+
+
         //
         // Call on proc 0 to decide who should be sent what
         // 

@@ -229,9 +229,50 @@ void avtImgCommunicator::gatherNumPatches(int numPatches){
 //  Modifications:
 //
 // ****************************************************************************
-void avtImgCommunicator::gatherMetaData(){
+void avtImgCommunicator::gatherMetaData(int arraySize, float *allIotaMetadata){
+	int *recvSizePerProc = NULL;
 
-	
+	#ifdef PARALLEL
+		float *tempRecvBuffer = NULL;
+		int *offsetBuffer = NULL;
+
+		if (my_id == 0){
+			tempRecvBuffer = new float[totalPatches*4]; // x4: procId, patchNumber, imgArea, avg_z
+			recvSizePerProc = new int[num_procs];
+			offsetBuffer = new int[num_procs];
+			for (int i=0; i<num_procs; i++){
+				recvSizePerProc[i] = processorPatchesCount[i]*4;
+				offsetBuffer[i] = 0;
+			}
+		}
+
+		syncAllProcs();
+		MPI_Gatherv(allIotaMetadata, arraySize, MPI_FLOAT,   tempRecvBuffer, recvSizePerProc, offsetBuffer,MPI_FLOAT,         0, MPI_COMM_WORLD);		// all send to proc 0
+
+		if (my_id == 0){
+			iotaMeta tempPatch;
+			std::vector<iotaMeta> vectorList;
+
+			for (int i=0; i<totalPatches; i++){
+				tempPatch.procId = 		(int)tempRecvBuffer[i*4 + 0];
+				tempPatch.patchNumber = (int)tempRecvBuffer[i*4 + 1];
+				tempPatch.imgArea = 	(int)tempRecvBuffer[i*4 + 2];
+				tempPatch.avg_z = 			 tempRecvBuffer[i*4 + 3];
+
+				vectorList.push_back(tempPatch);
+			}
+
+			for (int i=0; i<vectorList.size(); i++){
+				std::cout << "procId: " << vectorList[i].procId << "   patch: " << vectorList[i].patchNumber  << "   imgArea: " << vectorList[i].imgArea << "    " << vectorList[i].avg_z << std::endl;
+			}
+
+			vectorList.clear();
+
+			delete []recvSizePerProc;
+			delete []offsetBuffer;
+		}
+
+	#endif	
 }
 
 
