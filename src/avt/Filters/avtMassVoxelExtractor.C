@@ -376,7 +376,8 @@ avtMassVoxelExtractor::Extract(vtkRectilinearGrid *rgrid,
                 std::vector<std::string> &varnames, std::vector<int> &varsizes)
 {
     if (gridsAreInWorldSpace || pretendGridsAreInWorldSpace)
-        if (rayCastingSLIVR || trilinearInterpolation)
+        //if (rayCastingSLIVR || trilinearInterpolation)
+        if (rayCastingSLIVR)
             simpleExtractWorldSpaceGrid(rgrid, varnames, varsizes);
         else
             ExtractWorldSpaceGrid(rgrid, varnames, varsizes);
@@ -626,7 +627,8 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     // Let's find out if this range can even intersect the dataset.
     // If not, just skip it.
     //
-    if (!FrustumIntersectsGridSLIVR(w_min, w_max, h_min, h_max))
+    //if (!FrustumIntersectsGridSLIVR(w_min, w_max, h_min, h_max))
+    if (!FrustumIntersectsGrid(w_min, w_max, h_min, h_max))
        return;
     
     //

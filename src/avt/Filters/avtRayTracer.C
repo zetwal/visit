@@ -482,7 +482,7 @@ avtRayTracer::Execute(void)
         int  timingComm = visitTimer->StartTimer();
         int numPatches = extractor.getImgPatchSize();     // get the number of patches - Brown /8 procs / 100 each
 
-        std::cout << PAR_Rank() << "   avtRayTracer::Execute     numPatches: " << numPatches << std::endl;
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute     numPatches: " << numPatches << "   total assigned: " << extractor.getTotalAssignedPatches() << std::endl;
 
 
         //
@@ -509,17 +509,34 @@ avtRayTracer::Execute(void)
         imgAllPatches = NULL;
         imgAllPatches = new imgMetaData[numPatches];
 
+        float *tempSendBuffer;
+        tempSendBuffer = NULL;
+        tempSendBuffer = new float[numPatches*10];
+
         for (int i=0; i<numPatches; i++){
             imgAllPatches[i] = extractor.getImgMetaPatch(i);
-            imgComm.sendPatchMetaData(0,imgAllPatches[i]);
+
+            tempSendBuffer[i*10 + 0] = imgAllPatches[i].procId;
+            tempSendBuffer[i*10 + 1] = imgAllPatches[i].patchNumber;
+            tempSendBuffer[i*10 + 2] = imgAllPatches[i].inUse;
+            tempSendBuffer[i*10 + 3] = imgAllPatches[i].dims[0];
+            tempSendBuffer[i*10 + 4] = imgAllPatches[i].dims[1];
+            tempSendBuffer[i*10 + 5] = imgAllPatches[i].screen_ll[0];
+            tempSendBuffer[i*10 + 6] = imgAllPatches[i].screen_ll[1];
+            tempSendBuffer[i*10 + 7] = imgAllPatches[i].screen_ur[0];
+            tempSendBuffer[i*10 + 8] = imgAllPatches[i].screen_ur[1];
+            tempSendBuffer[i*10 + 9] = imgAllPatches[i].avg_z;
         }
 
-        if (PAR_Rank() == 0)
-            imgComm.masterRecvPatchMetaData();
-
+        imgComm.gatherMetaData(numPatches*10, tempSendBuffer);
         imgComm.syncAllProcs();
 
+        delete []tempSendBuffer;
+        tempSendBuffer = NULL;
 
+
+        /*
+        // for iotametadata
         float *tempSendBuffer;
         tempSendBuffer = NULL;
         tempSendBuffer = new float[numPatches*4];
@@ -531,18 +548,18 @@ avtRayTracer::Execute(void)
             tempSendBuffer[i*4 + 3] = imgAllPatches[i].avg_z;
         }
 
-        imgComm.gatherMetaData(numPatches*4, tempSendBuffer);
-        
+        imgComm.gatherIotaMetaData(numPatches*4, tempSendBuffer);
+
         delete []tempSendBuffer;
         tempSendBuffer = NULL;
+        */
+
 
 
         //
         // Call on proc 0 to decide who should be sent what
         // 
         if (PAR_Rank() == 0){
-
-
 
             //
             // Send info about which patch to receive and which patch to send
@@ -570,9 +587,7 @@ avtRayTracer::Execute(void)
         //
         if (PAR_Rank() == 0){
 
-
         }
-
 
 
         //
@@ -644,10 +659,10 @@ avtRayTracer::Execute(void)
 
         // create images structures to hold these
         avtImage_p whole_image, tempImage;
-        unsigned char *imgTest;
-        imgTest = NULL;
+        unsigned char *imgTest = NULL;
+        float *zbuffer = NULL;
 
-        tempImage = new avtImage(this);
+        tempImage = new avtImage(this);     // for processors other than proc 0
         
         // Processor 0 does a special compositing
         if (PAR_Rank() == 0)
@@ -660,6 +675,11 @@ avtRayTracer::Execute(void)
 
             imgTest = new unsigned char[screen[0] * screen[1] * 3];
             imgTest = whole_image->GetImage().GetRGBBuffer();
+
+            zbuffer = new float[screen[0] * screen[1]];
+            for (int s=0; s<screen[0] * screen[1]; s++)
+                zbuffer[s] = 0.5;
+            zbuffer =  whole_image->GetImage().GetZBuffer();
 
             // Call the compositing
             imgComm.composeImages(screen[0], screen[1], imgTest, background); 

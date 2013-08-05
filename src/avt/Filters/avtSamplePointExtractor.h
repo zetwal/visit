@@ -182,6 +182,7 @@ class AVTFILTERS_API avtSamplePointExtractor
     void                      SetViewUp(double *vu){ for (int i=0; i<3; i++) view_up[i] = vu[i]; }
 
     // Getting image information
+    int                       getTotalAssignedPatches() { return totalAssignedPatches; }              // gets the max number of patches it could have
     int                       getImgPatchSize(){ return patchCount;};                                 // gets the number of patches
     imgMetaData               getImgMetaPatch(int patchId){ return imageMetaPatchVector.at(patchId);} // gets the metadata
     void                      getImgData(int patchId, imgData &tempImgData);                          // gets the image

@@ -37,14 +37,10 @@ public:
 	void init();
 
 	void gatherNumPatches(int numPatches);
+	void gatherIotaMetaData(int arraySize, float *allIotaMetadata);
 	void gatherMetaData(int arraySize, float *allIotaMetadata);
 
-	void sendPatchMetaData(int destId, imgMetaData tempImg);
 	void sendPatchImgData(int destId, int arraySize, float *sendMsgBuffer);
-
-	
-
-	void masterRecvPatchMetaData();
 	void masterRecvPatchImgData();
 
 	void syncAllProcs();

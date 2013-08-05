@@ -229,7 +229,7 @@ void avtImgCommunicator::gatherNumPatches(int numPatches){
 //  Modifications:
 //
 // ****************************************************************************
-void avtImgCommunicator::gatherMetaData(int arraySize, float *allIotaMetadata){
+void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadata){
 	int *recvSizePerProc = NULL;
 
 	#ifdef PARALLEL
@@ -238,11 +238,15 @@ void avtImgCommunicator::gatherMetaData(int arraySize, float *allIotaMetadata){
 
 		if (my_id == 0){
 			tempRecvBuffer = new float[totalPatches*4]; // x4: procId, patchNumber, imgArea, avg_z
-			recvSizePerProc = new int[num_procs];
-			offsetBuffer = new int[num_procs];
+			recvSizePerProc = new int[num_procs];	
+			offsetBuffer = new int[num_procs];	
 			for (int i=0; i<num_procs; i++){
+				if (i == 0)
+					offsetBuffer[i] = 0;
+				else
+					offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
+
 				recvSizePerProc[i] = processorPatchesCount[i]*4;
-				offsetBuffer[i] = 0;
 			}
 		}
 
@@ -254,45 +258,29 @@ void avtImgCommunicator::gatherMetaData(int arraySize, float *allIotaMetadata){
 			std::vector<iotaMeta> vectorList;
 
 			for (int i=0; i<totalPatches; i++){
-				tempPatch.procId = 		(int)tempRecvBuffer[i*4 + 0];
-				tempPatch.patchNumber = (int)tempRecvBuffer[i*4 + 1];
-				tempPatch.imgArea = 	(int)tempRecvBuffer[i*4 + 2];
-				tempPatch.avg_z = 			 tempRecvBuffer[i*4 + 3];
+				tempPatch.procId = 		(int) tempRecvBuffer[i*4 + 0];
+				tempPatch.patchNumber = (int) tempRecvBuffer[i*4 + 1];
+				tempPatch.imgArea = 	(int) tempRecvBuffer[i*4 + 2];
+				tempPatch.avg_z = 			  tempRecvBuffer[i*4 + 3];
 
 				vectorList.push_back(tempPatch);
 			}
 
-			for (int i=0; i<vectorList.size(); i++){
-				std::cout << "procId: " << vectorList[i].procId << "   patch: " << vectorList[i].patchNumber  << "   imgArea: " << vectorList[i].imgArea << "    " << vectorList[i].avg_z << std::endl;
-			}
+			//for (int i=0; i<vectorList.size(); i++){
+			//	std::cout << "procId: " << vectorList[i].procId << "   patch: " << vectorList[i].patchNumber  << "   imgArea: " << vectorList[i].imgArea << "    " << vectorList[i].avg_z << std::endl;
+			//}
 
 			vectorList.clear();
 
 			delete []recvSizePerProc;
 			delete []offsetBuffer;
+			delete []tempRecvBuffer;
 		}
 
 	#endif	
 }
 
 
-// ****************************************************************************
-//  Method: avtImgCommunicator::
-//
-//  Purpose:
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-void avtImgCommunicator::sendPatchMetaData(int destId, imgMetaData tempImg){
-
-#ifdef PARALLEL
-	MPI_Send(&tempImg, 1, _img_mpi, 0, MSG_DATA, MPI_COMM_WORLD);
-#endif
-}
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::
@@ -305,24 +293,64 @@ void avtImgCommunicator::sendPatchMetaData(int destId, imgMetaData tempImg){
 //  Modifications:
 //
 // ****************************************************************************
-void avtImgCommunicator::masterRecvPatchMetaData(){
+
+void avtImgCommunicator::gatherMetaData(int arraySize, float *allIotaMetadata){
+	int *recvSizePerProc = NULL;
+
 	#ifdef PARALLEL
-	if (my_id == 0){			// Only proc 0 receives data
-		imgMetaData tempRecvImg;
+		float *tempRecvBuffer = NULL;
+		int *offsetBuffer = NULL;
 
-		for (int i=0; i<totalPatches; i++){
-			// Receive
-			MPI_Recv (&tempRecvImg, 1, _img_mpi, MPI_ANY_SOURCE, MSG_DATA, MPI_COMM_WORLD, &status);
-				
-			int patchIndex = getDataPatchID(tempRecvImg.procId, tempRecvImg.patchNumber);
-			allRecvPatches[patchIndex] = setImg(tempRecvImg.inUse, tempRecvImg.procId,  tempRecvImg.patchNumber, tempRecvImg.dims[0], tempRecvImg.dims[1],  
-								   				tempRecvImg.screen_ll[0],tempRecvImg.screen_ll[1], tempRecvImg.screen_ur[0],tempRecvImg.screen_ur[1], tempRecvImg.avg_z);
+		if (my_id == 0){
+			tempRecvBuffer = new float[totalPatches*10]; // x 10: procId, patchNumber, dims[0], dims[1], screen_ll[0], screen_ll[1], screen_ur[0], screen_ur[1], avg_z
+			recvSizePerProc = new int[num_procs];	
+			offsetBuffer = new int[num_procs];	
+			for (int i=0; i<num_procs; i++){
+				if (i == 0)
+					offsetBuffer[i] = 0;
+				else
+					offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
+
+				recvSizePerProc[i] = processorPatchesCount[i]*10;
+			}
 		}
 
-		// Now that we have all the patches, create space to store the img data
-		allRecvImgData = new imgData[totalPatches];
-	}
-	#endif
+		syncAllProcs();
+		MPI_Gatherv(allIotaMetadata, arraySize, MPI_FLOAT,   tempRecvBuffer, recvSizePerProc, offsetBuffer,MPI_FLOAT,         0, MPI_COMM_WORLD);		// all send to proc 0
+
+		if (my_id == 0){
+			imgMetaData tempRecvImg;
+
+			for (int i=0; i<totalPatches; i++){
+				tempRecvImg.procId = 		(int) tempRecvBuffer[i*10 + 0];
+				tempRecvImg.patchNumber = 	(int) tempRecvBuffer[i*10 + 1];
+				tempRecvImg.inUse = 		(int) tempRecvBuffer[i*10 + 2];
+				tempRecvImg.dims[0] = 		(int) tempRecvBuffer[i*10 + 3];
+				tempRecvImg.dims[1] = 		(int) tempRecvBuffer[i*10 + 4];
+				tempRecvImg.screen_ll[0] = 	(int) tempRecvBuffer[i*10 + 5];
+				tempRecvImg.screen_ll[1] = 	(int) tempRecvBuffer[i*10 + 6];
+				tempRecvImg.screen_ur[0] = 	(int) tempRecvBuffer[i*10 + 7];
+				tempRecvImg.screen_ur[1] = 	(int) tempRecvBuffer[i*10 + 8];
+				tempRecvImg.avg_z = 			  tempRecvBuffer[i*10 + 9];
+
+				int patchIndex = getDataPatchID(tempRecvImg.procId, tempRecvImg.patchNumber);
+				allRecvPatches[patchIndex] = setImg(tempRecvImg.inUse, tempRecvImg.procId,  tempRecvImg.patchNumber, tempRecvImg.dims[0], tempRecvImg.dims[1],  
+								   				tempRecvImg.screen_ll[0],tempRecvImg.screen_ll[1], tempRecvImg.screen_ur[0],tempRecvImg.screen_ur[1], tempRecvImg.avg_z);
+			}
+
+			//for (int i=0; i<vectorList.size(); i++){
+			//	std::cout << "procId: " << vectorList[i].procId << "   patch: " << vectorList[i].patchNumber  << "   imgArea: " << vectorList[i].imgArea << "    " << vectorList[i].avg_z << std::endl;
+			//}
+
+			// Now that we have all the patches, create space to store the img data
+			allRecvImgData = new imgData[totalPatches];
+
+			delete []recvSizePerProc;
+			delete []offsetBuffer;
+			delete []tempRecvBuffer;
+		}
+
+	#endif	
 }
 
 
