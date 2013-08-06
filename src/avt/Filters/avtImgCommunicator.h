@@ -58,18 +58,21 @@ public:
 
 	void patchAllocationLogic();		// decides which processor should get which patches and tell each processor how many patches it will receive
 
-	void sendNumPatchesToCompose();
-
+	void sendNumPatchesToCompose();		// communicate number of patches to receive
 	int receiveNumPatchesToCompose();
-	void sendRecvandRecvInfo();
+
+	void sendRecvandRecvInfo();			// tell each proc which patches it needs to send and which patches it needs to receive
 	void recvDataforDataToRecv(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray);
-	void sendnRecvPatchesMetanData(int sizeToReceive);
 
-	void sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData);
+	void sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData);	// Send out the patches and receive them
+	void recvPointToPoint(imgMetaData &recvMetaData, imgData &recvImgData);
+
+	void gatherAndAssembleImages(int sizex, int sizey, float *image, float zIndex);		// do the compositing of the subpatches
+
+	void getcompositedImage(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage);	// get the final composited image
 
 
-	void gatherAndAssembleImages(int sizex, int sizey, float *image, float zIndex);
-	void getcompositedImage(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage);
+
 
 	void sendPatchImgData(int destId, int arraySize, float *sendMsgBuffer);
 	void masterRecvPatchImgData();

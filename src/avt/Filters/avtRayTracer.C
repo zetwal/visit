@@ -524,7 +524,7 @@ avtRayTracer::Execute(void)
         for (int i=0; i<numPatches; i++){
             imgMetaData temp;
             temp = extractor.getImgMetaPatch(i);
-            imgMetaDataMultiMap.insert(  std::pair<int, imgData> (temp.patchNumber , temp)  );
+            imgMetaDataMultiMap.insert(  std::pair<int, imgMetaData>   (temp.patchNumber, temp));
 
             tempSendBuffer[i*4 + 0] = temp.procId;
             tempSendBuffer[i*4 + 1] = temp.patchNumber;
@@ -606,11 +606,12 @@ avtRayTracer::Execute(void)
             imgComm.sendRecvandRecvInfo();  // tell each proc which patches it needs to send and which patches it needs to receive
         }
 
-
         totalSendData = totalRecvData = 0;
          // informationToSendArray:   (patchNumber, destProcId)     (patchNumber, destProcId)    (patchNumber, destProcId)  ...
         // informationToRecvArray:   (procId, numPatches)           (procId, numPatches)         (procId, numPatches)  ...
         imgComm.recvDataforDataToRecv(totalSendData, informationToSendArray, totalRecvData, informationToRecvArray);
+
+
 
 
         // setting the destination processor id
@@ -619,6 +620,7 @@ avtRayTracer::Execute(void)
             it->second.destProcId = informationToSendArray[k+1];
         }
 
+        int numPatchesReceive = 0;      // number of patches to receive
         // counting how many patches to receive
         if (numRecvPatchesToCompose > 0)
             for (int i = 0; i < totalRecvData; i+=2)                 // loop through the number of processors to receive from
@@ -630,7 +632,6 @@ avtRayTracer::Execute(void)
         //
 
         // Send
-        int numPatchesReceive = 0;      // number of patches to receive
         int remainingPatches = 0;       // number of patches left on the processor that it will itself composite
 
         std::vector<imgMetaData> allImgMetaData;
@@ -653,7 +654,7 @@ avtRayTracer::Execute(void)
             if (tempImgMetaData.destProcId != tempImgMetaData.procId ){
                 // send the data
 
-                sendPointToPoint(tempImgMetaData,tempImgData);
+                imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
                 
                 if (tempImgData.imagePatch != NULL)
                     delete []tempImgData.imagePatch;
@@ -672,20 +673,17 @@ avtRayTracer::Execute(void)
         if (numRecvPatchesToCompose > 0)
             for (int i = 0; i < numRecvPatchesToCompose; i++){
                 imgData tempImgData;
-                recvPointToPoint(allImgMetaData[remainingPatches + i], tempImgData);
+                imgComm.recvPointToPoint(allImgMetaData[remainingPatches + i], tempImgData);
                 imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
             }
 
         int totalSize = numRecvPatchesToCompose + remainingPatches;
-        MPI_Barrier(MPI_COMM_WORLD);
-
-
+        
 
         //
         // Each proc does local compositing and then sends
         //
         
-
         int imgBufferWidth = screen[0];
         int imgBufferHeight = screen[1];
         float *buffer = new float[imgBufferWidth * imgBufferHeight * 4]();  //size: imgBufferWidth * imgBufferHeight * 4, initialized to 0
@@ -694,7 +692,7 @@ avtRayTracer::Execute(void)
             int startingX = allImgMetaData[i].screen_ll[0];
             int startingY = allImgMetaData[i].screen_ll[1]; 
 
-            itImgData = allImgMetaData.find(std::pair<int,int>(allImgMetaData[i].procId, allImgMetaData[i].patchNumber));
+            itImgData = imgDataToCompose.find(std::pair<int,int>(allImgMetaData[i].procId, allImgMetaData[i].patchNumber));
 
             for (int j=0; j<allImgMetaData[i].dims[1]; j++){
                 for (int k=0; k<allImgMetaData[i].dims[0]; k++){
