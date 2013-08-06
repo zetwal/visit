@@ -48,77 +48,219 @@ void displayStruct_meta(imgMetaData temp){
 			temp.avg_z);
 }
 
+#ifdef PARALLEL
+MPI_Datatype createImgDataType(const int dataSize){
+	MPI_Datatype _img_mpi;
+	const int numItems = 8;
+	int blockLengths[numItems] = {1, 1, 1, 1, 2, 2, 2, 1};
+	MPI_Datatype type[numItems] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_FLOAT};
+	MPI_Aint offsets[numItems] = {0, sizeof(int), sizeof(int)*2, sizeof(int)*3, sizeof(int)*4, sizeof(int)*6, sizeof(int)*8, sizeof(int)*10};
+	MPI_Type_struct(numItems, blockLengths,  offsets, type, &_img_mpi);
+	
+	return _img_mpi;
+}
+#endif
 
 bool sortImgByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z > after.avg_z; }
 bool sortImgByDepthIota(iotaMeta const& before, iotaMeta const& after){	return before.avg_z < after.avg_z; }
 bool value_comparer(const std::pair<int,int> &before, const std::pair<int,int> &after){ return before.second < after.second; }
 
 
-int calculatePatchDivision (const std::vector<iotaMeta>& imgVector, std::vector<int>& procsAlreadyInList){
-	std::map<int,int> numPatchesPerProc;
-	std::pair<std::map<int,int>::iterator, bool> isPresent;
 
-	if(imgVector.size() == 0) return 0;
 
-	for (int i = 0; i < imgVector.size(); ++i){
-		isPresent = numPatchesPerProc.insert (	std::pair<int,int>(imgVector[i].procId, imgVector[i].imgArea) );
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *image, float zIndex){
+	#ifdef PARALLEL
+		float *tempRecvBuffer = NULL;
+		
+		// Only proc 0 receives data
+		if (my_id == 0)		
+			tempRecvBuffer = new float[((sizex*sizey*4)+1)*num_procs];
 
-		if(isPresent.second == false)			
-			numPatchesPerProc[imgVector[i].procId] += imgVector[i].imgArea;
-	}
-	return std::max_element(numPatchesPerProc.begin(), numPatchesPerProc.end(), value_comparer)->first;
+		MPI_Gather(image, ((sizex*sizey*4)+1), MPI_FLOAT,   tempRecvBuffer, ((sizex*sizey*4)+1), MPI_FLOAT,         0, MPI_COMM_WORLD);		// all send to proc 0
+
+		std::vector<imageBuffer> imagesToMerge;
+		for (int i=0; i<num_procs; i++){
+			imageBuffer temp;
+			temp.depth = tempRecvBuffer[i*((sizex*sizey*4)+1) + (sizex*sizey*4)];
+			memcpy(temp.image, &tempRecvBuffer[i*((sizex*sizey*4)+1)], (sizex*sizey*4)  );
+		}
+
+		// sort imagesToMerge by z
+
+		if (my_id == 0){		
+			// Create a buffer to store the composited image
+			imgBuffer = new float[sizex * sizey * 4];
+
+			for (int i=0; i<(sizex * sizey * 4); i+=4){
+				imgBuffer[i] = background[0]/255.0;	imgBuffer[i+1] = background[1]/255.0; imgBuffer[i+2] = background[2]/255.0; imgBuffer[i+3] = 0.0;
+			}
+
+			for (int i=0; i<num_procs; i++){
+				for (int j=0; j<sizey; j++){
+					for (int k=0; k<sizex; k++){
+
+						int imgIndex = sizex*4*j + k*4;										// index in the image 
+
+						// Front to back compositing: composited = source * (1.0 - destination.a) + destination; 
+						//buffer[bufferIndex+0] = allRecvImgData[patchId].imagePatch[subImgIndex+0] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+0];
+						//buffer[bufferIndex+1] = allRecvImgData[patchId].imagePatch[subImgIndex+1] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+1];
+						//buffer[bufferIndex+2] = allRecvImgData[patchId].imagePatch[subImgIndex+2] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+2];
+						//buffer[bufferIndex+3] = allRecvImgData[patchId].imagePatch[subImgIndex+3] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+3];
+
+						// Back to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
+						imgBuffer[imgIndex+0] = (imgBuffer[imgIndex+0] * (1.0 - allRecvImgData[i].imagePatch[imgIndex+3])) + allRecvImgData[i].imagePatch[imgIndex+0];
+						imgBuffer[imgIndex+1] = (imgBuffer[imgIndex+1] * (1.0 - allRecvImgData[i].imagePatch[imgIndex+3])) + allRecvImgData[i].imagePatch[imgIndex+1];
+						imgBuffer[imgIndex+2] = (imgBuffer[imgIndex+2] * (1.0 - allRecvImgData[i].imagePatch[imgIndex+3])) + allRecvImgData[i].imagePatch[imgIndex+2];
+						imgBuffer[imgIndex+3] = (imgBuffer[imgIndex+3] * (1.0 - allRecvImgData[i].imagePatch[imgIndex+3]));
+					}
+				}
+
+				if (imagesToMerge[i].image != NULL)
+					delete []imagesToMerge[i].image;
+			}
+
+			imagesToMerge.clear();
+
+			if (tempRecvBuffer != NULL)
+				delete []tempRecvBuffer;
+
+			tempRecvBuffer = NULL;
+		}
+
+	#endif
 }
 
 
 
-void avtImgCommunicator::sendnRecvPatchesMetanData(){
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+#ifdef PARALLEL
+
+MPI_Datatype createImgDataType(){	
+	MPI_Datatype _img_mpi;
+	const int numItems = 8;
+	int blockLengths[numItems] = {1, 1,   1, 1,   2, 2, 2, 1};
+	MPI_Datatype type[numItems] = { MPI_INT, MPI_INT,    MPI_INT, MPI_INT,   MPI_INT, MPI_INT, MPI_INT,   MPI_FLOAT};
+	MPI_Aint offsets[numItems] = {0, sizeof(int), sizeof(int)*2, sizeof(int)*3, sizeof(int)*4, sizeof(int)*6, sizeof(int)*8, sizeof(int)*10};
+	MPI_Type_struct(numItems, blockLengths,  offsets, type, &_img_mpi);
+	
+	return _img_mpi;
+}
+
+#endif
+
+
+void avtImgCommunicator::sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData){
+	#ifdef PARALLEL
+		// Commit the datatype
+		MPI_Datatype _TestImg_mpi;
+		_TestImg_mpi = createImgDataType();
+		MPI_Type_commit(&_TestImg_mpi);
+
+
+
+	    MPI_Send(toSendMetaData, 1, _TestImg_mpi, toSendMetaData.destProcId, 2, MPI_COMM_WORLD);
+	    MPI_Send(&toSendImgData.imagePatch, s, MPI_FLOAT, toSendMetaData.destProcId, 1, MPI_COMM_WORLD); //send the image data
+    #endif
+}
+
+
+
+void avtImgCommunicator::recvPointToPoint(imgMetaData &recvMetaData, imgData &recvImgData){
+	#ifdef PARALLEL
+	
+		// Commit the datatype
+		MPI_Datatype _TestImg_mpi;
+		_TestImg_mpi = createImgDataType();
+		MPI_Type_commit(&_TestImg_mpi);
+
+	
+        MPI_Recv (&recvMetaData, 1, _TestImg_mpi, status.MPI_SOURCE, 2, MPI_COMM_WORLD, &status);
+
+        recvImgData = setImg(recvMetaData.patchNumber, recvMetaData.avg_z, tempDataSize);
+        recvImgData.imagePatch = new float[recvMetaData.dims[0]*recvMetaData.dims[1] * 4];
+        MPI_Recv(recvImgData.imagePatch, tempDataSize, MPI_FLOAT, status.MPI_SOURCE, 1, MPI_COMM_WORLD, &status);
+    #endif
+}
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::getcompositedImage(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage){
+
+	for (int i=0; i< imgBufferHeight; i++)
+		for (int j=0; j<imgBufferWidth; j++){
+			int bufferIndex = (imgBufferWidth*4*i) + (j*4);
+			int wholeImgIndex = (imgBufferWidth*3*i) + (j*3);
+
+			wholeImage[wholeImgIndex+0] = (imgBuffer[bufferIndex+0] ) * 255;
+			wholeImage[wholeImgIndex+1] = (imgBuffer[bufferIndex+1] ) * 255;
+			wholeImage[wholeImgIndex+2] = (imgBuffer[bufferIndex+2] ) * 255;
+		}
+
+	delete imgBuffer[];
+	imgBuffer = NULL;
+}
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::sendnRecvPatchesMetanData(int sizeToReceive){
 	// Each processor sends out the relevant img patches to other processors
 	//////////**************************** SEND FIVE: DISTRIBUTION OF PATCHES
 	//////////**************************** FROM: All Procs
 	//////////**************************** TO: Relevant Procs	
 	//
 	int numProcsToSend = 0;
-	
-
-
-	// copy over leftover data to new array
-	int totalSize = sizeToReceive + remainingPatches;
-
-	int *dataSize = new int[totalSize];
-	imgMetaData *allImgMetaData = new imgMetaData[totalSize];
-	imgData *allImgData = new imgData[totalSize];
-
-	count =0; 
-	for (int i = 0; i < num_avg_z; ++i){
-		for (int j = 0; j < compositedPatches[i].size(); ++j){
-			int destId = compositedPatches[i][j].destProcId;
-			if(destId == my_id){
-				allImgMetaData[count] = compositedPatches[i][j];
-				allImgData[count].patchNumber = compositedPatches[i][j].patchNumber;
-				allImgData[count].avg_z = compositedPatches[i][j].avg_z;
-				allImgData[count].data = new float[compositedData[i][j].dataSize];
-				allImgData[count].dataSize = compositedData[i][j].dataSize;
-				std::copy(compositedData[i][j].data, compositedData[i][j].data+compositedData[i][j].dataSize, allImgData[count].data);
-				count++;
-			} 
-		}
-	}
-
-	//MPI_Barrier(MPI_COMM_WORLD);
-
-
-	//////////**************************** RECV FIVE: DISTRIBUTION OF PATCHES
-	//////////**************************** FROM: All Procs
-	//////////**************************** TO: Relevant Procs	
-	// All procs receive image data
-
-	count = remainingPatches;
 	int originId;
 	int totalImgs;
 
+	// Commit the datatype
+	MPI_Datatype _TestImg_mpi;
+	_TestImg_mpi = createImgDataType(10);
+	MPI_Type_commit(&_TestImg_mpi);
+
 	//printf("\n\n@@@ dest: %d size: %d\n ", my_id, totalRecvData/2);
 
-	if(numPatchesToCompose > 0){
+	if (numPatchesToCompose > 0){
 		for (int i = 0; i < sizeToReceive; i++){
 
 			//originId = informationToRecvArray[i];
@@ -171,148 +313,38 @@ void avtImgCommunicator::sendnRecvPatchesMetanData(){
 
 
 
-void avtImgCommunicator::recvDataforDataToRecv(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray){
-	//////////**************************** RECV FOUR: REDISTRIBUTION DATA
-	//////////**************************** FROM: Proc 0
-	//////////**************************** TO: All Procs	
-	//
-	// All the procs receive
-	//
-	#ifdef PARALLEL
-	MPI_Barrier(MPI_COMM_WORLD);	// make sure all processors have reached here and sort
-
-	//receive the information about how many patches to receive from other processors
-	if(numPatchesToCompose > 0)		
-		MPI_Recv (&totalRecvData, 1, MPI_INT, 0, 3, MPI_COMM_WORLD, &status);
-	informationToRecvArray = new int[totalRecvData];
-
-	if(numPatchesToCompose > 0)		
-		MPI_Recv (&informationToRecvArray, totalRecvData, MPI_INT, 0, 2, MPI_COMM_WORLD, &status);
-
-	//receive the total number of patches to send to other processors, from processor 0
-	MPI_Recv (&totalSendData, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
 
 
-	informationToSendArray = new int[totalSendData];
-	MPI_Recv (&informationToSendArray, totalSendData, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 
-	#endif
-}
 
-void avtImgCommunicator::sendRecvandRecvInfo(){
-	//////////**************************** SEND FOUR: REDISTRIBUTION DATA
-	//////////**************************** FROM: Proc 0
-	//////////**************************** TO: All Procs	
-	//
-	// Proc 0 sends the patches data about redistribution
-	//
-	if (my_id == 0){
-		// Redistribute - even distribution as far as possible
-		int remainderDivision = totalPatches%num_procs;  // e.g. 18/4 = 4.5, 18%4 = 2 | 5,5,4,4
-		int numPatchesPerProc = totalPatches/num_procs;  // e.g 18/4 = 4
-		int patchIndex = 0;
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+int calculatePatchDivision (const std::vector<iotaMeta>& imgVector, std::vector<int>& procsAlreadyInList){
+	std::map<int,int> numPatchesPerProc;
+	std::pair<std::map<int,int>::iterator, bool> isPresent;
 
-		int patchesToSendArray[num_procs][2*totalPatches];
-		int patchesToRecvArray[num_procs][2*totalPatches];
+	if(imgVector.size() == 0) return 0;
 
-		std::map<int,int> patchesToRecvMap[num_procs]; 
-		std::pair<std::map<int,int>::iterator,bool> isPresent;
+	for (int i = 0; i < imgVector.size(); ++i){
+		isPresent = numPatchesPerProc.insert (	std::pair<int,int>(imgVector[i].procId, imgVector[i].imgArea) );
 
-		int numSendPatches[num_procs];
-
-		for(int procId=0; procId<num_procs; procId++){
-			numSendPatches[procId] = 0;
-			patchesToRecvMap[procId].clear();
-		}
-
-		//********************************************************** don't want to send the meta data 
-		
-		for (int i = 0; i < num_procs; i++){
-		 	for (int j = 0; j < processorPatchesCount[i]; j++){
-		 		int currentProcId = procToSend[i];
-		 		int originProcId = allRecvIotaMeta[patchIndex].procId;
-
-		 		if(originProcId != currentProcId){
-
-			 		// Array of the form [0 1 2 3 ...]
-			 		// 					 even numbers(0,2..): patchNumber 
-			 		//					 odd numbers(1,3...): destProcId
-
-		 		    patchesToSendArray[originProcId][numSendPatches[originProcId]++] = allRecvIotaMeta[patchIndex].patchNumber;
-		 			patchesToSendArray[originProcId][numSendPatches[originProcId]++] = currentProcId;
-
-		 			// Array of the form [0 1 2 3 ...]
-			 		// 					 even numbers(0,2..): procId 
-			 		//					 odd numbers(1,3...): numPatches
-
-  					isPresent = patchesToRecvMap[currentProcId].insert ( std::pair<int,int>(originProcId, 1) );
-
-  					//printf("Inserted to dest: %d the origin: %d\n", currentProcId, originProcId );
-
-  					if(isPresent.second == false){
-  						++patchesToRecvMap[currentProcId][originProcId];
-  					}
-		 		}
-
-		 		patchIndex++;
-		 	}
-		}
-
-		// convert the receive map to array
-		for (int i = 0; i < num_procs; i++){
-			int currentProcId = procToSend[i];
-			int count = 0;
-			int all_count = 0;
-			//printf("\n\n### dest: %d size: %ld\n ", currentProcId, patchesToRecvMap[currentProcId].size());
-			std::map<int,int>::iterator it = patchesToRecvMap[currentProcId].begin();
-			for (; it!=patchesToRecvMap[currentProcId].end(); ++it){
-			 		int first = it->first;
-			 		int second = it->second;
-					//printf("\t origin %d numPatches: %d\n", first, second);
-					patchesToRecvArray[currentProcId][count++] = first;
-					patchesToRecvArray[currentProcId][count++] = second;
-					all_count += second;
-			}
-			//printf("    totalPatches: %d\n ", all_count);
-		}
-
-		//printf("\n..................................................\n\n");	
-
-		//Send information about which processor needs to send which patch where
-		#ifdef PARALLEL
-		std::set<int> sentProcs;
-		for (int i = 0; i < num_procs; i++){
-			int procId = procToSend[i];
-			if (!(sentProcs.find(procId) != sentProcs.end())){
-				int s = 2*patchesToRecvMap[procId].size();
-				MPI_Send(&s, 1, MPI_INT, procId, 3, MPI_COMM_WORLD);
-				MPI_Send(patchesToRecvArray[procId], s, MPI_INT, procId, 2, MPI_COMM_WORLD);
-				sentProcs.insert(procId);
-			}
-
-		}
-
-		
-		for (int procId = 0; procId < num_procs; procId++){
-			MPI_Send(&numSendPatches[procId], 1, MPI_INT, procId, 1, MPI_COMM_WORLD);
-			MPI_Send(patchesToSendArray[procId], numSendPatches[procId], MPI_INT, procId, 0, MPI_COMM_WORLD);
-
-		}
-		#endif
+		if(isPresent.second == false)			
+			numPatchesPerProc[imgVector[i].procId] += imgVector[i].imgArea;
 	}
-}
-
-void avtImgCommunicator::receiveNumPatchesToCompose(){
-	
-	#ifdef PARALLEL
-		MPI_Recv(&numPatchesToCompose, 1, MPI_INT, 0, MSG_DATA, MPI_COMM_WORLD, &status);
-		MPI_Barrier(MPI_COMM_WORLD);	// make sure all processors have reached here and sort
-	#endif
+	return std::max_element(numPatchesPerProc.begin(), numPatchesPerProc.end(), value_comparer)->first;
 }
 
 
-
-void avtImgCommunicator::patchDecisionallocation(){
+void avtImgCommunicator::patchAllocationLogic(){
 	int *patchesPerProcessor;
 	int num_divisions;
 	std::vector<int> procToSend;
@@ -411,8 +443,9 @@ void avtImgCommunicator::patchDecisionallocation(){
 
 		std::cout << std::endl;
 
-		std::vector< std::vector<iotaMeta> > all_patches_sorted_avgZ_proc0(num_procs); 
-		std::vector<int> numPatchesPerProcVec(num_procs);
+		all_patches_sorted_avgZ_proc0.resize(num_procs);
+		numPatchesPerProcVec(num_procs);
+
 
 		// Populate the all_patches_sorted_avgZ_proc0 vector with data from allRecvIotaMeta
 		int count = 0;
@@ -420,8 +453,8 @@ void avtImgCommunicator::patchDecisionallocation(){
 		for (int currentProcId = 0; currentProcId < num_procs; currentProcId++){
 			std::cout << "Division: " << currentProcId << std::endl;
 
-		 	for (int j = 0; j < patchesPerProcessor[currentProcId]; j++){
-					all_patches_sorted_avgZ_proc0[count].push_back(allRecvIotaMeta[patchIndex]);
+		 	for (int j = 0; j < patchesPerProcessor[currentProcId]; j++){								
+					all_patches_sorted_avgZ_proc0[count].push_back(allRecvIotaMeta[patchIndex]);		// count to be replaced by currentProcId !!!TO CHECK
 
 					std::cout << patchIndex << ": " << allRecvIotaMeta[patchIndex].avg_z << std::endl;
 					patchIndex++;
@@ -434,6 +467,7 @@ void avtImgCommunicator::patchDecisionallocation(){
 		}
 
 		procToSend.resize(num_procs);
+
 
 		// Intialize the vectors
 		for (int i = 0; i < num_procs; ++i){
@@ -452,20 +486,180 @@ void avtImgCommunicator::patchDecisionallocation(){
 			printf("procToSend: %d\n", procToSend[i]);
 		}
 
+		printf("\n ..................................................\n");	
+	}
+}
 
-		// Send each processor how many total patches it expects. If the number is 0, it receives no patch.
-		//////////**************************** SEND THREE: TOTAL PATCHES RECEIVED PER PROCESSOR
-		//////////**************************** FROM: Proc 0
-		//////////**************************** TO: All Procs
-		#ifdef PARALLEL
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::sendNumPatchesToCompose(){
+	#ifdef PARALLEL
 		for (int i=0; i<num_procs; i++){
 			MPI_Send(&numPatchesPerProcVec[i], 1, MPI_INT, i, MSG_DATA, MPI_COMM_WORLD); // change to MPI_SCATTER
 		}
-		#endif
-		
-		printf("\n ..................................................\n");	
-	}
+	#endif
+}
 
+
+int avtImgCommunicator::receiveNumPatchesToCompose(){
+	#ifdef PARALLEL
+		MPI_Recv(&numPatchesToCompose, 1, MPI_INT, 0, MSG_DATA, MPI_COMM_WORLD, &status);
+		MPI_Barrier(MPI_COMM_WORLD);	// make sure all processors have reached here and sort
+	#endif
+
+	return numPatchesToCompose;
+}
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::sendRecvandRecvInfo(){
+	//////////**************************** SEND FOUR: REDISTRIBUTION DATA
+	//////////**************************** FROM: Proc 0
+	//////////**************************** TO: All Procs	
+	//
+	// Proc 0 sends the patches data about redistribution
+	//
+	if (my_id == 0){
+		// Redistribute - even distribution as far as possible
+		int patchIndex = 0;
+
+		int patchesToSendArray[num_procs][2*totalPatches];
+		int patchesToRecvArray[num_procs][2*totalPatches];
+
+		std::map<int,int> patchesToRecvMap[num_procs]; 
+		std::pair<std::map<int,int>::iterator,bool> isPresent;
+
+		int numSendPatches[num_procs];
+
+		for(int procId=0; procId<num_procs; procId++){
+			numSendPatches[procId] = 0;
+			patchesToRecvMap[procId].clear();
+		}
+
+		//********************************************************** don't want to send the meta data 
+		
+		for (int i = 0; i < num_procs; i++){
+		 	for (int j = 0; j < processorPatchesCount[i]; j++){
+		 		int currentProcId = procToSend[i];
+		 		int originProcId = allRecvIotaMeta[patchIndex].procId;
+
+		 		if(originProcId != currentProcId){
+
+			 		// Array of the form [0 1 2 3 ...]
+			 		// 					 even numbers(0,2..): patchNumber 
+			 		//					 odd numbers(1,3...): destProcId
+
+		 		    patchesToSendArray[originProcId][numSendPatches[originProcId]++] = allRecvIotaMeta[patchIndex].patchNumber;
+		 			patchesToSendArray[originProcId][numSendPatches[originProcId]++] = currentProcId;
+
+		 			// Array of the form [0 1 2 3 ...]
+			 		// 					 even numbers(0,2..): procId 
+			 		//					 odd numbers(1,3...): numPatches
+
+  					isPresent = patchesToRecvMap[currentProcId].insert ( std::pair<int,int>(originProcId, 1) );
+
+  					//printf("Inserted to dest: %d the origin: %d\n", currentProcId, originProcId );
+
+  					if(isPresent.second == false){
+  						++patchesToRecvMap[currentProcId][originProcId];
+  					}
+		 		}
+
+		 		patchIndex++;
+		 	}
+		}
+
+		// convert the receive map to array
+		for (int i = 0; i < num_procs; i++){
+			int currentProcId = procToSend[i];
+			int count = 0;
+			int all_count = 0;
+			//printf("\n\n### dest: %d size: %ld\n ", currentProcId, patchesToRecvMap[currentProcId].size());
+			std::map<int,int>::iterator it = patchesToRecvMap[currentProcId].begin();
+			for (; it!=patchesToRecvMap[currentProcId].end(); ++it){
+			 		int first = it->first;
+			 		int second = it->second;
+					//printf("\t origin %d numPatches: %d\n", first, second);
+					patchesToRecvArray[currentProcId][count++] = first;
+					patchesToRecvArray[currentProcId][count++] = second;
+					all_count += second;
+			}
+			//printf("    totalPatches: %d\n ", all_count);
+		}
+
+		//printf("\n..................................................\n\n");	
+
+		//Send information about which processor needs to send which patch where
+		#ifdef PARALLEL
+		std::set<int> sentProcs;
+		for (int i = 0; i < num_procs; i++){
+			int procId = procToSend[i];
+			if (!(sentProcs.find(procId) != sentProcs.end())){
+				int s = 2*patchesToRecvMap[procId].size();
+				MPI_Send(&s, 1, MPI_INT, procId, 3, MPI_COMM_WORLD);
+				MPI_Send(patchesToRecvArray[procId], s, MPI_INT, procId, 2, MPI_COMM_WORLD);
+				sentProcs.insert(procId);
+			}
+
+		}
+
+		for (int procId = 0; procId < num_procs; procId++){
+			MPI_Send(&numSendPatches[procId], 1, MPI_INT, procId, 1, MPI_COMM_WORLD);
+			MPI_Send(patchesToSendArray[procId], numSendPatches[procId], MPI_INT, procId, 0, MPI_COMM_WORLD);
+		}
+		#endif
+	}
+}
+
+
+
+
+void avtImgCommunicator::recvDataforDataToRecv(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray){
+	//////////**************************** RECV FOUR: REDISTRIBUTION DATA
+	//////////**************************** FROM: Proc 0
+	//////////**************************** TO: All Procs	
+	//
+	// All the procs receive
+	//
+	#ifdef PARALLEL
+		MPI_Barrier(MPI_COMM_WORLD);	// make sure all processors have reached here and sort
+
+		//receive the information about how many patches to receive from other processors
+		if(numPatchesToCompose > 0)		
+			MPI_Recv (&totalRecvData, 1, MPI_INT, 0, 3, MPI_COMM_WORLD, &status);
+		informationToRecvArray = new int[totalRecvData];
+
+		if(numPatchesToCompose > 0)		
+			MPI_Recv (&informationToRecvArray, totalRecvData, MPI_INT, 0, 2, MPI_COMM_WORLD, &status);
+
+		//receive the total number of patches to send to other processors, from processor 0
+		MPI_Recv (&totalSendData, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+
+
+		informationToSendArray = new int[totalSendData];
+		MPI_Recv (&informationToSendArray, totalSendData, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+
+	#endif
 }
 
 // ****************************************************************************
@@ -500,6 +694,10 @@ avtImgCommunicator::avtImgCommunicator(){
     processorPatchesCount = NULL;
 	allRecvImgData= NULL;
 	allRecvPatches= NULL;
+	imgBuffer = NULL;
+
+	all_patches_sorted_avgZ_proc0.clear(); 
+	numPatchesPerProcVec.clear();
 }
 
 
@@ -532,6 +730,12 @@ avtImgCommunicator::~avtImgCommunicator(){
 
 		if (allRecvIotaMeta != NULL)
 			delete []allRecvIotaMeta;
+
+		if (imgBuffer != NULL)
+			delete []imgBuffer;
+
+		all_patches_sorted_avgZ_proc0.clear(); 
+		numPatchesPerProcVec.clear();
 	}
 }
 

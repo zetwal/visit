@@ -14,7 +14,10 @@
 #define MSG_DATA 100
 #define MSG_RESULT 101
 
-
+struct imageBuffer{
+	float *image;
+	float depth;
+};
 
 class avtImgCommunicator
 {
@@ -24,11 +27,17 @@ class avtImgCommunicator
 	imgMetaData *allRecvPatches;
 	imgData *allRecvImgData;
 
+	float *imgBuffer;
+
 	
 	iotaMeta *allRecvIotaMeta;
 	std::vector<int> procToSend;
-	
 
+
+	std::vector< std::vector<iotaMeta> > all_patches_sorted_avgZ_proc0; 
+	std::vector<int> numPatchesPerProcVec;
+	
+	unsigned char background[3];
 
     int 		num_procs;
     int 		my_id;
@@ -47,12 +56,20 @@ public:
 	void gatherNumPatches(int numPatches);
 	void gatherIotaMetaData(int arraySize, float *allIotaMetadata);
 
-	void patchDecisionallocation();		// decides which processor should get which patches and tell each processor how many patches it will receive
+	void patchAllocationLogic();		// decides which processor should get which patches and tell each processor how many patches it will receive
 
-	void receiveNumPatchesToCompose();
+	void sendNumPatchesToCompose();
+
+	int receiveNumPatchesToCompose();
 	void sendRecvandRecvInfo();
 	void recvDataforDataToRecv(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray);
-	void sendnRecvPatchesMetanData();
+	void sendnRecvPatchesMetanData(int sizeToReceive);
+
+	void sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData);
+
+
+	void gatherAndAssembleImages(int sizex, int sizey, float *image, float zIndex);
+	void getcompositedImage(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage);
 
 	void sendPatchImgData(int destId, int arraySize, float *sendMsgBuffer);
 	void masterRecvPatchImgData();
@@ -69,6 +86,8 @@ public:
 	int GetMyId(){ return my_id;};
 
 	void gatherMetaData(int arraySize, float *allIotaMetadata);
+
+	void setBackground(unsigned char _background[3]){ for (int i=0; i<3; i++) background[i] = _background[i]; }
 	
 #ifdef PARALLEL
 	MPI_Status status;

@@ -516,30 +516,42 @@ avtRayTracer::Execute(void)
         //
 
         // for iotaMeta
-
-        imgMetaData *imgAllPatches;
-        imgAllPatches = NULL;
-        imgAllPatches = new imgMetaData[numPatches];
-
         float *tempSendBuffer;
         tempSendBuffer = NULL;
         tempSendBuffer = new float[numPatches*4];
 
+        std::multimap<int, imgMetaData> imgMetaDataMultiMap;
         for (int i=0; i<numPatches; i++){
-            imgAllPatches[i] = extractor.getImgMetaPatch(i);
+            imgMetaData temp;
+            temp = extractor.getImgMetaPatch(i);
+            imgMetaDataMultiMap.insert(  std::pair<int, imgData> (temp.patchNumber , temp)  );
 
-            tempSendBuffer[i*4 + 0] = imgAllPatches[i].procId;
-            tempSendBuffer[i*4 + 1] = imgAllPatches[i].patchNumber;
-            tempSendBuffer[i*4 + 2] = imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1];
-            tempSendBuffer[i*4 + 3] = imgAllPatches[i].avg_z;
+            tempSendBuffer[i*4 + 0] = temp.procId;
+            tempSendBuffer[i*4 + 1] = temp.patchNumber;
+            tempSendBuffer[i*4 + 2] = temp.dims[0] * temp.dims[1];
+            tempSendBuffer[i*4 + 3] = temp.avg_z;
         }
+
+        // imgMetaData *imgAllPatches;
+        // imgAllPatches = NULL;
+        // imgAllPatches = new imgMetaData[numPatches];
+
+        // for (int i=0; i<numPatches; i++){
+        //     imgAllPatches[i] = extractor.getImgMetaPatch(i);
+
+        //     tempSendBuffer[i*4 + 0] = imgAllPatches[i].procId;
+        //     tempSendBuffer[i*4 + 1] = imgAllPatches[i].patchNumber;
+        //     tempSendBuffer[i*4 + 2] = imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1];
+        //     tempSendBuffer[i*4 + 3] = imgAllPatches[i].avg_z;
+        // }
+
         imgComm.gatherIotaMetaData(numPatches*4, tempSendBuffer);
         imgComm.syncAllProcs();
 
         delete []tempSendBuffer;
         tempSendBuffer = NULL;
 
-    
+
 
         // Previous sending all
         // float *tempSendBuffer;
@@ -572,140 +584,214 @@ avtRayTracer::Execute(void)
         
 
         
-        
-        
-
-
         //
         // Call on proc 0 to decide who should be sent what
         // 
-        if (PAR_Rank() == 0){
+        if (PAR_Rank() == 0)
+            imgComm.patchAllocationLogic();      
+        
 
-            imgComm.patchDecisionallocation();      // do decision and tell each processor
-            //
-            // Send info about which patch to receive and which patch to send
-            //
+
+        //
+        // Send info about which patch to receive and which patch to send
+        //
+        if (PAR_Rank == 0){
+            imgComm.sendNumPatchesToCompose();
+        }
+        int numRecvPatchesToCompose = imgComm.receiveNumPatchesToCompose();
+
+
+
+        if (PAR_Rank == 0){
+            imgComm.sendRecvandRecvInfo();  // tell each proc which patches it needs to send and which patches it needs to receive
         }
 
 
-        //
-        // Each proc receives info about which patch it needs to send and receive
-        //
-
-        imgComm.receiveNumPatchesToCompose();
-        imgComm.sendRecvandRecvInfo();  // tell each proc which patches it needs to send and which patches it needs to receive
-
         totalSendData = totalRecvData = 0;
+         // informationToSendArray:   (patchNumber, destProcId)     (patchNumber, destProcId)    (patchNumber, destProcId)  ...
+        // informationToRecvArray:   (procId, numPatches)           (procId, numPatches)         (procId, numPatches)  ...
         imgComm.recvDataforDataToRecv(totalSendData, informationToSendArray, totalRecvData, informationToRecvArray);
-        
+
+
+        // setting the destination processor id
+        for (int k = 0; k < totalSendData; k+=2){
+            std::multimap<int,imgMetaData>::iterator it = imgMetaDataMultiMap.find(informationToSendArray[k]);
+            it->second.destProcId = informationToSendArray[k+1];
+        }
+
+        // counting how many patches to receive
+        if (numRecvPatchesToCompose > 0)
+            for (int i = 0; i < totalRecvData; i+=2)                 // loop through the number of processors to receive from
+                numPatchesReceive += informationToRecvArray[i+1];
+
 
         //
         // Each proc does the send and receive
         //
- 
-        int sizeToReceive = 0;      // Size of the data to be received
 
-        for (int j = 0; j < numPatches; ++j){
-            for (int k = 0; k < totalSendData; k+=2){
-                 if(imgAllPatches[j].patchNumber == informationToSendArray[k])  // tempImgData[i][2] = patchNumber
-                        imgAllPatches[j].destProcId = informationToSendArray[k+1];
-             }
-        }
+        // Send
+        int numPatchesReceive = 0;      // number of patches to receive
+        int remainingPatches = 0;       // number of patches left on the processor that it will itself composite
 
-        if (numPatchesToCompose > 0){
-            for (int i = 0; i < totalRecvData; i+=2){                   // loop through the number of processors to receive from
-                for (int j = 0; j < informationToRecvArray[i+1]; j++)   // loop through the data for each processor
-                    sizeToReceive++;
-            }
-        }
+        std::vector<imgMetaData> allImgMetaData;
+        std::vector<imgData> allImgData;
 
-        int remainingPatches = 0;   
+        std::multimap< std::pair<int,int>, imgData> imgDataToCompose;
+        std::multimap< std::pair<int,int>, imgData>::iterator itImgData;
 
-
-        for (int j = 0; j < numPatches; ++j){
-            int s = compositedData[i][j].dataSize;
-            int destId = compositedPatches[i][j].destProcId;
-
-            if(destId != my_id){
-                MPI_Send(&s, 1, MPI_INT, destId, 0, MPI_COMM_WORLD);
-                MPI_Send(&compositedPatches[i][j], 1, _TestImg_mpi, destId, 2, MPI_COMM_WORLD);
-                MPI_Send(compositedData[i][j].data, s, MPI_FLOAT, destId, 1, MPI_COMM_WORLD); //send the image data
-            } else
-                remainingPatches++;
-        }
         
+        
+            
+        std::multimap<int,imgMetaData>::iterator it;
+        for (it = imgMetaDataMultiMap.begin(); it != imgMetaDataMultiMap.end(); ++it ){
+
+            imgMetaData tempImgMetaData = it->second;
+
+            imgData tempImgData;
+            extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+
+            if (tempImgMetaData.destProcId != tempImgMetaData.procId ){
+                // send the data
+
+                sendPointToPoint(tempImgMetaData,tempImgData);
+                
+                if (tempImgData.imagePatch != NULL)
+                    delete []tempImgData.imagePatch;
+            }else{
+                // copy over leftover data to new array
+
+                allImgMetaData.push_back(tempImgMetaData);
+                imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
+
+                remainingPatches++;
+            }            
+        }
+
+
+        // Receive
+        if (numRecvPatchesToCompose > 0)
+            for (int i = 0; i < numRecvPatchesToCompose; i++){
+                imgData tempImgData;
+                recvPointToPoint(allImgMetaData[remainingPatches + i], tempImgData);
+                imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
+            }
+
+        int totalSize = numRecvPatchesToCompose + remainingPatches;
+        MPI_Barrier(MPI_COMM_WORLD);
+
 
 
         //
         // Each proc does local compositing and then sends
         //
+        
 
+        int imgBufferWidth = screen[0];
+        int imgBufferHeight = screen[1];
+        float *buffer = new float[imgBufferWidth * imgBufferHeight * 4]();  //size: imgBufferWidth * imgBufferHeight * 4, initialized to 0
+
+        for (int i=0; i<totalSize; i++){
+            int startingX = allImgMetaData[i].screen_ll[0];
+            int startingY = allImgMetaData[i].screen_ll[1]; 
+
+            itImgData = allImgMetaData.find(std::pair<int,int>(allImgMetaData[i].procId, allImgMetaData[i].patchNumber));
+
+            for (int j=0; j<allImgMetaData[i].dims[1]; j++){
+                for (int k=0; k<allImgMetaData[i].dims[0]; k++){
+
+                    if ((startingX + k) > imgBufferWidth)
+                        continue;
+
+                    if ((startingY + j) > imgBufferHeight)
+                        continue;
+                    
+                    int subImgIndex = allImgMetaData[i].dims[0]*j*4 + k*4;                                      // index in the subimage 
+                    int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);  // index in the big buffer
+
+                    // Front to back compositing: composited = source * (1.0 - destination.a) + destination; 
+                    //buffer[bufferIndex+0] = allRecvImgData[patchId].imagePatch[subImgIndex+0] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+0];
+                    //buffer[bufferIndex+1] = allRecvImgData[patchId].imagePatch[subImgIndex+1] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+1];
+                    //buffer[bufferIndex+2] = allRecvImgData[patchId].imagePatch[subImgIndex+2] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+2];
+                    //buffer[bufferIndex+3] = allRecvImgData[patchId].imagePatch[subImgIndex+3] * (1.0 - buffer[bufferIndex+3]) + buffer[bufferIndex+3];
+
+                    // ack to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
+                    buffer[bufferIndex+0] = (buffer[bufferIndex+0] * (1.0 - itImgData->second.imagePatch[subImgIndex+3])) + itImgData->second.imagePatch[subImgIndex+0];
+                    buffer[bufferIndex+1] = (buffer[bufferIndex+1] * (1.0 - itImgData->second.imagePatch[subImgIndex+3])) + itImgData->second.imagePatch[subImgIndex+1];
+                    buffer[bufferIndex+2] = (buffer[bufferIndex+2] * (1.0 - itImgData->second.imagePatch[subImgIndex+3])) + itImgData->second.imagePatch[subImgIndex+2];
+                    buffer[bufferIndex+3] = (buffer[bufferIndex+3] * (1.0 - itImgData->second.imagePatch[subImgIndex+3]));
+                }
+            }
+        }
+        
 
         //
         // Proc 0 receicves and does the final assmebly
         //
         if (PAR_Rank() == 0){
-
+            imgComm.setBackground(background);
         }
+
+        // Gather all the images
+        imgComm.gatherAndAssembleImages(screen[0], screen[1], buffer, 0.00000);
 
 
         //
         //  Sends the patches image data to proc 0
         //
-        if (PAR_Rank() == 0){
+        // if (PAR_Rank() == 0){
 
-             // Tell Proc 0 about its own patches
-            for (int i=0; i<numPatches; i++){
-                //imgData tempImgData = extractor.getImgData(i, tempImgData);
-                imgData tempImgData;
-                tempImgData.imagePatch = new float[imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4];
-                extractor.getImgData(i, tempImgData);
-                int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);
+        //      // Tell Proc 0 about its own patches
+        //     for (int i=0; i<numPatches; i++){
+        //         //imgData tempImgData = extractor.getImgData(i, tempImgData);
+        //         imgData tempImgData;
+        //         tempImgData.imagePatch = new float[imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4];
+        //         extractor.getImgData(i, tempImgData);
+        //         int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);
 
-                // creating a buffer for the img data & populating it
-                float *msgBuffer = new float[imgSize + 2];
-                msgBuffer[0] = (float)imgAllPatches[i].procId;
-                msgBuffer[1] = (float)imgAllPatches[i].patchNumber;
-                for (int j=0; j<imgSize; j++)
-                    msgBuffer[j+2] = tempImgData.imagePatch[j];
+        //         // creating a buffer for the img data & populating it
+        //         float *msgBuffer = new float[imgSize + 2];
+        //         msgBuffer[0] = (float)imgAllPatches[i].procId;
+        //         msgBuffer[1] = (float)imgAllPatches[i].patchNumber;
+        //         for (int j=0; j<imgSize; j++)
+        //             msgBuffer[j+2] = tempImgData.imagePatch[j];
 
-                imgComm.setPatchImg(imgAllPatches[i].procId, imgAllPatches[i].patchNumber, imgSize+2, msgBuffer);
+        //         imgComm.setPatchImg(imgAllPatches[i].procId, imgAllPatches[i].patchNumber, imgSize+2, msgBuffer);
 
-                delete []tempImgData.imagePatch;
-                delete []msgBuffer;
-            } 
+        //         delete []tempImgData.imagePatch;
+        //         delete []msgBuffer;
+        //     } 
 
-            // Receive the other patches from the other processors
-            imgComm.masterRecvPatchImgData();
-        }
-        else{       
-            for (int i=0; i<numPatches; i++){
-                //imgData tempImgData = extractor.getImgData(i);
-                imgData tempImgData;
-                tempImgData.imagePatch = new float[imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4];
-                extractor.getImgData(i, tempImgData);
-                int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);
+        //     // Receive the other patches from the other processors
+        //     imgComm.masterRecvPatchImgData();
+        // }
+        // else{       
+        //     for (int i=0; i<numPatches; i++){
+        //         //imgData tempImgData = extractor.getImgData(i);
+        //         imgData tempImgData;
+        //         tempImgData.imagePatch = new float[imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4];
+        //         extractor.getImgData(i, tempImgData);
+        //         int imgSize = (imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1] * 4);
 
-                // creating a buffer for the img data
-                float *sendMsgBuffer = new float[imgSize + 2];
+        //         // creating a buffer for the img data
+        //         float *sendMsgBuffer = new float[imgSize + 2];
 
-                // populating info in the buffer
-                sendMsgBuffer[0] = (float)imgAllPatches[i].procId;
-                sendMsgBuffer[1] = (float)imgAllPatches[i].patchNumber;
-                for (int j=0; j<imgSize; j++)
-                    sendMsgBuffer[j+2] = tempImgData.imagePatch[j];
+        //         // populating info in the buffer
+        //         sendMsgBuffer[0] = (float)imgAllPatches[i].procId;
+        //         sendMsgBuffer[1] = (float)imgAllPatches[i].patchNumber;
+        //         for (int j=0; j<imgSize; j++)
+        //             sendMsgBuffer[j+2] = tempImgData.imagePatch[j];
                 
-                imgComm.sendPatchImgData(0, imgSize+2, sendMsgBuffer);
+        //         imgComm.sendPatchImgData(0, imgSize+2, sendMsgBuffer);
 
-                delete []tempImgData.imagePatch;
-                delete []sendMsgBuffer;
-            }
-        }
+        //         delete []tempImgData.imagePatch;
+        //         delete []sendMsgBuffer;
+        //     }
+        // }
 
-        if (imgAllPatches != NULL)
-            delete []imgAllPatches;
+        // if (imgAllPatches != NULL)
+        //     delete []imgAllPatches;
 
-        imgComm.syncAllProcs();
+        // imgComm.syncAllProcs();
     
         visitTimer->StopTimer(timingComm, "Communicating");
         visitTimer->DumpTimings();
@@ -741,7 +827,11 @@ avtRayTracer::Execute(void)
             zbuffer = whole_image->GetImage().GetZBuffer();
 
             // Call the compositing
-            imgComm.composeImages(screen[0], screen[1], imgTest, background); 
+            //imgComm.composeImages(screen[0], screen[1], imgTest, background); 
+
+            // Get the composited image
+            imgComm.getcompositedImage(screen[0], screen[1], imgTest); 
+
         
             img->Delete();
 
