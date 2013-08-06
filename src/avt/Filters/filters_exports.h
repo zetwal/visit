@@ -82,6 +82,8 @@ struct imgMetaData{
   int procId;       // processor that produced the patch
   int patchNumber;  // id of the patch on that processor - with procId, acts as a key
 
+  int destProcId;   // destination proc where this patch gets composited
+
   int inUse;        // whether it is in use of not
   int dims[2];      // height, width
   int screen_ll[2]; // position in the final image

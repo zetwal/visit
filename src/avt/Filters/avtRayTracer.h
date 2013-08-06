@@ -186,6 +186,10 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     void                  TightenClippingPlanes(const avtViewInfo &view,
                                                 vtkMatrix4x4 *,
                                                 double &, double &);
+
+    int totalSendData, totalRecvData;
+    int *informationToRecvArray;
+    int *informationToSendArray;
 };
 
 

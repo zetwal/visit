@@ -132,6 +132,10 @@ avtRayTracer::avtRayTracer()
     lighting = false;
     lightPosition[0] = lightPosition[1] = lightPosition[2] = 0.0;   lightPosition[3] = 1.0;
     materialProperties[0] = 0.4; materialProperties[1] = 0.75; materialProperties[3] = 0.0; materialProperties[3] = 15.0;
+
+    totalSendData = totalRecvData = 0;
+    informationToRecvArray = NULL;
+    informationToSendArray = NULL;
 }
 
 
@@ -149,6 +153,11 @@ avtRayTracer::avtRayTracer()
 
 avtRayTracer::~avtRayTracer()
 {
+    if (informationToRecvArray != NULL)
+        delete informationToRecvArray;
+
+    if (informationToSendArray != NULL)
+        delete informationToSendArray;
     ;
 }
 
@@ -505,55 +514,66 @@ avtRayTracer::Execute(void)
         //
         // Send/Receive the patches metadata to proc 0
         //
+
+        // for iotaMeta
+
         imgMetaData *imgAllPatches;
         imgAllPatches = NULL;
         imgAllPatches = new imgMetaData[numPatches];
 
         float *tempSendBuffer;
         tempSendBuffer = NULL;
-        tempSendBuffer = new float[numPatches*10];
+        tempSendBuffer = new float[numPatches*4];
 
         for (int i=0; i<numPatches; i++){
             imgAllPatches[i] = extractor.getImgMetaPatch(i);
 
-            tempSendBuffer[i*10 + 0] = imgAllPatches[i].procId;
-            tempSendBuffer[i*10 + 1] = imgAllPatches[i].patchNumber;
-            tempSendBuffer[i*10 + 2] = imgAllPatches[i].inUse;
-            tempSendBuffer[i*10 + 3] = imgAllPatches[i].dims[0];
-            tempSendBuffer[i*10 + 4] = imgAllPatches[i].dims[1];
-            tempSendBuffer[i*10 + 5] = imgAllPatches[i].screen_ll[0];
-            tempSendBuffer[i*10 + 6] = imgAllPatches[i].screen_ll[1];
-            tempSendBuffer[i*10 + 7] = imgAllPatches[i].screen_ur[0];
-            tempSendBuffer[i*10 + 8] = imgAllPatches[i].screen_ur[1];
-            tempSendBuffer[i*10 + 9] = imgAllPatches[i].avg_z;
-        }
-
-        imgComm.gatherMetaData(numPatches*10, tempSendBuffer);
-        imgComm.syncAllProcs();
-
-        delete []tempSendBuffer;
-        tempSendBuffer = NULL;
-
-
-        /*
-        // for iotametadata
-        float *tempSendBuffer;
-        tempSendBuffer = NULL;
-        tempSendBuffer = new float[numPatches*4];
-
-        for (int i=0; i<numPatches; i++){
             tempSendBuffer[i*4 + 0] = imgAllPatches[i].procId;
             tempSendBuffer[i*4 + 1] = imgAllPatches[i].patchNumber;
             tempSendBuffer[i*4 + 2] = imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1];
             tempSendBuffer[i*4 + 3] = imgAllPatches[i].avg_z;
         }
-
         imgComm.gatherIotaMetaData(numPatches*4, tempSendBuffer);
+        imgComm.syncAllProcs();
 
         delete []tempSendBuffer;
         tempSendBuffer = NULL;
-        */
 
+    
+
+        // Previous sending all
+        // float *tempSendBuffer;
+        // tempSendBuffer = NULL;
+        // tempSendBuffer = new float[numPatches*10];
+
+        // for (int i=0; i<numPatches; i++){
+        //     imgAllPatches[i] = extractor.getImgMetaPatch(i);
+
+        //     tempSendBuffer[i*10 + 0] = imgAllPatches[i].procId;
+        //     tempSendBuffer[i*10 + 1] = imgAllPatches[i].patchNumber;
+        //     tempSendBuffer[i*10 + 2] = imgAllPatches[i].inUse;
+        //     tempSendBuffer[i*10 + 3] = imgAllPatches[i].dims[0];
+        //     tempSendBuffer[i*10 + 4] = imgAllPatches[i].dims[1];
+        //     tempSendBuffer[i*10 + 5] = imgAllPatches[i].screen_ll[0];
+        //     tempSendBuffer[i*10 + 6] = imgAllPatches[i].screen_ll[1];
+        //     tempSendBuffer[i*10 + 7] = imgAllPatches[i].screen_ur[0];
+        //     tempSendBuffer[i*10 + 8] = imgAllPatches[i].screen_ur[1];
+        //     tempSendBuffer[i*10 + 9] = imgAllPatches[i].avg_z;
+
+        //    // std::cout << imgAllPatches[i].procId << " , " << imgAllPatches[i].patchNumber << " , " << imgAllPatches[i].avg_z << std::endl;
+
+        // }
+
+        // imgComm.gatherMetaData(numPatches*10, tempSendBuffer);
+        // imgComm.syncAllProcs();
+
+        // delete []tempSendBuffer;
+        // tempSendBuffer = NULL;
+        
+
+        
+        
+        
 
 
         //
@@ -561,6 +581,7 @@ avtRayTracer::Execute(void)
         // 
         if (PAR_Rank() == 0){
 
+            imgComm.patchDecisionallocation();      // do decision and tell each processor
             //
             // Send info about which patch to receive and which patch to send
             //
@@ -571,11 +592,49 @@ avtRayTracer::Execute(void)
         // Each proc receives info about which patch it needs to send and receive
         //
 
+        imgComm.receiveNumPatchesToCompose();
+        imgComm.sendRecvandRecvInfo();  // tell each proc which patches it needs to send and which patches it needs to receive
+
+        totalSendData = totalRecvData = 0;
+        imgComm.recvDataforDataToRecv(totalSendData, informationToSendArray, totalRecvData, informationToRecvArray);
+        
 
         //
         // Each proc does the send and receive
         //
-       
+ 
+        int sizeToReceive = 0;      // Size of the data to be received
+
+        for (int j = 0; j < numPatches; ++j){
+            for (int k = 0; k < totalSendData; k+=2){
+                 if(imgAllPatches[j].patchNumber == informationToSendArray[k])  // tempImgData[i][2] = patchNumber
+                        imgAllPatches[j].destProcId = informationToSendArray[k+1];
+             }
+        }
+
+        if (numPatchesToCompose > 0){
+            for (int i = 0; i < totalRecvData; i+=2){                   // loop through the number of processors to receive from
+                for (int j = 0; j < informationToRecvArray[i+1]; j++)   // loop through the data for each processor
+                    sizeToReceive++;
+            }
+        }
+
+        int remainingPatches = 0;   
+
+
+        for (int j = 0; j < numPatches; ++j){
+            int s = compositedData[i][j].dataSize;
+            int destId = compositedPatches[i][j].destProcId;
+
+            if(destId != my_id){
+                MPI_Send(&s, 1, MPI_INT, destId, 0, MPI_COMM_WORLD);
+                MPI_Send(&compositedPatches[i][j], 1, _TestImg_mpi, destId, 2, MPI_COMM_WORLD);
+                MPI_Send(compositedData[i][j].data, s, MPI_FLOAT, destId, 1, MPI_COMM_WORLD); //send the image data
+            } else
+                remainingPatches++;
+        }
+        
+
 
         //
         // Each proc does local compositing and then sends
@@ -679,7 +738,7 @@ avtRayTracer::Execute(void)
             zbuffer = new float[screen[0] * screen[1]];
             for (int s=0; s<screen[0] * screen[1]; s++)
                 zbuffer[s] = 0.5;
-            zbuffer =  whole_image->GetImage().GetZBuffer();
+            zbuffer = whole_image->GetImage().GetZBuffer();
 
             // Call the compositing
             imgComm.composeImages(screen[0], screen[1], imgTest, background); 

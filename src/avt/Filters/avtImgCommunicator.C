@@ -50,6 +50,423 @@ void displayStruct_meta(imgMetaData temp){
 
 
 bool sortImgByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z > after.avg_z; }
+bool sortImgByDepthIota(iotaMeta const& before, iotaMeta const& after){	return before.avg_z < after.avg_z; }
+bool value_comparer(const std::pair<int,int> &before, const std::pair<int,int> &after){ return before.second < after.second; }
+
+
+int calculatePatchDivision (const std::vector<iotaMeta>& imgVector, std::vector<int>& procsAlreadyInList){
+	std::map<int,int> numPatchesPerProc;
+	std::pair<std::map<int,int>::iterator, bool> isPresent;
+
+	if(imgVector.size() == 0) return 0;
+
+	for (int i = 0; i < imgVector.size(); ++i){
+		isPresent = numPatchesPerProc.insert (	std::pair<int,int>(imgVector[i].procId, imgVector[i].imgArea) );
+
+		if(isPresent.second == false)			
+			numPatchesPerProc[imgVector[i].procId] += imgVector[i].imgArea;
+	}
+	return std::max_element(numPatchesPerProc.begin(), numPatchesPerProc.end(), value_comparer)->first;
+}
+
+
+
+void avtImgCommunicator::sendnRecvPatchesMetanData(){
+	// Each processor sends out the relevant img patches to other processors
+	//////////**************************** SEND FIVE: DISTRIBUTION OF PATCHES
+	//////////**************************** FROM: All Procs
+	//////////**************************** TO: Relevant Procs	
+	//
+	int numProcsToSend = 0;
+	
+
+
+	// copy over leftover data to new array
+	int totalSize = sizeToReceive + remainingPatches;
+
+	int *dataSize = new int[totalSize];
+	imgMetaData *allImgMetaData = new imgMetaData[totalSize];
+	imgData *allImgData = new imgData[totalSize];
+
+	count =0; 
+	for (int i = 0; i < num_avg_z; ++i){
+		for (int j = 0; j < compositedPatches[i].size(); ++j){
+			int destId = compositedPatches[i][j].destProcId;
+			if(destId == my_id){
+				allImgMetaData[count] = compositedPatches[i][j];
+				allImgData[count].patchNumber = compositedPatches[i][j].patchNumber;
+				allImgData[count].avg_z = compositedPatches[i][j].avg_z;
+				allImgData[count].data = new float[compositedData[i][j].dataSize];
+				allImgData[count].dataSize = compositedData[i][j].dataSize;
+				std::copy(compositedData[i][j].data, compositedData[i][j].data+compositedData[i][j].dataSize, allImgData[count].data);
+				count++;
+			} 
+		}
+	}
+
+	//MPI_Barrier(MPI_COMM_WORLD);
+
+
+	//////////**************************** RECV FIVE: DISTRIBUTION OF PATCHES
+	//////////**************************** FROM: All Procs
+	//////////**************************** TO: Relevant Procs	
+	// All procs receive image data
+
+	count = remainingPatches;
+	int originId;
+	int totalImgs;
+
+	//printf("\n\n@@@ dest: %d size: %d\n ", my_id, totalRecvData/2);
+
+	if(numPatchesToCompose > 0){
+		for (int i = 0; i < sizeToReceive; i++){
+
+			//originId = informationToRecvArray[i];
+			//totalImgs = informationToRecvArray[i+1];
+
+			//printf("@@@ %d originId: %d totalImgs: %d\n ", my_id, originId, totalImgs);
+			//for (int j = 0; j < totalSize; j++){
+				int tempDataSize;
+				MPI_Recv (&tempDataSize, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+
+				imgMetaData tempImgDataStruct;
+				MPI_Recv (&tempImgDataStruct, 1, _TestImg_mpi, status.MPI_SOURCE, 2, MPI_COMM_WORLD, &status);
+
+				float *tempImgRecv = new float[tempDataSize];
+				MPI_Recv (tempImgRecv, tempDataSize, MPI_FLOAT, status.MPI_SOURCE, 1, MPI_COMM_WORLD, &status);
+
+				allImgMetaData[count] = tempImgDataStruct;
+				allImgData[count] = setImg(tempImgDataStruct.patchNumber, tempImgDataStruct.avg_z, tempDataSize);
+
+				allImgData[count].data = new float[tempDataSize];
+				std::copy(tempImgRecv, tempImgRecv+tempDataSize, allImgData[count].data);
+
+				delete []tempImgRecv;
+
+				count++;
+			//}
+		}
+	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+
+	//double end = MPI_Wtime();
+	//printf("Elapsed Time: %f\n", (end - start) * 1000000);
+	//std::cout << "num received patches by processor " << my_id << ": " << count - remainingPatches << "\n";
+
+	//sort the received images
+	std::sort(allImgMetaData, allImgMetaData + totalSize, &sortImgByDepthMeta);
+	std::sort(allImgData, allImgData + totalSize, &sortImgByDepthImg);
+
+	// printf("\n\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\n");
+
+	for (int i = 0; i < totalSize; i++){
+	 	//printf("\n Processor: %d \t\tpatchNumber: %d depth: %.2f\n", my_id, (int)allImgData[i].patchNumber, allImgMetaData[i].avg_z);
+		if(!(((int)allImgData[i].data[0]/100) == my_id)) std::cout << "RECV::: Processor: "<<  my_id << "\tpatchNumber: " << (int)allImgData[i].patchNumber << " \tdepth: " << allImgMetaData[i].avg_z << " \tcomp patches: " << allImgMetaData[i].numCompositedPatches << " \tdataSize: " << (int)allImgData[i].dataSize << " \tdata: " << allImgData[i].data[0] << "\n"; 
+		else std::cout << "HAS:::: Processor: "<<  my_id << "\tpatchNumber: " << (int)allImgData[i].patchNumber << " \tdepth: " << allImgMetaData[i].avg_z << " \tcomp patches: " << allImgMetaData[i].numCompositedPatches << " \tdataSize: " << (int)allImgData[i].dataSize << "\tdata: " << allImgData[i].data[0] << "\n";
+		//}
+		//std::cout << std::endl;
+	}
+}
+
+
+
+void avtImgCommunicator::recvDataforDataToRecv(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray){
+	//////////**************************** RECV FOUR: REDISTRIBUTION DATA
+	//////////**************************** FROM: Proc 0
+	//////////**************************** TO: All Procs	
+	//
+	// All the procs receive
+	//
+	#ifdef PARALLEL
+	MPI_Barrier(MPI_COMM_WORLD);	// make sure all processors have reached here and sort
+
+	//receive the information about how many patches to receive from other processors
+	if(numPatchesToCompose > 0)		
+		MPI_Recv (&totalRecvData, 1, MPI_INT, 0, 3, MPI_COMM_WORLD, &status);
+	informationToRecvArray = new int[totalRecvData];
+
+	if(numPatchesToCompose > 0)		
+		MPI_Recv (&informationToRecvArray, totalRecvData, MPI_INT, 0, 2, MPI_COMM_WORLD, &status);
+
+	//receive the total number of patches to send to other processors, from processor 0
+	MPI_Recv (&totalSendData, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+
+
+	informationToSendArray = new int[totalSendData];
+	MPI_Recv (&informationToSendArray, totalSendData, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+
+	#endif
+}
+
+void avtImgCommunicator::sendRecvandRecvInfo(){
+	//////////**************************** SEND FOUR: REDISTRIBUTION DATA
+	//////////**************************** FROM: Proc 0
+	//////////**************************** TO: All Procs	
+	//
+	// Proc 0 sends the patches data about redistribution
+	//
+	if (my_id == 0){
+		// Redistribute - even distribution as far as possible
+		int remainderDivision = totalPatches%num_procs;  // e.g. 18/4 = 4.5, 18%4 = 2 | 5,5,4,4
+		int numPatchesPerProc = totalPatches/num_procs;  // e.g 18/4 = 4
+		int patchIndex = 0;
+
+		int patchesToSendArray[num_procs][2*totalPatches];
+		int patchesToRecvArray[num_procs][2*totalPatches];
+
+		std::map<int,int> patchesToRecvMap[num_procs]; 
+		std::pair<std::map<int,int>::iterator,bool> isPresent;
+
+		int numSendPatches[num_procs];
+
+		for(int procId=0; procId<num_procs; procId++){
+			numSendPatches[procId] = 0;
+			patchesToRecvMap[procId].clear();
+		}
+
+		//********************************************************** don't want to send the meta data 
+		
+		for (int i = 0; i < num_procs; i++){
+		 	for (int j = 0; j < processorPatchesCount[i]; j++){
+		 		int currentProcId = procToSend[i];
+		 		int originProcId = allRecvIotaMeta[patchIndex].procId;
+
+		 		if(originProcId != currentProcId){
+
+			 		// Array of the form [0 1 2 3 ...]
+			 		// 					 even numbers(0,2..): patchNumber 
+			 		//					 odd numbers(1,3...): destProcId
+
+		 		    patchesToSendArray[originProcId][numSendPatches[originProcId]++] = allRecvIotaMeta[patchIndex].patchNumber;
+		 			patchesToSendArray[originProcId][numSendPatches[originProcId]++] = currentProcId;
+
+		 			// Array of the form [0 1 2 3 ...]
+			 		// 					 even numbers(0,2..): procId 
+			 		//					 odd numbers(1,3...): numPatches
+
+  					isPresent = patchesToRecvMap[currentProcId].insert ( std::pair<int,int>(originProcId, 1) );
+
+  					//printf("Inserted to dest: %d the origin: %d\n", currentProcId, originProcId );
+
+  					if(isPresent.second == false){
+  						++patchesToRecvMap[currentProcId][originProcId];
+  					}
+		 		}
+
+		 		patchIndex++;
+		 	}
+		}
+
+		// convert the receive map to array
+		for (int i = 0; i < num_procs; i++){
+			int currentProcId = procToSend[i];
+			int count = 0;
+			int all_count = 0;
+			//printf("\n\n### dest: %d size: %ld\n ", currentProcId, patchesToRecvMap[currentProcId].size());
+			std::map<int,int>::iterator it = patchesToRecvMap[currentProcId].begin();
+			for (; it!=patchesToRecvMap[currentProcId].end(); ++it){
+			 		int first = it->first;
+			 		int second = it->second;
+					//printf("\t origin %d numPatches: %d\n", first, second);
+					patchesToRecvArray[currentProcId][count++] = first;
+					patchesToRecvArray[currentProcId][count++] = second;
+					all_count += second;
+			}
+			//printf("    totalPatches: %d\n ", all_count);
+		}
+
+		//printf("\n..................................................\n\n");	
+
+		//Send information about which processor needs to send which patch where
+		#ifdef PARALLEL
+		std::set<int> sentProcs;
+		for (int i = 0; i < num_procs; i++){
+			int procId = procToSend[i];
+			if (!(sentProcs.find(procId) != sentProcs.end())){
+				int s = 2*patchesToRecvMap[procId].size();
+				MPI_Send(&s, 1, MPI_INT, procId, 3, MPI_COMM_WORLD);
+				MPI_Send(patchesToRecvArray[procId], s, MPI_INT, procId, 2, MPI_COMM_WORLD);
+				sentProcs.insert(procId);
+			}
+
+		}
+
+		
+		for (int procId = 0; procId < num_procs; procId++){
+			MPI_Send(&numSendPatches[procId], 1, MPI_INT, procId, 1, MPI_COMM_WORLD);
+			MPI_Send(patchesToSendArray[procId], numSendPatches[procId], MPI_INT, procId, 0, MPI_COMM_WORLD);
+
+		}
+		#endif
+	}
+}
+
+void avtImgCommunicator::receiveNumPatchesToCompose(){
+	
+	#ifdef PARALLEL
+		MPI_Recv(&numPatchesToCompose, 1, MPI_INT, 0, MSG_DATA, MPI_COMM_WORLD, &status);
+		MPI_Barrier(MPI_COMM_WORLD);	// make sure all processors have reached here and sort
+	#endif
+}
+
+
+
+void avtImgCommunicator::patchDecisionallocation(){
+	int *patchesPerProcessor;
+	int num_divisions;
+	std::vector<int> procToSend;
+
+	if (my_id == 0){
+		
+		// Sorting the patches
+		std::sort(allRecvIotaMeta, allRecvIotaMeta + totalPatches, &sortImgByDepthIota);
+		
+		// Redistribute - roughly distribute all patches evenly at first
+		int remainderDivision = totalPatches%num_procs;  // e.g. 18/4 = 4.5, 18%4 = 2 | 5,5,4,4
+		int numPatchesPerProc =  totalPatches/num_procs; // e.g 18/4 = 4
+		num_divisions = num_procs;
+
+		patchesPerProcessor = new int[num_procs];
+		for (int i=0; i<num_procs; i++){
+			patchesPerProcessor[i] = numPatchesPerProc + (remainderDivision>0?1:0);
+			remainderDivision--;
+		}
+
+		int patchIndex = 0;
+
+		//Printing for error check
+		for (int currentProcId = 0; currentProcId < num_procs; currentProcId++){
+			std::cout << "Before Division: " << currentProcId << std::endl;
+		 	for (int j = 0; j < patchesPerProcessor[currentProcId]; j++){
+					std::cout << patchIndex << ": " << allRecvIotaMeta[patchIndex].avg_z << std::endl;
+					patchIndex++;
+			}
+			std::cout << std::endl;
+			std::cout << std::endl;
+		}
+		//std::cout << "numPatchesPerProc: " << numPatchesPerProc << std::endl;
+
+
+		// Calculate the proper division according keeping the same avg_z's in one block as far as possible
+		// For example, if originally, even distribution divided the avg_z's into the following 4 blocks
+		// Block 0 			Block 1 		Block 2 		Block 3
+		//		0				0.2 			0.4				1
+		//		0				0.2 			0.4				1
+		//		0.2 			0.2 			0.4 			1
+		//		0.2 			0.2 			0.4 			1
+		//		0.2 			0.2 			0.4 			1
+		//		0.2 			0.4 			0.4 			1
+		//
+		// the new division will be:
+		// Block 0			Block 1 		Block 2 		Block 3
+		//		0				0.4								1
+		//		0 				0.4								1
+		//		0.2 			0.4 							1
+		// 		0.2 			0.4								1
+		// 		0.2 			0.4 							1
+		//		0.2 			0.4 							1
+		//		0.2 			0.4								
+		//		0.2 			 							
+		//		0.2
+		//		0.2
+		// 		0.2
+		//
+		//
+
+		int patchNum = patchesPerProcessor[0]-1;
+		for (int i = 0; i < num_procs - 1;){
+			int patchEnd = patchNum + patchesPerProcessor[i+1];
+			int current_div = i;
+			float tol = 0.0001f;
+			if (allRecvIotaMeta[patchNum].avg_z < (allRecvIotaMeta[patchNum + 1].avg_z + tol) && allRecvIotaMeta[patchNum].avg_z >= (allRecvIotaMeta[patchNum + 1].avg_z - tol) ){
+				//printf("%d: %.2f, %.2f\n", patchNum, allRecvIotaMeta[patchNum].avg_z, allRecvIotaMeta[patchNum+1].avg_z);
+				int upper_div = i+1;
+				do{
+					if(patchesPerProcessor[upper_div] > 0) {
+						patchesPerProcessor[current_div]++;
+						patchesPerProcessor[upper_div]--;
+						patchNum++;
+						//std::cout << patchNum << ", " << totalPatches << " " << patchesPerProcessor[current_div] << std::endl;
+						if(patchNum >= totalPatches) {std::cout << "breaking!"; break;}
+					}
+					//if((patchNum > patchEnd)) {
+					else{
+						//break;
+						//printf("%d patchesPerProcessor: %d\n", i, patchesPerProcessor[i]);
+						++i; 
+						if(i == num_procs - 1) break;
+						patchEnd += patchesPerProcessor[i+1]; 
+						upper_div = i+1;
+					}
+					
+				}while(allRecvIotaMeta[patchNum].avg_z < (allRecvIotaMeta[patchNum + 1].avg_z + tol) && allRecvIotaMeta[patchNum].avg_z >= (allRecvIotaMeta[patchNum + 1].avg_z - tol) );
+			}
+
+			printf("%d patchesPerProcessor: %d\n", current_div,patchesPerProcessor[current_div]);
+			patchNum = patchEnd;
+			if(patchNum >= totalPatches) break;
+			++i;
+		}
+
+		std::cout << std::endl;
+
+		std::vector< std::vector<iotaMeta> > all_patches_sorted_avgZ_proc0(num_procs); 
+		std::vector<int> numPatchesPerProcVec(num_procs);
+
+		// Populate the all_patches_sorted_avgZ_proc0 vector with data from allRecvIotaMeta
+		int count = 0;
+		patchIndex = 0;
+		for (int currentProcId = 0; currentProcId < num_procs; currentProcId++){
+			std::cout << "Division: " << currentProcId << std::endl;
+
+		 	for (int j = 0; j < patchesPerProcessor[currentProcId]; j++){
+					all_patches_sorted_avgZ_proc0[count].push_back(allRecvIotaMeta[patchIndex]);
+
+					std::cout << patchIndex << ": " << allRecvIotaMeta[patchIndex].avg_z << std::endl;
+					patchIndex++;
+			}
+
+			std::cout << std::endl;
+			std::cout << std::endl;
+
+			count++;
+		}
+
+		procToSend.resize(num_procs);
+
+		// Intialize the vectors
+		for (int i = 0; i < num_procs; ++i){
+			procToSend[i] = -1;
+			numPatchesPerProcVec[i] = 0;
+		}
+
+		printf("num_procs: %d\n\n", num_procs);
+
+		// Calculate which block of avg_z to send to which processor
+		// ith block is sent to the processor in procToSend[i]
+		// if a block is  empty, it remains with processor 0
+		for (int i = 0; i < num_procs; ++i){
+			procToSend[i] = calculatePatchDivision(all_patches_sorted_avgZ_proc0[i], procToSend);
+			numPatchesPerProcVec[procToSend[i]] += patchesPerProcessor[i];
+			printf("procToSend: %d\n", procToSend[i]);
+		}
+
+
+		// Send each processor how many total patches it expects. If the number is 0, it receives no patch.
+		//////////**************************** SEND THREE: TOTAL PATCHES RECEIVED PER PROCESSOR
+		//////////**************************** FROM: Proc 0
+		//////////**************************** TO: All Procs
+		#ifdef PARALLEL
+		for (int i=0; i<num_procs; i++){
+			MPI_Send(&numPatchesPerProcVec[i], 1, MPI_INT, i, MSG_DATA, MPI_COMM_WORLD); // change to MPI_SCATTER
+		}
+		#endif
+		
+		printf("\n ..................................................\n");	
+	}
+
+}
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::
@@ -78,6 +495,7 @@ avtImgCommunicator::avtImgCommunicator(){
 #endif
     
     totalPatches = 0;
+    numPatchesToCompose = 0;
 
     processorPatchesCount = NULL;
 	allRecvImgData= NULL;
@@ -111,6 +529,9 @@ avtImgCommunicator::~avtImgCommunicator(){
 
 		if (allRecvPatches != NULL)
 			delete []allRecvPatches;
+
+		if (allRecvIotaMeta != NULL)
+			delete []allRecvIotaMeta;
 	}
 }
 
@@ -206,7 +627,8 @@ void avtImgCommunicator::gatherNumPatches(int numPatches){
 				std::cout << "!!! Recv: " << tempRecvBuffer[i*2] << "   Patch: " << processorPatchesCount[tempRecvBuffer[i*2]] << std::endl;
 			}
 
-			allRecvPatches = new imgMetaData[totalPatches];
+			//allRecvPatches = new imgMetaData[totalPatches];
+			allRecvIotaMeta = new iotaMeta[totalPatches];
 
 			if (tempRecvBuffer != NULL)
 				delete []tempRecvBuffer;
@@ -255,7 +677,7 @@ void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadat
 
 		if (my_id == 0){
 			iotaMeta tempPatch;
-			std::vector<iotaMeta> vectorList;
+			//std::vector<iotaMeta> vectorList;
 
 			for (int i=0; i<totalPatches; i++){
 				tempPatch.procId = 		(int) tempRecvBuffer[i*4 + 0];
@@ -263,14 +685,15 @@ void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadat
 				tempPatch.imgArea = 	(int) tempRecvBuffer[i*4 + 2];
 				tempPatch.avg_z = 			  tempRecvBuffer[i*4 + 3];
 
-				vectorList.push_back(tempPatch);
+				int patchIndex = getDataPatchID(tempPatch.procId, tempPatch.patchNumber);
+				allRecvIotaMeta[patchIndex] = setIota(tempPatch.procId, tempPatch.patchNumber,tempPatch.imgArea, tempPatch.avg_z);
 			}
 
 			//for (int i=0; i<vectorList.size(); i++){
 			//	std::cout << "procId: " << vectorList[i].procId << "   patch: " << vectorList[i].patchNumber  << "   imgArea: " << vectorList[i].imgArea << "    " << vectorList[i].avg_z << std::endl;
 			//}
 
-			vectorList.clear();
+			//vectorList.clear();
 
 			delete []recvSizePerProc;
 			delete []offsetBuffer;
@@ -596,10 +1019,22 @@ imgMetaData avtImgCommunicator::setImg(int _inUse, int _procId, int _patchNumber
 	imgMetaData temp;
 	temp.inUse = _inUse;
 	temp.procId = _procId;
+	temp.procId = destProcId;
 	temp.patchNumber = _patchNumber;
 	temp.dims[0] = dim_x;					temp.dims[1] = dim_y;
 	temp.screen_ll[0] = screen_ll_x;		temp.screen_ll[1] = screen_ll_y;
 	temp.screen_ur[0] = screen_ur_x;		temp.screen_ur[1] = screen_ur_y;
+	temp.avg_z = _avg_z;
+	
+	return temp;
+}
+
+
+iotaMeta avtImgCommunicator::setIota(int _procId, int _patchNumber, float _imgArea, float _avg_z){
+	iotaMeta temp;
+	temp.procId = _procId;
+	temp.patchNumber = _patchNumber;
+	temp.imgArea = _imgArea;
 	temp.avg_z = _avg_z;
 	
 	return temp;

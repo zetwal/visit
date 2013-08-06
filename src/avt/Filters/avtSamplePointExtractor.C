@@ -873,6 +873,7 @@ avtSamplePointExtractor::initMetaPatch(int id){
     imgMetaData temp;
     temp.inUse = 0;
     temp.procId = PAR_Rank();
+    temp.destProcId = PAR_Rank();
     temp.patchNumber = id;
     temp.dims[0] = temp.dims[1] = -1;
     temp.screen_ll[0] = temp.screen_ll[1] = -1;
@@ -1067,6 +1068,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
             if (tmpImageMetaPatch.inUse == 1){
+                tmpImageMetaPatch.destProcId = tmpImageMetaPatch.procId;
                 imageMetaPatchVector.push_back(tmpImageMetaPatch);
                 
 /*

@@ -1081,6 +1081,8 @@ VisWinRendering::ScreenRender(bool doViewportOnly, bool doCanvasZBufferToo,
         renWin->SetPixelData(r0,c0,w-1,h-1,rgbbuf,renWin->GetDoubleBuffer());
         glDepthMask(GL_TRUE);
 
+        std::cout << "zbuf: " << zbuf[0] << " , " << zbuf[1] << " , " << zbuf[2] << std::endl;
+
         glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE);
         renWin->SetZbufferData(r0,c0,w-1,h-1,zbuf);
         glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
