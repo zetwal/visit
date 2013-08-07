@@ -587,6 +587,7 @@ avtRayTracer::Execute(void)
         //
         // Call on proc 0 to decide who should be sent what
         // 
+        std::cout << PAR_Rank() << "  \t!  -------------------------  patchAllocationLogic ---------------------------------- !  " << std::endl;
         if (PAR_Rank() == 0)
             imgComm.patchAllocationLogic();      
         
@@ -595,24 +596,36 @@ avtRayTracer::Execute(void)
         //
         // Send info about which patch to receive and which patch to send
         //
-        if (PAR_Rank == 0){
+        std::cout << PAR_Rank() << "  \t! -------------------------  sending patch setting ---------------------------------- !  " << std::endl;
+        if (PAR_Rank() == 0){
+
             imgComm.sendNumPatchesToCompose();
         }
+
+        imgComm.syncAllProcs();
+
         int numRecvPatchesToCompose = imgComm.receiveNumPatchesToCompose();
+        std::cout << PAR_Rank() << "  \t! -------------------------  received patch from 0 ---------------------------------- !  " << numRecvPatchesToCompose << std::endl;
 
-
-
-        if (PAR_Rank == 0){
+        imgComm.syncAllProcs();
+        
+        if (PAR_Rank() == 0){
+            std::cout << "\n" << PAR_Rank() << "  \t! -------------------------  send and receive ---------------------------------- !  " << std::endl;
             imgComm.sendRecvandRecvInfo();  // tell each proc which patches it needs to send and which patches it needs to receive
+            std::cout << PAR_Rank() << "  \t! -------------------------  send and receive end ---------------------------------- !  " << std::endl;
         }
 
+        imgComm.syncAllProcs();
+
+/*
+        std::cout << PAR_Rank() << "  \t! -------------------------  imgComm.recvDataforDataToRecv ---------------------------------- !  " << std::endl;
         totalSendData = totalRecvData = 0;
          // informationToSendArray:   (patchNumber, destProcId)     (patchNumber, destProcId)    (patchNumber, destProcId)  ...
         // informationToRecvArray:   (procId, numPatches)           (procId, numPatches)         (procId, numPatches)  ...
         imgComm.recvDataforDataToRecv(totalSendData, informationToSendArray, totalRecvData, informationToRecvArray);
 
 
-
+        std::cout << PAR_Rank() << "  \t! -------------------------  imgComm.recvDataforDataToRecv end! ---------------------------------- !  " << std::endl;
 
         // setting the destination processor id
         for (int k = 0; k < totalSendData; k+=2){
@@ -630,7 +643,7 @@ avtRayTracer::Execute(void)
         //
         // Each proc does the send and receive
         //
-
+        std::cout << PAR_Rank() << "  \t! -------------------------  sending patch setting ---------------------------------- !  " << std::endl;
         // Send
         int remainingPatches = 0;       // number of patches left on the processor that it will itself composite
 
@@ -670,6 +683,7 @@ avtRayTracer::Execute(void)
 
 
         // Receive
+        std::cout << PAR_Rank() << "  \t! -------------------------  Receive ---------------------------------- !  " << std::endl;
         if (numRecvPatchesToCompose > 0)
             for (int i = 0; i < numRecvPatchesToCompose; i++){
                 imgData tempImgData;
@@ -683,7 +697,7 @@ avtRayTracer::Execute(void)
         //
         // Each proc does local compositing and then sends
         //
-        
+        std::cout << PAR_Rank() << "  \t! ------------------------- Each proc does local compositing and then sends ---------------------------------- !  " << std::endl;
         int imgBufferWidth = screen[0];
         int imgBufferHeight = screen[1];
         float *buffer = new float[imgBufferWidth * imgBufferHeight * 4]();  //size: imgBufferWidth * imgBufferHeight * 4, initialized to 0
@@ -726,10 +740,12 @@ avtRayTracer::Execute(void)
         // Proc 0 receicves and does the final assmebly
         //
         if (PAR_Rank() == 0){
+            std::cout << PAR_Rank() << "  \t! -------------------------set background ---------------------------------- !  " << std::endl;
             imgComm.setBackground(background);
         }
 
         // Gather all the images
+        std::cout << PAR_Rank() << "  \t! -------------------------Gather all the images ---------------------------------- !  " << std::endl;
         imgComm.gatherAndAssembleImages(screen[0], screen[1], buffer, 0.00000);
 
 
@@ -856,7 +872,7 @@ avtRayTracer::Execute(void)
         extractor.delImgPatches();
 
         std::cout << PAR_Rank() << "   avtRayTracer::Execute     done RayCasting SLIVR !!!!!!" << std::endl;
-
+*/
         return;
     }
 

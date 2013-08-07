@@ -26,6 +26,7 @@ class avtImgCommunicator
 	int *processorPatchesCount;
 	imgMetaData *allRecvPatches;
 	imgData *allRecvImgData;
+	int *patchesDivisonPerProcessor;
 
 	float *imgBuffer;
 
