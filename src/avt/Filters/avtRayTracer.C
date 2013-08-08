@@ -526,6 +526,8 @@ avtRayTracer::Execute(void)
             temp = extractor.getImgMetaPatch(i);
             imgMetaDataMultiMap.insert(  std::pair<int, imgMetaData>   (temp.patchNumber, temp));
 
+            //std::cout <<  PAR_Rank() << " ~!~ " << temp.procId << " , " << temp.patchNumber << std::endl;
+
             tempSendBuffer[i*4 + 0] = temp.procId;
             tempSendBuffer[i*4 + 1] = temp.patchNumber;
             tempSendBuffer[i*4 + 2] = temp.dims[0] * temp.dims[1];
@@ -596,7 +598,7 @@ avtRayTracer::Execute(void)
         //
         // Send info about which patch to receive and which patch to send
         //
-        std::cout << PAR_Rank() << "  \t! -------------------------  sending patch setting ---------------------------------- !  " << std::endl;
+        std::cout << PAR_Rank() << "  \t! -------------------------  sending num patches ---------------------------------- !  " << std::endl;
         if (PAR_Rank() == 0){
 
             imgComm.sendNumPatchesToCompose();
@@ -617,22 +619,36 @@ avtRayTracer::Execute(void)
 
         imgComm.syncAllProcs();
 
-/*
+
         std::cout << PAR_Rank() << "  \t! -------------------------  imgComm.recvDataforDataToRecv ---------------------------------- !  " << std::endl;
         totalSendData = totalRecvData = 0;
          // informationToSendArray:   (patchNumber, destProcId)     (patchNumber, destProcId)    (patchNumber, destProcId)  ...
         // informationToRecvArray:   (procId, numPatches)           (procId, numPatches)         (procId, numPatches)  ...
+        imgComm.recvNumforDataToRecv(totalSendData, totalRecvData);
+
+        informationToRecvArray = new int[totalRecvData];
+        informationToSendArray = new int[totalSendData];
         imgComm.recvDataforDataToRecv(totalSendData, informationToSendArray, totalRecvData, informationToRecvArray);
+
+
+        imgComm.syncAllProcs();
 
 
         std::cout << PAR_Rank() << "  \t! -------------------------  imgComm.recvDataforDataToRecv end! ---------------------------------- !  " << std::endl;
 
+        //print the information to send array
+
+        for(int i=0; i< totalSendData; i+=2){
+            std::cout << PAR_Rank() << " :\t patchNumber: " << informationToSendArray[i] << " destProcId:" << informationToSendArray[i+1] << std::endl;
+        }
         // setting the destination processor id
         for (int k = 0; k < totalSendData; k+=2){
             std::multimap<int,imgMetaData>::iterator it = imgMetaDataMultiMap.find(informationToSendArray[k]);
-            it->second.destProcId = informationToSendArray[k+1];
+            (it->second).destProcId = informationToSendArray[k+1];
         }
 
+        std::cout << PAR_Rank() << "  \t! -------------------------  set destination id ---------------------------------- !  " << std::endl;
+    
         int numPatchesReceive = 0;      // number of patches to receive
         // counting how many patches to receive
         if (numRecvPatchesToCompose > 0)
@@ -643,7 +659,9 @@ avtRayTracer::Execute(void)
         //
         // Each proc does the send and receive
         //
-        std::cout << PAR_Rank() << "  \t! -------------------------  sending patch setting ---------------------------------- !  " << std::endl;
+        
+        std::cout << PAR_Rank() << "  \t! -------------------------  sending patch setting ---------------------------------- !  "  << numRecvPatchesToCompose << "   " << numPatchesReceive << std::endl;
+        
         // Send
         int remainingPatches = 0;       // number of patches left on the processor that it will itself composite
 
@@ -654,43 +672,79 @@ avtRayTracer::Execute(void)
         std::multimap< std::pair<int,int>, imgData>::iterator itImgData;
 
         
-        
+        int test = 0;
+        int numToReceive = numPatchesReceive;
             
         std::multimap<int,imgMetaData>::iterator it;
         for (it = imgMetaDataMultiMap.begin(); it != imgMetaDataMultiMap.end(); ++it ){
 
             imgMetaData tempImgMetaData = it->second;
 
+            std::cout << PAR_Rank() << " \t " <<  test << " it->second info (proc, patch, dest): " << tempImgMetaData.procId << " , " <<  tempImgMetaData.patchNumber << " , " << tempImgMetaData.destProcId << "   tempImgData dims:" << it->second.dims[0] << " x " << it->second.dims[1] << std::endl;
+
             imgData tempImgData;
+            tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
             extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
 
             if (tempImgMetaData.destProcId != tempImgMetaData.procId ){
+                
                 // send the data
-
                 imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
                 
                 if (tempImgData.imagePatch != NULL)
-                    delete []tempImgData.imagePatch;
+                   delete []tempImgData.imagePatch;
+                    
             }else{
                 // copy over leftover data to new array
-
+ 
                 allImgMetaData.push_back(tempImgMetaData);
                 imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
 
                 remainingPatches++;
-            }            
+            }    
+
+
+            if (numToReceive > 0){
+                std::cout << PAR_Rank() << "  start numToReceive: " << numToReceive << std::endl;
+
+                imgMetaData temp;
+                imgData tempImgData;
+
+                imgComm.recvPointToPoint(temp, tempImgData);
+
+                allImgMetaData.push_back(temp);
+                imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
+                numToReceive--;
+
+                std::cout << PAR_Rank() << "  numToReceive: " << numToReceive << "  end!!!" << std::endl;
+            }
+
+            test++;        
         }
+
+        while (numToReceive > 0){
+            imgMetaData temp;
+            imgData tempImgData;
+
+            imgComm.recvPointToPoint(temp, tempImgData);
+
+            allImgMetaData.push_back(temp);
+            imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
+            numToReceive--;
+        }
+
 
 
         // Receive
         std::cout << PAR_Rank() << "  \t! -------------------------  Receive ---------------------------------- !  " << std::endl;
+        /*
         if (numRecvPatchesToCompose > 0)
             for (int i = 0; i < numRecvPatchesToCompose; i++){
                 imgData tempImgData;
                 imgComm.recvPointToPoint(allImgMetaData[remainingPatches + i], tempImgData);
                 imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
             }
-
+*/
         int totalSize = numRecvPatchesToCompose + remainingPatches;
         
 
@@ -698,7 +752,8 @@ avtRayTracer::Execute(void)
         // Each proc does local compositing and then sends
         //
         std::cout << PAR_Rank() << "  \t! ------------------------- Each proc does local compositing and then sends ---------------------------------- !  " << std::endl;
-        int imgBufferWidth = screen[0];
+       /*
+       int imgBufferWidth = screen[0];
         int imgBufferHeight = screen[1];
         float *buffer = new float[imgBufferWidth * imgBufferHeight * 4]();  //size: imgBufferWidth * imgBufferHeight * 4, initialized to 0
 
@@ -748,7 +803,10 @@ avtRayTracer::Execute(void)
         std::cout << PAR_Rank() << "  \t! -------------------------Gather all the images ---------------------------------- !  " << std::endl;
         imgComm.gatherAndAssembleImages(screen[0], screen[1], buffer, 0.00000);
 
+        */
 
+
+        //-----------------------------------------------------------------
         //
         //  Sends the patches image data to proc 0
         //
@@ -872,7 +930,7 @@ avtRayTracer::Execute(void)
         extractor.delImgPatches();
 
         std::cout << PAR_Rank() << "   avtRayTracer::Execute     done RayCasting SLIVR !!!!!!" << std::endl;
-*/
+
         return;
     }
 

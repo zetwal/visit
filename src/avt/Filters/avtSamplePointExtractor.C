@@ -846,9 +846,12 @@ avtSamplePointExtractor::getImgData(int patchId, imgData &tempImgData){
 */
 
     it = imgDataHashMap.find(patchId);
+
     tempImgData.procId = it->second.procId;
     tempImgData.patchNumber = it->second.patchNumber;
-    memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1]*sizeof(float));
+
+    
+    memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1] * sizeof(float));
 
     delete [](*it).second.imagePatch;
     it->second.imagePatch = NULL;

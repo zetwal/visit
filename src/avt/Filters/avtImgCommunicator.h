@@ -63,6 +63,7 @@ public:
 	int receiveNumPatchesToCompose();
 
 	void sendRecvandRecvInfo();			// tell each proc which patches it needs to send and which patches it needs to receive
+	void recvNumforDataToRecv(int &totalSendData, int &totalRecvData);
 	void recvDataforDataToRecv(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray);
 
 	void sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData);	// Send out the patches and receive them
