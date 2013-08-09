@@ -34,7 +34,7 @@ class avtImgCommunicator
 	iotaMeta *allRecvIotaMeta;
 	std::vector<int> procToSend;
 
-
+	std::set<float> all_avgZ_proc0;
 	std::vector< std::vector<iotaMeta> > all_patches_sorted_avgZ_proc0; 
 	std::vector<int> numPatchesPerProcVec;
 	

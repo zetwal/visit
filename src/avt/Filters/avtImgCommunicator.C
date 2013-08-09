@@ -325,6 +325,7 @@ void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadat
 
 				int patchIndex = getDataPatchID(tempPatch.procId, tempPatch.patchNumber);
 				allRecvIotaMeta[patchIndex] = setIota(tempPatch.procId, tempPatch.patchNumber,tempPatch.imgArea, tempPatch.avg_z);
+				all_avgZ_proc0.insert(tempPatch.avg_z); //insert avg_zs into the set to keep a count of the total number of avg_zs
 			}
 
 			//for (int i=0; i<vectorList.size(); i++){
@@ -428,26 +429,139 @@ void avtImgCommunicator::gatherMetaData(int arraySize, float *allIotaMetadata){
 //
 // ****************************************************************************
 int calculatePatchDivision (const std::vector<iotaMeta>& imgVector, std::vector<int>& procsAlreadyInList){
-	std::map<int,int> numPatchesPerProc;
+std::map<int,int> numPatchesPerProc;
 	std::pair<std::map<int,int>::iterator, bool> isPresent;
 
 	if (imgVector.size() == 0) return 0;
 
 	for (int i = 0; i < imgVector.size(); ++i){
-		isPresent = numPatchesPerProc.insert (	std::pair<int,int>(imgVector[i].procId, imgVector[i].imgArea) );
-
-		if(isPresent.second == false)			
-			numPatchesPerProc[imgVector[i].procId] += imgVector[i].imgArea;
+		const bool is_in = ((std::find(procsAlreadyInList.begin(), procsAlreadyInList.end(), imgVector[i].procId)) != (procsAlreadyInList.end()));
+		if(!is_in){
+			isPresent = numPatchesPerProc.insert (	std::pair<int,int>(imgVector[i].procId, imgVector[i].imgArea) );
+			if(isPresent.second == false)			
+				numPatchesPerProc[imgVector[i].procId] += imgVector[i].imgArea;
+		}
 	}
+
+	if(numPatchesPerProc.size() == 0){
+		std::cout << "---------->Proc Repeated! ";
+		for (int i = 0; i < imgVector.size(); ++i){
+			isPresent = numPatchesPerProc.insert (  std::pair<int,int>(imgVector[i].procId, imgVector[i].imgArea) );
+			if(isPresent.second == false)			
+				numPatchesPerProc[imgVector[i].procId] += imgVector[i].imgArea;
+		}
+	}
+
 	return std::max_element(numPatchesPerProc.begin(), numPatchesPerProc.end(), value_comparer)->first;
 }
 
 
 void avtImgCommunicator::patchAllocationLogic(){
 	int num_divisions;
-
-	if (my_id == 0){
 		
+		// 1. create std::set<float> all_avgZ_proc0; and populate it when receiving iotaMeta
+		// 2. update the calculatePatchDivision function
+		
+		// Sorting the patches
+
+		std::cout << "1-----------" <<std::endl;
+		std::sort(allRecvIotaMeta, allRecvIotaMeta + totalPatches, &sortImgByDepthIota);
+
+		int *blocksPerProcessor = NULL;
+		int num_avgZ_proc0 = all_avgZ_proc0.size();
+
+		std::cout << "num_avg_z: " << num_avgZ_proc0 << " num_procs: " << num_procs << std::endl << std::endl;
+
+		all_patches_sorted_avgZ_proc0.resize(num_avgZ_proc0); 
+		numPatchesPerProcVec.resize(num_procs);
+
+		patchesDivisonPerProcessor = new int[num_procs];
+		blocksPerProcessor = new int[num_procs];
+
+		// Redistribute - roughly distribute all patches evenly at first
+		int remainderDivision = num_avgZ_proc0%num_procs;  
+		int numBlocksPerProc =  num_avgZ_proc0/num_procs;
+
+		for (int i=0; i<num_procs; i++){
+			blocksPerProcessor[i] = numBlocksPerProc + (remainderDivision > 0 ? 1 : 0);
+			remainderDivision--;
+		}
+
+		std::cout << "2-----------" <<std::endl;
+
+		// Populate the all_patches_sorted_avgZ_proc0 vector with data from allRecvIotaMeta
+		int current_avgZ_index = 0;
+		float prevAvgZ;
+		
+		if(totalPatches > 0) prevAvgZ = allRecvIotaMeta[0].avg_z;
+
+		std::cout << "2.5-----------" <<std::endl;
+
+		for (int i = 0; i < totalPatches; ++i){
+			if (allRecvIotaMeta[i].avg_z != prevAvgZ){
+				current_avgZ_index++;
+				prevAvgZ = allRecvIotaMeta[i].avg_z;
+			}
+			all_patches_sorted_avgZ_proc0[current_avgZ_index].push_back(allRecvIotaMeta[i]);
+		}
+
+		std::cout << "3-----------" <<std::endl;
+		procToSend.resize(num_procs);
+
+		// Intialize the vectors
+		for (int i = 0; i < num_procs; ++i){
+			procToSend[i] = -1;
+			numPatchesPerProcVec[i] = 0;
+			patchesDivisonPerProcessor[i] = 0;
+		}
+
+		//printing for error check
+		// for(int i = 0; i< num_avgZ_proc0; ++i){
+		// 	printf("Block %d\n", i );
+		// 	for(std::vector<iotaMeta>::iterator it = all_patches_sorted_avgZ_proc0[i].begin(); it != all_patches_sorted_avgZ_proc0[i].end(); ++it){
+		// 		printf("\t %.2f\n", it->avg_z);
+		// 	}
+		// }
+		current_avgZ_index = 0;
+		for (int i = 0; i < num_procs; ++i){
+			std::cout << "Block " << i << std::endl;
+			if(i < num_avgZ_proc0) {
+
+				for(int k = 0; k < blocksPerProcessor[i]; ++k){
+					for(int j =0; j < all_patches_sorted_avgZ_proc0[current_avgZ_index].size(); ++j)
+						std::cout << "\t " << all_patches_sorted_avgZ_proc0[current_avgZ_index][j].procId << " \t" << all_patches_sorted_avgZ_proc0[current_avgZ_index][j].avg_z << std::endl;
+				}
+
+				++current_avgZ_index;
+				
+			}
+		}
+
+		// Calculate which block of avg_z to send to which processor
+		// ith block is sent to the processor in procToSend[i]
+		// if a block is  empty, it remains with processor 0
+
+		current_avgZ_index = 0;
+
+		for (int i = 0; i < num_procs; ++i){
+			if(i < num_avgZ_proc0) {
+				procToSend[i] = calculatePatchDivision(all_patches_sorted_avgZ_proc0[current_avgZ_index], procToSend);
+
+				for(int k = 0; k < blocksPerProcessor[i]; ++k){
+					int size = all_patches_sorted_avgZ_proc0[current_avgZ_index++].size();
+					numPatchesPerProcVec[procToSend[i]] += size;
+					patchesDivisonPerProcessor[i] += size; 
+				}
+
+				printf("division: %d, procToSend: %d, patchesDivisonPerProcessor: %d numPatchesPerProcVec %d\n", i, procToSend[i], patchesDivisonPerProcessor[i], numPatchesPerProcVec[procToSend[i]]);
+			}else
+					procToSend[i] = 0;
+		}
+		
+		if (blocksPerProcessor != NULL)	delete []blocksPerProcessor;
+
+		/*
+
 		// Sorting the patches
 		std::sort(allRecvIotaMeta, allRecvIotaMeta + totalPatches, &sortImgByDepthIota);
 		
@@ -583,6 +697,9 @@ void avtImgCommunicator::patchAllocationLogic(){
 
 		printf("\n ..................................................\n");	
 	}
+
+
+	*/
 
 
 }

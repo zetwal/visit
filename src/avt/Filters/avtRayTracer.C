@@ -593,7 +593,8 @@ avtRayTracer::Execute(void)
         if (PAR_Rank() == 0)
             imgComm.patchAllocationLogic();      
         
-
+        
+        imgComm.syncAllProcs();
 
         //
         // Send info about which patch to receive and which patch to send
