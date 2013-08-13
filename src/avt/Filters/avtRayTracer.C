@@ -663,90 +663,184 @@ avtRayTracer::Execute(void)
         
         std::cout << PAR_Rank() << "  \t! -------------------------  sending patch setting ---------------------------------- !  "  << numRecvPatchesToCompose << "   " << numPatchesReceive << std::endl;
         
-        // Send
-        int remainingPatches = 0;       // number of patches left on the processor that it will itself composite
+        int startingProc = 0;
+        int endingProc = PAR_Size() - 1;
 
-        std::vector<imgMetaData> allImgMetaData;
-        std::vector<imgData> allImgData;
+        while (startingProc != endingProc){
+            int newStartingProc, newEndingProc, numInOtherHalf;
+            int *procsInOtherList = NULL;
 
-        std::multimap< std::pair<int,int>, imgData> imgDataToCompose;
-        std::multimap< std::pair<int,int>, imgData>::iterator itImgData;
+            int numProcessors = endingProc - startingProc + 1;
+            int half = numProcessors/2;
+            int middleProc = startingProc + (half-1);
+            int doFirst = SEND; //1: send 2: receive
 
-        
-        int test = 0;
-        int numToReceive = numPatchesReceive;
             
-        std::multimap<int,imgMetaData>::iterator it;
-        for (it = imgMetaDataMultiMap.begin(); it != imgMetaDataMultiMap.end(); ++it ){
-
-            imgMetaData tempImgMetaData = it->second;
-
-            std::cout << PAR_Rank() << " \t " <<  test << " it->second info (proc, patch, dest): " << tempImgMetaData.procId << " , " <<  tempImgMetaData.patchNumber << " , " << tempImgMetaData.destProcId << "   tempImgData dims:" << it->second.dims[0] << " x " << it->second.dims[1] << std::endl;
-
-            imgData tempImgData;
-            tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
-            extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
-
-            if (tempImgMetaData.destProcId != tempImgMetaData.procId ){
+            
+            if (PAR_Rank() <= middleProc){
+                numInOtherHalf = numProcessors - half;
+                procsInOtherList = new int[numInOtherHalf];
                 
-                // send the data
-                imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
                 
-                if (tempImgData.imagePatch != NULL)
-                   delete []tempImgData.imagePatch;
-                    
-            }else{
-                // copy over leftover data to new array
- 
-                allImgMetaData.push_back(tempImgMetaData);
-                imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
-
-                remainingPatches++;
-            }    
-
-
-            if (numToReceive > 0){
-                std::cout << PAR_Rank() << "  start numToReceive: " << numToReceive << std::endl;
-
-                imgMetaData temp;
-                imgData tempImgData;
-
-                imgComm.recvPointToPoint(temp, tempImgData);
-
-                allImgMetaData.push_back(temp);
-                imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
-                numToReceive--;
-
-                std::cout << PAR_Rank() << "  numToReceive: " << numToReceive << "  end!!!" << std::endl;
+                for (int i=0; i<numInOtherHalf; i++)
+                    procsInOtherList[i] = startingProc+half+i;
+                
+                doFirst = SEND;
+                newStartingProc = startingProc;
+                newEndingProc = middleProc; 
+            }
+            else{
+                numInOtherHalf = half;
+                procsInOtherList = new int[numInOtherHalf];
+                
+                for (int i=0; i<half; i++)
+                    procsInOtherList[i] = startingProc+i;
+                
+                doFirst = RECEIVE;
+                newStartingProc = middleProc+1;
+                newEndingProc = endingProc;
+                
             }
 
-            test++;        
-        }
+            if (doFirst == SEND){
+                //
+                // Send
 
-        while (numToReceive > 0){
-            imgMetaData temp;
-            imgData tempImgData;
+                //
+                // Code here for equivalent of:
+                //  for (int i=0; i<senderListSize; i++){
+                //      for (int j=0; j<numInOtherHalf; j++){
+                //          if ((senderList[i*2] == procsInOtherList[j]) && (senderList[i*2 + 1] > 0)){
+            
+                
+                imgMetaData tempImgMetaData = it->second;
+                imgData tempImgData;
+                tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
+                extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+                imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
 
-            imgComm.recvPointToPoint(temp, tempImgData);
-
-            allImgMetaData.push_back(temp);
-            imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
-            numToReceive--;
-        }
 
 
+                //
+                // Receive
 
-        // Receive
-        std::cout << PAR_Rank() << "  \t! -------------------------  Receive ---------------------------------- !  " << std::endl;
-        /*
-        if (numRecvPatchesToCompose > 0)
-            for (int i = 0; i < numRecvPatchesToCompose; i++){
+                //
+                // Code here for code equivalent of:
+                //int numToReceive = 0;
+                //for (int i=0; i<recieverListSize; i++){
+                //  for (int j=0; j<numInOtherHalf; j++){
+                //        if ((recvList[i*2] == procsInOtherList[j]) && (recvList[i*2 + 1] > 0)){
+                //            numToReceive+=recvList[i*2 + 1];
+                //        }
+                //    }
+                //}
+
                 imgData tempImgData;
                 imgComm.recvPointToPoint(allImgMetaData[remainingPatches + i], tempImgData);
                 imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
+
+            }else{
+                //
+                // Receive
+
+
+                //
+                // Send
             }
-*/
-        int totalSize = numRecvPatchesToCompose + remainingPatches;
+
+            if (procsInOtherList != NULL)
+                delete []procsInOtherList;
+            procsInOtherList = NULL;
+    
+            startingProc = newStartingProc;
+            endingProc = newEndingProc;
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+
+//         // Send
+//         int remainingPatches = 0;       // number of patches left on the processor that it will itself composite
+
+//         std::vector<imgMetaData> allImgMetaData;
+//         std::vector<imgData> allImgData;
+
+//         std::multimap< std::pair<int,int>, imgData> imgDataToCompose;
+//         std::multimap< std::pair<int,int>, imgData>::iterator itImgData;
+
+        
+//         int test = 0;
+//         int numToReceive = numPatchesReceive;
+            
+//         std::multimap<int,imgMetaData>::iterator it;
+//         for (it = imgMetaDataMultiMap.begin(); it != imgMetaDataMultiMap.end(); ++it ){
+
+//             imgMetaData tempImgMetaData = it->second;
+
+//             std::cout << PAR_Rank() << " \t " <<  test << " it->second info (proc, patch, dest): " << tempImgMetaData.procId << " , " <<  tempImgMetaData.patchNumber << " , " << tempImgMetaData.destProcId << "   tempImgData dims:" << it->second.dims[0] << " x " << it->second.dims[1] << std::endl;
+
+//             imgData tempImgData;
+//             tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
+//             extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+
+//             if (tempImgMetaData.destProcId != tempImgMetaData.procId ){
+                
+//                 // send the data
+//                 imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
+                
+//                 if (tempImgData.imagePatch != NULL)
+//                    delete []tempImgData.imagePatch;
+                    
+//             }else{
+//                 // copy over leftover data to new array
+ 
+//                 allImgMetaData.push_back(tempImgMetaData);
+//                 imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
+
+//                 remainingPatches++;
+//             }    
+
+
+//             if (numToReceive > 0){
+//                 std::cout << PAR_Rank() << "  start numToReceive: " << numToReceive << std::endl;
+
+//                 imgMetaData temp;
+//                 imgData tempImgData;
+
+//                 imgComm.recvPointToPoint(temp, tempImgData);
+
+//                 allImgMetaData.push_back(temp);
+//                 imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
+//                 numToReceive--;
+
+//                 std::cout << PAR_Rank() << "  numToReceive: " << numToReceive << "  end!!!" << std::endl;
+//             }
+
+//             test++;        
+//         }
+
+//         while (numToReceive > 0){
+//             imgMetaData temp;
+//             imgData tempImgData;
+
+//             imgComm.recvPointToPoint(temp, tempImgData);
+
+//             allImgMetaData.push_back(temp);
+//             imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
+//             numToReceive--;
+//         }
+
+
+
+//         // Receive
+//         std::cout << PAR_Rank() << "  \t! -------------------------  Receive ---------------------------------- !  " << std::endl;
+//         /*
+//         if (numRecvPatchesToCompose > 0)
+//             for (int i = 0; i < numRecvPatchesToCompose; i++){
+//                 imgData tempImgData;
+//                 imgComm.recvPointToPoint(allImgMetaData[remainingPatches + i], tempImgData);
+//                 imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgData.procId, tempImgData.patchNumber), tempImgData));
+//             }
+// */
+//         int totalSize = numRecvPatchesToCompose + remainingPatches;
         
 
         //

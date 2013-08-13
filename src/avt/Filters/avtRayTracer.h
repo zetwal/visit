@@ -61,6 +61,9 @@ struct imagePatch{
     float *imagePatch;      //height x width x 4 (RGBA)
 };
 
+const int SEND = 1;
+const int RECEIVE = 2;
+
 class   avtRayFunction;
 class   vtkMatrix4x4;
 
