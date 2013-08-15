@@ -37,6 +37,13 @@ class avtImgCommunicator
 	std::set<float> all_avgZ_proc0;
 	std::vector< std::vector<iotaMeta> > all_patches_sorted_avgZ_proc0; 
 	std::vector<int> numPatchesPerProcVec;
+
+	int* patchesToSendArray;
+	int* patchesToRecvArray;
+	int* numPatchesToSendArray;
+	int* numPatchesToRecvArray;
+	int* recvDisplacementForProcs;
+	int* sendDisplacementForProcs;
 	
 	unsigned char background[3];
 
@@ -59,12 +66,8 @@ public:
 
 	void patchAllocationLogic();		// decides which processor should get which patches and tell each processor how many patches it will receive
 
-	void sendNumPatchesToCompose();		// communicate number of patches to receive
-	int receiveNumPatchesToCompose();
-
-	void sendRecvandRecvInfo();			// tell each proc which patches it needs to send and which patches it needs to receive
-	void recvNumforDataToRecv(int &totalSendData, int &totalRecvData);
-	void recvDataforDataToRecv(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray);
+	void scatterNumDataToCompose(int &totalSendData, int &totalRecvData);
+	void scatterDataToCompose(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray);
 
 	void sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData);	// Send out the patches and receive them
 	void recvPointToPoint(imgMetaData &recvMetaData, imgData &recvImgData);

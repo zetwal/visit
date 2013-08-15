@@ -78,6 +78,8 @@ using     std::vector;
 
 bool sortImgMetaDataByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z > after.avg_z; }
 
+
+
 // ****************************************************************************
 //  Method: avtRayTracer constructor
 //
@@ -529,26 +531,11 @@ avtRayTracer::Execute(void)
             temp = extractor.getImgMetaPatch(i);
             imgMetaDataMultiMap.insert(  std::pair<int, imgMetaData>   (temp.patchNumber, temp));
 
-            //std::cout <<  PAR_Rank() << " ~!~ " << temp.procId << " , " << temp.patchNumber << std::endl;
-
             tempSendBuffer[i*4 + 0] = temp.procId;
             tempSendBuffer[i*4 + 1] = temp.patchNumber;
             tempSendBuffer[i*4 + 2] = temp.dims[0] * temp.dims[1];
             tempSendBuffer[i*4 + 3] = temp.avg_z;
         }
-
-        // imgMetaData *imgAllPatches;
-        // imgAllPatches = NULL;
-        // imgAllPatches = new imgMetaData[numPatches];
-
-        // for (int i=0; i<numPatches; i++){
-        //     imgAllPatches[i] = extractor.getImgMetaPatch(i);
-
-        //     tempSendBuffer[i*4 + 0] = imgAllPatches[i].procId;
-        //     tempSendBuffer[i*4 + 1] = imgAllPatches[i].patchNumber;
-        //     tempSendBuffer[i*4 + 2] = imgAllPatches[i].dims[0] * imgAllPatches[i].dims[1];
-        //     tempSendBuffer[i*4 + 3] = imgAllPatches[i].avg_z;
-        // }
 
         imgComm.gatherIotaMetaData(numPatches*4, tempSendBuffer);
         imgComm.syncAllProcs();
@@ -556,37 +543,6 @@ avtRayTracer::Execute(void)
         delete []tempSendBuffer;
         tempSendBuffer = NULL;
 
-
-
-        // Previous sending all
-        // float *tempSendBuffer;
-        // tempSendBuffer = NULL;
-        // tempSendBuffer = new float[numPatches*10];
-
-        // for (int i=0; i<numPatches; i++){
-        //     imgAllPatches[i] = extractor.getImgMetaPatch(i);
-
-        //     tempSendBuffer[i*10 + 0] = imgAllPatches[i].procId;
-        //     tempSendBuffer[i*10 + 1] = imgAllPatches[i].patchNumber;
-        //     tempSendBuffer[i*10 + 2] = imgAllPatches[i].inUse;
-        //     tempSendBuffer[i*10 + 3] = imgAllPatches[i].dims[0];
-        //     tempSendBuffer[i*10 + 4] = imgAllPatches[i].dims[1];
-        //     tempSendBuffer[i*10 + 5] = imgAllPatches[i].screen_ll[0];
-        //     tempSendBuffer[i*10 + 6] = imgAllPatches[i].screen_ll[1];
-        //     tempSendBuffer[i*10 + 7] = imgAllPatches[i].screen_ur[0];
-        //     tempSendBuffer[i*10 + 8] = imgAllPatches[i].screen_ur[1];
-        //     tempSendBuffer[i*10 + 9] = imgAllPatches[i].avg_z;
-
-        //    // std::cout << imgAllPatches[i].procId << " , " << imgAllPatches[i].patchNumber << " , " << imgAllPatches[i].avg_z << std::endl;
-
-        // }
-
-        // imgComm.gatherMetaData(numPatches*10, tempSendBuffer);
-        // imgComm.syncAllProcs();
-
-        // delete []tempSendBuffer;
-        // tempSendBuffer = NULL;
-        
 
         
         //
@@ -605,18 +561,16 @@ avtRayTracer::Execute(void)
         //
         // Send info about which patch to receive and which patch to send
         //
-        if (PAR_Rank() == 0)
-            imgComm.sendRecvandRecvInfo();  // tell each proc which patches it needs to send and which patches it needs to receive
 
+        totalSendData = 0;
+        totalRecvData = 0;
+        imgComm.scatterNumDataToCompose(totalSendData, totalRecvData);
 
-        totalSendData = totalRecvData = 0;
-        // informationToRecvArray:   (procId, numPatches)           (procId, numPatches)         (procId, numPatches)  ...
-        // informationToSendArray:   (patchNumber, destProcId)     (patchNumber, destProcId)    (patchNumber, destProcId)  ...
-        imgComm.recvNumforDataToRecv(totalSendData, totalRecvData);
-
+        //receive the information about how many patches to receive from other processors
         informationToRecvArray = new int[totalRecvData];
         informationToSendArray = new int[totalSendData];
-        imgComm.recvDataforDataToRecv(totalSendData, informationToSendArray, totalRecvData, informationToRecvArray);
+        imgComm.scatterDataToCompose(totalSendData, informationToSendArray, totalRecvData, informationToRecvArray);
+
         imgComm.syncAllProcs();
 
         // for(int i=0; i< totalSendData; i+=2){
@@ -634,12 +588,6 @@ avtRayTracer::Execute(void)
             (it->second).destProcId = informationToSendArray[k+1];
         }
 
-
-        // counting how many patches to receive
-        //int numPatchesReceive = 0;                               // number of patches to receive
-        //for (int i = 0; i < totalRecvData; i+=2)                 // loop through the number of processors to receive from
-        //    numPatchesReceive += informationToRecvArray[i+1];
-
         
         std::cout << PAR_Rank() << "  \t! -------------------------  sending patch setting ---------------------------------- !  "  << std::endl;
         //
@@ -649,7 +597,7 @@ avtRayTracer::Execute(void)
         std::vector<imgMetaData> allImgMetaData;                        // to contain the metadata to composite
         std::multimap< std::pair<int,int>, imgData> imgDataToCompose;   // to contain the data to composite
 
-        //std::multimap<int, imgMetaData> imgMetaDataMultiMap;   // contained all the patches it produced
+        //std::multimap<int, imgMetaData> imgMetaDataMultiMap;          // contained all the patches it produced
 
         allImgMetaData.clear();
         imgDataToCompose.clear();
