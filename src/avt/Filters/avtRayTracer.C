@@ -943,8 +943,10 @@ avtRayTracer::Execute(void)
             }
         }
         
-        std::string imgFilenameFinal = "/home/pascal/Desktop/Intermediate_" + NumbToString(PAR_Rank()) + "_Buffer.ppm";
-        createPpm(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal);
+        //std::string imgFilenameFinal = "/home/pascal/Desktop/Intermediate_" + NumbToString(PAR_Rank()) + "_Buffer.ppm";
+        //createPpm(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal);
+        
+
         //
         // Proc 0 receicves and does the final assmebly
         //

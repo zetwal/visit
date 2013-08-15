@@ -1004,6 +1004,9 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 		if (my_id == 0)		
 			tempRecvBuffer = new float[((sizex*sizey*4))*num_procs];
 
+		std::string imgFilenameFinal = "/home/pascal/Desktop/Intermediate_" + NumbToString(my_id) + "_Buffer.ppm";
+        createPpm(image, sizex, sizey, imgFilenameFinal);
+
 		MPI_Gather(image, ((sizex*sizey*4)), MPI_FLOAT,   tempRecvBuffer, ((sizex*sizey*4)), MPI_FLOAT,         0, MPI_COMM_WORLD);		// all send to proc 0
 
 		std::cout << PAR_Rank() << "  \t! ------------------------- avtImgCommunicator::gatherAndAssembleImages after_gather ---------------------------------- !  " << std::endl;
@@ -1012,8 +1015,8 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 			std::vector<imageBuffer> imagesToMerge;
 			for (int i=0; i<num_procs; i++){
 				imageBuffer temp;
-				temp.depth = tempRecvBuffer[i*((sizex*sizey*4)) + (sizex*sizey*4)];
-				memcpy(temp.image, &tempRecvBuffer[i*((sizex*sizey*4))], (sizex*sizey*4)  );
+				temp.image = new float[sizex*sizey*4];
+				memcpy(temp.image, &tempRecvBuffer[(i*(sizex*sizey*4))], (sizex*sizey*4)*sizeof(float) );
 
 				std::string imgFilenameFinal = "/home/pascal/Desktop/Gathered_on_0_" + NumbToString(i) + "_Buffer.ppm";
 	        	createPpm(temp.image, sizex, sizey, imgFilenameFinal);
