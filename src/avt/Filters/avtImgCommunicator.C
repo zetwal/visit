@@ -828,7 +828,6 @@ void avtImgCommunicator::gatherMetaData(int arraySize, float *allIotaMetadata){
 */
 
 
-
 void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *images, int numDivisions){
 	#ifdef PARALLEL
 		float *tempRecvBuffer = NULL;
@@ -847,8 +846,10 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 			offsetBuffer = new int[num_procs];	
 
 			for (int i=0; i<num_procs; i++){
-				totalDivisions += boundsPerBlockVec[i].size();
-				recvSizePerProc[i] = boundsPerBlockVec[i].size()*(sizex*sizey*4);
+				int numBoundsPerBlock = boundsPerBlockVec[i].size()/2;
+				totalDivisions += numBoundsPerBlock;
+				std::cout << i << " ~ "<< "boundsPerBlockVec[i].size(): " << numBoundsPerBlock << std::endl;
+				recvSizePerProc[i] = numBoundsPerBlock*(sizex*sizey*4);
 
 				for (int j=0; j<boundsPerBlockVec[i].size(); j+=2){
 					//depthPartitions.insert( std::pair< float,std::pair<int,int> > ( (boundsPerBlockVec[i][j] + boundsPerBlockVec[i][j+1]) * 0.5, (std::pair<int,int>(i,j*0.5)) ) );
@@ -860,15 +861,16 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 					offsetBuffer[i] = 0;
 				else
 					offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
-
-
 			}
+
+
 			totalDivisions = totalDivisions;
 			std::cout << "divIndex: " << divIndex << "   totalDivisions: " << totalDivisions << std::endl;
 			tempRecvBuffer = new float[ ( (sizex*sizey*4)*totalDivisions) ];
 			
 		}
 
+		std::cout << my_id << " ~ numDivisions: " << numDivisions << std::endl;
 
 		syncAllProcs();
         //  send   recv  others
@@ -889,6 +891,9 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 			}
 
 
+
+
+
 			std::cout << PAR_Rank() << "  \t! ------------------------- avtImgCommunicator::Next Stage ---------------------------------- !  " << std::endl;
 
 
@@ -896,6 +901,7 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 			//std::map< float,std::pair<int,int> >::iterator it;
 			std::map< float,int >::iterator it;
 			it=depthPartitions.end();
+			int count = 0;
 			do{
 				--it;
 				std::cout << it->first << " => " << it->second << '\n';
@@ -909,6 +915,7 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 	        	for (int j=0; j<sizey; j++){
 					for (int k=0; k<sizex; k++){
 						int imgIndex = sizex*4*j + k*4;										// index in the image 
+
 						// Back to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
 						imgBuffer[imgIndex+0] = (imgBuffer[imgIndex+0] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+0];
 						imgBuffer[imgIndex+1] = (imgBuffer[imgIndex+1] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+1];
@@ -916,7 +923,11 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 						imgBuffer[imgIndex+3] = (imgBuffer[imgIndex+3] * (1.0 - temp.image[imgIndex+3]));
 					}
 				}
+
 				delete []temp.image;
+				std::string imgFilename_Final = "/home/pascal/Desktop/_"+ NumbToString(count) + "_Numfinal.ppm";
+	        	createPpm(imgBuffer, sizex, sizey, imgFilename_Final);
+	        	count++;
 			}while( it!=depthPartitions.begin());
 
 			std::string imgFilename_Final = "/home/pascal/Desktop/_final.ppm";
