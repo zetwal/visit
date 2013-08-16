@@ -190,9 +190,10 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
                                                 vtkMatrix4x4 *,
                                                 double &, double &);
 
-    int totalSendData, totalRecvData;
+    int totalSendData, totalRecvData, numDivisions;
     int *informationToRecvArray;
     int *informationToSendArray;
+    float *divisionsArray;
 };
 
 

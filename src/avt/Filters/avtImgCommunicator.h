@@ -32,11 +32,12 @@ class avtImgCommunicator
 
 	
 	iotaMeta *allRecvIotaMeta;
-	std::vector<int> procToSend;
+	//std::vector<int> procToSend;
 
 	std::set<float> all_avgZ_proc0;
-	std::vector< std::vector<iotaMeta> > all_patches_sorted_avgZ_proc0; 
-	std::vector<int> numPatchesPerProcVec;
+	//std::vector< std::vector<iotaMeta> > all_patches_sorted_avgZ_proc0; 
+	//std::vector<int> numPatchesPerProcVec;
+	std::vector<std::vector<float> > boundsPerBlockVec;
 
 	int* patchesToSendArray;
 	int* patchesToRecvArray;
@@ -44,6 +45,11 @@ class avtImgCommunicator
 	int* numPatchesToRecvArray;
 	int* recvDisplacementForProcs;
 	int* sendDisplacementForProcs;
+
+	int* numPatchesToSendRecvArray;
+	float* boundsPerBlockArray;
+	int* blockDisplacementForProcs;
+	int* numBlocksPerProc;
 	
 	unsigned char background[3];
 
@@ -66,13 +72,13 @@ public:
 
 	void patchAllocationLogic();		// decides which processor should get which patches and tell each processor how many patches it will receive
 
-	void scatterNumDataToCompose(int &totalSendData, int &totalRecvData);
-	void scatterDataToCompose(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray);
+	void scatterNumDataToCompose(int &totalSendData, int &totalRecvData, int &numDivisions);
+	void scatterDataToCompose(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray, int &numDivisions, float *blocksPerProc);
 
 	void sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData);	// Send out the patches and receive them
 	void recvPointToPoint(imgMetaData &recvMetaData, imgData &recvImgData);
 
-	void gatherAndAssembleImages(int sizex, int sizey, float *image, float zIndex);		// do the compositing of the subpatches
+	void gatherAndAssembleImages(int sizex, int sizey, float *image, int numDivisions);		// do the compositing of the subpatches
 
 	void getcompositedImage(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage);	// get the final composited image
 
@@ -108,5 +114,6 @@ public:
 
 
 void createPpm(float array[], int dimx, int dimy, std::string filename);
+void createPpmWithOffset(float array[], int dimx, int dimy, std::string filename, int offset);
 std::string NumbToString (int Number);
 #endif
