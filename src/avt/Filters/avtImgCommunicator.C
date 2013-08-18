@@ -880,34 +880,33 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 		std::cout << PAR_Rank() << "  \t! ------------------------- avtImgCommunicator::gatherAndAssembleImages after_gather ---------------------------------- !  " << std::endl;
 
 		if (my_id == 0){
-			
 			// Create a buffer to store the composited image
 			imgBuffer = new float[sizex * sizey * 4];
+			
+			// Front to back
 			for (int i=0; i<(sizex * sizey * 4); i+=4){
-				imgBuffer[i] = background[0]/255.0;	
+				imgBuffer[i+0] = background[0]/255.0;	
 				imgBuffer[i+1] = background[1]/255.0; 
 				imgBuffer[i+2] = background[2]/255.0; 
-				imgBuffer[i+3] = 0.0;
+				imgBuffer[i+3] = 1.0;
 			}
 
-
-
-
+			std::cout << " bkg:: " << imgBuffer[0] << " ,  " << imgBuffer[1] << " ,  " << imgBuffer[2] << " ,  " << imgBuffer[3] << std::endl;
 
 			std::cout << PAR_Rank() << "  \t! ------------------------- avtImgCommunicator::Next Stage ---------------------------------- !  " << std::endl;
-
-
 			//for (int i=0; i<totalDivisions; i++){
 			//std::map< float,std::pair<int,int> >::iterator it;
 			std::map< float,int >::iterator it;
 			it=depthPartitions.end();
+			//it=depthPartitions.begin();
 			int count = 0;
 			do{
+			//while (it!=depthPartitions.end()){
 				--it;
 				std::cout << it->first << " => " << it->second << '\n';
 				imageBuffer temp;
 				temp.image = new float[sizex*sizey*4];
-				memcpy(temp.image, &tempRecvBuffer[(it->second*(sizex*sizey*4))], (sizex*sizey*4)*sizeof(float) );
+				memcpy(temp.image, &tempRecvBuffer[(count*(sizex*sizey*4))], (sizex*sizey*4)*sizeof(float) );
 
 				std::string imgFilenameFinal = "/home/pascal/Desktop/Gathered_on_0_" + NumbToString(it->second) + "_Buffer.ppm";
 	        	createPpm(temp.image, sizex, sizey, imgFilenameFinal);
@@ -916,11 +915,23 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 					for (int k=0; k<sizex; k++){
 						int imgIndex = sizex*4*j + k*4;										// index in the image 
 
+						//if (temp.image[imgIndex+3] > 0){
 						// Back to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
-						imgBuffer[imgIndex+0] = (imgBuffer[imgIndex+0] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+0];
-						imgBuffer[imgIndex+1] = (imgBuffer[imgIndex+1] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+1];
-						imgBuffer[imgIndex+2] = (imgBuffer[imgIndex+2] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+2];
-						imgBuffer[imgIndex+3] = (imgBuffer[imgIndex+3] * (1.0 - temp.image[imgIndex+3]));
+							//std::cout << count << " ~ " << imgIndex << " initial:: " << imgBuffer[imgIndex+0] << " ,  " << imgBuffer[imgIndex+1] << " ,  " << imgBuffer[imgIndex+2] << std::endl;
+							imgBuffer[imgIndex+0] = (imgBuffer[imgIndex+0] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+0];
+							imgBuffer[imgIndex+1] = (imgBuffer[imgIndex+1] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+1];
+							imgBuffer[imgIndex+2] = (imgBuffer[imgIndex+2] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+2];
+
+							//std::cout << count << " ~ " << imgIndex << " incoming:: " << temp.image[imgIndex+0] << " ,  " << temp.image[imgIndex+1] << " ,  " << temp.image[imgIndex+2] << " ,  " << temp.image[imgIndex+3] << std::endl;
+							//std::cout << count << " ~ " << imgIndex << " final:: " << imgBuffer[imgIndex+0] << " ,  " << imgBuffer[imgIndex+1] << " ,  " << imgBuffer[imgIndex+2] << std::endl;
+						//}
+						//imgBuffer[imgIndex+3] = (imgBuffer[imgIndex+3] * (1.0 - temp.image[imgIndex+3]));
+
+						// Front to back
+						//imgBuffer[imgIndex+0] = imgBuffer[imgIndex+0] + ((1.0-imgBuffer[imgIndex+3]) * temp.image[imgIndex+0]);
+						//imgBuffer[imgIndex+1] = imgBuffer[imgIndex+1] + ((1.0-imgBuffer[imgIndex+3]) * temp.image[imgIndex+1]);
+						//imgBuffer[imgIndex+2] = imgBuffer[imgIndex+2] + ((1.0-imgBuffer[imgIndex+3]) * temp.image[imgIndex+2]);
+						//imgBuffer[imgIndex+3] = imgBuffer[imgIndex+3] * ((1.0-imgBuffer[imgIndex+3]) * temp.image[imgIndex+3]);
 					}
 				}
 
@@ -928,7 +939,9 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 				std::string imgFilename_Final = "/home/pascal/Desktop/_"+ NumbToString(count) + "_Numfinal.ppm";
 	        	createPpm(imgBuffer, sizex, sizey, imgFilename_Final);
 	        	count++;
+	        	//++it;
 			}while( it!=depthPartitions.begin());
+			
 
 			std::string imgFilename_Final = "/home/pascal/Desktop/_final.ppm";
 	        createPpm(imgBuffer, sizex, sizey, imgFilename_Final);

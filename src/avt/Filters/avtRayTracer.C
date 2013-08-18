@@ -899,17 +899,14 @@ avtRayTracer::Execute(void)
                     int subImgIndex = allImgMetaData[patchIndex].dims[0]*j*4 + k*4;                                      // index in the subimage 
                     int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);  // index in the big buffer
 
-                    // ack to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
+                    // back to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
                     buffer[bufferDivisionIndex + bufferIndex+0] = (buffer[bufferDivisionIndex + bufferIndex+0] * (1.0 - itImgData->second.imagePatch[subImgIndex+3])) + itImgData->second.imagePatch[subImgIndex+0];
                     buffer[bufferDivisionIndex + bufferIndex+1] = (buffer[bufferDivisionIndex + bufferIndex+1] * (1.0 - itImgData->second.imagePatch[subImgIndex+3])) + itImgData->second.imagePatch[subImgIndex+1];
                     buffer[bufferDivisionIndex + bufferIndex+2] = (buffer[bufferDivisionIndex + bufferIndex+2] * (1.0 - itImgData->second.imagePatch[subImgIndex+3])) + itImgData->second.imagePatch[subImgIndex+2];
-                    buffer[bufferDivisionIndex + bufferIndex+3] = (buffer[bufferDivisionIndex + bufferIndex+3] * (1.0 - itImgData->second.imagePatch[subImgIndex+3]));
+                    buffer[bufferDivisionIndex + bufferIndex+3] = (buffer[bufferDivisionIndex + bufferIndex+3] * (1.0 - itImgData->second.imagePatch[subImgIndex+3])) + itImgData->second.imagePatch[subImgIndex+3];
                 }
             }
-
-            
         }
-
 
         for (int i=0; i<numDivisions; i++){
             std::cout << PAR_Rank() << " ~ " << divisionsArray[i*2] << "  to " << divisionsArray[i*2 + 1] << std::endl;
