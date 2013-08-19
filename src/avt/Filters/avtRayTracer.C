@@ -526,7 +526,6 @@ avtRayTracer::Execute(void)
         }
 
         imgComm.gatherIotaMetaData(numPatches*4, tempSendBuffer);
-        imgComm.syncAllProcs();
 
         delete []tempSendBuffer;
         tempSendBuffer = NULL;
@@ -536,12 +535,11 @@ avtRayTracer::Execute(void)
         // Call on proc 0 to decide who should be sent what
         // 
         std::cout << PAR_Rank() << "  \t!  -------------------------  patchAllocationLogic start ---------------------------------- !  " << std::endl;
+
         if (PAR_Rank() == 0)
-            imgComm.patchAllocationLogic();      
+            imgComm.patchAllocationLogic();    
 
         std::cout << PAR_Rank() << "  \t! ---------------------------  patchAllocationLogic end ----------------------------------- !  " << std::endl;
-
-        imgComm.syncAllProcs();
 
 
 
@@ -589,7 +587,6 @@ avtRayTracer::Execute(void)
         }
 
         
-        std::cout << PAR_Rank() << "  \t! -------------------------  sending patch setting ---------------------------------- !  "  << std::endl;
         //
         // storage initialization
         //        

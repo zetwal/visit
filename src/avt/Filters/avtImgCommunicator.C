@@ -630,6 +630,8 @@ void avtImgCommunicator::sendPointToPoint(imgMetaData toSendMetaData, imgData to
 
 	    MPI_Send(&toSendMetaData, 1, _TestImg_mpi, toSendMetaData.destProcId, 2, MPI_COMM_WORLD);
 		MPI_Send(toSendImgData.imagePatch, toSendMetaData.dims[0]*toSendMetaData.dims[1]*4, MPI_FLOAT, toSendMetaData.destProcId, 1, MPI_COMM_WORLD); //send the image data
+   
+   		MPI_Type_free(&_TestImg_mpi);
     #endif
 }
 
@@ -649,6 +651,8 @@ void avtImgCommunicator::recvPointToPoint(imgMetaData &recvMetaData, imgData &re
         recvImgData.imagePatch = new float[recvMetaData.dims[0]*recvMetaData.dims[1] * 4];
 
         MPI_Recv(recvImgData.imagePatch, recvMetaData.dims[0]*recvMetaData.dims[1]*4, MPI_FLOAT, status.MPI_SOURCE, 1, MPI_COMM_WORLD, &status);
+
+        MPI_Type_free(&_TestImg_mpi);
     #endif
 }
 
@@ -660,6 +664,8 @@ void avtImgCommunicator::recvPointToPointMetaData(imgMetaData &recvMetaData){
 		MPI_Type_commit(&_TestImg_mpi);
 
         MPI_Recv (&recvMetaData, 1, _TestImg_mpi, MPI_ANY_SOURCE, 2, MPI_COMM_WORLD, &status);
+
+        MPI_Type_free(&_TestImg_mpi);
     #endif
 }
 
