@@ -24,19 +24,12 @@ class avtImgCommunicator
 	int totalPatches;
 	int numPatchesToCompose;
 	int *processorPatchesCount;
-	imgMetaData *allRecvPatches;
-	imgData *allRecvImgData;
-	int *patchesDivisonPerProcessor;
 
 	float *imgBuffer;
-
-	
 	iotaMeta *allRecvIotaMeta;
-	//std::vector<int> procToSend;
+
 
 	std::set<float> all_avgZ_proc0;
-	//std::vector< std::vector<iotaMeta> > all_patches_sorted_avgZ_proc0; 
-	//std::vector<int> numPatchesPerProcVec;
 	std::vector<std::vector<float> > boundsPerBlockVec;
 
 	int* patchesToSendArray;
@@ -78,28 +71,17 @@ public:
 	void sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData);	// Send out the patches and receive them
 	void recvPointToPoint(imgMetaData &recvMetaData, imgData &recvImgData);
 
+	void recvPointToPointMetaData(imgMetaData &recvMetaData);
+	void recvPointToPointImgData(imgMetaData recvMetaData, imgData &recvImgData);
+
 	void gatherAndAssembleImages(int sizex, int sizey, float *image, int numDivisions);		// do the compositing of the subpatches
 
 	void getcompositedImage(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage);	// get the final composited image
 
 
-
-
-	void sendPatchImgData(int destId, int arraySize, float *sendMsgBuffer);
-	void masterRecvPatchImgData();
-
 	void syncAllProcs();
-
-	void composeImages(int width, int height, unsigned char *wholeImage, unsigned char background[3]);
-	void setPatchImg(int procId, int patchNumber, int bufferSize, float buffer[]);
-
-	void printPatches();
-	
-
 	int GetNumProcs(){ return num_procs;};
 	int GetMyId(){ return my_id;};
-
-	void gatherMetaData(int arraySize, float *allIotaMetadata);
 
 	void setBackground(unsigned char _background[3]){ for (int i=0; i<3; i++) background[i] = _background[i]; }
 	

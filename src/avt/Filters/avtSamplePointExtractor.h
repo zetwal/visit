@@ -228,7 +228,6 @@ class AVTFILTERS_API avtSamplePointExtractor
     int                       totalAssignedPatches;
 
     std::vector<imgMetaData>   imageMetaPatchVector;
-    //std::vector<imgData>       imageDataVector;
     hash_multimap <int, imgData> imgDataHashMap;
     hash_multimap <int, imgData>::iterator it;
 

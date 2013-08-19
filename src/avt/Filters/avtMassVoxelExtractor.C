@@ -803,7 +803,6 @@ avtMassVoxelExtractor::getComputedImage(float *image)
    
     if (imgArray != NULL)
         delete []imgArray;
-
     imgArray = NULL;
 }
 

@@ -839,26 +839,11 @@ avtSamplePointExtractor::delImgPatches(){
 // ****************************************************************************
 void 
 avtSamplePointExtractor::getImgData(int patchId, imgData &tempImgData){
-    /*
-    tempImgData.procId = imageDataVector[patchId].procId;
-    tempImgData.patchNumber = imageDataVector[patchId].patchNumber;
-    memcpy(tempImgData.imagePatch,imageDataVector[patchId].imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1]*sizeof(float));
-*/
-
-
-    //std::cout << "avtSamplePointExtractor::getImgData" << std::endl;
     it = imgDataHashMap.find(patchId);
 
     tempImgData.procId = it->second.procId;
     tempImgData.patchNumber = it->second.patchNumber;
-
-    
     memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1] * sizeof(float));
-
-
-    if ( it == imgDataHashMap.end()){
-        std::cout << "|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||" << std::endl;
-    }
 
     delete [](*it).second.imagePatch;
     it->second.imagePatch = NULL;
@@ -1096,10 +1081,10 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 massVoxelExtractor->getComputedImage(tmpImageDataHash.imagePatch);
                 imgDataHashMap.insert( std::pair<int, imgData> (tmpImageDataHash.patchNumber , tmpImageDataHash) );
 
-                if (PAR_Rank() == 2){
-                    std::string imgFilenameFinal = "/home/pascal/Desktop/Generated_2_" + NumbToString(tmpImageDataHash.patchNumber) + "_.ppm";
-                    createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilenameFinal);
-                }
+                //if (PAR_Rank() == 2){
+                //    std::string imgFilenameFinal = "/home/pascal/Desktop/Generated_2_" + NumbToString(tmpImageDataHash.patchNumber) + "_.ppm";
+                //    createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilenameFinal);
+                //}
 
                 patchCount++;
             }
