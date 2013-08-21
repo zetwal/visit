@@ -668,7 +668,13 @@ avtRayTracer::Execute(void)
                         tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
                         extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
 
+                        debug5 << PAR_Rank() << " ~ " << "Sending " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
+
+
                         imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
+
+                        debug5 << PAR_Rank() << " ~ " << "Sent " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
+
 
                         if (tempImgData.imagePatch != NULL)
                             delete []tempImgData.imagePatch;
@@ -697,8 +703,11 @@ avtRayTracer::Execute(void)
                     imgData tempImgData;
                     imgMetaData tempImgMetaData;
 
+                    debug5 << PAR_Rank() << " ~ " << "To Receive " << i << endl;
                     //imgComm.recvPointToPoint(tempImgMetaData, tempImgData);
                     imgComm.recvPointToPointMetaData(tempImgMetaData);
+
+                    debug5 << PAR_Rank() << " ~ " << "Received " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
 
                     tempImgData.procId = tempImgMetaData.procId;
                     tempImgData.patchNumber = tempImgMetaData.patchNumber;
@@ -707,6 +716,10 @@ avtRayTracer::Execute(void)
 
                     allImgMetaData.push_back(tempImgMetaData);
                     imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgMetaData.procId, tempImgMetaData.patchNumber), tempImgData));
+               
+                    debug5 << PAR_Rank() << " ~ " << "Received " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " data." << endl;
+
+
                 }
             }else{
                 //
@@ -726,13 +739,21 @@ avtRayTracer::Execute(void)
                     imgData tempImgData;
                     imgMetaData tempImgMetaData;
 
+                    debug5 << PAR_Rank() << " ~ " << "To Receive " << i << endl;
+
                     //imgComm.recvPointToPoint(tempImgMetaData, tempImgData);
                     imgComm.recvPointToPointMetaData(tempImgMetaData);
+
+                    debug5 << PAR_Rank() << " ~ " << "Received " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
+
 
                     tempImgData.procId = tempImgMetaData.procId;
                     tempImgData.patchNumber = tempImgMetaData.patchNumber;
                     tempImgData.imagePatch = new float[tempImgMetaData.dims[0]*tempImgMetaData.dims[1] * 4];
                     imgComm.recvPointToPointImgData(tempImgMetaData, tempImgData);
+
+                    debug5 << PAR_Rank() << " ~ " << "Received " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " data." << endl;
+
 
                     allImgMetaData.push_back(tempImgMetaData);
                     imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgMetaData.procId, tempImgMetaData.patchNumber), tempImgData));
@@ -759,7 +780,13 @@ avtRayTracer::Execute(void)
                         imgData tempImgData;
                         tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
                         extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+
+                        debug5 << PAR_Rank() << " ~ " << "Sending " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
+
                         imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
+
+                        debug5 << PAR_Rank() << " ~ " << "Sent " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
+
 
                         if (tempImgData.imagePatch != NULL)
                             delete []tempImgData.imagePatch;
