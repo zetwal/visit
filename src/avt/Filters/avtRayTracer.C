@@ -465,6 +465,8 @@ avtRayTracer::Execute(void)
 
     std::cout << PAR_Rank() << "   avtRayTracer::Execute 0" << std::endl;
     avtDataObject_p samples = extractor.GetOutput();
+
+    debug5 << "After avtDataObject_p samples = extractor.GetOutput()" << endl;
     
     if (rayCastingSLIVR == true){
         std::cout << PAR_Rank() << "   avtRayTracer::Execute     starting RayCasting SLIVR  ...... " << std::endl;
@@ -487,6 +489,7 @@ avtRayTracer::Execute(void)
         int numPatches = extractor.getImgPatchSize();     // get the number of patches - Brown /8 procs / 100 each
 
         std::cout << PAR_Rank() << "   avtRayTracer::Execute     numPatches: " << numPatches << "   total assigned: " << extractor.getTotalAssignedPatches() << std::endl;
+        debug5 << PAR_Rank() << " ~  avtRayTracer::Execute     numPatches: " << numPatches << "   total assigned: " << extractor.getTotalAssignedPatches() << std::endl;
 
 
         //
@@ -503,6 +506,7 @@ avtRayTracer::Execute(void)
         // Send/Receive the number of patches that each has to 0
         //
         imgComm.gatherNumPatches(numPatches);
+        debug5 << PAR_Rank() << " ~ after imgComm.gatherNumPatches(numPatches)" << endl; 
 
     
         //
@@ -530,7 +534,7 @@ avtRayTracer::Execute(void)
         delete []tempSendBuffer;
         tempSendBuffer = NULL;
 
-        
+        debug5 << PAR_Rank() << " ~ Send/Receive the patches iota metadata to proc 0" << endl;
         //
         // Call on proc 0 to decide who should be sent what
         // 
@@ -541,7 +545,7 @@ avtRayTracer::Execute(void)
 
         std::cout << PAR_Rank() << "  \t! ---------------------------  patchAllocationLogic end ----------------------------------- !  " << std::endl;
 
-
+        debug5 << PAR_Rank() << " ~ patch allocation logic" << endl;
 
         //
         // Send info about which patch to receive and which patches to send & receive
@@ -568,6 +572,8 @@ avtRayTracer::Execute(void)
         imgComm.syncAllProcs();
 
         numZDivisions /= 2;
+
+        debug5 << PAR_Rank() << " ~ Send info about which patch to receive and which patches to send & receive" << endl;
 
         //for (int block = 0; block < numZDivisions*2; block+=2){
         //   printf(" %d lower: %.5f upper: %.5f\n\n", PAR_Rank(), divisionsArray[block], divisionsArray[block+1]);
@@ -629,6 +635,7 @@ avtRayTracer::Execute(void)
         //    std::cout << PAR_Rank() << " ~ already here " << allImgMetaData[i].procId << " ,  "  << allImgMetaData[i].patchNumber << " ,  " << allImgMetaData[i].destProcId <<  std::endl;
         //}
         
+        debug5 << PAR_Rank() << " ~ Copying the patches that it will need" << endl;
 
         //
         // Sending and receiving from other patches (does a kind of binary swap - half send, half receive and each list gets subdivided)
@@ -868,6 +875,8 @@ avtRayTracer::Execute(void)
             itImgData->second.imagePatch = NULL;
         }
 
+
+        debug5 << PAR_Rank() << " ~ send pt to pt" << endl;
         //for (int i=0; i<numZDivisions; i++){
         //    std::cout << PAR_Rank() << " ~ " << divisionsArray[i*2] << "  to " << divisionsArray[i*2 + 1] << std::endl;
         //    std::string imgFilenameFinal = "/home/pascal/Desktop/IntermediateAvtRayTracer_" + NumbToString(PAR_Rank()) + "__" + NumbToString(i) + "_Buffer.ppm";
@@ -898,7 +907,9 @@ avtRayTracer::Execute(void)
         visitTimer->StopTimer(timingComm, "Communicating");
         visitTimer->DumpTimings();
 
-        
+        debug5 << PAR_Rank() << " ~ gather and assemble" << endl;
+
+
         std::cout << PAR_Rank() << "  \t! ------------------------- Send composited image down the pipeline ---------------------------------- !  " << std::endl;
         //
         // Compositing
