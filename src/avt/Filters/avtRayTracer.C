@@ -573,6 +573,7 @@ avtRayTracer::Execute(void)
 
         numZDivisions /= 2;
 
+        imgComm.syncAllProcs();
         debug5 << PAR_Rank() << " ~ Send info about which patch to receive and which patches to send & receive" << endl;
 
         //for (int block = 0; block < numZDivisions*2; block+=2){
@@ -635,7 +636,9 @@ avtRayTracer::Execute(void)
         //    std::cout << PAR_Rank() << " ~ already here " << allImgMetaData[i].procId << " ,  "  << allImgMetaData[i].patchNumber << " ,  " << allImgMetaData[i].destProcId <<  std::endl;
         //}
         
+        imgComm.syncAllProcs();
         debug5 << PAR_Rank() << " ~ Copying the patches that it will need" << endl;
+
 
         //
         // Sending and receiving from other patches (does a kind of binary swap - half send, half receive and each list gets subdivided)
@@ -813,6 +816,10 @@ avtRayTracer::Execute(void)
             delete []informationToSendArray;
         informationToSendArray = NULL;
 
+        imgComm.syncAllProcs();
+        debug5 << PAR_Rank() << " ~ send pt to pt" << endl;
+
+
 
         //std::cout << PAR_Rank() << " ~ numPatches to compose " << allImgMetaData.size() << std::endl;
         //for (int i=0; i<allImgMetaData.size(); i++){
@@ -876,7 +883,9 @@ avtRayTracer::Execute(void)
         }
 
 
-        debug5 << PAR_Rank() << " ~ send pt to pt" << endl;
+        imgComm.syncAllProcs();
+        debug5 << PAR_Rank() << " ~ done compositing on one machine" << endl;
+
         //for (int i=0; i<numZDivisions; i++){
         //    std::cout << PAR_Rank() << " ~ " << divisionsArray[i*2] << "  to " << divisionsArray[i*2 + 1] << std::endl;
         //    std::string imgFilenameFinal = "/home/pascal/Desktop/IntermediateAvtRayTracer_" + NumbToString(PAR_Rank()) + "__" + NumbToString(i) + "_Buffer.ppm";
@@ -895,6 +904,8 @@ avtRayTracer::Execute(void)
         // Gather all the images
         imgComm.gatherAndAssembleImages(screen[0], screen[1], buffer, numZDivisions);
         imgComm.syncAllProcs();
+
+        debug5 << PAR_Rank() << " ~ done compositing on root" << endl;
 
         if (buffer != NULL)
             delete []buffer;
