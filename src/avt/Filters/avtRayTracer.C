@@ -652,10 +652,16 @@ avtRayTracer::Execute(void)
                 // Send
                 std::set<int> senderListSet;     senderListSet.clear();
 
+                debug5 << PAR_Rank() << " ~ " << "  send first: numInOtherHalf " <<  numInOtherHalf << std::endl;
+                for (int i=0; i<numInOtherHalf; i++)
+                    debug5 << PAR_Rank() << " ~ " << "  procsInOtherList[ " <<  i  << " ] " <<  procsInOtherList[i] << std::endl;
+
+
                 for (int i=0; i<numInOtherHalf; i++)
                     for(int j = 0; j < totalSendData; j+=2) 
                         if (informationToSendArray[j+1] == procsInOtherList[i])
                             senderListSet.insert(informationToSendArray[j+1]);
+
                     
                 std::multimap<int,imgMetaData>::iterator it;
                 for (it = imgMetaDataMultiMap.begin(); it != imgMetaDataMultiMap.end(); ++it ){
@@ -668,8 +674,7 @@ avtRayTracer::Execute(void)
                         tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
                         extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
 
-                        debug5 << PAR_Rank() << " ~ " << "Sending " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
-
+                        debug5 << PAR_Rank() << " ~ " << "Sending " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber  << "  to " << tempImgMetaData.destProcId << " meta." << endl;
 
                         imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
 
@@ -691,9 +696,14 @@ avtRayTracer::Execute(void)
                 // counting how many to receive
                 int numToReceive = 0;
                 for (int i=0; i<totalRecvData/2; i++)
-                    for (int j=0; j<numInOtherHalf; j++)
-                        if ((informationToRecvArray[i*2] == procsInOtherList[j]) && (informationToRecvArray[i*2 + 1] > 0))
+                    for (int j=0; j<numInOtherHalf; j++){
+                        if ((informationToRecvArray[i*2] == procsInOtherList[j]) && (informationToRecvArray[i*2 + 1] > 0)){
                             numToReceive+=informationToRecvArray[i*2 + 1];
+
+                            debug5 << PAR_Rank() << " ~ to receive from: " << procsInOtherList[j] << " , " << informationToRecvArray[i*2 + 1] << "  patches" << std::endl;
+
+                        }
+                    }
                 
                 //std::cout << PAR_Rank() << " ~ numToReceive: " << numToReceive << std::endl;
 
@@ -722,6 +732,12 @@ avtRayTracer::Execute(void)
 
                 }
             }else{
+
+                debug5 << PAR_Rank() << " ~ " << "  recv first: numInOtherHalf " <<  numInOtherHalf << std::endl;
+                for (int i=0; i<numInOtherHalf; i++)
+                    debug5 << PAR_Rank() << " ~ " << "  procsInOtherList[ " <<  i  << " ] " <<  procsInOtherList[i] << std::endl;
+
+
                 //
                 // Receive
         
@@ -729,8 +745,11 @@ avtRayTracer::Execute(void)
                 int numToReceive = 0;
                 for (int i=0; i<totalRecvData/2; i++)
                   for (int j=0; j<numInOtherHalf; j++)
-                        if ((informationToRecvArray[i*2] == procsInOtherList[j]) && (informationToRecvArray[i*2 + 1] > 0))
+                        if ((informationToRecvArray[i*2] == procsInOtherList[j]) && (informationToRecvArray[i*2 + 1] > 0)){
                             numToReceive+=informationToRecvArray[i*2 + 1];
+                            debug5 << PAR_Rank() << " ~ to receive from: " << procsInOtherList[j] << " , " << informationToRecvArray[i*2 + 1] << "  patches" << std::endl;
+
+                        }
                         
                 //std::cout << PAR_Rank() << " ~ numToReceive: " << numToReceive << std::endl;
 
@@ -768,6 +787,7 @@ avtRayTracer::Execute(void)
                     for(int j = 0; j < totalSendData; j+=2) 
                         if (informationToSendArray[j+1] == procsInOtherList[i])
                             senderListSet.insert(informationToSendArray[j+1]);
+                        
                     
                 
                 std::multimap<int,imgMetaData>::iterator it;
@@ -781,7 +801,7 @@ avtRayTracer::Execute(void)
                         tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
                         extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
 
-                        debug5 << PAR_Rank() << " ~ " << "Sending " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
+                        debug5 << PAR_Rank() << " ~ " << "Sending " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber  << "  to " << tempImgMetaData.destProcId << " meta." << endl;
 
                         imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
 
