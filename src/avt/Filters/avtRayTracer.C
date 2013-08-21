@@ -607,38 +607,7 @@ avtRayTracer::Execute(void)
         imgDataToCompose.clear();
 
 
-        //
-        // Copying the patches that it will need
-        //
-        std::multimap<int,imgMetaData>::iterator it;
-        for (it = imgMetaDataMultiMap.begin(); it != imgMetaDataMultiMap.end(); ++it ){
-
-            imgMetaData tempImgMetaData = it->second;
-
-            if (tempImgMetaData.destProcId == tempImgMetaData.procId ){
-                imgData tempImgData;
-                tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
-                extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
-
-                //if (PAR_Rank() == 2){
-                //    std::string imgFilenameFinal = "/home/pascal/Desktop/copying_2_" + NumbToString(tempImgMetaData.patchNumber) + "_Buffer.ppm";
-                //    createPpm(tempImgData.imagePatch, tempImgMetaData.dims[0], tempImgMetaData.dims[1], imgFilenameFinal);
-                //}
-
-                allImgMetaData.push_back(tempImgMetaData);
-                imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (  std::pair<int,int>(tempImgMetaData.procId, tempImgMetaData.patchNumber), tempImgData)   );
-
-                remainingPatches++;
-            }    
-        }
-
-        //for (int i=0; i<allImgMetaData.size(); i++){
-        //    std::cout << PAR_Rank() << " ~ already here " << allImgMetaData[i].procId << " ,  "  << allImgMetaData[i].patchNumber << " ,  " << allImgMetaData[i].destProcId <<  std::endl;
-        //}
         
-        imgComm.syncAllProcs();
-        debug5 << PAR_Rank() << " ~ Copying the patches that it will need" << endl;
-
 
         //
         // Sending and receiving from other patches (does a kind of binary swap - half send, half receive and each list gets subdivided)
@@ -818,6 +787,43 @@ avtRayTracer::Execute(void)
 
         imgComm.syncAllProcs();
         debug5 << PAR_Rank() << " ~ send pt to pt" << endl;
+
+
+
+
+        //
+        // Copying the patches that it will need
+        //
+        std::multimap<int,imgMetaData>::iterator it;
+        for (it = imgMetaDataMultiMap.begin(); it != imgMetaDataMultiMap.end(); ++it ){
+
+            imgMetaData tempImgMetaData = it->second;
+
+            if (tempImgMetaData.destProcId == tempImgMetaData.procId ){
+                imgData tempImgData;
+                tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
+                extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+
+                //if (PAR_Rank() == 2){
+                //    std::string imgFilenameFinal = "/home/pascal/Desktop/copying_2_" + NumbToString(tempImgMetaData.patchNumber) + "_Buffer.ppm";
+                //    createPpm(tempImgData.imagePatch, tempImgMetaData.dims[0], tempImgMetaData.dims[1], imgFilenameFinal);
+                //}
+
+                allImgMetaData.push_back(tempImgMetaData);
+                imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (  std::pair<int,int>(tempImgMetaData.procId, tempImgMetaData.patchNumber), tempImgData)   );
+
+                remainingPatches++;
+            }    
+        }
+
+        //for (int i=0; i<allImgMetaData.size(); i++){
+        //    std::cout << PAR_Rank() << " ~ already here " << allImgMetaData[i].procId << " ,  "  << allImgMetaData[i].patchNumber << " ,  " << allImgMetaData[i].destProcId <<  std::endl;
+        //}
+        
+        imgComm.syncAllProcs();
+        debug5 << PAR_Rank() << " ~ Copying the patches that it will need" << endl;
+
+
 
 
 
