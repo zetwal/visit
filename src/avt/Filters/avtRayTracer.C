@@ -569,7 +569,7 @@ avtRayTracer::Execute(void)
         divisionsArray = new float[numZDivisions];
 
         imgComm.scatterDataToCompose(totalSendData, informationToSendArray, totalRecvData, informationToRecvArray, numZDivisions, divisionsArray);
-        imgComm.syncAllProcs();
+        
 
         numZDivisions /= 2;
 
@@ -607,7 +607,7 @@ avtRayTracer::Execute(void)
         imgDataToCompose.clear();
 
 
-        
+        imgComm.syncAllProcs();
 
         //
         // Sending and receiving from other patches (does a kind of binary swap - half send, half receive and each list gets subdivided)
@@ -676,7 +676,7 @@ avtRayTracer::Execute(void)
 
                         debug5 << PAR_Rank() << " ~ " << "Sending " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber  << "  to " << tempImgMetaData.destProcId << " meta." << endl;
 
-                        imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
+                        imgComm.sendPointToPoint(tempImgMetaData,tempImgData, numProcessors);
 
                         debug5 << PAR_Rank() << " ~ " << "Sent " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
 
@@ -715,14 +715,14 @@ avtRayTracer::Execute(void)
 
                     debug5 << PAR_Rank() << " ~ " << "To Receive " << i << endl;
                     //imgComm.recvPointToPoint(tempImgMetaData, tempImgData);
-                    imgComm.recvPointToPointMetaData(tempImgMetaData);
+                    imgComm.recvPointToPointMetaData(tempImgMetaData, numProcessors);
 
                     debug5 << PAR_Rank() << " ~ " << "Received " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
 
                     tempImgData.procId = tempImgMetaData.procId;
                     tempImgData.patchNumber = tempImgMetaData.patchNumber;
                     tempImgData.imagePatch = new float[tempImgMetaData.dims[0]*tempImgMetaData.dims[1] * 4];
-                    imgComm.recvPointToPointImgData(tempImgMetaData, tempImgData);
+                    imgComm.recvPointToPointImgData(tempImgMetaData, tempImgData, numProcessors);
 
                     allImgMetaData.push_back(tempImgMetaData);
                     imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgMetaData.procId, tempImgMetaData.patchNumber), tempImgData));
@@ -761,7 +761,7 @@ avtRayTracer::Execute(void)
                     debug5 << PAR_Rank() << " ~ " << "To Receive " << i << endl;
 
                     //imgComm.recvPointToPoint(tempImgMetaData, tempImgData);
-                    imgComm.recvPointToPointMetaData(tempImgMetaData);
+                    imgComm.recvPointToPointMetaData(tempImgMetaData, numProcessors);
 
                     debug5 << PAR_Rank() << " ~ " << "Received " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
 
@@ -769,7 +769,7 @@ avtRayTracer::Execute(void)
                     tempImgData.procId = tempImgMetaData.procId;
                     tempImgData.patchNumber = tempImgMetaData.patchNumber;
                     tempImgData.imagePatch = new float[tempImgMetaData.dims[0]*tempImgMetaData.dims[1] * 4];
-                    imgComm.recvPointToPointImgData(tempImgMetaData, tempImgData);
+                    imgComm.recvPointToPointImgData(tempImgMetaData, tempImgData, numProcessors);
 
                     debug5 << PAR_Rank() << " ~ " << "Received " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " data." << endl;
 
@@ -803,7 +803,7 @@ avtRayTracer::Execute(void)
 
                         debug5 << PAR_Rank() << " ~ " << "Sending " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber  << "  to " << tempImgMetaData.destProcId << " meta." << endl;
 
-                        imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
+                        imgComm.sendPointToPoint(tempImgMetaData,tempImgData, numProcessors);
 
                         debug5 << PAR_Rank() << " ~ " << "Sent " << tempImgMetaData.procId << "  and " << tempImgMetaData.patchNumber << " meta." << endl;
 

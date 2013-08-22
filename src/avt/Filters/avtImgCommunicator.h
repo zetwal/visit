@@ -68,11 +68,11 @@ public:
 	void scatterNumDataToCompose(int &totalSendData, int &totalRecvData, int &numDivisions);
 	void scatterDataToCompose(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray, int &numDivisions, float *blocksPerProc);
 
-	void sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData);	// Send out the patches and receive them
+	void sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData, int tag);	// Send out the patches and receive them
 	void recvPointToPoint(imgMetaData &recvMetaData, imgData &recvImgData);
 
-	void recvPointToPointMetaData(imgMetaData &recvMetaData);
-	void recvPointToPointImgData(imgMetaData recvMetaData, imgData &recvImgData);
+	void recvPointToPointMetaData(imgMetaData &recvMetaData, int tag);
+	void recvPointToPointImgData(imgMetaData recvMetaData, imgData &recvImgData, int tag);
 
 	void gatherAndAssembleImages(int sizex, int sizey, float *image, int numDivisions);		// do the compositing of the subpatches
 

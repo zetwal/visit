@@ -621,15 +621,15 @@ void avtImgCommunicator::scatterDataToCompose(int &totalSendData, int *informati
 //  Modifications:
 //
 // ****************************************************************************
-void avtImgCommunicator::sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData){
+void avtImgCommunicator::sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData, int tag){
 	#ifdef PARALLEL
 		// Commit the datatype
 		MPI_Datatype _TestImg_mpi;
 		_TestImg_mpi = createImgDataType();
 		MPI_Type_commit(&_TestImg_mpi);
 
-	    MPI_Send(&toSendMetaData, 1, _TestImg_mpi, toSendMetaData.destProcId, 2, MPI_COMM_WORLD);
-		MPI_Send(toSendImgData.imagePatch, toSendMetaData.dims[0]*toSendMetaData.dims[1]*4, MPI_FLOAT, toSendMetaData.destProcId, 1, MPI_COMM_WORLD); //send the image data
+	    MPI_Send(&toSendMetaData, 1, _TestImg_mpi, toSendMetaData.destProcId, tag, MPI_COMM_WORLD); // 2
+		MPI_Send(toSendImgData.imagePatch, toSendMetaData.dims[0]*toSendMetaData.dims[1]*4, MPI_FLOAT, toSendMetaData.destProcId, tag-1, MPI_COMM_WORLD); //send the image data // 1
    
    		MPI_Type_free(&_TestImg_mpi);
     #endif
@@ -656,23 +656,23 @@ void avtImgCommunicator::recvPointToPoint(imgMetaData &recvMetaData, imgData &re
     #endif
 }
 
-void avtImgCommunicator::recvPointToPointMetaData(imgMetaData &recvMetaData){
+void avtImgCommunicator::recvPointToPointMetaData(imgMetaData &recvMetaData, int tag){
 	#ifdef PARALLEL
 		// Commit the datatype
 		MPI_Datatype _TestImg_mpi;
 		_TestImg_mpi = createImgDataType();
 		MPI_Type_commit(&_TestImg_mpi);
 
-        MPI_Recv (&recvMetaData, 1, _TestImg_mpi, MPI_ANY_SOURCE, 2, MPI_COMM_WORLD, &status);
+        MPI_Recv (&recvMetaData, 1, _TestImg_mpi, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status); // 2
 
         MPI_Type_free(&_TestImg_mpi);
     #endif
 }
 
 
-void avtImgCommunicator::recvPointToPointImgData(imgMetaData recvMetaData, imgData &recvImgData){
+void avtImgCommunicator::recvPointToPointImgData(imgMetaData recvMetaData, imgData &recvImgData, int tag){
 	#ifdef PARALLEL
-        MPI_Recv(recvImgData.imagePatch, recvMetaData.dims[0]*recvMetaData.dims[1]*4, MPI_FLOAT, status.MPI_SOURCE, 1, MPI_COMM_WORLD, &status);
+        MPI_Recv(recvImgData.imagePatch, recvMetaData.dims[0]*recvMetaData.dims[1]*4, MPI_FLOAT, status.MPI_SOURCE, tag-1, MPI_COMM_WORLD, &status); // 1
     #endif
 }
 
