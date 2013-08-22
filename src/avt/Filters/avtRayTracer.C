@@ -585,7 +585,7 @@ avtRayTracer::Execute(void)
 
         numZDivisions /= 2;
 
-        imgComm.syncAllProcs();
+        //imgComm.syncAllProcs();
         debug5 << PAR_Rank() << " ~ Send info about which patch to receive and which patches to send & receive" << endl;
 
         //for (int block = 0; block < numZDivisions*2; block+=2){
@@ -619,7 +619,7 @@ avtRayTracer::Execute(void)
         imgDataToCompose.clear();
 
 
-        imgComm.syncAllProcs();
+        //imgComm.syncAllProcs();
 
 
         visitTimer->StopTimer(timingCommMeta, "Communicating metadata");
@@ -849,7 +849,7 @@ avtRayTracer::Execute(void)
             delete []informationToSendArray;
         informationToSendArray = NULL;
 
-        //imgComm.syncAllProcs();
+        imgComm.syncAllProcs();
         debug5 << PAR_Rank() << " ~ send pt to pt" << endl;
 
 
