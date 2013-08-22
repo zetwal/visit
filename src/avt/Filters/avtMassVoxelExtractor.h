@@ -116,7 +116,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     // Raycasting SLIVR
     void             SetRayCastingSLIVR(bool s) {rayCastingSLIVR = s; };
     void             SetTrilinear(bool t) {trilinearInterpolation = t; };
-    void             SetLighting(bool l) {lighting = l; };
+    void             SetLighting(bool l) {lighting = true; };
     void             SetLightDirection(double _lightDir[3]) { for (int i=0;i<3;i++) lightDirection[i]=_lightDir[i]; }
     void             SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void             SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
