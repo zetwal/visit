@@ -173,7 +173,7 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     ind_buffer    = new int[3*depth];
     valid_sample  = new bool[depth];
 
-    lighting = true;
+    lighting = false;
     lightPosition[0] = lightPosition[1] = lightPosition[2] = 0.0;   lightPosition[3] = 1.0;
     materialProperties[0] = 0.4; materialProperties[1] = 0.75; materialProperties[3] = 0.0; materialProperties[3] = 15.0;
     gradient[0] = gradient[1] = gradient[2] = 0;
