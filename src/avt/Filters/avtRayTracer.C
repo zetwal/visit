@@ -463,7 +463,14 @@ avtRayTracer::Execute(void)
         extractor.SetRectilinearGridsAreInWorldSpace(true, view, aspect);
     }
 
-    std::cout << PAR_Rank() << "   avtRayTracer::Execute 0" << std::endl;
+    int  timingVolToImg;
+
+    if (rayCastingSLIVR == true)
+        timingVolToImg = visitTimer->StartTimer();
+
+
+
+    //std::cout << PAR_Rank() << "   avtRayTracer::Execute 0" << std::endl;
     avtDataObject_p samples = extractor.GetOutput();
 
     debug5 << "After avtDataObject_p samples = extractor.GetOutput()" << endl;
@@ -481,14 +488,19 @@ avtRayTracer::Execute(void)
         image->Update(GetGeneralContract());
 
 
-       
+        visitTimer->StopTimer(timingVolToImg, "VolToImg");
+        visitTimer->DumpTimings();
+
+
         //
         // Getting the patches
         //
         int  timingComm = visitTimer->StartTimer();
+        int  timingCommMeta = visitTimer->StartTimer();
+
         int numPatches = extractor.getImgPatchSize();     // get the number of patches - Brown /8 procs / 100 each
 
-        std::cout << PAR_Rank() << "   avtRayTracer::Execute     numPatches: " << numPatches << "   total assigned: " << extractor.getTotalAssignedPatches() << std::endl;
+        //std::cout << PAR_Rank() << "   avtRayTracer::Execute     numPatches: " << numPatches << "   total assigned: " << extractor.getTotalAssignedPatches() << std::endl;
         debug5 << PAR_Rank() << " ~  avtRayTracer::Execute     numPatches: " << numPatches << "   total assigned: " << extractor.getTotalAssignedPatches() << std::endl;
 
 
@@ -608,6 +620,11 @@ avtRayTracer::Execute(void)
 
 
         imgComm.syncAllProcs();
+
+
+        visitTimer->StopTimer(timingCommMeta, "Communicating metadata");
+        visitTimer->DumpTimings();
+        timingCommMeta = visitTimer->StartTimer();
 
         //
         // Sending and receiving from other patches (does a kind of binary swap - half send, half receive and each list gets subdivided)
@@ -832,11 +849,13 @@ avtRayTracer::Execute(void)
             delete []informationToSendArray;
         informationToSendArray = NULL;
 
-        imgComm.syncAllProcs();
+        //imgComm.syncAllProcs();
         debug5 << PAR_Rank() << " ~ send pt to pt" << endl;
 
 
-
+        visitTimer->StopTimer(timingCommMeta, "Point to point send");
+        visitTimer->DumpTimings();
+        timingCommMeta = visitTimer->StartTimer();
 
         //
         // Copying the patches that it will need
@@ -867,7 +886,6 @@ avtRayTracer::Execute(void)
         //    std::cout << PAR_Rank() << " ~ already here " << allImgMetaData[i].procId << " ,  "  << allImgMetaData[i].patchNumber << " ,  " << allImgMetaData[i].destProcId <<  std::endl;
         //}
         
-        imgComm.syncAllProcs();
         debug5 << PAR_Rank() << " ~ Copying the patches that it will need" << endl;
 
 
@@ -936,7 +954,9 @@ avtRayTracer::Execute(void)
         }
 
 
-        imgComm.syncAllProcs();
+        visitTimer->StopTimer(timingCommMeta, "Local compositing");
+        visitTimer->DumpTimings();
+        timingCommMeta = visitTimer->StartTimer();
         debug5 << PAR_Rank() << " ~ done compositing on one machine" << endl;
 
         //for (int i=0; i<numZDivisions; i++){
@@ -956,7 +976,7 @@ avtRayTracer::Execute(void)
 
         // Gather all the images
         imgComm.gatherAndAssembleImages(screen[0], screen[1], buffer, numZDivisions);
-        imgComm.syncAllProcs();
+        
 
         debug5 << PAR_Rank() << " ~ done compositing on root" << endl;
 
@@ -967,12 +987,14 @@ avtRayTracer::Execute(void)
          if (divisionsArray != NULL)
             delete []divisionsArray;
         divisionsArray = NULL;
+
+        visitTimer->StopTimer(timingCommMeta, "Sending local compositing");
+        visitTimer->DumpTimings();
        
-        visitTimer->StopTimer(timingComm, "Communicating");
+        visitTimer->StopTimer(timingComm, "Communicating Overall");
         visitTimer->DumpTimings();
 
         debug5 << PAR_Rank() << " ~ gather and assemble" << endl;
-
 
         std::cout << PAR_Rank() << "  \t! ------------------------- Send composited image down the pipeline ---------------------------------- !  " << std::endl;
         //
@@ -1015,7 +1037,7 @@ avtRayTracer::Execute(void)
             tempImage->Copy(*whole_image);
         SetOutput(tempImage);
 
-        visitTimer->StopTimer(timingCompositinig, "Compositing");
+        visitTimer->StopTimer(timingCompositinig, "Final Compositing");
         visitTimer->DumpTimings();
 
         visitTimer->StopTimer(timingIndex, "Ray Tracing");
