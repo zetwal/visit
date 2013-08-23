@@ -886,7 +886,7 @@ avtRayTracer::Execute(void)
         //    std::cout << PAR_Rank() << " ~ already here " << allImgMetaData[i].procId << " ,  "  << allImgMetaData[i].patchNumber << " ,  " << allImgMetaData[i].destProcId <<  std::endl;
         //}
         
-        debug5 << PAR_Rank() << " ~ Copying the patches that it will need" << endl;
+        //debug5 << PAR_Rank() << " ~ Copying the patches that it will need" << endl;
 
 
 
@@ -915,7 +915,9 @@ avtRayTracer::Execute(void)
         int bufferDivisionIndex = 0;
         int divIndex = 0;
         int totalSize = allImgMetaData.size();
-        //std::cout << PAR_Rank() << " ~ " << numZDivisions << "  ||  "  <<  totalSize << "  ||   " << numZDivisions << std::endl;
+
+        debug5 << PAR_Rank() << " ~  numZDivisions: " << numZDivisions << "     totalSize: "  <<  totalSize << endl;
+
         for (int patchIndex=0; patchIndex<totalSize; patchIndex++){
 
             if (allImgMetaData[patchIndex].avg_z > divisionsArray[divIndex*2 + 1]){  //new index
