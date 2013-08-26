@@ -558,7 +558,7 @@ avtRayTracer::Execute(void)
         // Send info about which patch to receive and which patches to send & receive
         imgComm.scatterNumDataToCompose(totalSendData, totalRecvData, numZDivisions, totalPatchesToCompositeLocally);
 
-        debug5 << PAR_Rank() << " ~  num patches to send: " << totalSendData/2 << " num processors to recv from: " << totalRecvData/2 << "    numZDivisions: " << numZDivisions << "   totalPatchesToCompositeLocally: " <<   totalPatchesToCompositeLocally << endl;
+        //debug5 << PAR_Rank() << " ~  num patches to send: " << totalSendData/2 << " num processors to recv from: " << totalRecvData/2 << "    numZDivisions: " << numZDivisions << "   totalPatchesToCompositeLocally: " <<   totalPatchesToCompositeLocally << endl;
 
 
         //
@@ -617,7 +617,6 @@ avtRayTracer::Execute(void)
                 composedPatch.dims[0]   = imgBufferWidth;
                 composedPatch.dims[1]   = imgBufferHeight;
                 composedPatch.inUse     = false;
-
 
 
                 for (int patchIndex=start; patchIndex<=end; patchIndex++){
@@ -706,7 +705,7 @@ avtRayTracer::Execute(void)
             if (tempImgMetaData.destProcId == tempImgMetaData.procId ){
                 imgData tempImgData;
                 tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
-                extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+                extractor.getnDelImgData(tempImgMetaData.patchNumber, tempImgData);
 
                 allImgMetaData.push_back(tempImgMetaData);
                 imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (  std::pair<int,int>(tempImgMetaData.procId, tempImgMetaData.patchNumber), tempImgData)   );
@@ -787,7 +786,7 @@ avtRayTracer::Execute(void)
                         
 
                         if(tempImgMetaData.inUse)
-                            extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+                            extractor.getnDelImgData(tempImgMetaData.patchNumber, tempImgData);
                         else{
                             const bool is_inC = (std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData)) != compositedDataVec.end();  
                             if(is_inC) tempImgData = *(std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData));
@@ -887,7 +886,7 @@ avtRayTracer::Execute(void)
                         tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
 
                         if(tempImgMetaData.inUse)
-                            extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+                            extractor.getnDelImgData(tempImgMetaData.patchNumber, tempImgData);
                         else{
                             const bool is_inC = (std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData)) != compositedDataVec.end();  
                             if(is_inC) tempImgData = *(std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData));
@@ -949,9 +948,10 @@ avtRayTracer::Execute(void)
         int bufferDivisionIndex = 0;
         int divIndex = 0;
         int totalSize = allImgMetaData.size();
-        std::cout << PAR_Rank() << " ~ " << numZDivisions << "  ||  "  <<  totalSize << "  ||   " << numZDivisions << std::endl;
+
+        //std::cout << PAR_Rank() << " ~ " << numZDivisions << "  ||  "  <<  totalSize << "  ||   " << numZDivisions << std::endl;
         for (int patchIndex=0; patchIndex<totalSize; patchIndex++){
-            std::cout << PAR_Rank() << " ~ " <<patchIndex << "  of  "  <<  totalSize << std::endl;
+            // std::cout << PAR_Rank() << " ~ " <<patchIndex << "  of  "  <<  totalSize << std::endl;
 
             if (allImgMetaData[patchIndex].avg_z > divisionsArray[divIndex*2 + 1]){  //new index
                 divIndex++;
