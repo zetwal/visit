@@ -84,7 +84,7 @@ struct imgMetaData{
 
   int destProcId;   // destination proc where this patch gets composited
 
-  int inUse;        // whether it is in use of not
+  int inUse;   // whether the patch is composed locally or not
   int dims[2];      // height, width
   int screen_ll[2]; // position in the final image
   int screen_ur[2];
@@ -107,6 +107,10 @@ struct imgData{
   int patchNumber;    // id of the patch on that processor  - with procId, acts as a key
 
   float *imagePatch;  // the image data - RGBA
+
+  bool operator==(const imgData &a){
+    return (patchNumber == a.patchNumber);// && (procId == a.procId);
+ }   
 };
 
 
@@ -124,8 +128,13 @@ struct iotaMeta{
   int procId;  
   int patchNumber; 
   
-  int imgArea;
+  int dims[2];      // height, width
+  int screen_ll[2]; // position in the final image
   float avg_z;   
+
+  bool operator==(const iotaMeta &a){
+    return (patchNumber == a.patchNumber) && (procId == a.procId);
+ }    
 };
 
 #endif

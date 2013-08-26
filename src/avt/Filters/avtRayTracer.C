@@ -79,6 +79,55 @@ using     std::vector;
 bool sortImgMetaDataByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z > after.avg_z; }
 
 
+void compositePatchesLocally(int *arrayToCompose, int from, int to, float *imgLocal){
+    // int dimsX, dimsY;
+
+    // int imgBufferWidth = arrayToCompose[to].screen_ll[0] + arrayToCompose[to].dims[0] - arrayToCompose[from].screen_ll[0];
+    // int imgBufferHeight = arrayToCompose[to].screen_ll[1] + arrayToCompose[to].dims[1] - arrayToCompose[from].screen_ll[1];
+
+    // float *buffer = new float[((imgBufferWidth * imgBufferHeight * 4)) ]();  //size: imgBufferWidth * imgBufferHeight * 4, initialized to 0
+
+   
+    // std::multimap< std::pair<int,int>, imgData>::iterator itImgData;
+
+    // int bufferDivisionIndex = 0;
+    // int divIndex = 0;
+    // int totalSize = allImgMetaData.size();
+    // //std::cout << PAR_Rank() << " ~ " << numZDivisions << "  ||  "  <<  totalSize << "  ||   " << numZDivisions << std::endl;
+    // for (int patchIndex=0; patchIndex<totalSize; patchIndex++){
+    //     std::cout << PAR_Rank() << " ~ " <<patchIndex << "  of  "  <<  totalSize << std::endl;
+
+    //     int startingX = allImgMetaData[patchIndex].screen_ll[0];
+    //     int startingY = allImgMetaData[patchIndex].screen_ll[1]; 
+
+    //     itImgData = imgDataToCompose.find( std::pair<int,int>(allImgMetaData[patchIndex].procId, allImgMetaData[patchIndex].patchNumber) );
+        
+    //     // Assemble the idivisions into 1 layer
+    //     for (int j=0; j<allImgMetaData[patchIndex].dims[1]; j++){
+    //         for (int k=0; k<allImgMetaData[patchIndex].dims[0]; k++){
+
+    //             if ((startingX + k) > imgBufferWidth)
+    //                 continue;
+
+    //             if ((startingY + j) > imgBufferHeight)
+    //                 continue;
+                
+    //             int subImgIndex = allImgMetaData[patchIndex].dims[0]*j*4 + k*4;                             // index in the subimage 
+    //             int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);  // index in the big buffer
+
+    //             // back to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
+    //             buffer[  bufferIndex+0] = (buffer[  bufferIndex+0] * (1.0 - itImgData->second.imagePatch[subImgIndex+3])) + itImgData->second.imagePatch[subImgIndex+0];
+    //             buffer[  bufferIndex+1] = (buffer[  bufferIndex+1] * (1.0 - itImgData->second.imagePatch[subImgIndex+3])) + itImgData->second.imagePatch[subImgIndex+1];
+    //             buffer[  bufferIndex+2] = (buffer[  bufferIndex+2] * (1.0 - itImgData->second.imagePatch[subImgIndex+3])) + itImgData->second.imagePatch[subImgIndex+2];
+    //             buffer[  bufferIndex+3] = (buffer[  bufferIndex+3] * (1.0 - itImgData->second.imagePatch[subImgIndex+3])) + itImgData->second.imagePatch[subImgIndex+3];
+    //         }
+    //     }
+
+    //     if (itImgData->second.imagePatch != NULL)
+    //         delete []itImgData->second.imagePatch;
+    //     itImgData->second.imagePatch = NULL;
+    // }
+}
 
 // ****************************************************************************
 //  Method: avtRayTracer constructor
@@ -478,7 +527,6 @@ avtRayTracer::Execute(void)
         avtImage_p image  = rc.GetTypedOutput();
         image->Update(GetGeneralContract());
 
-
        
         //
         // Getting the patches
@@ -490,27 +538,16 @@ avtRayTracer::Execute(void)
 
 
         //
-        // Check for possibility of local compositing
-        //
-
-
-        //
-        // Get these patches and merge them (new patch created and old ones removed)
-        // 
-        
-
-        //
         // Send/Receive the number of patches that each has to 0
         //
         imgComm.gatherNumPatches(numPatches);
 
-    
         //
         // Send/Receive the patches iota metadata to proc 0
         //
 
         float *tempSendBuffer = NULL;
-        tempSendBuffer = new float[numPatches*4];
+        tempSendBuffer = new float[numPatches*7];
 
         std::multimap<int, imgMetaData> imgMetaDataMultiMap;
         imgMetaDataMultiMap.clear();
@@ -519,27 +556,30 @@ avtRayTracer::Execute(void)
             temp = extractor.getImgMetaPatch(i);
             imgMetaDataMultiMap.insert(  std::pair<int, imgMetaData>   (temp.patchNumber, temp));
 
-            tempSendBuffer[i*4 + 0] = temp.procId;
-            tempSendBuffer[i*4 + 1] = temp.patchNumber;
-            tempSendBuffer[i*4 + 2] = temp.dims[0] * temp.dims[1];
-            tempSendBuffer[i*4 + 3] = temp.avg_z;
+            tempSendBuffer[i*7 + 0] = temp.procId;
+            tempSendBuffer[i*7 + 1] = temp.patchNumber;
+            tempSendBuffer[i*7 + 2] = temp.dims[0];
+            tempSendBuffer[i*7 + 3] = temp.dims[1];
+            tempSendBuffer[i*7 + 4] = temp.screen_ll[0];
+            tempSendBuffer[i*7 + 5] = temp.screen_ll[1];
+            tempSendBuffer[i*7 + 6] = temp.avg_z;
         }
 
-        imgComm.gatherIotaMetaData(numPatches*4, tempSendBuffer);
+        imgComm.gatherIotaMetaData(numPatches*7, tempSendBuffer); 
 
         delete []tempSendBuffer;
         tempSendBuffer = NULL;
-
+imgComm.syncAllProcs();
         
         //
         // Call on proc 0 to decide who should be sent what
         // 
-        std::cout << PAR_Rank() << "  \t!  -------------------------  patchAllocationLogic start ---------------------------------- !  " << std::endl;
+        if (PAR_Rank() == 0) std::cout << PAR_Rank() << "  \t!  -------------------------  patchAllocationLogic start ---------------------------------- !  " << std::endl;
 
         if (PAR_Rank() == 0)
             imgComm.patchAllocationLogic();    
 
-        std::cout << PAR_Rank() << "  \t! ---------------------------  patchAllocationLogic end ----------------------------------- !  " << std::endl;
+        if (PAR_Rank() == 0) std::cout << PAR_Rank() << "  \t! ---------------------------  patchAllocationLogic end ----------------------------------- !  " << std::endl;
 
 
 
@@ -549,42 +589,163 @@ avtRayTracer::Execute(void)
 
         // informationToRecvArray:   (procId, numPatches)           (procId, numPatches)         (procId, numPatches)  ...
         // informationToSendArray:   (patchNumber, destProcId)     (patchNumber, destProcId)    (patchNumber, destProcId)  ...
-        int totalSendData, totalRecvData, numZDivisions;
-        int *informationToRecvArray, *informationToSendArray;
+        int totalSendData, totalRecvData, numZDivisions, totalPatchesToCompositeLocally;
+        int *informationToRecvArray, *informationToSendArray, *patchesToCompositeLocally;
         float *divisionsArray = NULL;
-        informationToRecvArray = informationToSendArray = NULL;
-        totalSendData = totalRecvData = numZDivisions = 0;
+        informationToRecvArray = informationToSendArray = patchesToCompositeLocally = NULL;
+        totalSendData = totalRecvData = numZDivisions = totalPatchesToCompositeLocally = 0;
 
-        imgComm.scatterNumDataToCompose(totalSendData, totalRecvData, numZDivisions);
+        imgComm.scatterNumDataToCompose(totalSendData, totalRecvData, numZDivisions, totalPatchesToCompositeLocally);
+        imgComm.syncAllProcs();
 
-        //printf("id: %d num patches to send: %d num processors to recv from: %d numZDivisions: %d\n", PAR_Rank(), totalSendData/2, totalRecvData/2, numZDivisions);
+        std::cout << PAR_Rank() << "  \t! ---------------------------  Scatter Num end ----------------------------------- !  " << std::endl;
+
+        printf("id: %d num patches to send: %d num processors to recv from: %d numZDivisions: %d totalPatchesToCompositeLocally: %d\n", PAR_Rank(), totalSendData/2, totalRecvData/2, numZDivisions, totalPatchesToCompositeLocally);
 
         //receive the information about how many patches to receive from other processors
         informationToRecvArray = new int[totalRecvData];
         informationToSendArray = new int[totalSendData];
         divisionsArray = new float[numZDivisions];
 
-        imgComm.scatterDataToCompose(totalSendData, informationToSendArray, totalRecvData, informationToRecvArray, numZDivisions, divisionsArray);
+        if (totalPatchesToCompositeLocally > 0)
+            patchesToCompositeLocally = new int[totalPatchesToCompositeLocally];
+
+        imgComm.scatterDataToCompose(totalSendData, informationToSendArray, totalRecvData, informationToRecvArray, numZDivisions, divisionsArray, totalPatchesToCompositeLocally, patchesToCompositeLocally);
         imgComm.syncAllProcs();
+
+        std::cout << PAR_Rank() << "  \t! ---------------------------  Scatter Data end ----------------------------------- !  " << std::endl;
 
         numZDivisions /= 2;
 
-        //for (int block = 0; block < numZDivisions*2; block+=2){
+        // for (int block = 0; block < numZDivisions*2; block+=2){
         //   printf(" %d lower: %.5f upper: %.5f\n\n", PAR_Rank(), divisionsArray[block], divisionsArray[block+1]);
-        //}
+        // }
 
         // for(int i=0; i< totalSendData; i+=2){
         //     std::cout << PAR_Rank() << " :\t patchNumber: " << informationToSendArray[i] << " destProcId:" << informationToSendArray[i+1] << std::endl;
         // }
 
 
+                //
+        // Check for which patches should be composited locally & compose them
+        //
+
+
+        int index = 1;
+        int start, end;
+        start = end = index;
+
+        std::vector<imgData> compositedDataVec;
+
+        while (index <= totalPatchesToCompositeLocally){
+            if (patchesToCompositeLocally[index] == -1 || index == totalPatchesToCompositeLocally){
+                end = index-1;
+
+                int dimsX, dimsY;
+
+                
+                imgMetaData composedPatch = imgMetaDataMultiMap.find(patchesToCompositeLocally[start])->second;
+                imgMetaData lastPatch = imgMetaDataMultiMap.find(patchesToCompositeLocally[end])->second;
+
+                imgData composedData;
+                composedData.patchNumber    = composedPatch.patchNumber;
+                composedData.procId         = composedPatch.procId;
+
+                
+
+                int imgBufferWidth = abs(lastPatch.screen_ll[0] + lastPatch.dims[0] - composedPatch.screen_ll[0]);
+                int imgBufferHeight = abs(lastPatch.screen_ll[1] + lastPatch.dims[1] - composedPatch.screen_ll[1]);
+
+                std::cout << PAR_Rank() << " imgBufferHeight: " << imgBufferHeight << " imgBufferWidth: " << imgBufferWidth << std::endl;
+
+                //imgComm.syncAllProcs();
+
+                composedData.imagePatch = new float[((imgBufferWidth * imgBufferHeight * 4)) ]();  //size: imgBufferWidth * imgBufferHeight * 4, initialized to 0
+
+                composedPatch.dims[0]   = imgBufferWidth;
+                composedPatch.dims[1]   = imgBufferHeight;
+                composedPatch.inUse     = false;
+
+
+
+                for (int patchIndex=start; patchIndex<=end; patchIndex++){
+                    //std::cout << PAR_Rank() << " ~ " <<patchIndex << "  of  "  <<  totalSize << std::endl;
+                    imgMetaData currentPatch = imgMetaDataMultiMap.find(patchesToCompositeLocally[patchIndex])->second;
+
+                    int startingX = currentPatch.screen_ll[0] - composedPatch.screen_ll[0];
+                    int startingY = currentPatch.screen_ll[1] - composedPatch.screen_ll[1]; 
+
+                    
+                    imgData tempImgData;
+                    tempImgData.imagePatch = new float[currentPatch.dims[0] * currentPatch.dims[1] * 4];
+                    extractor.getImgData(currentPatch.patchNumber, tempImgData);
+
+                    
+                    // Assemble the idivisions into 1 layer
+                    for (int j=0; j<currentPatch.dims[1]; j++){
+                        for (int k=0; k<currentPatch.dims[0]; k++){
+
+                            if ((startingX + k) > imgBufferWidth)
+                                continue;
+
+                            if ((startingY + j) > imgBufferHeight)
+                                continue;
+                            
+                            int subImgIndex = currentPatch.dims[0]*j*4 + k*4;                             // index in the subimage 
+                            int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);  // index in the big buffer
+
+                            // back to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
+                            composedData.imagePatch[bufferIndex+0] = (composedData.imagePatch[bufferIndex+0] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+0];
+                            composedData.imagePatch[bufferIndex+1] = (composedData.imagePatch[bufferIndex+1] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+1];
+                            composedData.imagePatch[bufferIndex+2] = (composedData.imagePatch[bufferIndex+2] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+2];
+                            composedData.imagePatch[bufferIndex+3] = (composedData.imagePatch[bufferIndex+3] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+3];
+                        }
+                    }
+
+                    if (tempImgData.imagePatch != NULL)
+                        delete []tempImgData.imagePatch;
+                    tempImgData.imagePatch = NULL;
+
+
+                    imgMetaDataMultiMap.erase(patchesToCompositeLocally[patchIndex]);
+                }
+
+
+                // display imageLocal for testing
+                start = index+1;
+
+                imgMetaDataMultiMap.insert(std::pair<int,imgMetaData>(composedPatch.patchNumber, composedPatch));
+                compositedDataVec.push_back(composedData);
+            }
+            index++;
+        }
+
+        imgComm.syncAllProcs();
+
+        std::cout << PAR_Rank() << " All procs have reached here without seg fault --------------->" << std::endl;
+
+
+
+
         //
         // Set the destination for each patch
         //
+        //std::cout << PAR_Rank() << "Patches to Send" <<std::endl;
         for (int k = 0; k < totalSendData; k+=2){
             std::multimap<int,imgMetaData>::iterator it = imgMetaDataMultiMap.find(informationToSendArray[k]);
             (it->second).destProcId = informationToSendArray[k+1];
+            //std::cout << PAR_Rank() << " ~  patches to Send: " << informationToSendArray[k] << std::endl;
         }
+
+
+        // for(int k=0; k<totalPatchesToCompositeLocally; k++){
+        //        if (patchesToCompositeLocally[k] < 0) 
+        //             k++;
+        //        else 
+        //             imgMetaDataMultiMap.erase(patchesToCompositeLocally[k]); // compositeLocally();
+
+        //      //std::cout << PAR_Rank() << " ~  patches To Composite Locally: " << patchesToCompositeLocally[k] << std::endl;
+        // }
 
         
         //
@@ -625,6 +786,9 @@ avtRayTracer::Execute(void)
             }    
         }
 
+
+
+        //std::cout << PAR_Rank() << " ~  size of patches copied to itself: " << allImgMetaData.size() << std::endl;
         //for (int i=0; i<allImgMetaData.size(); i++){
         //    std::cout << PAR_Rank() << " ~ already here " << allImgMetaData[i].procId << " ,  "  << allImgMetaData[i].patchNumber << " ,  " << allImgMetaData[i].destProcId <<  std::endl;
         //}
@@ -686,8 +850,18 @@ avtRayTracer::Execute(void)
                     if (is_in){
                         imgMetaData tempImgMetaData = it->second;
                         imgData tempImgData;
-                        tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
-                        extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+                        tempImgData.patchNumber = tempImgMetaData.patchNumber;
+                        tempImgData.procId = tempImgMetaData.procId;
+                        tempImgData.imagePatch = new float[tempImgMetaData.dims[0] * tempImgMetaData.dims[1] * 4];
+                        
+
+                        if(tempImgMetaData.inUse)
+                            extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+                        else{
+                            const bool is_inC = (std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData)) != compositedDataVec.end();  
+                            if(is_inC) tempImgData = *(std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData));
+                            else std::cout << PAR_Rank() << " uuuuuuuh it didn't find the patch" << std::endl;
+                        }
 
                         imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
 
@@ -778,8 +952,20 @@ avtRayTracer::Execute(void)
                     if (is_in){
                         imgMetaData tempImgMetaData = it->second;
                         imgData tempImgData;
+                        tempImgData.patchNumber = tempImgMetaData.patchNumber;
+                        tempImgData.procId = tempImgMetaData.procId;
                         tempImgData.imagePatch = new float[it->second.dims[0] * it->second.dims[1] * 4];
-                        extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+
+                        if(tempImgMetaData.inUse)
+                            extractor.getImgData(tempImgMetaData.patchNumber, tempImgData);
+                        else{
+                            const bool is_inC = (std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData)) != compositedDataVec.end();  
+                            if(is_inC) tempImgData = *(std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData));
+                            else std::cout << PAR_Rank() << " uuuuuuuh it didn't find the patch" << std::endl;
+                        }
+                        
+
+
                         imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
 
                         if (tempImgData.imagePatch != NULL)
@@ -806,6 +992,9 @@ avtRayTracer::Execute(void)
             delete []informationToSendArray;
         informationToSendArray = NULL;
 
+        std::cout << PAR_Rank() << "  \t! ---------------------------  Send point to point end ----------------------------------- !  " << std::endl;
+        imgComm.syncAllProcs();
+
 
         //std::cout << PAR_Rank() << " ~ numPatches to compose " << allImgMetaData.size() << std::endl;
         //for (int i=0; i<allImgMetaData.size(); i++){
@@ -821,17 +1010,17 @@ avtRayTracer::Execute(void)
 
         std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgMetaDataByDepth);
         //std::cout << PAR_Rank() << " ~ numPatches to compose " << allImgMetaData.size() << "  numZDivisions: " << numZDivisions << std::endl;
-        //for (int i=0; i<allImgMetaData.size(); i++){
-        //    std::cout << PAR_Rank() << " ~ allImgMetaData " << allImgMetaData[i].procId << " ,  "  << allImgMetaData[i].patchNumber << " ,  " << allImgMetaData[i].destProcId <<  " ,  " << allImgMetaData[i].avg_z << " ,  " << allImgMetaData[i].screen_ll[0] << " - " << allImgMetaData[i].screen_ll[1] << std::endl;
-        //}
-
+        // for (int i=0; i<allImgMetaData.size(); i++){
+        //     std::cout << PAR_Rank() << " ~ allImgMetaData " << allImgMetaData[i].procId << " ,  "  << allImgMetaData[i].patchNumber << " ,  " << allImgMetaData[i].destProcId <<  " ,  " << allImgMetaData[i].avg_z << " ,  " << allImgMetaData[i].screen_ll[0] << " - " << allImgMetaData[i].screen_ll[1] << std::endl;
+        // }
 
         std::multimap< std::pair<int,int>, imgData>::iterator itImgData;
         int bufferDivisionIndex = 0;
         int divIndex = 0;
         int totalSize = allImgMetaData.size();
-        //std::cout << PAR_Rank() << " ~ " << numZDivisions << "  ||  "  <<  totalSize << "  ||   " << numZDivisions << std::endl;
+        std::cout << PAR_Rank() << " ~ " << numZDivisions << "  ||  "  <<  totalSize << "  ||   " << numZDivisions << std::endl;
         for (int patchIndex=0; patchIndex<totalSize; patchIndex++){
+            std::cout << PAR_Rank() << " ~ " <<patchIndex << "  of  "  <<  totalSize << std::endl;
 
             if (allImgMetaData[patchIndex].avg_z > divisionsArray[divIndex*2 + 1]){  //new index
                 divIndex++;
@@ -841,6 +1030,10 @@ avtRayTracer::Execute(void)
             int startingY = allImgMetaData[patchIndex].screen_ll[1]; 
 
             itImgData = imgDataToCompose.find( std::pair<int,int>(allImgMetaData[patchIndex].procId, allImgMetaData[patchIndex].patchNumber) );
+            if (itImgData == imgDataToCompose.end()){
+                std::cout << "Error - shouldn't happen!!!  " << allImgMetaData[patchIndex].patchNumber << std::endl;
+                continue;
+            }
             
             // Assemble the idivisions into 1 layer
             for (int j=0; j<allImgMetaData[patchIndex].dims[1]; j++){
@@ -863,19 +1056,47 @@ avtRayTracer::Execute(void)
                 }
             }
 
+            //code *encoding = NULL;
+            //imgComm.rleEncode(allImgMetaData[patchIndex].dims[0],allImgMetaData[patchIndex].dims[1],buffer,bufferDivisionIndex,encoding);
+            //delete []encoding;
+            //encoding = NULL;
+
             if (itImgData->second.imagePatch != NULL)
                 delete []itImgData->second.imagePatch;
             itImgData->second.imagePatch = NULL;
         }
 
-        //for (int i=0; i<numZDivisions; i++){
-        //    std::cout << PAR_Rank() << " ~ " << divisionsArray[i*2] << "  to " << divisionsArray[i*2 + 1] << std::endl;
-        //    std::string imgFilenameFinal = "/home/pascal/Desktop/IntermediateAvtRayTracer_" + NumbToString(PAR_Rank()) + "__" + NumbToString(i) + "_Buffer.ppm";
-        //    createPpmWithOffset(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal,((imgBufferWidth * imgBufferHeight * 4) * i));
-        //}
-       
         allImgMetaData.clear();
         imgDataToCompose.clear();
+
+        //for (int i=0; i<numZDivisions; i++){
+        //   std::cout << PAR_Rank() << " ~ " << divisionsArray[i*2] << "  to " << divisionsArray[i*2 + 1] << std::endl;
+        //   std::string imgFilenameFinal = "/home/pascal/Desktop/IntermediateAvtRayTracer_" + NumbToString(PAR_Rank()) + "__" + NumbToString(i) + "_Buffer.ppm";
+        //   createPpmWithOffset(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal,((imgBufferWidth * imgBufferHeight * 4) * i));
+        //}
+       
+        //code *encoding = NULL;.
+        float *encoding = NULL;
+        int *sizeEncoding = NULL;
+        int *offsetArray = new int[numZDivisions];
+        for (int i=0; i<numZDivisions; i++)
+            offsetArray[i] = allImgMetaData[i].dims[1]*allImgMetaData[i].dims[0]*4  *  i;
+
+        int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, buffer,numZDivisions,offsetArray, encoding,sizeEncoding);
+
+        
+        if (offsetArray != NULL)
+            delete []offsetArray;
+        offsetArray = NULL;
+
+        //if (buffer != NULL)
+        //    delete []buffer;
+        //buffer = NULL;
+        
+
+        imgComm.syncAllProcs();
+        std::cout << PAR_Rank() << "  \t! ---------------------------  Local Compositing end ----------------------------------- !  " << std::endl;
+        imgComm.syncAllProcs();
 
         //
         // Proc 0 receicves and does the final assmebly
@@ -883,9 +1104,27 @@ avtRayTracer::Execute(void)
         if (PAR_Rank() == 0)
             imgComm.setBackground(background);
 
+
         // Gather all the images
-        imgComm.gatherAndAssembleImages(screen[0], screen[1], buffer, numZDivisions);
+        imgComm.gatherEncodingSizes(sizeEncoding, numZDivisions);
+        //void gatherAndAssembleEncodedImages(int sizex, int sizey, float *image, int numDivisions);
+        imgComm.gatherAndAssembleEncodedImages(screen[0], screen[1], totalEncodingSize*5, buffer, numZDivisions);
+
         imgComm.syncAllProcs();
+        std::cout << PAR_Rank() << "  \t! ---------------------------  gatherEncodingSizes end ----------------------------------- !  " << std::endl;
+        imgComm.syncAllProcs();
+
+
+        //imgComm.gatherAndAssembleImages(screen[0], screen[1], buffer, numZDivisions);
+        imgComm.syncAllProcs();
+
+        if (encoding != NULL)
+            delete []encoding;
+        encoding = NULL;
+
+        if (sizeEncoding != NULL)
+            delete []sizeEncoding;
+        sizeEncoding = NULL;
 
         if (buffer != NULL)
             delete []buffer;

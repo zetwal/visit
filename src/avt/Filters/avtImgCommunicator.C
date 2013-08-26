@@ -48,6 +48,11 @@ void displayStruct_meta(imgMetaData temp){
 			temp.avg_z);
 }
 
+
+
+
+
+
 #ifdef PARALLEL
 MPI_Datatype createImgDataType(const int dataSize){
 	MPI_Datatype _img_mpi;
@@ -76,13 +81,20 @@ MPI_Datatype createImgDataType(){
 #endif
 
 bool sortImgByDepth(imgMetaData const& before, imgMetaData const& after){ return before.avg_z > after.avg_z; }
-bool sortImgByDepthIota(iotaMeta const& before, iotaMeta const& after){	return before.avg_z < after.avg_z; }
+bool sortImgByDepthIota(iotaMeta const& before, iotaMeta const& after){	
+	if(before.avg_z != after.avg_z) 
+		return (before.avg_z < after.avg_z);
+	else 
+		return (before.procId < after.procId); 
+}
 bool value_comparer(const std::pair<int,int> &before, const std::pair<int,int> &after){ return before.second < after.second; }
 bool sortByVecSize(const std::vector<iotaMeta> &before, const std::vector<iotaMeta> &after){return before.size() > after.size();}
-
-
-
-
+bool sortImgByCoordinatesIota(iotaMeta const& before, iotaMeta const& after){
+	if(before.screen_ll[1] != after.screen_ll[1]) 
+		return before.screen_ll[1] < after.screen_ll[1];
+	else 
+		return before.screen_ll[0] < after.screen_ll[0];
+}
 
 
 
@@ -133,6 +145,11 @@ avtImgCommunicator::avtImgCommunicator(){
 	boundsPerBlockArray = NULL;
 	blockDisplacementForProcs = NULL;
 	numBlocksPerProc = NULL;
+	patchesToCompositeLocallyArray = NULL;
+	numPatchesToCompositeLocally = NULL;
+	compositeDisplacementForProcs = NULL;
+
+	compressedSizePerDiv = NULL;
 
 	all_avgZ_proc0.clear();
 }
@@ -160,9 +177,18 @@ avtImgCommunicator::~avtImgCommunicator(){
 
 		if (imgBuffer != NULL)
 			delete []imgBuffer;
+
+		if (compressedSizePerDiv != NULL)
+			delete []compressedSizePerDiv;
+		compressedSizePerDiv = NULL;
 	}
 
+	
 	all_avgZ_proc0.clear();
+#ifdef PARALLEL
+	MPI_Type_free(&_img_mpi);
+#endif
+
 	//boundsPerBlockVec.clear();
 }
 
@@ -285,7 +311,7 @@ void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadat
 		int *offsetBuffer = NULL;
 
 		if (my_id == 0){
-			tempRecvBuffer = new float[totalPatches*4]; // x4: procId, patchNumber, imgArea, avg_z
+			tempRecvBuffer = new float[totalPatches*7]; // x4: procId, patchNumber, imgArea, avg_z
 			recvSizePerProc = new int[num_procs];	
 			offsetBuffer = new int[num_procs];	
 			for (int i=0; i<num_procs; i++){
@@ -294,7 +320,7 @@ void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadat
 				else
 					offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
 
-				recvSizePerProc[i] = processorPatchesCount[i]*4;
+				recvSizePerProc[i] = processorPatchesCount[i]*7;
 			}
 		}
 
@@ -307,13 +333,16 @@ void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadat
 			iotaMeta tempPatch;
 
 			for (int i=0; i<totalPatches; i++){
-				tempPatch.procId = 		(int) tempRecvBuffer[i*4 + 0];
-				tempPatch.patchNumber = (int) tempRecvBuffer[i*4 + 1];
-				tempPatch.imgArea = 	(int) tempRecvBuffer[i*4 + 2];
-				tempPatch.avg_z = 			  tempRecvBuffer[i*4 + 3];
+				tempPatch.procId = 		(int) tempRecvBuffer[i*7 + 0];
+				tempPatch.patchNumber = (int) tempRecvBuffer[i*7 + 1];
+				tempPatch.dims[0] = 	(int) tempRecvBuffer[i*7 + 2];
+				tempPatch.dims[1] = 	(int) tempRecvBuffer[i*7 + 3];
+				tempPatch.screen_ll[0] =(int) tempRecvBuffer[i*7 + 4];
+				tempPatch.screen_ll[1] =(int) tempRecvBuffer[i*7 + 5];
+				tempPatch.avg_z = 			  tempRecvBuffer[i*7 + 6];
 
 				int patchIndex = getDataPatchID(tempPatch.procId, tempPatch.patchNumber);
-				allRecvIotaMeta[patchIndex] = setIota(tempPatch.procId, tempPatch.patchNumber,tempPatch.imgArea, tempPatch.avg_z);
+				allRecvIotaMeta[patchIndex] = setIota(tempPatch.procId, tempPatch.patchNumber, tempPatch.dims[0], tempPatch.dims[1], tempPatch.screen_ll[0], tempPatch.screen_ll[1], tempPatch.avg_z);
 				all_avgZ_proc0.insert(tempPatch.avg_z); //insert avg_zs into the set to keep a count of the total number of avg_zs
 			}
 
@@ -334,7 +363,142 @@ void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadat
 	#endif	
 }
 
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void determinePatchesToCompositeLocally(const std::vector<iotaMeta>& all_patches_sorted_avgZ_proc0, std::vector<std::vector<iotaMeta> >& patchesToCompositeLocallyVector, const int& procToSend, std::vector<std::vector<int> >& divisions){
 
+	iotaMeta prev_data = *all_patches_sorted_avgZ_proc0.begin();
+	bool already_in = false;
+
+	iotaMeta delimiter;
+	delimiter.patchNumber = -1;
+
+	for (int i=1; i < all_patches_sorted_avgZ_proc0.size(); ++i){
+		if(prev_data.procId == all_patches_sorted_avgZ_proc0[i].procId && all_patches_sorted_avgZ_proc0[i].procId != procToSend){
+			if(!already_in) {
+				patchesToCompositeLocallyVector[prev_data.procId].push_back(delimiter);
+				patchesToCompositeLocallyVector[prev_data.procId].push_back(prev_data);
+				divisions[prev_data.procId].push_back(patchesToCompositeLocallyVector[prev_data.procId].size() - 1);
+				already_in = true;
+			}
+			patchesToCompositeLocallyVector[prev_data.procId].push_back(all_patches_sorted_avgZ_proc0[i]);
+		}else{
+			prev_data = all_patches_sorted_avgZ_proc0[i];
+			already_in = false;
+		}
+	}
+
+	for (int i=0; i < patchesToCompositeLocallyVector.size(); ++i){
+		divisions[i].push_back(patchesToCompositeLocallyVector[i].size() + 1);
+	}
+}
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+
+bool adjacencyTest(const iotaMeta& patch_1, const iotaMeta& patch_2){
+	if(	(patch_2.screen_ll[0] <= patch_1.screen_ll[0] + patch_1.dims[0]) && 
+		(patch_2.screen_ll[1] == patch_1.screen_ll[1] )) 
+		return true;
+	return false;
+}
+
+void determinePatchAdjacency(std::vector<iotaMeta>& allPatchesSorted, std::vector<std::vector<iotaMeta> >& patchesToComposite, std::vector<std::vector<int> >& divisions ){
+
+	iotaMeta delimiter; 
+	delimiter.patchNumber = -1;
+
+	std::vector<iotaMeta>::iterator it;
+
+	iotaMeta prevPatch, currentPatch, nextPatch;
+	int lower, upper;
+
+	for (int i=0; i < patchesToComposite.size(); ++i){
+		for(int k=0; k<divisions[i].size()-1; k++){
+
+			lower = divisions[i][k];
+			upper = divisions[i][k+1]-1;
+
+			std::sort(	patchesToComposite[i].begin()+lower, 
+						patchesToComposite[i].begin()+upper,  &sortImgByCoordinatesIota);
+
+			for(int j = lower; j < upper; j++){
+
+				currentPatch = patchesToComposite[i][j];
+				if(j < upper-1) 	nextPatch = patchesToComposite[i][j+1];
+				if(j > lower)		prevPatch = patchesToComposite[i][j-1];
+			
+				//
+				// if patch is adjacent to the preceding patch, remove it from the allPatchesSorted list
+				//
+				if (j > lower && adjacencyTest(prevPatch, currentPatch)) {
+					it = std::find(allPatchesSorted.begin(), allPatchesSorted.end(), currentPatch);	
+					allPatchesSorted.erase(it);
+				}
+
+				//
+				// if patch is adjacent to the succeeding patch, check if:
+				//					patch lies somewhere in the middle => insert a delimiter before patch
+				//
+				else if (j < upper-1 && adjacencyTest(currentPatch, nextPatch)){
+					if (j != lower){ //insert a -1 			
+						it = std::find(patchesToComposite[i].begin(), patchesToComposite[i].end(), currentPatch);
+						patchesToComposite[i].insert(it, delimiter);
+
+						for(int m = k; m < divisions[i].size() - 1; m++)
+							divisions[i][m+1]++;
+						j++; upper++;
+
+						int position = it - patchesToComposite[i].begin();
+						lower = position + 1;
+					}
+					// else do nothing. Let the first patch remain
+				}
+
+				//
+				// if patch does not lie beside any adjoining patch, remove it from patchesToComposite
+				//
+				else{
+					it = std::find(patchesToComposite[i].begin(), patchesToComposite[i].end(), currentPatch);
+					patchesToComposite[i].erase(it);
+
+					// if this is the only remaining element, also remove the -1
+					if(upper == lower+1){ 
+						patchesToComposite[i].erase(--it);
+						for(int m = k; m < divisions[i].size() - 1; m++)
+						 	divisions[i][m+1] -= 2;
+					}else{
+						for(int m = k; m < divisions[i].size() - 1; m++)
+							divisions[i][m+1]--;
+						j--; upper--;
+
+					}
+				}
+				// end of j loop
+			}
+			// end of k loop
+		}
+		// end of i loop
+	}
+}
 
 
 
@@ -358,18 +522,18 @@ std::map<int,int> numPatchesPerProc;
 	for (int i = 0; i < imgVector.size(); ++i){
 		const bool is_in = ((std::find(procsAlreadyInList.begin(), procsAlreadyInList.end(), imgVector[i].procId)) != (procsAlreadyInList.end()));
 		if(!is_in){
-			isPresent = numPatchesPerProc.insert (	std::pair<int,int>(imgVector[i].procId, imgVector[i].imgArea) );
+			isPresent = numPatchesPerProc.insert (	std::pair<int,int>(imgVector[i].procId, imgVector[i].dims[0] * imgVector[i].dims[1]) );
 			if(isPresent.second == false)			
-				numPatchesPerProc[imgVector[i].procId] += imgVector[i].imgArea;
+				numPatchesPerProc[imgVector[i].procId] += imgVector[i].dims[0] * imgVector[i].dims[1];
 		}
 	}
 
 	if(numPatchesPerProc.size() == 0){
 		std::cout << "---------->Proc Repeated! ";
 		for (int i = 0; i < imgVector.size(); ++i){
-			isPresent = numPatchesPerProc.insert (  std::pair<int,int>(imgVector[i].procId, imgVector[i].imgArea) );
+			isPresent = numPatchesPerProc.insert (  std::pair<int,int>(imgVector[i].procId, imgVector[i].dims[0] * imgVector[i].dims[1]) );
 			if(isPresent.second == false)			
-				numPatchesPerProc[imgVector[i].procId] += imgVector[i].imgArea;
+				numPatchesPerProc[imgVector[i].procId] += imgVector[i].dims[0] * imgVector[i].dims[1];
 		}
 	}
 
@@ -384,7 +548,7 @@ void avtImgCommunicator::patchAllocationLogic(){
 	// 2. do away with numcompositedPatches test and replace with totalRecvPatches
 
 	std::vector<std::vector<iotaMeta> > all_patches_sorted_avgZ_proc0(num_procs); 
-	std::vector<int> procToSend			(num_procs);
+	std::vector<int> procToSend;
 	std::vector<int> numAvgZEachBlock	(num_procs);
 
 	numBlocksPerProc = new int[num_procs]();
@@ -431,15 +595,18 @@ void avtImgCommunicator::patchAllocationLogic(){
 
 	//sort the avg_z vector by size
 	std::sort (all_patches_sorted_avgZ_proc0.begin(), all_patches_sorted_avgZ_proc0.end(), sortByVecSize);
+	std::vector<std::vector<iotaMeta> > patchesToCompositeLocallyVector(num_procs);
 
 	// Calculate which block of avg_z to send to which processor
 	// ith block is sent to the processor in procToSend[i]
 
 	//printf("num_avg_z: %d num_procs: %d\n\n", num_avgZ_proc0, num_procs);
 	for (int i = 0; i < num_procs; ++i){
-		procToSend[i] = calculatePatchDivision(all_patches_sorted_avgZ_proc0[i], procToSend);
-
-		numBlocksPerProc[procToSend[i]] += 2; // 2 for lower and upper bound
+		
+		procToSend.push_back(calculatePatchDivision(all_patches_sorted_avgZ_proc0[i], procToSend));
+		std::vector<std::vector<int> > divisions(num_procs);
+		determinePatchesToCompositeLocally(all_patches_sorted_avgZ_proc0[i], patchesToCompositeLocallyVector, procToSend[i], divisions); 
+		determinePatchAdjacency(all_patches_sorted_avgZ_proc0[i], patchesToCompositeLocallyVector, divisions);
 
 		int size = all_patches_sorted_avgZ_proc0[i].size();
 		if(size >= 1)	boundsPerBlockVec[procToSend[i]].push_back(all_patches_sorted_avgZ_proc0[i][0].avg_z);
@@ -451,7 +618,7 @@ void avtImgCommunicator::patchAllocationLogic(){
 	for(int i = 0; i < num_procs; ++i){
 		printf("Block %d\n", i );
 		for(std::vector<iotaMeta>::iterator it = all_patches_sorted_avgZ_proc0[i].begin(); it != all_patches_sorted_avgZ_proc0[i].end(); ++it){
-			printf("\t %.5f\n", it->avg_z);
+			printf("\t %.5f \t %d\n", it->avg_z, it->procId);
 		}
 	}
 
@@ -496,29 +663,38 @@ void avtImgCommunicator::patchAllocationLogic(){
 	numPatchesToSendArray 		= new int[num_procs]();
 	numPatchesToRecvArray 		= new int[num_procs]();
 	blockDisplacementForProcs 	= new int[num_procs]();
-	numPatchesToSendRecvArray 	= new int[3*num_procs]();
+	numPatchesToSendRecvArray 	= new int[4*num_procs]();
+
+	compositeDisplacementForProcs = new int[num_procs]();
+	numPatchesToCompositeLocally = new int[num_procs]();
 
 	int totalRecvSize = 0;
 	int totalSendSize = 0;
 	int totalBlockSize = 0;
+	int totalCompositeSize = 0;
 
 	for (int currentProcId = 0; currentProcId < num_procs; currentProcId++){
 
 		numPatchesToSendArray[currentProcId] = patchesToSendVec[currentProcId].size();
 		numPatchesToRecvArray[currentProcId] = 2*patchesToRecvMap[currentProcId].size();
+		numBlocksPerProc[currentProcId]		 = boundsPerBlockVec[currentProcId].size();
+		numPatchesToCompositeLocally[currentProcId] = patchesToCompositeLocallyVector[currentProcId].size();
 
-		numPatchesToSendRecvArray[currentProcId*3] 		= numPatchesToSendArray[currentProcId];
-		numPatchesToSendRecvArray[currentProcId*3 + 1] 	= numPatchesToRecvArray[currentProcId];
-		numPatchesToSendRecvArray[currentProcId*3 + 2]	= numBlocksPerProc[currentProcId];
+		numPatchesToSendRecvArray[currentProcId*4] 		= numPatchesToSendArray[currentProcId];
+		numPatchesToSendRecvArray[currentProcId*4 + 1] 	= numPatchesToRecvArray[currentProcId];
+		numPatchesToSendRecvArray[currentProcId*4 + 2]	= numBlocksPerProc[currentProcId];
+		numPatchesToSendRecvArray[currentProcId*4 + 3]	= numPatchesToCompositeLocally[currentProcId];
 
 		totalRecvSize += numPatchesToRecvArray[currentProcId];
 		totalSendSize += numPatchesToSendArray[currentProcId];
 		totalBlockSize+= numBlocksPerProc[currentProcId];
+		totalCompositeSize += numPatchesToCompositeLocally[currentProcId];
 
 		if(currentProcId!=0) {
 			recvDisplacementForProcs[currentProcId] = recvDisplacementForProcs[currentProcId-1] + numPatchesToRecvArray[currentProcId-1];
 			sendDisplacementForProcs[currentProcId] = sendDisplacementForProcs[currentProcId-1] + numPatchesToSendArray[currentProcId-1];
 			blockDisplacementForProcs[currentProcId] = blockDisplacementForProcs[currentProcId-1] + numBlocksPerProc[currentProcId-1];
+			compositeDisplacementForProcs[currentProcId] = compositeDisplacementForProcs[currentProcId-1] + numPatchesToCompositeLocally[currentProcId-1];
 		}
 
 	}
@@ -526,6 +702,7 @@ void avtImgCommunicator::patchAllocationLogic(){
 	patchesToRecvArray 	= new int[totalRecvSize];
 	patchesToSendArray 	= new int[totalSendSize];
 	boundsPerBlockArray = new float[totalBlockSize];
+	patchesToCompositeLocallyArray = new int[totalCompositeSize];
 
 	for (int currentProcId = 0; currentProcId < num_procs; currentProcId++){
 
@@ -534,15 +711,26 @@ void avtImgCommunicator::patchAllocationLogic(){
 		for (std::map<int,int>::iterator it = patchesToRecvMap[currentProcId].begin(); it!=patchesToRecvMap[currentProcId].end(); ++it){
 				patchesToRecvArray[recvDisplacementForProcs[currentProcId] + (count++)] = it->first;
 				patchesToRecvArray[recvDisplacementForProcs[currentProcId] + (count++)] = it->second;
+				printf("\t numPatches %d origin: %d\n", it->second, it->first);
 		}
 
 		count = 0;
-		for (std::vector<int>::iterator it = patchesToSendVec[currentProcId].begin(); it!=patchesToSendVec[currentProcId].end(); ++it)
+		//printf("\n\n### origin: %d size: %ld\n ", currentProcId, patchesToSendVec[currentProcId].size());
+		for (std::vector<int>::iterator it = patchesToSendVec[currentProcId].begin(); it!=patchesToSendVec[currentProcId].end(); ++it){
 			patchesToSendArray[sendDisplacementForProcs[currentProcId] + (count++)] = *it;
+
+			//if(count%2!=0) printf("\t patchNumber %d", *it);
+			//else 		   printf(" dest: %d\n", *it);
+
+		}
 
 		count = 0;
 		for (std::vector<float>::iterator it = boundsPerBlockVec[currentProcId].begin(); it!=boundsPerBlockVec[currentProcId].end(); ++it)
 			boundsPerBlockArray[blockDisplacementForProcs[currentProcId] + (count++)] = *it;
+
+		count = 0;
+		for (std::vector<iotaMeta>::iterator it = patchesToCompositeLocallyVector[currentProcId].begin(); it!=patchesToCompositeLocallyVector[currentProcId].end(); ++it)
+			patchesToCompositeLocallyArray[compositeDisplacementForProcs[currentProcId] + (count++)] = it->patchNumber;
 
 	}
 
@@ -563,15 +751,16 @@ void avtImgCommunicator::patchAllocationLogic(){
 //
 // ****************************************************************************
 
-void avtImgCommunicator::scatterNumDataToCompose(int &totalSendData, int &totalRecvData, int &numDivisions){
-	int totalSendRecvData[3];
+void avtImgCommunicator::scatterNumDataToCompose(int &totalSendData, int &totalRecvData, int &numDivisions, int &totalPatchesToCompositeLocally){
+	int totalSendRecvData[4];
 	#ifdef PARALLEL
-		MPI_Scatter(numPatchesToSendRecvArray, 3, MPI_INT, totalSendRecvData, 3, MPI_INT, 0, MPI_COMM_WORLD);
+		MPI_Scatter(numPatchesToSendRecvArray, 4, MPI_INT, totalSendRecvData, 4, MPI_INT, 0, MPI_COMM_WORLD);
 	#endif
 
 	totalSendData = totalSendRecvData[0];
 	totalRecvData = totalSendRecvData[1];
 	numDivisions = totalSendRecvData[2]; // 2 times num divisions
+	totalPatchesToCompositeLocally = totalSendRecvData[3];
 
 }
 
@@ -588,26 +777,48 @@ void avtImgCommunicator::scatterNumDataToCompose(int &totalSendData, int &totalR
 //  Modifications:
 //
 // ****************************************************************************
-void avtImgCommunicator::scatterDataToCompose(int &totalSendData, int *informationToSendArray, int &totalRecvData, int *informationToRecvArray, int &numDivisions, float *blocksPerProc){
+void avtImgCommunicator::scatterDataToCompose(	int& totalSendData, int* informationToSendArray, 
+												int& totalRecvData, int* informationToRecvArray, 
+												int& numDivisions, float* blocksPerProc,
+												int& totalPatchesToCompositeLocally, int* patchesToCompositeLocally){
 	#ifdef PARALLEL
         MPI_Scatterv(patchesToSendArray, numPatchesToSendArray, sendDisplacementForProcs, MPI_INT, informationToSendArray, totalSendData, MPI_INT, 0,MPI_COMM_WORLD);
         MPI_Scatterv(patchesToRecvArray, numPatchesToRecvArray, recvDisplacementForProcs, MPI_INT, informationToRecvArray, totalRecvData, MPI_INT, 0,MPI_COMM_WORLD);
         MPI_Scatterv(boundsPerBlockArray, numBlocksPerProc, blockDisplacementForProcs, MPI_FLOAT, blocksPerProc, numDivisions, MPI_FLOAT, 0,MPI_COMM_WORLD);
+        MPI_Scatterv(patchesToCompositeLocallyArray, numPatchesToCompositeLocally, compositeDisplacementForProcs, MPI_INT, patchesToCompositeLocally, totalPatchesToCompositeLocally, MPI_INT, 0, MPI_COMM_WORLD);
 	#endif
 
     if(my_id == 0){
-        if(patchesToSendArray!=NULL) delete[] patchesToSendArray;	patchesToSendArray = NULL;
-        if(patchesToRecvArray!=NULL) delete[] patchesToRecvArray;
-        if(numPatchesToSendArray!=NULL) delete[] numPatchesToSendArray;
-        if(numPatchesToRecvArray!=NULL) delete[] numPatchesToRecvArray;
-        if(recvDisplacementForProcs!=NULL) delete[] recvDisplacementForProcs;
-        if(sendDisplacementForProcs!=NULL) delete[] sendDisplacementForProcs;
-        if(blockDisplacementForProcs!=NULL) delete[] blockDisplacementForProcs;
-        if(numPatchesToSendRecvArray!=NULL) delete[] numPatchesToSendRecvArray;
-        if(boundsPerBlockArray!=NULL) delete[] boundsPerBlockArray;
-        if(numBlocksPerProc!=NULL) delete[] numBlocksPerProc;
+        if (patchesToSendArray!=NULL) delete[] patchesToSendArray;
+        if (patchesToRecvArray!=NULL) delete[] patchesToRecvArray;
+        if (numPatchesToSendArray!=NULL) delete[] numPatchesToSendArray;
+        if (numPatchesToRecvArray!=NULL) delete[] numPatchesToRecvArray;
+        if (recvDisplacementForProcs!=NULL) delete[] recvDisplacementForProcs;
+        if (sendDisplacementForProcs!=NULL) delete[] sendDisplacementForProcs;
+        if (blockDisplacementForProcs!=NULL) delete[] blockDisplacementForProcs;
+        if (numPatchesToSendRecvArray!=NULL) delete[] numPatchesToSendRecvArray;
+        if (boundsPerBlockArray!=NULL) delete[] boundsPerBlockArray;
+        if (numBlocksPerProc!=NULL) delete[] numBlocksPerProc;
+        if (patchesToCompositeLocallyArray!=NULL) delete[] patchesToCompositeLocallyArray;
+        if (numPatchesToCompositeLocally!=NULL) delete[] numPatchesToCompositeLocally;
+        if (compositeDisplacementForProcs!=NULL) delete[] compositeDisplacementForProcs;
+
+        patchesToSendArray = NULL;
+		patchesToRecvArray = NULL;
+		numPatchesToSendArray = NULL;
+		numPatchesToRecvArray = NULL;
+		recvDisplacementForProcs = NULL;
+		sendDisplacementForProcs = NULL;
+		numPatchesToSendRecvArray = NULL;
+		boundsPerBlockArray = NULL;
+		blockDisplacementForProcs = NULL;
+		numBlocksPerProc = NULL;
+		patchesToCompositeLocallyArray = NULL;
+		numPatchesToCompositeLocally = NULL;
+		compositeDisplacementForProcs = NULL;
     }
 }
+
 
 
 // ****************************************************************************
@@ -623,7 +834,7 @@ void avtImgCommunicator::scatterDataToCompose(int &totalSendData, int *informati
 // ****************************************************************************
 void avtImgCommunicator::sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData){
 	#ifdef PARALLEL
-		// Commit the datatype
+
 		MPI_Datatype _TestImg_mpi;
 		_TestImg_mpi = createImgDataType();
 		MPI_Type_commit(&_TestImg_mpi);
@@ -639,7 +850,7 @@ void avtImgCommunicator::sendPointToPoint(imgMetaData toSendMetaData, imgData to
 
 void avtImgCommunicator::recvPointToPoint(imgMetaData &recvMetaData, imgData &recvImgData){
 	#ifdef PARALLEL
-		// Commit the datatype
+
 		MPI_Datatype _TestImg_mpi;
 		_TestImg_mpi = createImgDataType();
 		MPI_Type_commit(&_TestImg_mpi);
@@ -658,7 +869,7 @@ void avtImgCommunicator::recvPointToPoint(imgMetaData &recvMetaData, imgData &re
 
 void avtImgCommunicator::recvPointToPointMetaData(imgMetaData &recvMetaData){
 	#ifdef PARALLEL
-		// Commit the datatype
+
 		MPI_Datatype _TestImg_mpi;
 		_TestImg_mpi = createImgDataType();
 		MPI_Type_commit(&_TestImg_mpi);
@@ -675,6 +886,203 @@ void avtImgCommunicator::recvPointToPointImgData(imgMetaData recvMetaData, imgDa
         MPI_Recv(recvImgData.imagePatch, recvMetaData.dims[0]*recvMetaData.dims[1]*4, MPI_FLOAT, status.MPI_SOURCE, 1, MPI_COMM_WORLD, &status);
     #endif
 }
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::gatherEncodingSizes(int *sizeEncoding, int numDivisions){
+	int *offsetBuffer = NULL;
+	int *recvSizePerProc = NULL;
+	int totalDivisions = 0;
+
+	#ifdef PARALLEL
+
+		// Only proc 0 receives data
+		if (my_id == 0){
+
+			recvSizePerProc = new int[num_procs];
+			offsetBuffer = new int[num_procs];
+			
+			for (int i=0; i<num_procs; i++){
+				int numBoundsPerBlock = boundsPerBlockVec[i].size()/2;
+				totalDivisions += numBoundsPerBlock;
+				recvSizePerProc[i] = numBoundsPerBlock;
+
+				if (i == 0)
+					offsetBuffer[i] = 0;
+				else
+					offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
+
+			}
+			compressedSizePerDiv = new int[totalDivisions];
+		}
+
+		if (numDivisions > 0)
+			for (int i=0; i<numDivisions; i++)
+				std::cout << my_id << " ~  encoding size of " << i << " :  "<< sizeEncoding[i] << std::endl;
+		
+        //  send   recv  others
+		MPI_Gatherv(sizeEncoding, numDivisions, MPI_INT,    compressedSizePerDiv, recvSizePerProc, offsetBuffer,MPI_INT,      0, MPI_COMM_WORLD); // all send to proc 0
+
+
+
+		if (my_id == 0){
+			for (int i=0; i<totalDivisions; i++)
+				std::cout << "div " << i << " : " << compressedSizePerDiv[i] << std::endl;
+
+			if (offsetBuffer != NULL) 
+				delete []offsetBuffer;
+			offsetBuffer = NULL;
+
+			if (recvSizePerProc != NULL)  
+				delete []recvSizePerProc;
+			recvSizePerProc = NULL;
+		}
+	#endif
+}
+
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, int sizeSending, float *images, int numDivisions){
+	#ifdef PARALLEL
+		float *tempRecvBuffer = NULL;
+		int *recvSizePerProc = NULL;
+		int *offsetBuffer = NULL;
+		int totalDivisions = 0;
+		std::map<float,int> depthPartitions;	//float: z-value, int: division index
+
+		// Only proc 0 receives data
+		if (my_id == 0){
+			int divIndex = 0;
+			int totalSize = 0;
+			recvSizePerProc = new int[num_procs];	
+			offsetBuffer = new int[num_procs];	
+
+			int divCount = 0;
+			for (int i=0; i<num_procs; i++){
+				int numBoundsPerBlock = boundsPerBlockVec[i].size()/2;
+				totalDivisions += numBoundsPerBlock;
+				std::cout << i << " ~ "<< "boundsPerBlockVec[i].size(): " << numBoundsPerBlock << std::endl;
+				
+
+				int sizeEncoded = 0;
+				for (int j=0; j<boundsPerBlockVec[i].size(); j+=2){
+					depthPartitions.insert( std::pair< float,int > ( (boundsPerBlockVec[i][j] + boundsPerBlockVec[i][j+1]) * 0.5, divIndex ) );		
+					sizeEncoded	+= compressedSizePerDiv[divIndex]*5;
+					divIndex++;
+				}
+				totalSize += sizeEncoded;
+				recvSizePerProc[i] = sizeEncoded;
+
+				if (i == 0)
+					offsetBuffer[i] = 0;
+				else
+					offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
+			}
+
+			tempRecvBuffer = new float[ totalSize ];
+
+			std::cout << "divIndex: " << divIndex << "   totalDivisions: " << totalDivisions << std::endl;	
+		}
+
+		//std::cout << my_id << " ~ numDivisions: " << numDivisions << std::endl;
+
+        //  send   recv  others
+		MPI_Gatherv(images, sizeSending, MPI_FLOAT,    tempRecvBuffer, recvSizePerProc, offsetBuffer,MPI_FLOAT,        0, MPI_COMM_WORLD);		// all send to proc 0
+
+		if (my_id == 0){
+			// Create a buffer to store the composited image
+			imgBuffer = new float[sizex * sizey * 4];
+			
+			// Front to back
+			for (int i=0; i<(sizex * sizey * 4); i+=4){
+				imgBuffer[i+0] = background[0]/255.0;	
+				imgBuffer[i+1] = background[1]/255.0; 
+				imgBuffer[i+2] = background[2]/255.0; 
+				imgBuffer[i+3] = 1.0;
+			}
+
+			std::map< float,int >::iterator it;
+			it=depthPartitions.end();
+			int count = 0;
+			int offset = 0;
+			do{
+				--it;
+				std::cout << it->first << " => " << it->second << '\n';
+				imageBuffer temp;
+				temp.image = new float[sizex*sizey*4];
+
+				if (count == 0)
+					offset = 0;
+				else
+					offset += compressedSizePerDiv[count];
+				rleDecode(compressedSizePerDiv[count], tempRecvBuffer, offset, temp.image);
+				//memcpy(temp.image, &tempRecvBuffer[(count*(sizex*sizey*4))], (sizex*sizey*4)*sizeof(float) );
+
+				std::string imgFilenameFinal = "/home/pascal/Desktop/Decoded_Gathered_on_0_" + NumbToString(count) + "_Buffer.ppm";
+	        	createPpm(temp.image, sizex, sizey, imgFilenameFinal);
+
+	        	for (int j=0; j<sizey; j++){
+					for (int k=0; k<sizex; k++){
+						int imgIndex = sizex*4*j + k*4;										// index in the image 
+
+						// Back to front compositing
+						imgBuffer[imgIndex+0] = (imgBuffer[imgIndex+0] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+0];
+						imgBuffer[imgIndex+1] = (imgBuffer[imgIndex+1] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+1];
+						imgBuffer[imgIndex+2] = (imgBuffer[imgIndex+2] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+2];
+					}
+				}
+
+				//std::string imgFilename_Final = "/home/pascal/Desktop/_"+ NumbToString(count) + "_Numfinal.ppm";
+	        	//createPpm(imgBuffer, sizex, sizey, imgFilename_Final);
+
+	        	delete []temp.image;
+	        	count++;
+			}while( it!=depthPartitions.begin());
+			
+			//std::string imgFilename_Final = "/home/pascal/Desktop/_final.ppm";
+	        //createPpm(imgBuffer, sizex, sizey, imgFilename_Final);
+
+			if (tempRecvBuffer != NULL)
+				delete []tempRecvBuffer;
+			tempRecvBuffer = NULL;
+
+			if (offsetBuffer != NULL)
+				delete []offsetBuffer;
+			offsetBuffer = NULL;
+
+			if (recvSizePerProc != NULL)
+				delete []recvSizePerProc;
+			recvSizePerProc = NULL;
+		}
+
+		syncAllProcs();
+
+	#endif
+}
+
+
+
 
 
 // ****************************************************************************
@@ -705,11 +1113,12 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 			for (int i=0; i<num_procs; i++){
 				int numBoundsPerBlock = boundsPerBlockVec[i].size()/2;
 				totalDivisions += numBoundsPerBlock;
-				std::cout << i << " ~ "<< "boundsPerBlockVec[i].size(): " << numBoundsPerBlock << std::endl;
+				//std::cout << i << " ~ "<< "boundsPerBlockVec[i].size(): " << numBoundsPerBlock << std::endl;
 				recvSizePerProc[i] = numBoundsPerBlock*(sizex*sizey*4);
 
 				for (int j=0; j<boundsPerBlockVec[i].size(); j+=2){
-					depthPartitions.insert( std::pair< float,int > ( (boundsPerBlockVec[i][j] + boundsPerBlockVec[i][j+1]) * 0.5, divIndex ) );					
+					depthPartitions.insert( std::pair< float,int > ( (boundsPerBlockVec[i][j] + boundsPerBlockVec[i][j+1]) * 0.5, divIndex ) );	
+					//std::cout << j << " ~ "<< "boundsPerBlockVec[i][j]: " << boundsPerBlockVec[i][j] << " ,  " << boundsPerBlockVec[i][j+1] << std::endl;				
 					divIndex++;
 				}
 
@@ -719,10 +1128,9 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 					offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
 			}
 
-			totalDivisions = totalDivisions;
 			tempRecvBuffer = new float[ ( (sizex*sizey*4)*totalDivisions) ];
 
-			//std::cout << "divIndex: " << divIndex << "   totalDivisions: " << totalDivisions << std::endl;	
+			std::cout << "divIndex: " << divIndex << "   totalDivisions: " << totalDivisions << std::endl;	
 		}
 
 		//std::cout << my_id << " ~ numDivisions: " << numDivisions << std::endl;
@@ -779,6 +1187,14 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 			if (tempRecvBuffer != NULL)
 				delete []tempRecvBuffer;
 			tempRecvBuffer = NULL;
+
+			if (offsetBuffer != NULL)
+				delete []offsetBuffer;
+			offsetBuffer = NULL;
+
+			if (recvSizePerProc != NULL)
+				delete []recvSizePerProc;
+			recvSizePerProc = NULL;
 		}
 
 		syncAllProcs();
@@ -848,15 +1264,203 @@ imgMetaData avtImgCommunicator::setImg(int _inUse, int _procId, int _patchNumber
 }
 
 
-iotaMeta avtImgCommunicator::setIota(int _procId, int _patchNumber, float _imgArea, float _avg_z){
+iotaMeta avtImgCommunicator::setIota(int _procId, int _patchNumber, int dim_x, int dim_y, int screen_ll_x, int screen_ll_y, float _avg_z){
 	iotaMeta temp;
 	temp.procId = _procId;
 	temp.patchNumber = _patchNumber;
-	temp.imgArea = _imgArea;
+	temp.dims[0] = dim_x;					temp.dims[1] = dim_y;
+	temp.screen_ll[0] = screen_ll_x;		temp.screen_ll[1] = screen_ll_y;
 	temp.avg_z = _avg_z;
 	
 	return temp;
 }
+
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+
+bool compareColor(code x, float r, float g, float b, float a){
+	if ((x.color[0] == r && x.color[1]==g) &&  (x.color[2] == b && x.color[3]==a))
+		return true;
+	else
+		return false;
+}
+
+code initCode(int count, float r, float g, float b, float a){
+	code temp;
+	temp.count = count;
+	temp.color[0] = r;	temp.color[1]=g;	temp.color[2]=b; 	temp.color[3]=a;
+	return temp;	
+}
+
+code incrCode(code x){
+	x.count += 1;
+	return x;
+}
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+int avtImgCommunicator::rleEncode(int dimsX, int dimsY, float *array, int offset, code *& encoding){
+	std::vector<code> encodingVec;
+	encodingVec.clear();
+	code tempCode;
+	
+
+	// Encode the data
+	int i=0;
+	tempCode = initCode(1, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],  array[offset + (i*4+3)]);
+	for (i=1; i<dimsX*dimsY; i++){
+		if ( compareColor(tempCode, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],array[offset + (i*4+3)]) ){
+			tempCode = incrCode(tempCode);
+		}
+		else{
+			encodingVec.push_back(tempCode);
+			tempCode = initCode(1, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],array[offset + (i*4+3)]);
+		}
+	}
+	encodingVec.push_back(tempCode);
+
+
+
+	// Transfer the data to the encoding array
+	int encSize = encodingVec.size();
+	encoding = new code[encSize];
+	std::cout << my_id << "    encoding.size(): " << encSize << "   offset: " << offset << std::endl;
+	for (int j=0; j<encSize; j++){
+		//std::cout << encodingVec[j].count << " : " << encodingVec[j].color[0] << " ,  " << encodingVec[j].color[1] << " ,  " << encodingVec[j].color[2] << " ,  " << encodingVec[j].color[3] << std::endl;
+		encoding[j] = encodingVec[j];
+	}
+	encodingVec.clear();
+
+	return encSize;		// size of the array
+}
+
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, float *array, int numDivs, int *offsetArray,  float *& encoding, int *& sizeOFEncoding){
+	std::vector<code> encodingVec;
+	encodingVec.clear();
+	code tempCode;
+	sizeOFEncoding = new int[numDivs];
+
+	// Encode the data
+	for (int j=0; j<numDivs; j++){
+		int offset = offsetArray[j];
+		
+		int i=0;
+		tempCode = initCode(1, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],  array[offset + (i*4+3)]);
+		for (i=1; i<dimsX*dimsY; i++){
+			if ( compareColor(tempCode, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],array[offset + (i*4+3)]) ){
+				tempCode = incrCode(tempCode);
+			}
+			else{
+				encodingVec.push_back(tempCode);
+				tempCode = initCode(1, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],array[offset + (i*4+3)]);
+			}
+		}
+		encodingVec.push_back(tempCode);
+
+		if (j == 0)
+			sizeOFEncoding[j] = encodingVec.size();
+		else
+			sizeOFEncoding[j] = encodingVec.size() - sizeOFEncoding[j-1];
+
+		std::cout << my_id << "    encoding.size(): " << sizeOFEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << std::endl;
+	}
+
+
+
+	// Transfer the data to the encoding array
+	int encSize = encodingVec.size();
+	encoding = new float[encSize*5];
+	
+	//std::cout << my_id << "    encoding.size(): " << encSize << "   offset: " << offset << std::endl;
+	int index = 0;
+	for (int j=0; j<encSize; j++){
+
+		//std::cout << encodingVec[j].count << " : " << encodingVec[j].color[0] << " ,  " << encodingVec[j].color[1] << " ,  " << encodingVec[j].color[2] << " ,  " << encodingVec[j].color[3] << std::endl;
+		//encoding[j] = encodingVec[j];
+		encoding[index] = encodingVec[j].count;	index++;
+		encoding[index] = encodingVec[j].color[0];	index++;
+		encoding[index] = encodingVec[j].color[1];	index++;
+		encoding[index] = encodingVec[j].color[2];	index++;
+		encoding[index] = encodingVec[j].color[3];	index++;	
+	}
+	encodingVec.clear();
+
+	return encSize;		// size of the array
+}
+
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::rleDecode(int encSize, float *encoding, int offset, float *array){
+	int index=0;
+	int indexE = 0;
+	for (int i=0; i<encSize; i++){
+		//std::cout << "\n\n rle decode!!! " << i << std::endl;
+		for (int j=0; j<(int)encoding[offset+indexE+0]; j++){
+			//std::cout << i << " : " << encoding[i].count << std::endl;
+			array[index*4+0] = encoding[offset+indexE*4+1];
+			array[index*4+1] = encoding[offset+indexE*4+2];
+			array[index*4+2] = encoding[offset+indexE*4+3];
+			array[index*4+3] = encoding[offset+indexE*4+4];
+			index++;
+			//std::cout << index << std::endl;
+		}
+		indexE++;
+	}
+	
+	
+	//std::cout << "\n\n Decoded: \n";
+	//for (int i=0; i<index; i++){
+	//	std::cout << array[i*4+0] << " ,  " <<  array[i*4+1] << " ,  " << array[i*4+2] << " ,  " << array[i*4+3] << std::endl;
+	//}
+	
+}
+
+
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::

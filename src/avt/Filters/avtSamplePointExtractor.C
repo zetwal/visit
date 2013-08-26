@@ -844,11 +844,32 @@ avtSamplePointExtractor::getImgData(int patchId, imgData &tempImgData){
     tempImgData.procId = it->second.procId;
     tempImgData.patchNumber = it->second.patchNumber;
     memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1] * sizeof(float));
+}
+
+
+// ****************************************************************************
+//  Method: avtSamplePointExtractor::getImgData
+//
+//  Purpose:
+//      copies a patchover
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void 
+avtSamplePointExtractor::getnDelImgData(int patchId, imgData &tempImgData){
+    it = imgDataHashMap.find(patchId);
+
+    tempImgData.procId = it->second.procId;
+    tempImgData.patchNumber = it->second.patchNumber;
+    memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1] * sizeof(float));
 
     delete [](*it).second.imagePatch;
     it->second.imagePatch = NULL;
 }
-
 
 
 // ****************************************************************************
