@@ -182,9 +182,9 @@ avtImgCommunicator::~avtImgCommunicator(){
 			delete []compressedSizePerDiv;
 		compressedSizePerDiv = NULL;
 	}
-
 	
 	all_avgZ_proc0.clear();
+
 #ifdef PARALLEL
 	MPI_Type_free(&_img_mpi);
 #endif
@@ -218,16 +218,15 @@ int avtImgCommunicator::getDataPatchID(int procID, int patchID){
 //  Method: avtImgCommunicator::
 //
 //  Purpose:
+//		initialize 
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
 //
 //  Modifications:
 //
 // ****************************************************************************
 void avtImgCommunicator::init(){
-	if (my_id == 0)
-		processorPatchesCount = new int[num_procs];
 }
 
 
@@ -237,8 +236,8 @@ void avtImgCommunicator::init(){
 //  Purpose:
 //			Wait for all processors to hearch here before continuing
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
 //
 //  Modifications:
 //
@@ -252,12 +251,16 @@ void avtImgCommunicator::syncAllProcs(){
 
 
 // ****************************************************************************
-//  Method: avtImgCommunicator::
+//  Method: avtImgCommunicator::gatherNumPatches
 //
 //  Purpose:
+//		Get the number of patches each processor has
 //
-//  Programmer: 
-//  Creation:   
+//	Arguments:
+//		numPatches: number of patches a processor has
+//
+//  Programmer: Pascal Grosset
+//  Creation: July 2013
 //
 //  Modifications:
 //
@@ -268,9 +271,11 @@ void avtImgCommunicator::gatherNumPatches(int numPatches){
 
 	#ifdef PARALLEL
 		int *tempRecvBuffer = NULL;
-		// Only proc 0 receives data
-		if (my_id == 0)		
+
+		if (my_id == 0){	
+			processorPatchesCount = new int[num_procs];		// creates a buffer to hold the number of patches per processor
 			tempRecvBuffer = new int[num_procs*2];
+		}
 
 		MPI_Gather(patchesProc, 2, MPI_INT,   tempRecvBuffer, 2,MPI_INT,         0, MPI_COMM_WORLD);		// all send to proc 0
 
@@ -278,8 +283,6 @@ void avtImgCommunicator::gatherNumPatches(int numPatches){
 			for (int i=0; i<num_procs; i++){
 				processorPatchesCount[tempRecvBuffer[i*2]] = tempRecvBuffer[i*2 + 1];	// enter the number of patches for each processor
 				totalPatches += processorPatchesCount[tempRecvBuffer[i*2]];				// count the number of patches
-
-				//std::cout << "!!! Recv: " << tempRecvBuffer[i*2] << "   Patch: " << processorPatchesCount[tempRecvBuffer[i*2]] << std::endl;
 			}
 
 			if (tempRecvBuffer != NULL)
@@ -295,10 +298,15 @@ void avtImgCommunicator::gatherNumPatches(int numPatches){
 // ****************************************************************************
 //  Method: avtImgCommunicator::
 //
-//  Purpose:
+//  Purpose: 
+//		Send the metadata needed by the root node to make decisions
 //
-//  Programmer: 
-//  Creation:   
+//	Arguments:
+//		arraySize		: the number of elements being sent
+//		allIotaMetadata : the metadata bieng sent
+//
+//  Programmer: Pascal Grosset
+//  Creation: July 2013
 //
 //  Modifications:
 //
@@ -311,7 +319,7 @@ void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadat
 		int *offsetBuffer = NULL;
 
 		if (my_id == 0){
-			tempRecvBuffer = new float[totalPatches*7]; // x4: procId, patchNumber, imgArea, avg_z
+			tempRecvBuffer = new float[totalPatches*7]; // x7: procId, patchNumber, dims[0], dims[1], screen_ll[0], screen_ll[1], avg_z
 			recvSizePerProc = new int[num_procs];	
 			offsetBuffer = new int[num_procs];	
 			for (int i=0; i<num_procs; i++){
@@ -324,14 +332,12 @@ void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadat
 			}
 		}
 
-		MPI_Gatherv(allIotaMetadata, arraySize, MPI_FLOAT,   tempRecvBuffer, recvSizePerProc, offsetBuffer,MPI_FLOAT,         0, MPI_COMM_WORLD);		// all send to proc 0
+		MPI_Gatherv(allIotaMetadata, arraySize, MPI_FLOAT,   tempRecvBuffer, recvSizePerProc, offsetBuffer,MPI_FLOAT,    0, MPI_COMM_WORLD);// all send to proc 0
 
 		if (my_id == 0){
-			// Allocate space to receive the many patches
-			allRecvIotaMeta = new iotaMeta[totalPatches];
+			allRecvIotaMeta = new iotaMeta[totalPatches];	// allocate space to receive the many patches
 
 			iotaMeta tempPatch;
-
 			for (int i=0; i<totalPatches; i++){
 				tempPatch.procId = 		(int) tempRecvBuffer[i*7 + 0];
 				tempPatch.patchNumber = (int) tempRecvBuffer[i*7 + 1];
@@ -359,17 +365,17 @@ void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadat
 			tempRecvBuffer = NULL;
 
 		}
-
 	#endif	
 }
+
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::
 //
 //  Purpose:
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Manasa Prasad
+//  Creation: August 2013
 //
 //  Modifications:
 //
@@ -407,8 +413,8 @@ void determinePatchesToCompositeLocally(const std::vector<iotaMeta>& all_patches
 //
 //  Purpose:
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Manasa Prasad
+//  Creation: August 2013
 //
 //  Modifications:
 //
@@ -507,8 +513,8 @@ void determinePatchAdjacency(std::vector<iotaMeta>& allPatchesSorted, std::vecto
 //
 //  Purpose:
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Manasa Prasad
+//  Creation: August 2013
 //
 //  Modifications:
 //
@@ -542,6 +548,17 @@ std::map<int,int> numPatchesPerProc;
 
 
 
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: Manasa Prasad
+//  Creation: August 2013
+//
+//  Modifications:
+//
+// ****************************************************************************
 void avtImgCommunicator::patchAllocationLogic(){
 
 	// 1. do not send the numpatchespreproc vector!
@@ -560,7 +577,7 @@ void avtImgCommunicator::patchAllocationLogic(){
 	int num_avgZ_perBlock = (num_avgZ_proc0 / num_procs);
 	int rem_avgZ = num_avgZ_proc0 % num_procs;
 
-	printf("num_avg_z: %d num_procs: %d num_avgZ_perBlock: %d rem_avgZ: %d \n\n", num_avgZ_proc0, num_procs, num_avgZ_perBlock, rem_avgZ);
+	//printf("num_avg_z: %d num_procs: %d num_avgZ_perBlock: %d rem_avgZ: %d \n\n", num_avgZ_proc0, num_procs, num_avgZ_perBlock, rem_avgZ);
 	
 	//procToSend.resize 					(num_procs);
 	//all_patches_sorted_avgZ_proc0.resize(num_procs);
@@ -615,12 +632,12 @@ void avtImgCommunicator::patchAllocationLogic(){
 	}
 
 	// Printing for error check
-	for(int i = 0; i < num_procs; ++i){
-		printf("Block %d\n", i );
-		for(std::vector<iotaMeta>::iterator it = all_patches_sorted_avgZ_proc0[i].begin(); it != all_patches_sorted_avgZ_proc0[i].end(); ++it){
-			printf("\t %.5f \t %d\n", it->avg_z, it->procId);
-		}
-	}
+	// for(int i = 0; i < num_procs; ++i){
+	// 	printf("Block %d\n", i );
+	// 	for(std::vector<iotaMeta>::iterator it = all_patches_sorted_avgZ_proc0[i].begin(); it != all_patches_sorted_avgZ_proc0[i].end(); ++it){
+	// 		printf("\t %.5f \t %d\n", it->avg_z, it->procId);
+	// 	}
+	// }
 
 
 	std::vector< std::vector<int> >	 patchesToSendVec (num_procs);
@@ -711,7 +728,7 @@ void avtImgCommunicator::patchAllocationLogic(){
 		for (std::map<int,int>::iterator it = patchesToRecvMap[currentProcId].begin(); it!=patchesToRecvMap[currentProcId].end(); ++it){
 				patchesToRecvArray[recvDisplacementForProcs[currentProcId] + (count++)] = it->first;
 				patchesToRecvArray[recvDisplacementForProcs[currentProcId] + (count++)] = it->second;
-				printf("\t numPatches %d origin: %d\n", it->second, it->first);
+				//printf("\t numPatches %d origin: %d\n", it->second, it->first);
 		}
 
 		count = 0;
@@ -744,8 +761,8 @@ void avtImgCommunicator::patchAllocationLogic(){
 //
 //  Purpose:
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Manasa Prasad
+//  Creation: July 2013
 //
 //  Modifications:
 //
@@ -759,9 +776,8 @@ void avtImgCommunicator::scatterNumDataToCompose(int &totalSendData, int &totalR
 
 	totalSendData = totalSendRecvData[0];
 	totalRecvData = totalSendRecvData[1];
-	numDivisions = totalSendRecvData[2]; // 2 times num divisions
+	numDivisions = totalSendRecvData[2]; // twice the  number of divisions
 	totalPatchesToCompositeLocally = totalSendRecvData[3];
-
 }
 
 
@@ -771,8 +787,8 @@ void avtImgCommunicator::scatterNumDataToCompose(int &totalSendData, int &totalR
 //
 //  Purpose:
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Manasa Prasad
+//  Creation: July 2013
 //
 //  Modifications:
 //
@@ -826,8 +842,8 @@ void avtImgCommunicator::scatterDataToCompose(	int& totalSendData, int* informat
 //
 //  Purpose:
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
 //
 //  Modifications:
 //
@@ -847,7 +863,17 @@ void avtImgCommunicator::sendPointToPoint(imgMetaData toSendMetaData, imgData to
 }
 
 
-
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
+//
+//  Modifications:
+//
+// ****************************************************************************
 void avtImgCommunicator::recvPointToPoint(imgMetaData &recvMetaData, imgData &recvImgData){
 	#ifdef PARALLEL
 
@@ -867,6 +893,18 @@ void avtImgCommunicator::recvPointToPoint(imgMetaData &recvMetaData, imgData &re
     #endif
 }
 
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
+//
+//  Modifications:
+//
+// ****************************************************************************
 void avtImgCommunicator::recvPointToPointMetaData(imgMetaData &recvMetaData){
 	#ifdef PARALLEL
 
@@ -881,6 +919,17 @@ void avtImgCommunicator::recvPointToPointMetaData(imgMetaData &recvMetaData){
 }
 
 
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
+//
+//  Modifications:
+//
+// ****************************************************************************
 void avtImgCommunicator::recvPointToPointImgData(imgMetaData recvMetaData, imgData &recvImgData){
 	#ifdef PARALLEL
         MPI_Recv(recvImgData.imagePatch, recvMetaData.dims[0]*recvMetaData.dims[1]*4, MPI_FLOAT, status.MPI_SOURCE, 1, MPI_COMM_WORLD, &status);
@@ -888,13 +937,14 @@ void avtImgCommunicator::recvPointToPointImgData(imgMetaData recvMetaData, imgDa
 }
 
 
+
 // ****************************************************************************
 //  Method: avtImgCommunicator::
 //
 //  Purpose:
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
 //
 //  Modifications:
 //
@@ -926,9 +976,9 @@ void avtImgCommunicator::gatherEncodingSizes(int *sizeEncoding, int numDivisions
 			compressedSizePerDiv = new int[totalDivisions];
 		}
 
-		if (numDivisions > 0)
-			for (int i=0; i<numDivisions; i++)
-				std::cout << my_id << " ~  encoding size of " << i << " :  "<< sizeEncoding[i] << std::endl;
+		//if (numDivisions > 0)
+		//	for (int i=0; i<numDivisions; i++)
+		//		std::cout << my_id << " ~  encoding size of " << i << " :  "<< sizeEncoding[i] << std::endl;
 		
         //  send   recv  others
 		MPI_Gatherv(sizeEncoding, numDivisions, MPI_INT,    compressedSizePerDiv, recvSizePerProc, offsetBuffer,MPI_INT,      0, MPI_COMM_WORLD); // all send to proc 0
@@ -936,8 +986,8 @@ void avtImgCommunicator::gatherEncodingSizes(int *sizeEncoding, int numDivisions
 
 
 		if (my_id == 0){
-			for (int i=0; i<totalDivisions; i++)
-				std::cout << "div " << i << " : " << compressedSizePerDiv[i] << std::endl;
+			//for (int i=0; i<totalDivisions; i++)
+			//	std::cout << "div " << i << " : " << compressedSizePerDiv[i] << std::endl;
 
 			if (offsetBuffer != NULL) 
 				delete []offsetBuffer;
@@ -957,8 +1007,8 @@ void avtImgCommunicator::gatherEncodingSizes(int *sizeEncoding, int numDivisions
 //
 //  Purpose:
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
 //
 //  Modifications:
 //
@@ -982,7 +1032,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 			for (int i=0; i<num_procs; i++){
 				int numBoundsPerBlock = boundsPerBlockVec[i].size()/2;
 				totalDivisions += numBoundsPerBlock;
-				std::cout << i << " ~ "<< "boundsPerBlockVec[i].size(): " << numBoundsPerBlock << std::endl;
+				//std::cout << i << " ~ "<< "boundsPerBlockVec[i].size(): " << numBoundsPerBlock << std::endl;
 				
 				int sizeEncoded = 0;
 				for (int j=0; j<boundsPerBlockVec[i].size(); j+=2){
@@ -1004,7 +1054,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 			std::cout << "divIndex: " << divIndex << "   totalDivisions: " << totalDivisions << std::endl;	
 		}
 
-		std::cout << my_id << " ~ numDivisions: " << numDivisions << "   size encoding: " << sizeSending << std::endl;
+		//std::cout << my_id << " ~ numDivisions: " << numDivisions << "   size encoding: " << sizeSending << std::endl;
 
         //  send   recv  others
 		MPI_Gatherv(images, sizeSending, MPI_FLOAT,    tempRecvBuffer, recvSizePerProc, offsetBuffer,MPI_FLOAT,        0, MPI_COMM_WORLD);		// all send to proc 0
@@ -1027,7 +1077,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 			int offset = 0;
 			do{
 				--it;
-				std::cout << it->first << " => " << it->second << '\n';
+				//std::cout << it->first << " => " << it->second << '\n';
 				imageBuffer temp;
 				temp.image = new float[sizex*sizey*4];
 
@@ -1036,8 +1086,8 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 				else
 					offset += compressedSizePerDiv[count-1];
 
-				std::cout << my_id << " ~ compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << "   count: " << count << "   offset: " << offset << std::endl;
-				rleDecode(compressedSizePerDiv[count], tempRecvBuffer, offset, temp.image);
+				//std::cout << my_id << " ~ compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << "   count: " << count << "   offset: " << offset << std::endl;
+				rleDecode(compressedSizePerDiv[count], tempRecvBuffer, offset*5, temp.image);
 
 				
 				//if (count == 1){
@@ -1101,8 +1151,8 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 //
 //  Purpose:
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
 //
 //  Modifications:
 //
@@ -1166,7 +1216,8 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 			int count = 0;
 			do{
 				--it;
-				std::cout << it->first << " => " << it->second << '\n';
+				//std::cout << it->first << " => " << it->second << '\n';
+
 				imageBuffer temp;
 				temp.image = new float[sizex*sizey*4];
 				memcpy(temp.image, &tempRecvBuffer[(count*(sizex*sizey*4))], (sizex*sizey*4)*sizeof(float) );
@@ -1219,8 +1270,8 @@ void avtImgCommunicator::gatherAndAssembleImages(int sizex, int sizey, float *im
 //
 //  Purpose:
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
 //
 //  Modifications:
 //
@@ -1254,8 +1305,8 @@ void avtImgCommunicator::getcompositedImage(int imgBufferWidth, int imgBufferHei
 //
 //  Purpose:
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
 //
 //  Modifications:
 //
@@ -1275,6 +1326,17 @@ imgMetaData avtImgCommunicator::setImg(int _inUse, int _procId, int _patchNumber
 }
 
 
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
+//
+//  Modifications:
+//
+// ****************************************************************************
 iotaMeta avtImgCommunicator::setIota(int _procId, int _patchNumber, int dim_x, int dim_y, int screen_ll_x, int screen_ll_y, float _avg_z){
 	iotaMeta temp;
 	temp.procId = _procId;
@@ -1285,6 +1347,8 @@ iotaMeta avtImgCommunicator::setIota(int _procId, int _patchNumber, int dim_x, i
 	
 	return temp;
 }
+
+
 
 
 
@@ -1307,6 +1371,19 @@ bool compareColor(code x, float r, float g, float b, float a){
 		return false;
 }
 
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+
 code initCode(int count, float r, float g, float b, float a){
 	code temp;
 	temp.count = count;
@@ -1314,16 +1391,40 @@ code initCode(int count, float r, float g, float b, float a){
 	return temp;	
 }
 
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+
 code incrCode(code x){
 	x.count += 1;
 	return x;
 }
 
 
+
 // ****************************************************************************
 //  Method: avtImgCommunicator::
 //
 //  Purpose:
+//		Encodes an image using RLE: Runlength, R, G, B, A
+//
+//  Arguments:
+//		dimsX & dimsY	: width & height of the image
+//		imgArray	 	: array containing all the division composited by this processor
+//		numDivs 	 	: number of Z divisions
+//
+//		encoding     	: the image compressed using RLE; it's a float so that it can be sent directly using MPI
+//		sizeOfEncoding	: the compressed size of each image
+//
 //
 //  Programmer: 
 //  Creation:   
@@ -1331,102 +1432,46 @@ code incrCode(code x){
 //  Modifications:
 //
 // ****************************************************************************
-int avtImgCommunicator::rleEncode(int dimsX, int dimsY, float *array, int offset, code *& encoding){
+int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *imgArray,  float *& encoding, int *& sizeOfEncoding){
 	std::vector<code> encodingVec;
 	encodingVec.clear();
 	code tempCode;
-	
-
-	// Encode the data
-	int i=0;
-	tempCode = initCode(1, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],  array[offset + (i*4+3)]);
-	for (i=1; i<dimsX*dimsY; i++){
-		if ( compareColor(tempCode, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],array[offset + (i*4+3)]) ){
-			tempCode = incrCode(tempCode);
-		}
-		else{
-			encodingVec.push_back(tempCode);
-			tempCode = initCode(1, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],array[offset + (i*4+3)]);
-		}
-	}
-	encodingVec.push_back(tempCode);
-
-
-
-	// Transfer the data to the encoding array
-	int encSize = encodingVec.size();
-	encoding = new code[encSize];
-	std::cout << my_id << "    encoding.size(): " << encSize << "   offset: " << offset << std::endl;
-	for (int j=0; j<encSize; j++){
-		//std::cout << encodingVec[j].count << " : " << encodingVec[j].color[0] << " ,  " << encodingVec[j].color[1] << " ,  " << encodingVec[j].color[2] << " ,  " << encodingVec[j].color[3] << std::endl;
-		encoding[j] = encodingVec[j];
-	}
-	encodingVec.clear();
-
-	return encSize;		// size of the array
-}
-
-
-
-// ****************************************************************************
-//  Method: avtImgCommunicator::
-//
-//  Purpose:
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, float *array, int numDivs, int *offsetArray,  float *& encoding, int *& sizeOFEncoding){
-	std::vector<code> encodingVec;
-	encodingVec.clear();
-	code tempCode;
-	sizeOFEncoding = new int[numDivs];
+	sizeOfEncoding = new int[numDivs];
 	int prev = 0;
 
-	// Encode the data
+	// Compress the data
 	for (int j=0; j<numDivs; j++){
-		int offset = offsetArray[j];
-		
+		int offset = dimsX*dimsY*4  *  j;	// to get the next image in the array of images
+
 		int i=0;
-		tempCode = initCode(1, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],  array[offset + (i*4+3)]);
+		tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],  imgArray[offset + (i*4+3)]);
 		for (i=1; i<dimsX*dimsY; i++){
-			if ( compareColor(tempCode, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],array[offset + (i*4+3)]) ){
+			if ( compareColor(tempCode, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],imgArray[offset + (i*4+3)]) )
 				tempCode = incrCode(tempCode);
-			}
 			else{
 				encodingVec.push_back(tempCode);
-				tempCode = initCode(1, array[offset + (i*4+0)],array[offset + (i*4+1)],array[offset + (i*4+2)],array[offset + (i*4+3)]);
+				tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],imgArray[offset + (i*4+3)]);
 			}
 		}
 		encodingVec.push_back(tempCode);
 
 		if (j == 0)
-			prev = sizeOFEncoding[j] = encodingVec.size();
+			prev = sizeOfEncoding[j] = encodingVec.size();
 		else{
-			//sum += encodingVec.size() - sizeOFEncoding[j-1];
-			//sizeOFEncoding[j] = encodingVec.size() - sizeOFEncoding[j-1];
-			sizeOFEncoding[j] = encodingVec.size() - prev;
+			sizeOfEncoding[j] = encodingVec.size() - prev;
 			prev = encodingVec.size();
 		}
 
-		std::cout << my_id << "    encoding.size(): " << sizeOFEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << "   size: " << encodingVec.size() << std::endl;
+		//debug5 <<  my_id << "  ~  encoding.size(): " << sizeOfEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << "   size: " << encodingVec.size() << std::endl;
 	}
-
 
 
 	// Transfer the data to the encoding array
 	int encSize = encodingVec.size();
 	encoding = new float[encSize*5];
 	
-	//std::cout << my_id << "    encoding.size(): " << encSize << "   offset: " << offset << std::endl;
 	int index = 0;
 	for (int j=0; j<encSize; j++){
-
-		//std::cout << encodingVec[j].count << " : " << encodingVec[j].color[0] << " ,  " << encodingVec[j].color[1] << " ,  " << encodingVec[j].color[2] << " ,  " << encodingVec[j].color[3] << std::endl;
-		//encoding[j] = encodingVec[j];
 		encoding[index] = encodingVec[j].count;	index++;
 		encoding[index] = encodingVec[j].color[0];	index++;
 		encoding[index] = encodingVec[j].color[1];	index++;
@@ -1444,50 +1489,36 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, float *array, int num
 //  Method: avtImgCommunicator::
 //
 //  Purpose:
+//		Decodes rle encoded image to an RGBA image the size of the screen
 //
-//  Programmer: 
-//  Creation:   
+//  Arguments:
+//		encSize : size of compressed image
+//		encoding: the image to be decoded
+//		offset  : offset in the encoding array (all images from all procs are stored in 1 array)
+//		img     : an array containing the RGBA decompressed image
+//
+//  Programmer: Pascal Grosset
+//  Creation: August 23, 2013
 //
 //  Modifications:
 //
 // ****************************************************************************
-void avtImgCommunicator::rleDecode(int encSize, float *encoding, int offset, float *array){
-	int index = 0;
+void avtImgCommunicator::rleDecode(int encSize, float *encoding, int offset, float *& img){
+	int imgIndex = 0;	// index into the image to be decompressed
 
-	std::cout << my_id << " ~  offset: " << offset  << " encSize: " << encSize << std::endl;
+	//debug5 << " 0 ~ offset: " << offset  << " encSize: " << encSize << std::endl;
 
-	for (int i=0; i<encSize; i++){
-		for (int j=0; j<(int)encoding[offset*5 + i*5 + 0]; j++){
+	for (int i=0; i<encSize; i++)
+		for (int j=0; j<(int)encoding[offset + i*5 + 0]; j++)	// *5 to offset into image; +0 run count
+		{
+			img[imgIndex*4 + 0] = encoding[offset + i*5 + 1];	// R
+			img[imgIndex*4 + 1] = encoding[offset + i*5 + 2];	// G
+			img[imgIndex*4 + 2] = encoding[offset + i*5 + 3];	// B
+			img[imgIndex*4 + 3] = encoding[offset + i*5 + 4];	// A
 
-			array[index*4 + 0] = encoding[offset*5 + i*5 + 1];
-			array[index*4 + 1] = encoding[offset*5 + i*5 + 2];
-			array[index*4 + 2] = encoding[offset*5 + i*5 + 3];
-			array[index*4 + 3] = encoding[offset*5 + i*5 + 4];
-
-			index++;
+			imgIndex++;
 		}
-	}
-
-	/*
-	rleDecode(compressedSizePerDiv[count], tempRecvBuffer, offset, temp.image);
-
-				
-				if (count == 1){
-            		for (int i=0; i<compressedSizePerDiv[count]; i++){
-                		std::cout <<  " @0 ~ " << i << " server " << tempRecvBuffer[offset*5 + i*5+0] << " : " << tempRecvBuffer[offset*5 +i*5+1] << " ,  " << tempRecvBuffer[offset*5 +i*5+2] << " ,  " << tempRecvBuffer[offset*5 +i*5+3] << " ,  " << tempRecvBuffer[offset*5 + i*5+4] << std::endl;
-            		}
-				}
-
-	*/
-	
-	
-	//std::cout << "\n\n Decoded: \n";
-	//for (int i=0; i<index; i++){
-	//	std::cout << array[i*4+0] << " ,  " <<  array[i*4+1] << " ,  " << array[i*4+2] << " ,  " << array[i*4+3] << std::endl;
-	//}
-	
 }
-
 
 
 // ****************************************************************************
@@ -1530,9 +1561,6 @@ MPI_Datatype avtImgCommunicator::createMetaDataType(){
 //  Modifications:
 //
 // ****************************************************************************
-
-
-
 
 void createPpm(float array[], int dimx, int dimy, std::string filename){
     int i, j;

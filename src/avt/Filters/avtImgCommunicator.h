@@ -93,11 +93,10 @@ public:
 	void getcompositedImage(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage);	// get the final composited image
 
 
-	int rleEncode(int dimsX, int dimsY, float *array, int offset, code *& encoding);
 
-
-	int rleEncodeAll(int dimsX, int dimsY, float *array, int numDivs, int *offsetArray,  float *& encoding, int *& offsetEncoding);
-	void rleDecode(int encSize, float *encoding, int offset, float *array);
+	// RLE Encoding
+	int rleEncodeAll(int dimsX, int dimsY, int numDivs, float *imgArray,  float *& encoding, int *& sizeOfEncoding);
+	void rleDecode(int encSize, float *encoding, int offset, float *& img);
 
 
 	void syncAllProcs();
