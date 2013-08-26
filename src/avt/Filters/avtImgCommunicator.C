@@ -1005,7 +1005,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 			std::cout << "divIndex: " << divIndex << "   totalDivisions: " << totalDivisions << std::endl;	
 		}
 
-		//std::cout << my_id << " ~ numDivisions: " << numDivisions << std::endl;
+		std::cout << my_id << " ~ numDivisions: " << numDivisions << "   size encoding: " << sizeSending << std::endl;
 
         //  send   recv  others
 		MPI_Gatherv(images, sizeSending, MPI_FLOAT,    tempRecvBuffer, recvSizePerProc, offsetBuffer,MPI_FLOAT,        0, MPI_COMM_WORLD);		// all send to proc 0
@@ -1438,6 +1438,8 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, float *array, int num
 void avtImgCommunicator::rleDecode(int encSize, float *encoding, int offset, float *array){
 	int index=0;
 	int indexE = 0;
+
+	std::cout << my_id << " ~  offset: " << offset << std::endl;
 	for (int i=0; i<encSize; i++){
 		//std::cout << "\n\n rle decode!!! " << i << std::endl;
 		for (int j=0; j<(int)encoding[offset+indexE+0]; j++){
