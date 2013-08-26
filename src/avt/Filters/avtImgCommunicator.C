@@ -984,7 +984,6 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 				totalDivisions += numBoundsPerBlock;
 				std::cout << i << " ~ "<< "boundsPerBlockVec[i].size(): " << numBoundsPerBlock << std::endl;
 				
-
 				int sizeEncoded = 0;
 				for (int j=0; j<boundsPerBlockVec[i].size(); j+=2){
 					depthPartitions.insert( std::pair< float,int > ( (boundsPerBlockVec[i][j] + boundsPerBlockVec[i][j+1]) * 0.5, divIndex ) );		
@@ -1035,12 +1034,22 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 				if (count == 0)
 					offset = 0;
 				else
-					offset += compressedSizePerDiv[count];
+					offset += compressedSizePerDiv[count-1];
+
+				std::cout << my_id << " ~ compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << "   count: " << count << "   offset: " << offset << std::endl;
 				rleDecode(compressedSizePerDiv[count], tempRecvBuffer, offset, temp.image);
+
+				
+				//if (count == 1){
+            	//	for (int i=0; i<compressedSizePerDiv[count]; i++){
+                //		std::cout <<  " @0 ~ " << i << " server " << tempRecvBuffer[offset*5 + i*5+0] << " : " << tempRecvBuffer[offset*5 +i*5+1] << " ,  " << tempRecvBuffer[offset*5 +i*5+2] << " ,  " << tempRecvBuffer[offset*5 +i*5+3] << " ,  " << tempRecvBuffer[offset*5 + i*5+4] << std::endl;
+            	//	}
+				//}
+
 				//memcpy(temp.image, &tempRecvBuffer[(count*(sizex*sizey*4))], (sizex*sizey*4)*sizeof(float) );
 
-				std::string imgFilenameFinal = "/home/pascal/Desktop/Decoded_Gathered_on_0_" + NumbToString(count) + "_Buffer.ppm";
-	        	createPpm(temp.image, sizex, sizey, imgFilenameFinal);
+				//std::string imgFilenameFinal = "/home/pascal/Desktop/Decoded_Gathered_on_0_" + NumbToString(count) + "_Buffer.ppm";
+	        	//createPpm(temp.image, sizex, sizey, imgFilenameFinal);
 
 	        	for (int j=0; j<sizey; j++){
 					for (int k=0; k<sizex; k++){
@@ -1057,6 +1066,8 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 	        	//createPpm(imgBuffer, sizex, sizey, imgFilename_Final);
 
 	        	delete []temp.image;
+	        	temp.image = NULL;
+
 	        	count++;
 			}while( it!=depthPartitions.begin());
 			
@@ -1373,6 +1384,7 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, float *array, int num
 	encodingVec.clear();
 	code tempCode;
 	sizeOFEncoding = new int[numDivs];
+	int prev = 0;
 
 	// Encode the data
 	for (int j=0; j<numDivs; j++){
@@ -1392,11 +1404,15 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, float *array, int num
 		encodingVec.push_back(tempCode);
 
 		if (j == 0)
-			sizeOFEncoding[j] = encodingVec.size();
-		else
-			sizeOFEncoding[j] = encodingVec.size() - sizeOFEncoding[j-1];
+			prev = sizeOFEncoding[j] = encodingVec.size();
+		else{
+			//sum += encodingVec.size() - sizeOFEncoding[j-1];
+			//sizeOFEncoding[j] = encodingVec.size() - sizeOFEncoding[j-1];
+			sizeOFEncoding[j] = encodingVec.size() - prev;
+			prev = encodingVec.size();
+		}
 
-		std::cout << my_id << "    encoding.size(): " << sizeOFEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << std::endl;
+		std::cout << my_id << "    encoding.size(): " << sizeOFEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << "   size: " << encodingVec.size() << std::endl;
 	}
 
 
@@ -1436,23 +1452,33 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, float *array, int num
 //
 // ****************************************************************************
 void avtImgCommunicator::rleDecode(int encSize, float *encoding, int offset, float *array){
-	int index=0;
-	int indexE = 0;
+	int index = 0;
 
-	std::cout << my_id << " ~  offset: " << offset << std::endl;
+	std::cout << my_id << " ~  offset: " << offset  << " encSize: " << encSize << std::endl;
+
 	for (int i=0; i<encSize; i++){
-		//std::cout << "\n\n rle decode!!! " << i << std::endl;
-		for (int j=0; j<(int)encoding[offset+indexE+0]; j++){
-			//std::cout << i << " : " << encoding[i].count << std::endl;
-			array[index*4+0] = encoding[offset+indexE*4+1];
-			array[index*4+1] = encoding[offset+indexE*4+2];
-			array[index*4+2] = encoding[offset+indexE*4+3];
-			array[index*4+3] = encoding[offset+indexE*4+4];
+		for (int j=0; j<(int)encoding[offset*5 + i*5 + 0]; j++){
+
+			array[index*4 + 0] = encoding[offset*5 + i*5 + 1];
+			array[index*4 + 1] = encoding[offset*5 + i*5 + 2];
+			array[index*4 + 2] = encoding[offset*5 + i*5 + 3];
+			array[index*4 + 3] = encoding[offset*5 + i*5 + 4];
+
 			index++;
-			//std::cout << index << std::endl;
 		}
-		indexE++;
 	}
+
+	/*
+	rleDecode(compressedSizePerDiv[count], tempRecvBuffer, offset, temp.image);
+
+				
+				if (count == 1){
+            		for (int i=0; i<compressedSizePerDiv[count]; i++){
+                		std::cout <<  " @0 ~ " << i << " server " << tempRecvBuffer[offset*5 + i*5+0] << " : " << tempRecvBuffer[offset*5 +i*5+1] << " ,  " << tempRecvBuffer[offset*5 +i*5+2] << " ,  " << tempRecvBuffer[offset*5 +i*5+3] << " ,  " << tempRecvBuffer[offset*5 + i*5+4] << std::endl;
+            		}
+				}
+
+	*/
 	
 	
 	//std::cout << "\n\n Decoded: \n";

@@ -1080,7 +1080,7 @@ imgComm.syncAllProcs();
         int *sizeEncoding = NULL;
         int *offsetArray = new int[numZDivisions];
         for (int i=0; i<numZDivisions; i++)
-            offsetArray[i] = allImgMetaData[i].dims[1]*allImgMetaData[i].dims[0]*4  *  i;
+            offsetArray[i] = imgBufferWidth*imgBufferHeight*4  *  i;
 
         int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, buffer,numZDivisions,offsetArray, encoding,sizeEncoding);
 
@@ -1108,7 +1108,13 @@ imgComm.syncAllProcs();
         // Gather all the images
         imgComm.gatherEncodingSizes(sizeEncoding, numZDivisions);
         //void gatherAndAssembleEncodedImages(int sizex, int sizey, float *image, int numDivisions);
-        imgComm.gatherAndAssembleEncodedImages(screen[0], screen[1], totalEncodingSize*5, buffer, numZDivisions);
+        imgComm.gatherAndAssembleEncodedImages(screen[0], screen[1], totalEncodingSize*5, encoding, numZDivisions);
+
+       // if (PAR_Rank() == 3){
+      //      for (int i=0; i<totalEncodingSize; i++){
+       //         debug5 << PAR_Rank() << " ~ " << i << "   client " << encoding[i*5+0] << " : " << encoding[i*5+1] << " ,  " << encoding[i*5+2] << " ,  " << encoding[i*5+3] << " ,  " << encoding[i*5+4] << endl;
+       //     }
+       // }
 
         imgComm.syncAllProcs();
         std::cout << PAR_Rank() << "  \t! ---------------------------  gatherEncodingSizes end ----------------------------------- !  " << std::endl;
