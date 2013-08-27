@@ -75,10 +75,8 @@
 avtImageCommunicator::avtImageCommunicator()
 {
 #ifdef PARALLEL
-    std::cout << "avtImageCommunicator::avtImageCommunicator " << std::endl;
     MPI_Comm_size(VISIT_MPI_COMM, &numProcs);
     MPI_Comm_rank(VISIT_MPI_COMM, &myRank);
-    std::cout << "       avtImageCommunicator::avtImageCommunicator End!!!" << std::endl;
 #else
     numProcs = 1; myRank = 0;
 #endif
@@ -121,9 +119,7 @@ avtImageCommunicator::~avtImageCommunicator()
 void
 avtImageCommunicator::SetImagePartition(avtImagePartition *ip)
 {
-    std::cout << "avtImageCommunicator::SetImagePartition " << std::endl;
     imagePartition = ip;
-    std::cout << "  avtImageCommunicator::SetImagePartition End!!!" << std::endl;
 }
 
 
@@ -165,7 +161,6 @@ void
 avtImageCommunicator::Execute(void)
 {
 #ifdef PARALLEL
-    std::cout << " avtImageCommunicator::Execute " << std::endl;
     int timingsIndex = visitTimer->StartTimer();
 
     if (imagePartition == NULL)
@@ -285,10 +280,7 @@ avtImageCommunicator::Execute(void)
     }
 
     visitTimer->StopTimer(timingsIndex, "Image Communication");
-
-    std::cout << "    avtImageCommunicator::Execute End!!!" << std::endl;
 #endif
 }
-
 
 

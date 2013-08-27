@@ -135,6 +135,7 @@ avtImgCommunicator::avtImgCommunicator(){
     processorPatchesCount = NULL;
 	imgBuffer = NULL;
 
+	allRecvIotaMeta = NULL;
 	patchesToSendArray = NULL;
 	patchesToRecvArray = NULL;
 	numPatchesToSendArray = NULL;
