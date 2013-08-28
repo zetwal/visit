@@ -499,7 +499,7 @@ avtRayTracer::Execute(void)
         int numPatches = extractor.getImgPatchSize();     // get the number of patches - Brown /8 procs / 100 each
         imgComm.gatherNumPatches(numPatches);
 
-        debug5 << PAR_Rank() << "   avtRayTracer::Execute     numPatches: " << numPatches << "   total assigned: " << extractor.getTotalAssignedPatches() << endl;
+        debug5 << PAR_Rank() << "   avtRayTracer::Execute  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << extractor.getTotalAssignedPatches() << endl;
 
 
         //
@@ -530,6 +530,7 @@ avtRayTracer::Execute(void)
         delete []tempSendBuffer;
         tempSendBuffer = NULL;
 
+        debug5 << PAR_Rank() << "   avtRayTracer::Execute  - Send/Receive the patches iota " << endl;
 
         //
         // --- Timing -- //
@@ -545,6 +546,7 @@ avtRayTracer::Execute(void)
         if (PAR_Rank() == 0)
             imgComm.patchAllocationLogic();    
 
+        debug5 << PAR_Rank() << "   avtRayTracer::Execute  - imgComm.patchAllocationLogic() " << endl;
 
         // informationToRecvArray:   (procId, numPatches)           (procId, numPatches)         (procId, numPatches)  ...
         // informationToSendArray:   (patchNumber, destProcId)     (patchNumber, destProcId)    (patchNumber, destProcId)  ...
@@ -793,7 +795,7 @@ avtRayTracer::Execute(void)
                             else std::cout << PAR_Rank() << " uuuuuuuh it didn't find the patch" << std::endl;
                         }
 
-                        imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
+                        imgComm.sendPointToPoint(tempImgMetaData,tempImgData, numProcessors);
 
                         if (tempImgData.imagePatch != NULL)
                             delete []tempImgData.imagePatch;
@@ -822,12 +824,12 @@ avtRayTracer::Execute(void)
                     imgData tempImgData;
                     imgMetaData tempImgMetaData;
 
-                    imgComm.recvPointToPointMetaData(tempImgMetaData);
+                    imgComm.recvPointToPointMetaData(tempImgMetaData, numProcessors);
 
                     tempImgData.procId = tempImgMetaData.procId;
                     tempImgData.patchNumber = tempImgMetaData.patchNumber;
                     tempImgData.imagePatch = new float[tempImgMetaData.dims[0]*tempImgMetaData.dims[1] * 4];
-                    imgComm.recvPointToPointImgData(tempImgMetaData, tempImgData);
+                    imgComm.recvPointToPointImgData(tempImgMetaData, tempImgData, numProcessors);
 
                     allImgMetaData.push_back(tempImgMetaData);
                     imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgMetaData.procId, tempImgMetaData.patchNumber), tempImgData));
@@ -851,12 +853,12 @@ avtRayTracer::Execute(void)
                     imgMetaData tempImgMetaData;
 
                     //imgComm.recvPointToPoint(tempImgMetaData, tempImgData);
-                    imgComm.recvPointToPointMetaData(tempImgMetaData);
+                    imgComm.recvPointToPointMetaData(tempImgMetaData, numProcessors);
 
                     tempImgData.procId = tempImgMetaData.procId;
                     tempImgData.patchNumber = tempImgMetaData.patchNumber;
                     tempImgData.imagePatch = new float[tempImgMetaData.dims[0]*tempImgMetaData.dims[1] * 4];
-                    imgComm.recvPointToPointImgData(tempImgMetaData, tempImgData);
+                    imgComm.recvPointToPointImgData(tempImgMetaData, tempImgData, numProcessors);
 
                     allImgMetaData.push_back(tempImgMetaData);
                     imgDataToCompose.insert( std::pair< std::pair<int,int>, imgData> (std::pair<int,int>(tempImgMetaData.procId, tempImgMetaData.patchNumber), tempImgData));
@@ -894,8 +896,7 @@ avtRayTracer::Execute(void)
                         }
                         
 
-
-                        imgComm.sendPointToPoint(tempImgMetaData,tempImgData);
+                        imgComm.sendPointToPoint(tempImgMetaData,tempImgData, numProcessors);
 
                         if (tempImgData.imagePatch != NULL)
                             delete []tempImgData.imagePatch;

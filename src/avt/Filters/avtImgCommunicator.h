@@ -79,11 +79,11 @@ public:
 								int& numDivisions, float* blocksPerProc,
 								int& totalPatchesToCompositeLocally, int* patchesToCompositeLocally);
 
-	void sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData);	// Send out the patches and receive them
+	void sendPointToPoint(imgMetaData toSendMetaData, imgData toSendImgData, int tag);	// Send out the patches and receive them
 	void recvPointToPoint(imgMetaData &recvMetaData, imgData &recvImgData);
 
-	void recvPointToPointMetaData(imgMetaData &recvMetaData);
-	void recvPointToPointImgData(imgMetaData recvMetaData, imgData &recvImgData);
+	void recvPointToPointMetaData(imgMetaData &recvMetaData, int tag);
+	void recvPointToPointImgData(imgMetaData recvMetaData, imgData &recvImgData, int tag);
 
 	void gatherEncodingSizes(int *sizeEncoding, int numDivisions);
 	void gatherAndAssembleEncodedImages(int sizex, int sizey, int sizeSending, float *image, int numDivisions);		// do the compositing of the subpatches
