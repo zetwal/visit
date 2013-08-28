@@ -523,7 +523,11 @@ avtRayTracer::Execute(void)
             tempSendBuffer[i*7 + 4] = temp.screen_ll[0];
             tempSendBuffer[i*7 + 5] = temp.screen_ll[1];
             tempSendBuffer[i*7 + 6] = temp.avg_z;
+
+            debug5 << PAR_Rank() << "   ~ has patch #: " << temp.patchNumber << "   avg_z: " << temp.avg_z << endl;
+
         }
+
 
         imgComm.gatherIotaMetaData(numPatches*7, tempSendBuffer); 
 
@@ -597,6 +601,9 @@ avtRayTracer::Execute(void)
         start = end = index;
 
         std::vector<imgData> compositedDataVec;
+
+        debug5 << PAR_Rank() << " ~  totalPatchesToCompositeLocally: " << totalPatchesToCompositeLocally << endl;
+
 
         while (index <= totalPatchesToCompositeLocally){
             if (patchesToCompositeLocally[index] == -1 || index == totalPatchesToCompositeLocally){
@@ -960,6 +967,8 @@ avtRayTracer::Execute(void)
             }
             int startingX = allImgMetaData[patchIndex].screen_ll[0];
             int startingY = allImgMetaData[patchIndex].screen_ll[1]; 
+
+            debug5 << PAR_Rank() << "   ~ composing patch #: " << allImgMetaData[patchIndex].procId << " ,  " << allImgMetaData[patchIndex].patchNumber << "   avg_z: " << allImgMetaData[patchIndex].avg_z << endl;
 
             itImgData = imgDataToCompose.find( std::pair<int,int>(allImgMetaData[patchIndex].procId, allImgMetaData[patchIndex].patchNumber) );
             if (itImgData == imgDataToCompose.end()){
