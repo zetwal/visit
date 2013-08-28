@@ -558,7 +558,7 @@ avtRayTracer::Execute(void)
         // Send info about which patch to receive and which patches to send & receive
         imgComm.scatterNumDataToCompose(totalSendData, totalRecvData, numZDivisions, totalPatchesToCompositeLocally);
 
-        //debug5 << PAR_Rank() << " ~  num patches to send: " << totalSendData/2 << " num processors to recv from: " << totalRecvData/2 << "    numZDivisions: " << numZDivisions << "   totalPatchesToCompositeLocally: " <<   totalPatchesToCompositeLocally << endl;
+        debug5 << PAR_Rank() << " ~  num patches to send: " << totalSendData/2 << " num processors to recv from: " << totalRecvData/2 << "    numZDivisions: " << numZDivisions << "   totalPatchesToCompositeLocally: " <<   totalPatchesToCompositeLocally << endl;
 
 
         //
@@ -627,7 +627,7 @@ avtRayTracer::Execute(void)
 
                     imgData tempImgData;
                     tempImgData.imagePatch = new float[currentPatch.dims[0] * currentPatch.dims[1] * 4];
-                    extractor.getImgData(currentPatch.patchNumber, tempImgData);
+                    extractor.getnDelImgData(currentPatch.patchNumber, tempImgData);
 
                     // Assemble the idivisions into 1 layer
                     for (int j=0; j<currentPatch.dims[1]; j++){
@@ -1110,6 +1110,9 @@ avtRayTracer::Execute(void)
 
         //if (imgTest != NULL)
         //   delete []imgTest;
+
+        if (zbuffer != NULL)
+           delete []zbuffer;
 
         extractor.delImgPatches();
 

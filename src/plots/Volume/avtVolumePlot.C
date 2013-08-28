@@ -657,10 +657,14 @@ avtVolumePlot::ApplyRenderingTransformation(avtDataObject_p input)
             gradientFilter->SetOutputVariableName(gradName);
             gradientFilter->AddInputVariableName(gradvar);
 
+            std::cout << " atts.GetRendererType() == VolumeAttributes::RayCasting -- ################### " << std::endl;
+
             // prevent this intermediate object from getting cleared out, so
             // it is still there when we want to render.
             gradientFilter->GetOutput()->SetTransientStatus(false);
             dob = gradientFilter->GetOutput();
+
+
         }
 #endif
 

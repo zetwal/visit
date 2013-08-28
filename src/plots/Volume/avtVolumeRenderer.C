@@ -460,7 +460,10 @@ avtVolumeRenderer::Initialize(vtkDataSet *ds)
             gmn = new float[nels];
             hs = NULL;
             float ghostval = omax+osize;
+
+            std::cout << " VolumeCalculateGradient  --- (atts.GetLightingFlag() && gm == NULL -- ################### " << std::endl;
             gm_max = VolumeCalculateGradient(atts, grid, opac, gx, gy, gz, gm, gmn, ghostval);
+            
         }
     }
     else
@@ -494,8 +497,12 @@ avtVolumeRenderer::Initialize(vtkDataSet *ds)
                     calcHS = true;
             }
 
+            std::cout << " VolumeCalculateGradient_SPH  --- (gm == NULL) -- ################### " << std::endl;
+            
+            
             gm_max = VolumeCalculateGradient_SPH(ds, opac, 
                 gx, gy, gz, gm, gmn, hs, calcHS, ghostval);
+
             
             //Set the extents for the compact support variables;
             hs_size = nels;

@@ -701,8 +701,11 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     
     unsigned long m_size, m_rss;
     GetMemorySize(m_size, m_rss);
-    std::cout << PAR_Rank() << "avtSamplePointExtractor::ExecuteTree  .. .  " 
+    std::cout << PAR_Rank() << " ~ avtSamplePointExtractor::ExecuteTree  .. .  " 
               << "    Memory use before: " << m_size << "  rss (MB): " << m_rss/(1024*1024) << std::endl;
+
+    debug5 << PAR_Rank() << " ~ avtSamplePointExtractor::ExecuteTree  .. .  " 
+              << "    Memory use before: " << m_size << "  rss (MB): " << m_rss/(1024*1024) << endl;
 
     totalAssignedPatches = dt->GetNChildren();
     patchCount = 0;
@@ -740,8 +743,10 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     }
 
     GetMemorySize(m_size, m_rss);
-    std::cout << PAR_Rank() << "   Memory use after: " << m_size << "  rss (MB): " << m_rss/(1024*1024)
+    std::cout << PAR_Rank() << " ~ Memory use after: " << m_size << "  rss (MB): " << m_rss/(1024*1024)
               <<  "   ... avtSamplePointExtractor::ExecuteTree done@!!!" << std::endl;
+    debug5 << PAR_Rank() << " ~ Memory use after: " << m_size << "  rss (MB): " << m_rss/(1024*1024)
+              <<  "   ... avtSamplePointExtractor::ExecuteTree done@!!!" << endl;
 }
 
 //
@@ -823,28 +828,6 @@ avtSamplePointExtractor::delImgPatches(){
     imgDataHashMap.clear();
 }
 
-
-
-// ****************************************************************************
-//  Method: avtSamplePointExtractor::getImgData
-//
-//  Purpose:
-//      copies a patchover
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-void 
-avtSamplePointExtractor::getImgData(int patchId, imgData &tempImgData){
-    it = imgDataHashMap.find(patchId);
-
-    tempImgData.procId = it->second.procId;
-    tempImgData.patchNumber = it->second.patchNumber;
-    memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1] * sizeof(float));
-}
 
 
 // ****************************************************************************

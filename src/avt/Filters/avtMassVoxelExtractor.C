@@ -1515,6 +1515,7 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
 
     // Phong Shading
     if (lighting == true){
+    //if (0){
         float dir[3];          // The view "right" vector.
         double view_right[3];   // view_direction cross view_up
                                 
@@ -1584,6 +1585,8 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
         invTransModelView->SetElement(2,1, view_to_world_transform->GetElement(2,1));
         invTransModelView->SetElement(2,2, view_to_world_transform->GetElement(2,2));
 */
+
+
         if (countt == 0){
             
             //std::cout << 
@@ -2083,7 +2086,31 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         indices[2] = index_bottom;      indices[3] = index_top;
         indices[0] = index_left;        indices[1] = index_right;
 
-        if (trilinearInterpolation || rayCastingSLIVR){
+        if (trilinearInterpolation){
+            if (indices[0] < 0 || indices[0]>dims[0]-2)
+                valid_sample[i] = false;
+
+            if (indices[1] < 0 || indices[1]>dims[0]-2)
+                valid_sample[i] = false;
+
+
+
+            if (indices[2] < 0 || indices[2]>dims[1]-2)
+                valid_sample[i] = false;
+
+            if (indices[3] < 0 || indices[3]>dims[1]-2)
+                valid_sample[i] = false;
+
+
+
+            if (indices[4] < 0 || indices[4]>dims[2]-2)
+                valid_sample[i] = false;
+
+            if (indices[5] < 0 || indices[5]>dims[2]-2)
+                valid_sample[i] = false;
+        }
+
+        if (rayCastingSLIVR){
             if (indices[0] < 2 || indices[0]>dims[0]-3)
                 valid_sample[i] = false;
 
@@ -2116,6 +2143,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         // Computing Gradient using finite differences
         //
         if (rayCastingSLIVR && lighting)
+        //if (0)
             if (ncell_arrays > 0){
                 // h = offset = 1/2 the distance between grids
                 // grad = 1/2*h * ( f(x+h,y,z)-f(x-h,y,z)    f(x,y+h,z)-f(x,y-h,z)   f(x,y,z-h)-f(x,y,z-h)  )

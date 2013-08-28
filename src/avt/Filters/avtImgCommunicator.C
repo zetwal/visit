@@ -15,6 +15,8 @@
 #include <avtImgCommunicator.h>
 #include <fstream>
 
+#include <DebugStream.h>
+
 
 
 void displayStruct_imgRecv(int id, int from_id, imgMetaData temp){
@@ -153,6 +155,8 @@ avtImgCommunicator::avtImgCommunicator(){
 	compressedSizePerDiv = NULL;
 
 	all_avgZ_proc0.clear();
+
+	//debug5 << PAR_Rank() << "  avtImgCommunicator::avtImgCommunicator " << endl;
 }
 
 
@@ -182,6 +186,35 @@ avtImgCommunicator::~avtImgCommunicator(){
 		if (compressedSizePerDiv != NULL)
 			delete []compressedSizePerDiv;
 		compressedSizePerDiv = NULL;
+
+
+		if (patchesToSendArray!=NULL) delete[] patchesToSendArray;
+        if (patchesToRecvArray!=NULL) delete[] patchesToRecvArray;
+        if (numPatchesToSendArray!=NULL) delete[] numPatchesToSendArray;
+        if (numPatchesToRecvArray!=NULL) delete[] numPatchesToRecvArray;
+        if (recvDisplacementForProcs!=NULL) delete[] recvDisplacementForProcs;
+        if (sendDisplacementForProcs!=NULL) delete[] sendDisplacementForProcs;
+        if (blockDisplacementForProcs!=NULL) delete[] blockDisplacementForProcs;
+        if (numPatchesToSendRecvArray!=NULL) delete[] numPatchesToSendRecvArray;
+        if (boundsPerBlockArray!=NULL) delete[] boundsPerBlockArray;
+        if (numBlocksPerProc!=NULL) delete[] numBlocksPerProc;
+        if (patchesToCompositeLocallyArray!=NULL) delete[] patchesToCompositeLocallyArray;
+        if (numPatchesToCompositeLocally!=NULL) delete[] numPatchesToCompositeLocally;
+        if (compositeDisplacementForProcs!=NULL) delete[] compositeDisplacementForProcs;
+
+        patchesToSendArray = NULL;
+		patchesToRecvArray = NULL;
+		numPatchesToSendArray = NULL;
+		numPatchesToRecvArray = NULL;
+		recvDisplacementForProcs = NULL;
+		sendDisplacementForProcs = NULL;
+		numPatchesToSendRecvArray = NULL;
+		boundsPerBlockArray = NULL;
+		blockDisplacementForProcs = NULL;
+		numBlocksPerProc = NULL;
+		patchesToCompositeLocallyArray = NULL;
+		numPatchesToCompositeLocally = NULL;
+		compositeDisplacementForProcs = NULL;
 	}
 	
 	all_avgZ_proc0.clear();
@@ -629,16 +662,18 @@ void avtImgCommunicator::patchAllocationLogic(){
 		int size = all_patches_sorted_avgZ_proc0[i].size();
 		if(size >= 1)	boundsPerBlockVec[procToSend[i]].push_back(all_patches_sorted_avgZ_proc0[i][0].avg_z);
 		if(size >= 2) 	boundsPerBlockVec[procToSend[i]].push_back(all_patches_sorted_avgZ_proc0[i][size-1].avg_z);
-		printf("division: %d, procToSend: %d \n", i, procToSend[i]);
+		//printf("division: %d, procToSend: %d \n", i, procToSend[i]);
 	}
 
 	// Printing for error check
-	// for(int i = 0; i < num_procs; ++i){
+	for(int i = 0; i < num_procs; ++i){
+		debug5 <<  "Block: " << i << " \t size:" << all_patches_sorted_avgZ_proc0[i].size() << endl;
 	// 	printf("Block %d\n", i );
-	// 	for(std::vector<iotaMeta>::iterator it = all_patches_sorted_avgZ_proc0[i].begin(); it != all_patches_sorted_avgZ_proc0[i].end(); ++it){
+		for(std::vector<iotaMeta>::iterator it = all_patches_sorted_avgZ_proc0[i].begin(); it != all_patches_sorted_avgZ_proc0[i].end(); ++it){
+			debug5 <<  it->avg_z << "\t " << it->procId << endl;
 	// 		printf("\t %.5f \t %d\n", it->avg_z, it->procId);
-	// 	}
-	// }
+	 	}
+	}
 
 
 	std::vector< std::vector<int> >	 patchesToSendVec (num_procs);
@@ -672,6 +707,7 @@ void avtImgCommunicator::patchAllocationLogic(){
 	 		}
 	 	}
 
+	 	debug5 <<  "------division: " << i << " procToSend:" << procToSend[i] << endl;
 	 	//std::cout << "------division:" << i << " procToSend:" << procToSend[i] << std::endl;
 	}
 
@@ -987,8 +1023,9 @@ void avtImgCommunicator::gatherEncodingSizes(int *sizeEncoding, int numDivisions
 
 
 		if (my_id == 0){
-			//for (int i=0; i<totalDivisions; i++)
-			//	std::cout << "div " << i << " : " << compressedSizePerDiv[i] << std::endl;
+			for (int i=0; i<totalDivisions; i++)
+				//	std::cout << "div " << i << " : " << compressedSizePerDiv[i] << std::endl;
+				debug5 <<  "  0 div: " << i << " : " << compressedSizePerDiv[i] << endl;
 
 			if (offsetBuffer != NULL) 
 				delete []offsetBuffer;
@@ -1413,7 +1450,7 @@ code incrCode(code x){
 
 
 // ****************************************************************************
-//  Method: avtImgCommunicator::
+//  Method: avtImgCommunicator::rleEncodeAll
 //
 //  Purpose:
 //		Encodes an image using RLE: Runlength, R, G, B, A
@@ -1427,8 +1464,8 @@ code incrCode(code x){
 //		sizeOfEncoding	: the compressed size of each image
 //
 //
-//  Programmer: 
-//  Creation:   
+//  Programmer: Pascal Grosset
+//  Creation: August 23, 2013
 //
 //  Modifications:
 //
@@ -1463,7 +1500,7 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *i
 			prev = encodingVec.size();
 		}
 
-		//debug5 <<  my_id << "  ~  encoding.size(): " << sizeOfEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << "   size: " << encodingVec.size() << std::endl;
+		debug5 <<  my_id << "  ~  encoding.size(): " << sizeOfEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << "   size: " << encodingVec.size() << std::endl;
 	}
 
 
@@ -1487,7 +1524,7 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *i
 
 
 // ****************************************************************************
-//  Method: avtImgCommunicator::
+//  Method: avtImgCommunicator::rleDecode
 //
 //  Purpose:
 //		Decodes rle encoded image to an RGBA image the size of the screen

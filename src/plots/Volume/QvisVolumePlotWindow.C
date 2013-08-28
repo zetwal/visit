@@ -3219,6 +3219,7 @@ QvisVolumePlotWindow::lightingToggled(bool)
         volumeAtts->GetSampling() == VolumeAttributes::Trilinear)
         if (volumeAtts->GetLightingFlag())
             matEnabled = true;
+
     matKa->setEnabled(matEnabled);
     matKd->setEnabled(matEnabled);
     matKs->setEnabled(matEnabled);
@@ -3227,7 +3228,6 @@ QvisVolumePlotWindow::lightingToggled(bool)
     Kd->setEnabled(matEnabled);
     Ks->setEnabled(matEnabled);
     specPow->setEnabled(matEnabled);
-
 
     SetUpdate(false);
     Apply();

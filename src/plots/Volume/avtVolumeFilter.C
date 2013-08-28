@@ -861,7 +861,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
             EXCEPTION1(InvalidVariableException,atts.GetOpacityVariable());
         }
     }
-    if ( (atts.GetRendererType() != VolumeAttributes::RayCastingIntegration) &&
+    if ( (atts.GetRendererType() != VolumeAttributes::RayCastingIntegration && atts.GetRendererType() != VolumeAttributes::RayCastingSLIVR) &&
           atts.GetLightingFlag() &&
           gradIndex == -1)
     {
@@ -915,6 +915,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     double gradMax = 0.0, lightingPower = 1.0;
     if (atts.GetLowGradientLightingReduction() != VolumeAttributes::Off)
     {
+        std::cout << " atts.GetLowGradientLightingReduction() != VolumeAttributes::Off -- ################### " << std::endl;
         gradMax = atts.GetLowGradientLightingClampValue();
         if (atts.GetLowGradientLightingClampFlag() == false)
         {
@@ -998,7 +999,8 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
 
         compositeRF->SetColorVariableIndex(primIndex);
         compositeRF->SetOpacityVariableIndex(opacIndex);
-        if (atts.GetLightingFlag())
+        //if (atts.GetLightingFlag()) 
+        if (atts.GetLightingFlag() && (atts.GetRendererType() != VolumeAttributes::RayCastingSLIVR) ) 
             compositeRF->SetGradientVariableIndex(gradIndex);
         integrateRF->SetPrimaryVariableIndex(primIndex);
         integrateRF->SetRange(range[0], range[1]);

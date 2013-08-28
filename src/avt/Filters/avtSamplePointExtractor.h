@@ -185,7 +185,6 @@ class AVTFILTERS_API avtSamplePointExtractor
     int                       getTotalAssignedPatches() { return totalAssignedPatches; }              // gets the max number of patches it could have
     int                       getImgPatchSize(){ return patchCount;};                                 // gets the number of patches
     imgMetaData               getImgMetaPatch(int patchId){ return imageMetaPatchVector.at(patchId);} // gets the metadata
-    void                      getImgData(int patchId, imgData &tempImgData);                          // gets the image
     void                      getnDelImgData(int patchId, imgData &tempImgData);                      // gets the image & erase its existence
     void                      delImgPatches();                                                        // deletes patches
     
