@@ -798,8 +798,10 @@ avtRayTracer::Execute(void)
                             extractor.getnDelImgData(tempImgMetaData.patchNumber, tempImgData);
                         else{
                             const bool is_inC = (std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData)) != compositedDataVec.end();  
-                            if(is_inC) tempImgData = *(std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData));
-                            else std::cout << PAR_Rank() << " uuuuuuuh it didn't find the patch" << std::endl;
+                            if(is_inC) 
+                                tempImgData = *(std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData));
+                            else 
+                                std::cout << PAR_Rank() << " uuuuuuuh it didn't find the patch" << std::endl;
                         }
 
                         imgComm.sendPointToPoint(tempImgMetaData,tempImgData, numProcessors);
@@ -958,17 +960,37 @@ avtRayTracer::Execute(void)
         int totalSize = allImgMetaData.size();
 
         //std::cout << PAR_Rank() << " ~ " << numZDivisions << "  ||  "  <<  totalSize << "  ||   " << numZDivisions << std::endl;
+
+        debug5 << PAR_Rank() << "   ~   totalSize to compose: " << totalSize <<  endl;
+
+        for (int k=0; k<numZDivisions; k++){
+            debug5 << PAR_Rank() << "   ~   division boundaries: " << divisionsArray[k*2 + 0] << " to " << divisionsArray[k*2 + 1] << endl;
+        }
+
         for (int patchIndex=0; patchIndex<totalSize; patchIndex++){
             // std::cout << PAR_Rank() << " ~ " <<patchIndex << "  of  "  <<  totalSize << std::endl;
 
-            if (allImgMetaData[patchIndex].avg_z > divisionsArray[divIndex*2 + 1]){  //new index
-                divIndex++;
-                bufferDivisionIndex = (imgBufferWidth * imgBufferHeight * 4) * divIndex; 
+           // if (allImgMetaData[patchIndex].avg_z < divisionsArray[divIndex*2]){  //new index
+           //     debug5 << PAR_Rank() << "   ~   allImgMetaData[patchIndex].avg_z: " <<allImgMetaData[patchIndex].avg_z << " to " << divisionsArray[divIndex*2 + 1] << endl;
+           //     divIndex++;
+           //     bufferDivisionIndex = (imgBufferWidth * imgBufferHeight * 4) * divIndex; 
+           // }
+
+            if (allImgMetaData[patchIndex].avg_z >= divisionsArray[divIndex*2] && allImgMetaData[patchIndex].avg_z <= divisionsArray[divIndex*2+1]){  //new index
+            }else{
+                for (int z=0; z<numZDivisions; z++){
+                    if (allImgMetaData[patchIndex].avg_z >= divisionsArray[z*2] && allImgMetaData[patchIndex].avg_z <= divisionsArray[z*2+1]) {
+                        divIndex = z;
+                        break;
+                    }  
+                }
             }
+
             int startingX = allImgMetaData[patchIndex].screen_ll[0];
             int startingY = allImgMetaData[patchIndex].screen_ll[1]; 
 
-            debug5 << PAR_Rank() << "   ~ composing patch #: " << allImgMetaData[patchIndex].procId << " ,  " << allImgMetaData[patchIndex].patchNumber << "   avg_z: " << allImgMetaData[patchIndex].avg_z << endl;
+            debug5 << PAR_Rank() << "   ~   divIndex: " << divIndex << "    composing patch #: " << allImgMetaData[patchIndex].procId << " ,  " << allImgMetaData[patchIndex].patchNumber << "   size: " << allImgMetaData[patchIndex].dims[0] << " x  " << allImgMetaData[patchIndex].dims[1] << "   avg_z: " << allImgMetaData[patchIndex].avg_z << endl;
+
 
             itImgData = imgDataToCompose.find( std::pair<int,int>(allImgMetaData[patchIndex].procId, allImgMetaData[patchIndex].patchNumber) );
             if (itImgData == imgDataToCompose.end()){
@@ -1003,9 +1025,18 @@ avtRayTracer::Execute(void)
             itImgData->second.imagePatch = NULL;
         }
 
+       
+        for (int i=0; i<numZDivisions; i++){
+           std::string imgFilenameFinal = "/home/pascal/Desktop/Generated_" + NumbToString(PAR_Rank()) + "_" + NumbToString(i) + "_Buffer.ppm";
+        createPpmWithOffset(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal,imgBufferWidth*imgBufferHeight*4*i);
+        }
+
+
         allImgMetaData.clear();
         imgDataToCompose.clear();
 
+        debug5 << PAR_Rank() << "   ~ composing patch done: " << endl;
+        //cout << PAR_Rank() << "   ~ composing patch done: " << endl;
 
         //
         // --- Timing -- 
@@ -1030,6 +1061,9 @@ avtRayTracer::Execute(void)
         buffer = NULL;
         
 
+        debug5 << PAR_Rank() << "   ~ encoding done: " << endl;
+        //cout << PAR_Rank() << "   ~ encoding done: " << endl;
+
         //
         // --- Timing -- 
         visitTimer->StopTimer(timingRLE, "RLE ");
@@ -1047,6 +1081,9 @@ avtRayTracer::Execute(void)
         // Gather all the images
         imgComm.gatherEncodingSizes(sizeEncoding, numZDivisions);                                                       // size of images
         imgComm.gatherAndAssembleEncodedImages(screen[0], screen[1], totalEncodingSize*5, encoding, numZDivisions);     // data from each processor
+
+        debug5 << PAR_Rank() << "   ~ gatherEncodingSizes " << endl;
+        //cout << PAR_Rank() << "   ~ gatherEncodingSizes " << endl;
 
 
         if (encoding != NULL)
@@ -1105,6 +1142,10 @@ avtRayTracer::Execute(void)
             imgComm.getcompositedImage(screen[0], screen[1], imgTest); 
 
             img->Delete();
+
+            debug5 << PAR_Rank() << "   ~ final: " << endl;
+            cout << PAR_Rank() << "   ~ final: " << endl;
+        
         }
         imgComm.syncAllProcs();
 
@@ -1120,6 +1161,8 @@ avtRayTracer::Execute(void)
 
         //if (imgTest != NULL)
         //   delete []imgTest;
+
+
 
         if (zbuffer != NULL)
            delete []zbuffer;

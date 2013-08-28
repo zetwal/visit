@@ -416,6 +416,7 @@ void avtImgCommunicator::gatherIotaMetaData(int arraySize, float *allIotaMetadat
 // ****************************************************************************
 void determinePatchesToCompositeLocally(const std::vector<iotaMeta>& all_patches_sorted_avgZ_proc0, std::vector<std::vector<iotaMeta> >& patchesToCompositeLocallyVector, const int& procToSend, std::vector<std::vector<int> >& divisions){
 
+	if(all_patches_sorted_avgZ_proc0.size() == 0) return;
 	iotaMeta prev_data = *all_patches_sorted_avgZ_proc0.begin();
 	bool already_in = false;
 
@@ -462,6 +463,8 @@ bool adjacencyTest(const iotaMeta& patch_1, const iotaMeta& patch_2){
 }
 
 void determinePatchAdjacency(std::vector<iotaMeta>& allPatchesSorted, std::vector<std::vector<iotaMeta> >& patchesToComposite, std::vector<std::vector<int> >& divisions ){
+
+	if(allPatchesSorted.size() == 0) return;
 
 	iotaMeta delimiter; 
 	delimiter.patchNumber = -1;
@@ -1025,8 +1028,8 @@ void avtImgCommunicator::gatherEncodingSizes(int *sizeEncoding, int numDivisions
 
 		if (my_id == 0){
 			for (int i=0; i<totalDivisions; i++)
-				//	std::cout << "div " << i << " : " << compressedSizePerDiv[i] << std::endl;
-				debug5 <<  "  0 div: " << i << " : " << compressedSizePerDiv[i] << endl;
+					std::cout << "div " << i << " : " << compressedSizePerDiv[i] << std::endl;
+				//debug5 <<  "  0 div: " << i << " : " << compressedSizePerDiv[i] << endl;
 
 			if (offsetBuffer != NULL) 
 				delete []offsetBuffer;
@@ -1114,19 +1117,36 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 			it=depthPartitions.end();
 			int count = 0;
 			int offset = 0;
+			int index = 0;
+
+			// do{
+			// 	--it;
+			// 	std::cout << it->first << " => " << it->second << "  compressedSizePerDiv[count]" << compressedSizePerDiv[count] << std::endl;
+			// 	//std::cout << it->first << " => " << it->second << '\n';
+
+			// }while( it!=depthPartitions.begin());
+
+			it=depthPartitions.end();
 			do{
 				--it;
-				//std::cout << it->first << " => " << it->second << '\n';
+				debug5 << it->first << " => " << it->second << "    compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << std::endl;
+				std::cout << it->first << " => " << it->second << "    compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << std::endl;
 				imageBuffer temp;
 				temp.image = new float[sizex*sizey*4];
+				index = it->second;
 
-				if (count == 0)
+				if (index == 0)
 					offset = 0;
-				else
-					offset += compressedSizePerDiv[count-1];
+				else{
+					offset = 0;
+					for (int k=0; k<index; k++)
+						offset += compressedSizePerDiv[k];
+				}
+					//offset += compressedSizePerDiv[index-1];
+					//offset += compressedSizePerDiv[count-1];
 
 				//std::cout << my_id << " ~ compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << "   count: " << count << "   offset: " << offset << std::endl;
-				rleDecode(compressedSizePerDiv[count], tempRecvBuffer, offset*5, temp.image);
+				rleDecode(compressedSizePerDiv[index], tempRecvBuffer, offset*5, temp.image);
 
 				
 				//if (count == 1){
@@ -1151,8 +1171,8 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 					}
 				}
 
-				//std::string imgFilename_Final = "/home/pascal/Desktop/_"+ NumbToString(count) + "_Numfinal.ppm";
-	        	//createPpm(imgBuffer, sizex, sizey, imgFilename_Final);
+				std::string imgFilename_Final = "/home/pascal/Desktop/_"+ NumbToString(count) + "_Numfinal.ppm";
+	        	createPpm(imgBuffer, sizex, sizey, imgFilename_Final);
 
 	        	delete []temp.image;
 	        	temp.image = NULL;
