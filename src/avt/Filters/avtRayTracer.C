@@ -394,7 +394,7 @@ avtRayTracer::GetNumberOfDivisions(int screenX, int screenY, int screenZ)
 void
 avtRayTracer::Execute(void)
 {
-    std::cout << "avtRayTracer::Execute" << std::endl;
+    //std::cout << "avtRayTracer::Execute" << std::endl;
     int  timingIndex = visitTimer->StartTimer();
 
     if (rayfoo == NULL)
@@ -973,7 +973,7 @@ avtRayTracer::Execute(void)
            // if (allImgMetaData[patchIndex].avg_z < divisionsArray[divIndex*2]){  //new index
            //     debug5 << PAR_Rank() << "   ~   allImgMetaData[patchIndex].avg_z: " <<allImgMetaData[patchIndex].avg_z << " to " << divisionsArray[divIndex*2 + 1] << endl;
            //     divIndex++;
-           //     bufferDivisionIndex = (imgBufferWidth * imgBufferHeight * 4) * divIndex; 
+                
            // }
 
             if (allImgMetaData[patchIndex].avg_z >= divisionsArray[divIndex*2] && allImgMetaData[patchIndex].avg_z <= divisionsArray[divIndex*2+1]){  //new index
@@ -985,6 +985,7 @@ avtRayTracer::Execute(void)
                     }  
                 }
             }
+            bufferDivisionIndex = (imgBufferWidth * imgBufferHeight * 4) * divIndex; 
 
             int startingX = allImgMetaData[patchIndex].screen_ll[0];
             int startingY = allImgMetaData[patchIndex].screen_ll[1]; 
@@ -1027,8 +1028,8 @@ avtRayTracer::Execute(void)
 
        
         //for (int i=0; i<numZDivisions; i++){
-        //   std::string imgFilenameFinal = "/home/pascal/Desktop/Generated_" + NumbToString(PAR_Rank()) + "_" + NumbToString(i) + "_Buffer.ppm";
-        //createPpmWithOffset(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal,imgBufferWidth*imgBufferHeight*4*i);
+        //    std::string imgFilenameFinal = "/home/pascal/Desktop/Generated_" + NumbToString(PAR_Rank()) + "_" + NumbToString(i) + "_Buffer.ppm";
+        //    createPpmWithOffset(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal,imgBufferWidth*imgBufferHeight*4*i);
         //}
 
 
@@ -1169,7 +1170,7 @@ avtRayTracer::Execute(void)
 
         extractor.delImgPatches();
 
-        std::cout << PAR_Rank() << "....................................... avtRayTracer::Execute     done RayCasting SLIVR !!!!!!" << std::endl;
+        //std::cout << PAR_Rank() << "....................................... avtRayTracer::Execute     done RayCasting SLIVR !!!!!!" << std::endl;
 
         return;
     }

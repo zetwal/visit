@@ -619,10 +619,10 @@ void avtImgCommunicator::patchAllocationLogic(){
 	//procToSend.resize 					(num_procs);
 	//all_patches_sorted_avgZ_proc0.resize(num_procs);
 
-	for(int i = 0; i < num_procs; i++){
-		numAvgZEachBlock[i] = num_avgZ_perBlock + (rem_avgZ-- > 0 ? 1 : 0);
-		std::cout << "i: " << i << " numAvgZEachBlock: " << numAvgZEachBlock[i] << std::endl;
-	}
+	//for(int i = 0; i < num_procs; i++){
+	//	numAvgZEachBlock[i] = num_avgZ_perBlock + (rem_avgZ-- > 0 ? 1 : 0);
+	//	std::cout << "i: " << i << " numAvgZEachBlock: " << numAvgZEachBlock[i] << std::endl;
+	//}
 
 	// Sorting the patches
 	std::sort(allRecvIotaMeta, allRecvIotaMeta + totalPatches, &sortImgByDepthIota);
@@ -1030,8 +1030,8 @@ void avtImgCommunicator::gatherEncodingSizes(int *sizeEncoding, int numDivisions
 
 		if (my_id == 0){
 			for (int i=0; i<totalDivisions; i++)
-					std::cout << "div " << i << " : " << compressedSizePerDiv[i] << std::endl;
-				//debug5 <<  "  0 div: " << i << " : " << compressedSizePerDiv[i] << endl;
+				//	std::cout << "div " << i << " : " << compressedSizePerDiv[i] << std::endl;
+				debug5 <<  "  0 div: " << i << " : " << compressedSizePerDiv[i] << endl;
 
 			if (offsetBuffer != NULL) 
 				delete []offsetBuffer;
@@ -1095,7 +1095,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 
 			tempRecvBuffer = new float[ totalSize ];
 
-			std::cout << "divIndex: " << divIndex << "   totalDivisions: " << totalDivisions << std::endl;	
+			//std::cout << "divIndex: " << divIndex << "   totalDivisions: " << totalDivisions << std::endl;	
 		}
 
 		//std::cout << my_id << " ~ numDivisions: " << numDivisions << "   size encoding: " << sizeSending << std::endl;
@@ -1132,7 +1132,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 			do{
 				--it;
 				debug5 << it->first << " => " << it->second << "    compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << std::endl;
-				std::cout << it->first << " => " << it->second << "    compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << std::endl;
+				//std::cout << it->first << " => " << it->second << "    compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << std::endl;
 				imageBuffer temp;
 				temp.image = new float[sizex*sizey*4];
 				index = it->second;
@@ -1638,7 +1638,6 @@ void createPpm(float array[], int dimx, int dimy, std::string filename){
         }
     }
     (void) fclose(fp);
-    std::cout << "End createPpm: " << std::endl;
 }
 
 void createPpmWithOffset(float array[], int dimx, int dimy, std::string filename, int offset){
@@ -1656,7 +1655,6 @@ void createPpmWithOffset(float array[], int dimx, int dimy, std::string filename
         }
     }
     (void) fclose(fp);
-    std::cout << "End createPpm: " << std::endl;
 }
 
 std::string NumbToString (int Number)

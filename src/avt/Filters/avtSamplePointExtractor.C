@@ -701,8 +701,8 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     
     unsigned long m_size, m_rss;
     GetMemorySize(m_size, m_rss);
-    std::cout << PAR_Rank() << " ~ avtSamplePointExtractor::ExecuteTree  .. .  " 
-              << "    Memory use before: " << m_size << "  rss (MB): " << m_rss/(1024*1024) << std::endl;
+   // std::cout << PAR_Rank() << " ~ avtSamplePointExtractor::ExecuteTree  .. .  " 
+   //           << "    Memory use before: " << m_size << "  rss (MB): " << m_rss/(1024*1024) << std::endl;
 
     debug5 << PAR_Rank() << " ~ avtSamplePointExtractor::ExecuteTree  .. .  " 
               << "    Memory use before: " << m_size << "  rss (MB): " << m_rss/(1024*1024) << endl;
@@ -743,8 +743,8 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     }
 
     GetMemorySize(m_size, m_rss);
-    std::cout << PAR_Rank() << " ~ Memory use after: " << m_size << "  rss (MB): " << m_rss/(1024*1024)
-              <<  "   ... avtSamplePointExtractor::ExecuteTree done@!!!" << std::endl;
+    //std::cout << PAR_Rank() << " ~ Memory use after: " << m_size << "  rss (MB): " << m_rss/(1024*1024)
+    //          <<  "   ... avtSamplePointExtractor::ExecuteTree done@!!!" << std::endl;
     debug5 << PAR_Rank() << " ~ Memory use after: " << m_size << "  rss (MB): " << m_rss/(1024*1024)
               <<  "   ... avtSamplePointExtractor::ExecuteTree done@!!!" << endl;
 }
