@@ -663,8 +663,10 @@ void avtImgCommunicator::patchAllocationLogic(){
 		determinePatchAdjacency(all_patches_sorted_avgZ_proc0[i], patchesToCompositeLocallyVector, divisions);
 
 		int size = all_patches_sorted_avgZ_proc0[i].size();
-		if(size >= 1)	boundsPerBlockVec[procToSend[i]].push_back(all_patches_sorted_avgZ_proc0[i][0].avg_z);
-		if(size >= 2) 	boundsPerBlockVec[procToSend[i]].push_back(all_patches_sorted_avgZ_proc0[i][size-1].avg_z);
+		if(size > 0){	
+			boundsPerBlockVec[procToSend[i]].push_back(all_patches_sorted_avgZ_proc0[i][0].avg_z);
+			boundsPerBlockVec[procToSend[i]].push_back(all_patches_sorted_avgZ_proc0[i][size-1].avg_z);
+		}
 		//printf("division: %d, procToSend: %d \n", i, procToSend[i]);
 	}
 
