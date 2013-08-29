@@ -1171,8 +1171,8 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 					}
 				}
 
-				std::string imgFilename_Final = "/home/pascal/Desktop/_"+ NumbToString(count) + "_Numfinal.ppm";
-	        	createPpm(imgBuffer, sizex, sizey, imgFilename_Final);
+				//std::string imgFilename_Final = "/home/pascal/Desktop/_"+ NumbToString(count) + "_Numfinal.ppm";
+	        	//createPpm(imgBuffer, sizex, sizey, imgFilename_Final);
 
 	        	delete []temp.image;
 	        	temp.image = NULL;

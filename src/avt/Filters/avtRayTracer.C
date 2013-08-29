@@ -900,8 +900,10 @@ avtRayTracer::Execute(void)
                             extractor.getnDelImgData(tempImgMetaData.patchNumber, tempImgData);
                         else{
                             const bool is_inC = (std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData)) != compositedDataVec.end();  
-                            if(is_inC) tempImgData = *(std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData));
-                            else std::cout << PAR_Rank() << " uuuuuuuh it didn't find the patch" << std::endl;
+                            if(is_inC) 
+                                tempImgData = *(std::find(compositedDataVec.begin(), compositedDataVec.end(), tempImgData));
+                            else 
+                                std::cout << PAR_Rank() << " uuuuuuuh it didn't find the patch" << std::endl;
                         }
                         
 
@@ -959,9 +961,7 @@ avtRayTracer::Execute(void)
         int divIndex = 0;
         int totalSize = allImgMetaData.size();
 
-        //std::cout << PAR_Rank() << " ~ " << numZDivisions << "  ||  "  <<  totalSize << "  ||   " << numZDivisions << std::endl;
-
-        debug5 << PAR_Rank() << "   ~   totalSize to compose: " << totalSize <<  endl;
+        debug5 << PAR_Rank() << "   ~   totalSize to compose: " << totalSize << "    numZDivisions: " << numZDivisions << endl;
 
         for (int k=0; k<numZDivisions; k++){
             debug5 << PAR_Rank() << "   ~   division boundaries: " << divisionsArray[k*2 + 0] << " to " << divisionsArray[k*2 + 1] << endl;
@@ -1026,10 +1026,10 @@ avtRayTracer::Execute(void)
         }
 
        
-        for (int i=0; i<numZDivisions; i++){
-           std::string imgFilenameFinal = "/home/pascal/Desktop/Generated_" + NumbToString(PAR_Rank()) + "_" + NumbToString(i) + "_Buffer.ppm";
-        createPpmWithOffset(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal,imgBufferWidth*imgBufferHeight*4*i);
-        }
+        //for (int i=0; i<numZDivisions; i++){
+        //   std::string imgFilenameFinal = "/home/pascal/Desktop/Generated_" + NumbToString(PAR_Rank()) + "_" + NumbToString(i) + "_Buffer.ppm";
+        //createPpmWithOffset(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal,imgBufferWidth*imgBufferHeight*4*i);
+        //}
 
 
         allImgMetaData.clear();
@@ -1144,7 +1144,7 @@ avtRayTracer::Execute(void)
             img->Delete();
 
             debug5 << PAR_Rank() << "   ~ final: " << endl;
-            cout << PAR_Rank() << "   ~ final: " << endl;
+            //cout << PAR_Rank() << "   ~ final: " << endl;
         
         }
         imgComm.syncAllProcs();
