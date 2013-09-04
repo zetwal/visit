@@ -539,7 +539,7 @@ TextureRenderer::draw_polygons(vector<float>& vertex,
   }
 
   glGetFloatv(GL_MODELVIEW_MATRIX, mvmat);
-  std::cout << "model view: \n";
+  std::cout << "SLIVR model view: \n";
   std::cout << mvmat[ 0] << "  " << mvmat[ 1] << "  " << mvmat[ 2] << "  " << mvmat[ 3] << std::endl;
   std::cout << mvmat[ 4] << "  " << mvmat[ 5] << "  " << mvmat[ 6] << "  " << mvmat[ 7] << std::endl;
   std::cout << mvmat[ 8] << "  " << mvmat[ 9] << "  " << mvmat[10] << "  " << mvmat[11] << std::endl;

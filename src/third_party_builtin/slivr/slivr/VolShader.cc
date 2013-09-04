@@ -196,7 +196,7 @@ namespace SLIVR {
 "   p = clamp(gl_TexCoord[0] - w, 0.0, 1.0); \n" \
 "   r = texture3D(tex0, p.stp); \n" \
 "   n.z = r.x - n.z; \n" \
-"   w.x = dot(n.xxx, vec3(tmat[0].x, tmat[1].x, tmat[2].x)); \n" \
+"  w.x = dot(n.xxx, vec3(tmat[0].x, tmat[1].x, tmat[2].x)); \n" \
 "   w.y = dot(n.yyy, vec3(tmat[0].y, tmat[1].y, tmat[2].y)); \n" \
 "   w.z = dot(n.zzz, vec3(tmat[0].z, tmat[1].z, tmat[2].z)); \n" \
 "   r = vec4(dot(w.xyz, w.xyz)); \n" \

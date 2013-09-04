@@ -92,10 +92,10 @@ bool sortImgByDepthIota(iotaMeta const& before, iotaMeta const& after){
 bool value_comparer(const std::pair<int,int> &before, const std::pair<int,int> &after){ return before.second < after.second; }
 bool sortByVecSize(const std::vector<iotaMeta> &before, const std::vector<iotaMeta> &after){return before.size() > after.size();}
 bool sortImgByCoordinatesIota(iotaMeta const& before, iotaMeta const& after){
-	if(before.screen_ll[1] != after.screen_ll[1]) 
-		return before.screen_ll[1] < after.screen_ll[1];
-	else 
+	if(before.screen_ll[0] != after.screen_ll[0]) 
 		return before.screen_ll[0] < after.screen_ll[0];
+	else 
+		return before.screen_ll[1] < after.screen_ll[1];
 }
 
 
@@ -456,8 +456,8 @@ void determinePatchesToCompositeLocally(const std::vector<iotaMeta>& all_patches
 // ****************************************************************************
 
 bool adjacencyTest(const iotaMeta& patch_1, const iotaMeta& patch_2){
-	if(	(patch_2.screen_ll[0] <= patch_1.screen_ll[0] + patch_1.dims[0]) && 
-		(patch_2.screen_ll[1] == patch_1.screen_ll[1] )) 
+	if(	(patch_2.screen_ll[0] == patch_1.screen_ll[0] /*+ patch_1.dims[0]*/) && 
+		(patch_2.screen_ll[1] <= patch_1.screen_ll[1] + patch_1.dims[1])) 
 		return true;
 	return false;
 }
@@ -619,10 +619,10 @@ void avtImgCommunicator::patchAllocationLogic(){
 	//procToSend.resize 					(num_procs);
 	//all_patches_sorted_avgZ_proc0.resize(num_procs);
 
-	//for(int i = 0; i < num_procs; i++){
-	//	numAvgZEachBlock[i] = num_avgZ_perBlock + (rem_avgZ-- > 0 ? 1 : 0);
+	for(int i = 0; i < num_procs; i++){
+		numAvgZEachBlock[i] = num_avgZ_perBlock + (rem_avgZ-- > 0 ? 1 : 0);
 	//	std::cout << "i: " << i << " numAvgZEachBlock: " << numAvgZEachBlock[i] << std::endl;
-	//}
+	}
 
 	// Sorting the patches
 	std::sort(allRecvIotaMeta, allRecvIotaMeta + totalPatches, &sortImgByDepthIota);
@@ -1045,6 +1045,15 @@ void avtImgCommunicator::gatherEncodingSizes(int *sizeEncoding, int numDivisions
 }
 
 
+float clamp(float x){
+	if (x > 1.0)
+		x = 1.0;
+
+	if (x < 0.0)
+		x = 0.0;
+
+	return x;
+}
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::
@@ -1167,9 +1176,9 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 						int imgIndex = sizex*4*j + k*4;										// index in the image 
 
 						// Back to front compositing
-						imgBuffer[imgIndex+0] = (imgBuffer[imgIndex+0] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+0];
-						imgBuffer[imgIndex+1] = (imgBuffer[imgIndex+1] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+1];
-						imgBuffer[imgIndex+2] = (imgBuffer[imgIndex+2] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+2];
+						imgBuffer[imgIndex+0] = clamp((imgBuffer[imgIndex+0] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+0]);
+						imgBuffer[imgIndex+1] = clamp((imgBuffer[imgIndex+1] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+1]);
+						imgBuffer[imgIndex+2] = clamp((imgBuffer[imgIndex+2] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+2]);
 					}
 				}
 

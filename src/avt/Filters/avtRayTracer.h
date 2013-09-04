@@ -194,4 +194,3 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
 
 #endif
 
-

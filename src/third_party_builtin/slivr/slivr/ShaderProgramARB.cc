@@ -244,6 +244,7 @@ ShaderProgramARB::create(std::string& error)
     }
 
     //    cerr << program_ << endl;
+    std::cout << program_ << endl;
 
     // set the source code and compile the shader
     const char *source[1];

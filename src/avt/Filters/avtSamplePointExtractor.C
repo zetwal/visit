@@ -1029,6 +1029,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 {
     if (modeIs3D && ds->GetDataObjectType() == VTK_RECTILINEAR_GRID)
     {
+
         // Get attributes of the data
         avtDataAttributes &atts = GetInput()->GetInfo().GetAttributes();
 
@@ -1086,7 +1087,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 imgDataHashMap.insert( std::pair<int, imgData> (tmpImageDataHash.patchNumber , tmpImageDataHash) );
 
                 //if (PAR_Rank() == 2){
-                //    std::string imgFilenameFinal = "/home/pascal/Desktop/Generated_2_" + NumbToString(tmpImageDataHash.patchNumber) + "_.ppm";
+                //   std::string imgFilenameFinal = "/home/pascal/Desktop/Generated_2_" + NumbToString(tmpImageDataHash.patchNumber) + "_.ppm";
                 //    createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilenameFinal);
                 //}
 

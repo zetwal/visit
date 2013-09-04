@@ -637,12 +637,13 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
     vi.SetCameraFromView(camera);
     vtkMatrix4x4 *cameraMatrix = camera->GetViewTransformMatrix();
 
-    //std::cout << " cameraMatrix: \n";
-    //    std::cout << 
-    //    cameraMatrix->GetElement(0,0) << "  " << cameraMatrix->GetElement(0,1) << "  " << cameraMatrix->GetElement(0,2) << "  " << cameraMatrix->GetElement(0,3) << std::endl <<
-    //    cameraMatrix->GetElement(1,0) << "  " << cameraMatrix->GetElement(1,1) << "  " << cameraMatrix->GetElement(1,2) << "  " << cameraMatrix->GetElement(1,3) << std::endl << 
-    //    cameraMatrix->GetElement(2,0) << "  " << cameraMatrix->GetElement(2,1) << "  " << cameraMatrix->GetElement(2,2) << "  " << cameraMatrix->GetElement(2,3) << std::endl <<
-    //   cameraMatrix->GetElement(3,0) << "  " << cameraMatrix->GetElement(3,1) << "  " << cameraMatrix->GetElement(3,2) << "  " << cameraMatrix->GetElement(3,3) << std::endl;
+    //
+    std::cout << " cameraMatrix: \n";
+        std::cout << 
+        cameraMatrix->GetElement(0,0) << "  " << cameraMatrix->GetElement(0,1) << "  " << cameraMatrix->GetElement(0,2) << "  " << cameraMatrix->GetElement(0,3) << std::endl <<
+        cameraMatrix->GetElement(1,0) << "  " << cameraMatrix->GetElement(1,1) << "  " << cameraMatrix->GetElement(1,2) << "  " << cameraMatrix->GetElement(1,3) << std::endl << 
+        cameraMatrix->GetElement(2,0) << "  " << cameraMatrix->GetElement(2,1) << "  " << cameraMatrix->GetElement(2,2) << "  " << cameraMatrix->GetElement(2,3) << std::endl <<
+        cameraMatrix->GetElement(3,0) << "  " << cameraMatrix->GetElement(3,1) << "  " << cameraMatrix->GetElement(3,2) << "  " << cameraMatrix->GetElement(3,3) << std::endl;
 
     double modelViewMatrix[16];
     modelViewMatrix[0] = cameraMatrix->GetElement(0,0);
