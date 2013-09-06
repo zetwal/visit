@@ -67,6 +67,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <algorithm> 
 
 
 
@@ -1494,7 +1495,7 @@ avtMassVoxelExtractor::FindSegmentIntersections(const double *origin,
 // ****************************************************************************
 
 void
-avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4], int show){
+avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4]){
     double source_rgb[4];
     int retVal;
     retVal = transferFn1D->QueryTF(scalarValue,source_rgb);
@@ -1563,90 +1564,56 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
         // You accomplish this by transforming surface normals by the
         // inverse transpose of the upper leftmost 3 x 3 matrix taken from the modelview matrix
 
-        vtkMatrix3x3 *invTransModelView = vtkMatrix3x3::New();
+        // vtkMatrix3x3 *invTransModelView = vtkMatrix3x3::New();
 
-        invTransModelView->SetElement(0,0, modelViewMatrix[0]);
-        invTransModelView->SetElement(0,1, modelViewMatrix[1]);
-        invTransModelView->SetElement(0,2, modelViewMatrix[2]);
+        // invTransModelView->SetElement(0,0, modelViewMatrix[0]);
+        // invTransModelView->SetElement(0,1, modelViewMatrix[1]);
+        // invTransModelView->SetElement(0,2, modelViewMatrix[2]);
 
-        invTransModelView->SetElement(1,0, modelViewMatrix[4]);
-        invTransModelView->SetElement(1,1, modelViewMatrix[5]);
-        invTransModelView->SetElement(1,2, modelViewMatrix[6]);
+        // invTransModelView->SetElement(1,0, modelViewMatrix[4]);
+        // invTransModelView->SetElement(1,1, modelViewMatrix[5]);
+        // invTransModelView->SetElement(1,2, modelViewMatrix[6]);
 
-        invTransModelView->SetElement(2,0, modelViewMatrix[8]);
-        invTransModelView->SetElement(2,1, modelViewMatrix[9]);
-        invTransModelView->SetElement(2,2, modelViewMatrix[10]);
+        // invTransModelView->SetElement(2,0, modelViewMatrix[8]);
+        // invTransModelView->SetElement(2,1, modelViewMatrix[9]);
+        // invTransModelView->SetElement(2,2, modelViewMatrix[10]);
 
-        
-        
+        // invTransModelView->Invert();
+        // invTransModelView->Transpose();
 
-        // if (countt == 0){
-        //     std::cout << proc << " _ _ Compute Color: Modelview _ _ 0 \n" <<
-        //     modelViewMatrix[0] << "  "  << modelViewMatrix[1] << "  "  << modelViewMatrix[2] << "  "  << modelViewMatrix[3] << "  " << std::endl <<     // view normal
-        //     modelViewMatrix[4] << "  "  << modelViewMatrix[5] << "  "  << modelViewMatrix[6] << "  "  << modelViewMatrix[7] << "  " << std::endl <<     //
-        //     modelViewMatrix[8] << "  "  << modelViewMatrix[9] << "  "  << modelViewMatrix[10] << "  " << modelViewMatrix[11] << "  " << std::endl <<    // Up Vector
-        //     modelViewMatrix[12] << "  " << modelViewMatrix[13] << "  " << modelViewMatrix[14] << "  " << modelViewMatrix[15] << "  " << std::endl << std::endl;
-
-        //     std::cout << proc << " _ _ view_direction : " << view_direction[0] << "  "  << view_direction[1] << "  "  << view_direction[2] <<     
-        //           " \n _ _ transformed view direction : " << dir[0] << "  "  << dir[1] << "  "  << dir[2] <<
-        //                       " \n _ _ lightDirection : " << lightDirection[0] << "  "  << lightDirection[1] << "  "  << lightDirection[2] << std::endl << std::endl;
-
-        //     std::cout << proc << " _ _ materialProperties : " << materialProperties[0] << "  "  << materialProperties[1] << "  "  << materialProperties[2] <<   "  "  << materialProperties[3] << std::endl;  
-        // }
-
-        invTransModelView->Invert();
-
-        // if (countt == 0){
-        //     std::cout << proc << " _ _ Compute Color: Modelview transformed_ _ 1 \n" <<
-        //     invTransModelView->GetElement(0,0) << "  " << invTransModelView->GetElement(0,1) << "  " << invTransModelView->GetElement(0,2) <<  std::endl <<
-        //     invTransModelView->GetElement(1,0) << "  " << invTransModelView->GetElement(1,1) << "  " << invTransModelView->GetElement(1,2) <<  std::endl << 
-        //     invTransModelView->GetElement(2,0) << "  " << invTransModelView->GetElement(2,1) << "  " << invTransModelView->GetElement(2,2) <<  std::endl << std::endl;
-        // }
-        invTransModelView->Transpose();
-
-        // if (countt == 0){
-        //     std::cout << proc << " _ _ Compute Color: Modelview transformed_ _ 2 \n" <<
-        //     invTransModelView->GetElement(0,0) << "  " << invTransModelView->GetElement(0,1) << "  " << invTransModelView->GetElement(0,2) <<  std::endl <<
-        //     invTransModelView->GetElement(1,0) << "  " << invTransModelView->GetElement(1,1) << "  " << invTransModelView->GetElement(1,2) <<  std::endl << 
-        //     invTransModelView->GetElement(2,0) << "  " << invTransModelView->GetElement(2,1) << "  " << invTransModelView->GetElement(2,2) <<  std::endl << std::endl;       
-        // }
-        countt++;
     
+        dir[0] = -view_direction[0];
+        dir[1] = -view_direction[1];
+        dir[2] = -view_direction[2];
         
         double gradientDouble[3], transformedGradient[3];
         for (int i=0; i<3; i++)
-            gradientDouble[i] = gradient[i];
+            transformedGradient[i] = gradientDouble[i] = gradient[i];
 
-        invTransModelView->MultiplyPoint(gradientDouble, transformedGradient);
+        // probably not required here coz of the way gradient is computed
+        // invTransModelView->MultiplyPoint(gradientDouble, transformedGradient);
+        //  invTransModelView->MultiplyPoint(lightDir, lightDir);
 
-       // if (scalarValue > 0.1){
-       //     std::cout << scalarValue << " : " << gradientDouble[0] << " ,  " << gradientDouble[1] << " ,  " << gradientDouble[2] << "   --   " << transformedGradient[0] << " ,  " << transformedGradient[1] << " ,  " << transformedGradient[2] << std::endl;
-       // }
+        // float transformedGradientFloat[3];
+        // for (int i=0; i<3; i++)
+        //     transformedGradientFloat[i] = transformedGradient[i];
 
-        float transformedGradientFloat[3];
-        for (int i=0; i<3; i++)
-            transformedGradientFloat[i] = transformedGradient[i];
-
-        normalize(transformedGradientFloat);
-        invTransModelView->Delete();
-
+        // normalize(transformedGradientFloat);
+        // invTransModelView->Delete();
 
 
         // cos(angle) = a.b;  angle between normal and light
-        float normal_dot_light = dot(transformedGradientFloat,dir);   // angle between light and normal;
-        //normal_dot_light = normal_dot_light * 1.5;
-        if (normal_dot_light < 0.0)
-            normal_dot_light = -normal_dot_light;
+        float normal_dot_light = dot(gradient,dir);   // angle between light and normal;
+        normal_dot_light = std::max(0.0, std::min(fabs(normal_dot_light),1.0) );
 
-        if (normal_dot_light > 1.0)
-            normal_dot_light = 1.0;
-
-        //float opacityCorrectiong = 0.8;
-        //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
-        //source_rgb[3] = alpha;
+        // opacity correction
+        float opacityCorrectiong = 0.7;
+        float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
+        source_rgb[3] = alpha;
 
         // Calculate color using phong shading
-        // I = (I  * ka) + (I  * kd*abs(cos(angle))) + (Ia * ks*abs(cos(angle))^ns)
+        // I = (I  * ka) + [ (I_i  * kd * (L.N)) + (Ia_i * ks * (R.V)^ns) ]_for each light source i
+        // I = (I  * ka) +   (I  * kd*abs(cos(angle))) + (Ia * ks*abs(cos(angle))^ns)
         for (int i=0; i<3; i++)
             source_rgb[i] = source_rgb[i] * materialProperties[0];                          // I  * ka
 
@@ -1663,7 +1630,6 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4],
             source_rgb[i] = 1.0;
         
         dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
-
     }
 
     // back to front
@@ -2309,13 +2275,10 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 vals[5] = trilinearInterpolate(gradVals, dist_from_left, dist_from_bottom, distFromFront);
 
 
-               // gradient[0] = (1.0/(2.0*gradientOffset)) * (vals[1] - vals[0]);
-               // gradient[1] = (1.0/(2.0*gradientOffset)) * (vals[3] - vals[2]);
-               // gradient[2] = (1.0/(2.0*gradientOffset)) * (vals[5] - vals[4]);
+               gradient[0] = (1.0/(2.0*gradientOffset)) * (vals[1] - vals[0]);
+               gradient[1] = (1.0/(2.0*gradientOffset)) * (vals[3] - vals[2]);
+               gradient[2] = (1.0/(2.0*gradientOffset)) * (vals[5] - vals[4]);
 
-                gradient[0] =  (vals[1] - vals[0])/2.0;
-                gradient[1] =  (vals[3] - vals[2]);
-                gradient[2] =  (vals[5] - vals[4]);
                 normalize(gradient);
 
 
@@ -2341,7 +2304,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         
                         stepsZ++;
                         if (rayCastingSLIVR)
-                            computePixelColor(val, dest_rgb, 0);
+                            computePixelColor(val, dest_rgb);
                         else
                             tmpSampleList[count][cell_index[l]+m] = val; 
                     }

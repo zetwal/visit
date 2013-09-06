@@ -1189,7 +1189,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 	        	temp.image = NULL;
 
 	        	count++;
-			}while( it!=depthPartitions.begin());
+			}while( it!=depthPartitions.begin() );
 			
 			//std::string imgFilename_Final = "/home/pascal/Desktop/_final.ppm";
 	        //createPpm(imgBuffer, sizex, sizey, imgFilename_Final);

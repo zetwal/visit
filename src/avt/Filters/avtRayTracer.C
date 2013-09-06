@@ -1037,7 +1037,6 @@ avtRayTracer::Execute(void)
         imgDataToCompose.clear();
 
         debug5 << PAR_Rank() << "   ~ composing patch done: " << endl;
-        //cout << PAR_Rank() << "   ~ composing patch done: " << endl;
 
         //
         // --- Timing -- 
@@ -1084,7 +1083,6 @@ avtRayTracer::Execute(void)
         imgComm.gatherAndAssembleEncodedImages(screen[0], screen[1], totalEncodingSize*5, encoding, numZDivisions);     // data from each processor
 
         debug5 << PAR_Rank() << "   ~ gatherEncodingSizes " << endl;
-        //cout << PAR_Rank() << "   ~ gatherEncodingSizes " << endl;
 
 
         if (encoding != NULL)
@@ -1136,7 +1134,7 @@ avtRayTracer::Execute(void)
 
             zbuffer = new float[screen[0] * screen[1]];
             for (int s=0; s<screen[0] * screen[1]; s++)
-                zbuffer[s] = 0.5;
+                zbuffer[s] = 1.0;
             zbuffer = whole_image->GetImage().GetZBuffer();
 
             // Get the composited image
@@ -1145,8 +1143,6 @@ avtRayTracer::Execute(void)
             img->Delete();
 
             debug5 << PAR_Rank() << "   ~ final: " << endl;
-            //cout << PAR_Rank() << "   ~ final: " << endl;
-        
         }
         imgComm.syncAllProcs();
 
@@ -1219,7 +1215,11 @@ avtRayTracer::Execute(void)
 
                 // Now normalize based on near and far.
                 val = (val - newNearPlane) / (newFarPlane-newNearPlane);
+
+                //std::cout << "!! val: " << val << ",  p: " << p << "   opaqueImageZB[p]: " << opaqueImageZB[p] << std::endl;
                 opaqueImageZB[p] = val;
+
+
             }
         }
         else // orthographic and need to adjust for tightened clipping planes
@@ -1232,6 +1232,10 @@ avtRayTracer::Execute(void)
                              (oldFarPlane-oldNearPlane)*opaqueImageZB[p];
                 opaqueImageZB[p] = (val-newNearPlane) 
                                  / (newFarPlane-newNearPlane);
+
+                //opaqueImageZB[p] = 1.0;
+
+                //std::cout << "@@ val: " << val << ",  p: " << p << "   opaqueImageZB[p]: " << opaqueImageZB[p] << std::endl;
             }
         }
     }
