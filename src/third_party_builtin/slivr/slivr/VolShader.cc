@@ -30,6 +30,7 @@
 //    Date   : Tue Jul 13 02:28:09 2004
 
 #include <string>
+#include <fstream>
 #include <sstream>
 #include <iostream>
 #include <slivr/gldefs.h>
@@ -41,6 +42,13 @@ using std::vector;
 using std::ostringstream;
 
 namespace SLIVR {
+
+#define VERTEX_SHADER \
+"void main()\n" \
+"{\n" \
+"   gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0.xyzw;  \n " \
+"   gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;         \n " \
+"}\n ";
 
 #define VOL_UNIFORMS_1 \
 "// VOL_UNIFORMS_1\n" \
@@ -55,7 +63,7 @@ namespace SLIVR {
 "uniform vec4 loc0, loc1, loc2, loc3, loc4;\n" \
 "uniform sampler3D tex0;\n" \
 "uniform sampler3D tex1;\n" \
-"uniform sampler2D tex2;\n" \
+"uniform sampler2D tex3;\n" \
 "\n"
 
 #define VOL_HEAD \
@@ -87,9 +95,9 @@ namespace SLIVR {
 #define VOL_TFLUP_1_4 \
 "   c = texture1D(tex2, v.w); // VOL_TFLUP_1_4\n"
 #define VOL_TFLUP_2_1 \
-"   c = texture2D(tex2, v.xy); // VOL_TFLUP_2_1\n"
+"   c = texture2D(tex3, v.xy); // VOL_TFLUP_2_1\n"
 #define VOL_TFLUP_2_4 \
-"   c = texture2D(tex2, v.wx); // VOL_TFLUP_2_4\n"
+"   c = texture2D(tex3, v.wx); // VOL_TFLUP_2_4\n"
 
 #define VOL_TFLUP_MASK_HEAD \
 "   vec4 mask = loc3; // VOL_TFLUP_MASK_HEAD\n" \
@@ -196,7 +204,7 @@ namespace SLIVR {
 "   p = clamp(gl_TexCoord[0] - w, 0.0, 1.0); \n" \
 "   r = texture3D(tex0, p.stp); \n" \
 "   n.z = r.x - n.z; \n" \
-"  w.x = dot(n.xxx, vec3(tmat[0].x, tmat[1].x, tmat[2].x)); \n" \
+"   w.x = dot(n.xxx, vec3(tmat[0].x, tmat[1].x, tmat[2].x)); \n" \
 "   w.y = dot(n.yyy, vec3(tmat[0].y, tmat[1].y, tmat[2].y)); \n" \
 "   w.z = dot(n.zzz, vec3(tmat[0].z, tmat[1].z, tmat[2].z)); \n" \
 "   r = vec4(dot(w.xyz, w.xyz)); \n" \
@@ -288,7 +296,7 @@ namespace SLIVR {
 "   gl_FragColor = c; // VOL_RASTER_BLEND\n"
 
 VolShader::VolShader(int dim, int vsize, int channels, bool shading, 
-		     bool frag, bool fog, int blend, int cmaps)
+         bool frag, bool fog, int blend, int cmaps)
   : dim_(dim), 
     vsize_(vsize),
     channels_(channels),
@@ -297,12 +305,16 @@ VolShader::VolShader(int dim, int vsize, int channels, bool shading,
     blend_(blend),
     frag_(frag),
     num_cmaps_(cmaps),
+    vertexShaderPath_("slivrShaders/vertexShader.vert"),
+    fragmentShaderPath_("slivrShaders/fragmentShader.frag"),
+    shaderProgram_(0),
     program_(0)
 {}
 
 VolShader::~VolShader()
 {
   delete program_;
+  delete shaderProgram_;
 }
 
 bool
@@ -311,6 +323,42 @@ VolShader::create()
   string s;
   if (emit(s)) return true;
   program_ = new FragmentProgramARB(s);
+  return false;
+}
+
+bool
+VolShader::createVertandFrag(string vertFilename, string fragFilename)
+{
+  std::string frag, vert;
+
+  if (LoadShaderFromFile(frag, fragFilename)) return true;
+  if (LoadShaderFromFile(vert, vertFilename)) return true;
+  shaderProgram_ = new ShaderProgramARB(frag, vert);
+
+  return false;
+}
+
+bool
+VolShader::LoadShaderFromFile(string& s, string shaderFilename)
+{
+  std::string line;
+  ostringstream z;
+  std::ifstream shaderFile(shaderFilename.c_str());
+  if (shaderFile.is_open())
+  {
+    while ( shaderFile.good() )
+    {
+      getline (shaderFile,line);
+      z << line << std::endl;
+    }
+    shaderFile.close();
+  }
+  else{
+    std::cout << "cannot open file"  << std::endl; 
+    return true;
+  }
+
+  s = z.str(); 
   return false;
 }
 
@@ -414,7 +462,7 @@ VolShader::emit(string& s)
         }
         else
         {
-	  z << VOL_TFLUP_2_1;
+    z << VOL_TFLUP_2_1;
         }
         z << VOL_LIT_END;
       }
@@ -470,7 +518,7 @@ VolShader::emit(string& s)
           if (!blend_) z << VOL_FRAGMENT_BLEND_HEAD;
           z << VOL_GRAD_COMPUTE_NOLIGHT_HEAD;
           z << VOL_GRAD_COMPUTE_2_1;
-	  z << "\n";
+    z << "\n";
           z << VOL_COMPUTED_GRADIENT_LOOKUP;
         }
         else
@@ -487,7 +535,7 @@ VolShader::emit(string& s)
           if (!blend_) z << VOL_FRAGMENT_BLEND_HEAD;
           z << VOL_GRAD_COMPUTE_NOLIGHT_HEAD;
           z << VOL_GRAD_COMPUTE_2_4;
-	  z << "\n";
+    z << "\n";
           z << VOL_COMPUTED_GRADIENT_LOOKUP;
           z << VOL_TFLUP_2_1; // look it up as if 2_1
         }
@@ -555,12 +603,12 @@ VolShaderFactory::~VolShaderFactory()
 
 FragmentProgramARB*
 VolShaderFactory::shader(int dim, int vsize, int channels, bool shading, 
-			 bool frag, bool fog, int blend, int cmaps)
+       bool frag, bool fog, int blend, int cmaps)
 {
   CHECK_OPENGL_ERROR();
   if(prev_shader_ >= 0) {
     if(shader_[prev_shader_]->match(dim, vsize, channels, shading, 
-				    frag, fog, blend, cmaps)) 
+            frag, fog, blend, cmaps)) 
     {
       CHECK_OPENGL_ERROR();
       return shader_[prev_shader_]->program();
@@ -568,7 +616,7 @@ VolShaderFactory::shader(int dim, int vsize, int channels, bool shading,
   }
   for(unsigned int i=0; i<shader_.size(); i++) {
     if(shader_[i]->match(dim, vsize, channels, shading, 
-			 frag, fog, blend, cmaps)) 
+       frag, fog, blend, cmaps)) 
     {
       prev_shader_ = i;
       CHECK_OPENGL_ERROR();
@@ -577,7 +625,7 @@ VolShaderFactory::shader(int dim, int vsize, int channels, bool shading,
   }
 
   VolShader* s = new VolShader(dim, vsize, channels, shading, 
-			       frag, fog, blend, cmaps);
+             frag, fog, blend, cmaps);
   if(s->create()) {
     delete s;
     CHECK_OPENGL_ERROR();
@@ -588,6 +636,26 @@ VolShaderFactory::shader(int dim, int vsize, int channels, bool shading,
   CHECK_OPENGL_ERROR();
   return s->program();
 }
+
+
+ShaderProgramARB*
+VolShaderFactory::shaderProgram(int dim, int vsize, int channels, bool shading, 
+       bool frag, bool fog, int blend, int cmaps, std::string vertexShaderFile, std::string fragmentShaderFile)
+{
+  CHECK_OPENGL_ERROR();
+  
+  VolShader* s = new VolShader(dim, vsize, channels, shading, 
+             frag, fog, blend, cmaps);
+
+  if(s->createVertandFrag(vertexShaderFile,fragmentShaderFile)) {
+    delete s;
+    CHECK_OPENGL_ERROR();
+    return 0;
+  }
+  CHECK_OPENGL_ERROR();
+  return s->shaderProgram();
+}
+
 
 } // end namespace SLIVR
 

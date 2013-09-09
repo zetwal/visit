@@ -37,15 +37,22 @@
 
 namespace SLIVR {
 
+class ShaderProgramARB;
 class FragmentProgramARB;
+class VertexProgramARB;
 
 class VolShader
 {
 public:
+  enum ShaderAlgo { ALGO_NORMAL, 
+        ALGO_OCCSH,
+        ALGO_DOF };
+
   VolShader(int dim, int vsize, int channels, bool shading, bool frag, bool fog, int blend, int cmaps);
   ~VolShader();
 
   bool create();
+  bool createVertandFrag(std::string fragFilename, std::string vertFilename);
   
   inline int dim() { return dim_; }
   inline int vsize() { return vsize_; }
@@ -57,22 +64,24 @@ public:
   inline int num_cmaps() { return num_cmaps_; }
 
   inline bool match(int dim, int vsize, int channels, bool shading, 
-		    bool frag, bool fog, int blend, int cmaps)
+        bool frag, bool fog, int blend, int cmaps)
   { 
     return (dim_ == dim && 
-	    vsize_ == vsize && 
+      vsize_ == vsize && 
             channels_ == channels &&
-	    shading_ == shading && 
-	    frag_ == frag && 
-	    fog_ == fog && 
-	    blend_ == blend && 
-	    num_cmaps_ == cmaps); 
+      shading_ == shading && 
+      frag_ == frag && 
+      fog_ == fog && 
+      blend_ == blend && 
+      num_cmaps_ == cmaps); 
   }
 
   inline FragmentProgramARB* program() { return program_; }
+  inline ShaderProgramARB* shaderProgram() { return shaderProgram_; }
   
 protected:
   bool emit(std::string& s);
+  bool LoadShaderFromFile(std::string& s, std::string shaderFilename);
 
   int dim_;
   int vsize_;
@@ -83,6 +92,11 @@ protected:
   bool frag_;
   int num_cmaps_;
   FragmentProgramARB* program_;
+  ShaderProgramARB* shaderProgram_;
+
+  bool readShadersFromFile_;
+  std::string vertexShaderPath_;
+  std::string fragmentShaderPath_;
 };
 
 class VolShaderFactory
@@ -92,7 +106,10 @@ public:
   ~VolShaderFactory();
   
   FragmentProgramARB* shader(int dim, int vsize, int channels, bool shading, 
-			     bool frag, bool fog, int blend, int num_cmaps);
+           bool frag, bool fog, int blend, int num_cmaps);
+  
+  ShaderProgramARB* shaderProgram(int dim, int vsize, int channels, bool shading, 
+           bool frag, bool fog, int blend, int num_cmaps, std::string vertexShaderFile, std::string fragmentShaderFile);
 
 protected:
   std::vector<VolShader*> shader_;

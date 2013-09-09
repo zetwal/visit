@@ -98,8 +98,21 @@ TextureRenderer::TextureRenderer(Texture* tex,
   use_blend_buffer_(true),
   free_tex_mem_(tex_mem),
   use_stencil_(false),
-  clear_pool_(false)
+  clear_pool_(false),
+  reloadShaders_(true),
+  readShadersFromFile_(true),
+  textureDim_(256),
+  shaderAlgo_(ALGO_NORMAL)
 {
+  attachmentpoints[0] = GL_COLOR_ATTACHMENT0_EXT;
+  attachmentpoints[1] = GL_COLOR_ATTACHMENT1_EXT;
+  attachmentpoints[2] = GL_COLOR_ATTACHMENT2_EXT;
+  attachmentpoints[3] = GL_COLOR_ATTACHMENT3_EXT;
+  
+  attachmentpoints1[0] = GL_COLOR_ATTACHMENT0_EXT;
+  attachmentpoints1[1] = GL_COLOR_ATTACHMENT2_EXT;
+  attachmentpoints2[0] = GL_COLOR_ATTACHMENT1_EXT;
+  attachmentpoints2[1] = GL_COLOR_ATTACHMENT3_EXT;
 }
 
 TextureRenderer::TextureRenderer(const TextureRenderer& copy) :
@@ -125,8 +138,21 @@ TextureRenderer::TextureRenderer(const TextureRenderer& copy) :
   use_blend_buffer_(copy.use_blend_buffer_),
   free_tex_mem_(copy.free_tex_mem_),
   use_stencil_(copy.use_stencil_),
-  clear_pool_(true)
+  clear_pool_(true),
+  reloadShaders_(true),
+  readShadersFromFile_(true),
+  textureDim_(256),
+  shaderAlgo_(ALGO_NORMAL)
 {
+  attachmentpoints[0] = GL_COLOR_ATTACHMENT0_EXT;
+  attachmentpoints[1] = GL_COLOR_ATTACHMENT1_EXT;
+  attachmentpoints[2] = GL_COLOR_ATTACHMENT2_EXT;
+  attachmentpoints[3] = GL_COLOR_ATTACHMENT3_EXT;
+  
+  attachmentpoints1[0] = GL_COLOR_ATTACHMENT0_EXT;
+  attachmentpoints1[1] = GL_COLOR_ATTACHMENT2_EXT;
+  attachmentpoints2[0] = GL_COLOR_ATTACHMENT1_EXT;
+  attachmentpoints2[1] = GL_COLOR_ATTACHMENT3_EXT;
 }
 
 
@@ -159,6 +185,7 @@ TextureRenderer::set_texture(Texture* tex)
 void
 TextureRenderer::set_colormap1(ColorMap* cmap1)
 {
+  std::cout << " TextureRenderer::set_colormap1 " << std::endl;
   cmap1_ = cmap1;
   cmap1_dirty_ = true;
 }
@@ -166,6 +193,7 @@ TextureRenderer::set_colormap1(ColorMap* cmap1)
 void
 TextureRenderer::set_colormap2(const vector<ColorMap2*> &cmap2)
 {
+  std::cout << " TextureRenderer::set_colormap2 " << std::endl;
   cmap2_ = cmap2;
   cmap2_dirty_ = true;
 }
@@ -176,6 +204,8 @@ TextureRenderer::set_colormap2_width(int size)
   if (cmap2_width_ != size) {
     cmap2_width_ = size;
     cmap2_dirty_ = true;
+
+    std::cout << " TextureRenderer::set_colormap2: cmap2_width_ " << std::endl;
   }
 }
 
@@ -261,7 +291,7 @@ TextureRenderer::clear_tex_pool()
   for(unsigned int i = 0; i < tex_pool_.size(); i++)
   {
     size_t size = (tex_pool_[i].nx * tex_pool_[i].ny * 
-		   tex_pool_[i].nz * tex_pool_[i].nb);
+       tex_pool_[i].nz * tex_pool_[i].nb);
     // delete tex object.
     glDeleteTextures(1, (GLuint*)&tex_pool_[i].id);
     tex_pool_[i].id = 0;
@@ -504,8 +534,8 @@ TextureRenderer::load_brick(vector<TextureBrick*> &bricks, int bindex,
             glTexImage3D(GL_TEXTURE_3D, 0, GL_LUMINANCE,
                          nx, ny, nz, 0, GL_LUMINANCE,
                          brick->tex_type(c), brick->tex_data(c));
-	  }
-	}
+    }
+  }
       }
 #  endif
 #endif // !__sgi
@@ -528,7 +558,7 @@ TextureRenderer::draw_polygons(vector<float>& vertex,
                                vector<int>& poly, 
                                bool normal, bool fog,
                                vector<int> *mask, 
-                               FragmentProgramARB* shader)
+                               ShaderProgramARB* shader)
 
 {
   CHECK_OPENGL_ERROR();
@@ -537,13 +567,6 @@ TextureRenderer::draw_polygons(vector<float>& vertex,
   if(fog) {
     glGetFloatv(GL_MODELVIEW_MATRIX, mvmat);
   }
-
-  glGetFloatv(GL_MODELVIEW_MATRIX, mvmat);
-  std::cout << "SLIVR model view: \n";
-  std::cout << mvmat[ 0] << "  " << mvmat[ 1] << "  " << mvmat[ 2] << "  " << mvmat[ 3] << std::endl;
-  std::cout << mvmat[ 4] << "  " << mvmat[ 5] << "  " << mvmat[ 6] << "  " << mvmat[ 7] << std::endl;
-  std::cout << mvmat[ 8] << "  " << mvmat[ 9] << "  " << mvmat[10] << "  " << mvmat[11] << std::endl;
-  std::cout << mvmat[12] << "  " << mvmat[13] << "  " << mvmat[14] << "  " << mvmat[15] << std::endl << std::endl;
 
   for(unsigned int i=0, k=0; i<poly.size(); i++) {
     if (mask && shader) {
@@ -598,7 +621,6 @@ TextureRenderer::draw_polygons(vector<float>& vertex,
   CHECK_OPENGL_ERROR();
 }
 
-
 void
 TextureRenderer::draw_polygons_wireframe(vector<float>& vertex,
                                          vector<float>& /*texcoord*/,
@@ -619,7 +641,7 @@ TextureRenderer::draw_polygons_wireframe(vector<float>& vertex,
                 v & 2 ? 1.0 : 0.0, 
                 v & 4 ? 1.0 : 0.0, 1.0);
     }
-		  
+      
     glBegin(GL_LINE_LOOP);
     {
       for(int j=0; j<poly[i]; j++)
@@ -651,9 +673,9 @@ TextureRenderer::build_colormap1(vector<float> cmap_array,
     case MODE_SLICE: {
       for(int j=0; j < 1024; j+=4) {
         // interpolate from colormap
-	double t = (j/4)*dv;
-	float r,g,b,alpha;
-	cmap1_->get_color(t, r, g, b, alpha);
+  double t = (j/4)*dv;
+  float r,g,b,alpha;
+  cmap1_->get_color(t, r, g, b, alpha);
         // pre-multiply and quantize
         cmap_array[j+0] = r*alpha;
         cmap_array[j+1] = g*alpha;
@@ -664,9 +686,9 @@ TextureRenderer::build_colormap1(vector<float> cmap_array,
     case MODE_MIP: {
       for(int j=0; j < 1024; j+=4) {
         // interpolate from colormap
-	double t = (j/4)*dv;
-	float r,g,b,alpha;
-	cmap1_->get_color(t, r, g, b, alpha);
+  double t = (j/4)*dv;
+  float r,g,b,alpha;
+  cmap1_->get_color(t, r, g, b, alpha);
         // pre-multiply and quantize
         cmap_array[j+0] = r*alpha;
         cmap_array[j+1] = g*alpha;
@@ -678,9 +700,9 @@ TextureRenderer::build_colormap1(vector<float> cmap_array,
       double bp = tan(1.570796327 * (0.5 - slice_alpha_*0.49999));
       for(int j=0; j < 1024; j+=4) {
         // interpolate from colormap
-	      double t = (j/4)*dv;
-	      float r,g,b,alpha;
-	      cmap1_->get_color(t, r, g, b, alpha);
+        double t = (j/4)*dv;
+        float r,g,b,alpha;
+        cmap1_->get_color(t, r, g, b, alpha);
         // scale slice opacity
         alpha = pow(alpha, (float)bp);
         // opacity correction
@@ -782,7 +804,7 @@ TextureRenderer::colormap2_hardware_rasterize()
         glGenFramebuffersEXT(1, &cmap2_widget_framebuffer_);
       }
       glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, cmap2_widget_framebuffer_);
-	  
+    
       // Set up the widget texture.
       if (cmap2_widget_tex_id_ == 0)
       {
@@ -860,8 +882,8 @@ TextureRenderer::colormap2_hardware_rasterize()
                    GL_RGBA, GL_INT, NULL);
 
       glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT,
-				GL_COLOR_ATTACHMENT0_EXT,
-				GL_TEXTURE_2D, cmap2_tex_id_, 0);
+        GL_COLOR_ATTACHMENT0_EXT,
+        GL_TEXTURE_2D, cmap2_tex_id_, 0);
 
       CHECK_FRAMEBUFFER_STATUS();
     }
@@ -907,7 +929,7 @@ TextureRenderer::colormap2_hardware_rasterize()
 
     glPopAttrib();
     glClearColor(clear_color[0], clear_color[1], 
-		 clear_color[2], clear_color[3]);
+     clear_color[2], clear_color[3]);
 
     // Restore buffer state.
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -916,6 +938,274 @@ TextureRenderer::colormap2_hardware_rasterize()
     glReadBuffer(cur_read_buffer);
   }
 }
+
+
+void 
+TextureRenderer::initEyeOccTex(int texWidth, int texHeight, int value=0){
+  unsigned char *textureArray = new unsigned char[4*texWidth*texHeight];
+  for (int i=0; i<(textureDim_*textureDim_); i++)
+    textureArray[i*4 +0] = textureArray[i*4 +1] = textureArray[i*4 +2] =  textureArray[i*4 +3] = value;
+
+    // Eye buffer
+    glEnable(GL_TEXTURE_2D);
+    for (int i=0; i<2; i++){
+        glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id0[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureArray);
+    }
+    
+    // Occlusion Buffer - initialize to white
+    for (int i=0; i<(textureDim_*textureDim_); i++)
+    textureArray[i*4 +0] = textureArray[i*4 +1] = textureArray[i*4 +2] =  textureArray[i*4 +3] = 255;
+    
+    for (int i=0; i<2; i++){
+        glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id1[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureArray);
+    }
+    
+    delete []textureArray;
+}
+
+
+void
+TextureRenderer::init_textures()
+{
+  glGenTextures(2, eyeBuffer_tex_id0);
+    for (int i=0; i<2; i++){
+        glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id0[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, textureDim_, textureDim_, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    }
+
+  glGenTextures(2, eyeBuffer_tex_id1);
+    for (int i=0; i<2; i++){
+        glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id1[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, textureDim_, textureDim_, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    }
+}
+
+bool
+TextureRenderer::init_FrameBuffer()
+{
+  glGenFramebuffersEXT(1, &occShFrameBuffer_);
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, occShFrameBuffer_);
+
+  // attach two textures to FBO
+  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, attachmentpoints[0], GL_TEXTURE_2D, eyeBuffer_tex_id0[0], 0);
+  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, attachmentpoints[1], GL_TEXTURE_2D, eyeBuffer_tex_id0[1], 0);
+  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, attachmentpoints[2], GL_TEXTURE_2D, eyeBuffer_tex_id1[0], 0);
+  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, attachmentpoints[3], GL_TEXTURE_2D, eyeBuffer_tex_id1[1], 0);
+
+  GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+  if (status == GL_FRAMEBUFFER_COMPLETE_EXT){
+  //  cout << "All Good!!!" << endl;
+  }
+  else{
+    cout << "Error: Binding framebuffer failed" << status << endl;
+    return false;
+  }
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+  return true;
+}
+
+
+
+void 
+TextureRenderer::draw_polygonsOccSh(vector<float>& vertex,
+                               vector<float>& texcoord,
+                               vector<int>& poly,
+                               bool normal, bool fog,
+                               vector<int> *mask,
+                               ShaderProgramARB *shaderOccSh, ShaderProgramARB *shaderTexDisp)
+{
+  CHECK_OPENGL_ERROR();
+  float mvmat[16];
+  if (fog) {
+    glGetFloatv(GL_MODELVIEW_MATRIX, mvmat);
+  }
+
+  //int programId, location;
+  int location;
+  int writeTex, readTex;
+  int lastWritePhase1, lastWritePhase2;
+  lastWritePhase1 = lastWritePhase2 = 0;
+
+  int z;          // current z slice position
+  int totalVerticesInPoly = 0;
+  for (unsigned int i=0; i<poly.size(); i++)
+    totalVerticesInPoly += poly[i];
+    
+  float lengthSlice = textureDim_/(float)poly.size();
+  float lengthOpp = (lengthSlice * tan(occSh_blurAngle_ * PI/180.0))/2.0;
+    
+  writeTex = 1; readTex = 0;
+
+  glPushAttrib(GL_ALL_ATTRIB_BITS);
+  glPushMatrix();
+
+  glDisable(GL_BLEND);
+    initEyeOccTex(textureDim_,textureDim_);
+    //writeTextureToPPM( "/Users/pascalgrosset/Desktop/tempImgs/DOF_FtB_", eyeBuffer_tex_id0[0], textureDim,textureDim, GL_RGBA, GL_UNSIGNED_BYTE);
+
+    
+    glViewport(0,0,textureDim_,textureDim_);  // set the viewport for now to the texture size
+    screenSize[0] = screenSize[1] = textureDim_;
+
+    int programId = shaderOccSh->activate();
+    location = glGetUniformLocation(programId, "windowSize");
+    glUniform2fv(location, 1, screenSize);
+
+    location = glGetUniformLocation(programId, "angleFactor");
+    glUniform1fARB(location, lengthOpp);
+
+    //location = glGetUniformLocation(programId, "numSamples");
+    //glUniform1iARB(location, 9);
+
+    location = glGetUniformLocation(programId, "ambIntensity");
+    glUniform1fARB(location, occSh_ambIntensity_);
+
+ 
+    // Phase 1: front to in-focus-plane (front-to-back)
+      //location = glGetUniformLocation(programId, "traversalDirection");
+      //glUniform1i(location, FRONT_TO_BACK);
+            
+      z = -1;
+      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, occShFrameBuffer_);
+     // glDisable(GL_BLEND);     
+      //std::cout << "poly.size(): " << poly.size() << std::endl;
+      for (unsigned int i=poly.size()-1, k=totalVerticesInPoly; i>=1; i--) {  
+
+        //writeTextureToPPM( ("/Users/pascalgrosset/Desktop/tempImgs/DOF_FtB_"+to_string(z)).c_str(), eyeBuffer_tex_id0[readTex], textureDim,textureDim, GL_RGBA, GL_UNSIGNED_BYTE);
+        
+        if (writeTex == 0)  // need to write to eye buffer + to occlusion buffer
+            glDrawBuffers(2, attachmentpoints1);
+        else
+            glDrawBuffers(2, attachmentpoints2);
+        z++;
+        
+
+        glEnable(GL_TEXTURE_2D);
+        // Eye Buffer
+        glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id0[readTex]);
+        shaderOccSh->setLocalTexture(6);
+        
+        // Occlusion Buffer
+        glActiveTexture(GL_TEXTURE7);
+        glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id1[readTex]);
+        shaderOccSh->setLocalTexture(7);
+
+
+        glBegin(GL_POLYGON);
+        {
+          if (normal) {
+            float* v0 = &vertex[(k+0)*3];
+            float* v1 = &vertex[(k+1)*3];
+            float* v2 = &vertex[(k+2)*3];
+            Vector dv1(v1[0]-v0[0], v1[1]-v0[1], v1[2]-v0[2]);
+            Vector dv2(v2[0]-v0[0], v2[1]-v0[1], v2[2]-v0[2]);
+            Vector n = Cross(dv1, dv2);   n.normalize();
+            glNormal3f(n.x(), n.y(), n.z());
+          }
+
+          // draw the number of vertices making up the polygon
+          for(int j=0; j<poly[i]; j++) {
+            float* t = &texcoord[(k+j)*3];
+            float* v = &vertex[(k+j)*3];
+
+            #if defined(GL_ARB_fragment_program) || defined(GL_ATI_fragment_shader)
+            #ifdef _WIN32
+            if (glMultiTexCoord3f) {
+            #endif // _WIN32
+              glMultiTexCoord3f(GL_TEXTURE0, t[0],   t[1],     t[2]);
+              if (fog) {
+                float vz = mvmat[2]*v[0] + mvmat[6]*v[1] + mvmat[10]*v[2] + mvmat[14];
+                glMultiTexCoord3f(GL_TEXTURE1, -vz, 0.0, 0.0);
+              }
+            #ifdef _WIN32
+            }
+            else{
+              glTexCoord3f(t[0], t[1], t[2]);
+            }
+            #endif // _WIN32
+            #else
+            glTexCoord3f(t[0], t[1], t[2]);
+            #endif
+            glVertex3f(v[0], v[1], v[2]);
+          }
+        }
+        glEnd();
+
+        // swap read and write textures
+        writeTex = 1 - writeTex;
+        readTex = 1 - readTex;
+
+        
+        k -= poly[i]; 
+      }
+      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+      
+    lastWritePhase1 = readTex;
+    shaderOccSh->release();
+
+
+    glEnable(GL_BLEND);
+
+
+//std::cout << "inal Phase: Render to texture " <<  std::endl;
+    // Final Phase: Render to texture
+    glViewport(viewport[0],viewport[1],viewport[2],viewport[3]);
+    glPushMatrix();
+      glMatrixMode(GL_MODELVIEW);
+      glPushMatrix();
+        glLoadIdentity();
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+          glLoadIdentity();
+          programId = shaderTexDisp->activate();
+            glEnable(GL_TEXTURE_2D);
+
+            location = glGetUniformLocation(programId, "tex7");
+            glActiveTexture(GL_TEXTURE7);
+            glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id0[lastWritePhase1]);
+            glUniform1i(location, 7);
+            
+            location = glGetUniformLocation(programId, "option");
+            glUniform1i(location, 0);
+
+            glBegin (GL_QUADS);
+              glTexCoord2f(0.0, 0.0);  glVertex3f (-1, -1, 0.0);
+              glTexCoord2f(1.0, 0.0);  glVertex3f ( 1, -1, 0.0);
+              glTexCoord2f(1.0, 1.0);  glVertex3f ( 1,  1, 0.0);
+              glTexCoord2f(0.0, 1.0);  glVertex3f (-1,  1, 0.0);
+            glEnd ();
+
+          shaderTexDisp->release();
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
+      glPopMatrix();
+    glPopMatrix();
+
+  glPopMatrix();
+  glPopAttrib();
+
+  CHECK_OPENGL_ERROR();
+}
+
 
 
 void
@@ -961,7 +1251,7 @@ TextureRenderer::colormap2_hardware_rasterize_setup()
     shader_factory_ = new CM2ShaderFactory();
     CHECK_OPENGL_ERROR();
     if (cmap2_shader_glsl_->create()) /* true shader->create() means it
-					 failed (backwards) */
+           failed (backwards) */
     {
       cmap2_shader_glsl_->destroy();
       delete shader_factory_;
@@ -979,6 +1269,7 @@ TextureRenderer::colormap2_hardware_rasterize_setup()
 void
 TextureRenderer::build_colormap2()
 {
+  std::cout << " TextureRenderer::build_colormap2 " << std::endl;
   CHECK_OPENGL_ERROR();
   if (!ShaderProgramARB::shaders_supported()) return;
   if (!cmap2_dirty_ && !alpha_dirty_) return;
@@ -1011,7 +1302,7 @@ TextureRenderer::bind_colormap1(vector<float> cmap_array,
     glEnable(GL_TEXTURE_1D);
     glBindTexture(GL_TEXTURE_1D, cmap_tex);
     // enable data texture unit 1
-    glActiveTexture(GL_TEXTURE1_ARB);
+    glActiveTexture(GL_TEXTURE2_ARB);   //glActiveTexture(GL_TEXTURE1_ARB);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glEnable(GL_TEXTURE_3D);
     glActiveTexture(GL_TEXTURE0_ARB);
@@ -1056,7 +1347,7 @@ TextureRenderer::bind_colormap2()
 
     glBindTexture(GL_TEXTURE_2D, cmap2_tex_id_);
     // enable data texture unit 1
-    glActiveTexture(GL_TEXTURE1_ARB);
+    glActiveTexture(GL_TEXTURE3_ARB);   //glActiveTexture(GL_TEXTURE1_ARB);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glEnable(GL_TEXTURE_3D);
     glActiveTexture(GL_TEXTURE0_ARB);
@@ -1079,7 +1370,7 @@ TextureRenderer::release_colormap1()
     glDisable(GL_TEXTURE_1D);
     glBindTexture(GL_TEXTURE_1D, 0);
     // enable data texture unit 1
-    glActiveTexture(GL_TEXTURE1_ARB);
+    glActiveTexture(GL_TEXTURE2_ARB);   //glActiveTexture(GL_TEXTURE1_ARB);
     glDisable(GL_TEXTURE_3D);
     glBindTexture(GL_TEXTURE_3D, 0);
     glActiveTexture(GL_TEXTURE0_ARB);
@@ -1110,7 +1401,7 @@ TextureRenderer::release_colormap2()
     glActiveTexture(GL_TEXTURE2_ARB);
     glDisable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0); 
-    glActiveTexture(GL_TEXTURE1_ARB);
+    glActiveTexture(GL_TEXTURE3_ARB); //glActiveTexture(GL_TEXTURE1_ARB);
     glDisable(GL_TEXTURE_3D);
     glBindTexture(GL_TEXTURE_3D, 0);
     glActiveTexture(GL_TEXTURE0_ARB);

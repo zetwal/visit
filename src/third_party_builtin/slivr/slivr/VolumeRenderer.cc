@@ -74,6 +74,7 @@ VolumeRenderer::VolumeRenderer(Texture* tex,
   adaptive_(true),
   draw_level_(20),
   level_alpha_(20),
+  shader(0),
   planes_(planes)
 {
   mode_ = MODE_OVER;
@@ -99,6 +100,7 @@ VolumeRenderer::VolumeRenderer(const VolumeRenderer& copy):
   draw_level_(copy.draw_level_),
   level_alpha_(copy.level_alpha_),
   planes_(copy.planes_),
+  shader(0),
   depth_rb_(0)
 {
 }
@@ -164,7 +166,7 @@ VolumeRenderer::set_planes(const vector<Plane*> &p)
 
 void
 VolumeRenderer::draw(bool draw_wireframe_p, bool interactive_mode_p,
-		     bool orthographic_p)
+         bool orthographic_p)
 {
   if(draw_wireframe_p) {
     draw_wireframe(orthographic_p);
@@ -192,7 +194,7 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
   for (int i = 0; i < levels; i++)
   {
     tex_->get_sorted_bricks(bricks[i], view_ray, 
-			    levels - i - 1, orthographic_p);
+          levels - i - 1, orthographic_p);
     total_brick_size += bricks[i].size();
     if (firstlevel < 0 && bricks[i].size()) { firstlevel = i; }
   }
@@ -265,7 +267,7 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
     if(GLEW_ARB_imaging)
 #else
     if(gluCheckExtension((GLubyte*)"GL_ARB_imaging",
-			 glGetString(GL_EXTENSIONS)))
+       glGetString(GL_EXTENSIONS)))
 #endif
 #else
       if (glBlendEquation)
@@ -281,7 +283,7 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
     if(GLEW_ARB_imaging)
 #else
     if(gluCheckExtension((GLubyte*)"GL_ARB_imaging",
-			 glGetString(GL_EXTENSIONS)))
+       glGetString(GL_EXTENSIONS)))
 #endif
 #else
       if (glBlendEquation)
@@ -332,21 +334,21 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
       // rendering to it is currently unusably slow. May, 2007
       // To test it just switch GL_RGBA16F_ARB to GL_RGBA32F_ARB.
       glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16F_ARB, w, h, 0,
-		     GL_RGBA, GL_FLOAT, NULL);
+         GL_RGBA, GL_FLOAT, NULL);
 
       CHECK_OPENGL_ERROR();
       glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT,
-				GL_COLOR_ATTACHMENT0_EXT,
-				GL_TEXTURE_RECTANGLE_ARB, blend_tex_id_, 0);
+        GL_COLOR_ATTACHMENT0_EXT,
+        GL_TEXTURE_RECTANGLE_ARB, blend_tex_id_, 0);
       CHECK_OPENGL_ERROR();
 
       // Initialize depth renderbuffer
       glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, depth_rb_);
       glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT,
-			       GL_DEPTH_COMPONENT24, w, h);
+             GL_DEPTH_COMPONENT24, w, h);
       glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT,
-				   GL_DEPTH_ATTACHMENT_EXT,
-				   GL_RENDERBUFFER_EXT, depth_rb_);
+           GL_DEPTH_ATTACHMENT_EXT,
+           GL_RENDERBUFFER_EXT, depth_rb_);
     }
 
     CHECK_OPENGL_ERROR();
@@ -439,18 +441,81 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
 
   //--------------------------------------------------------------------------
   // Set up shaders
-  FragmentProgramARB* shader = 0;
-  int blend_mode = 0;
-  shader = vol_shader_factory_->shader(use_cmap2 ? 2 : 1, nb0, tex_->nc(),
-                                       use_shading, false,
-                                       use_fog, blend_mode, cmap2_.size());
-  if (shader)
-  {
-    if (!shader->valid())
+   
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  screenSize[0] = viewport[2];
+  textureDim_ = screenSize[1] = viewport[3];
+  
+  if (reloadShaders_ == true){
+    int blend_mode = 0;                              
+    if (readShadersFromFile_ == false)
     {
-      shader->create();
+      shaderLightON = vol_shader_factory_->shader(use_cmap2 ? 2 : 1, nb0, tex_->nc(),
+                                         true, false,
+                                         use_fog, blend_mode, cmap2_.size());
+      shaderLightON->create();
+      shaderLightON->bind();
+      shaderLightON->release();
+
+
+      shaderLightOFF = vol_shader_factory_->shader(use_cmap2 ? 2 : 1, nb0, tex_->nc(),
+                                         false, false,
+                                         use_fog, blend_mode, cmap2_.size());
+      shaderLightOFF->create();
+      shaderLightOFF->bind();
+      shaderLightOFF->release();
+    
+      shader = (use_shading == true)?shaderLightON:shaderLightOFF;
     }
-    shader->bind();
+    else
+    {
+      shaderProg = vol_shader_factory_->shaderProgram(use_cmap2 ? 2 : 1, nb0, tex_->nc(),
+                                                true, false, use_fog, blend_mode, cmap2_.size(),
+                                                "slivrShaders/emiAbs.vert","slivrShaders/emiAbs.frag");
+      shaderProg->createVertandFrag();
+      shaderProg->bind();
+      shaderProg->release();
+
+      shaderTexture = vol_shader_factory_->shaderProgram(use_cmap2 ? 2 : 1, nb0, tex_->nc(),
+                                                true, false, use_fog, blend_mode, cmap2_.size(),
+                                                "slivrShaders/textureDisplay.vert","slivrShaders/textureDisplay.frag");
+      shaderTexture->createVertandFrag();
+      shaderTexture->bind();
+      shaderTexture->release();
+
+
+      shaderOccSh = vol_shader_factory_->shaderProgram(use_cmap2 ? 2 : 1, nb0, tex_->nc(),
+                                                true, false, use_fog, blend_mode, cmap2_.size(),
+                                                "slivrShaders/occlusionShader.vert","slivrShaders/occlusionShader.frag");
+      shaderOccSh->createVertandFrag();
+      shaderOccSh->bind();
+      shaderOccSh->release();
+
+      if (shaderAlgo_ == ALGO_OCCSH)
+        shader = shaderOccSh;
+      else
+        shader = shaderProg;
+    }
+    shader->activate();
+
+    reloadShaders_ = false;
+  }
+  else
+  {
+    if (readShadersFromFile_ == false)
+      shader = (use_shading == true)?shaderLightON:shaderLightOFF; 
+    else
+      if (shaderAlgo_ == ALGO_OCCSH)
+        shader = shaderOccSh;
+      else
+        shader = shaderProg;
+
+    shader->activate();
+  }
+
+  if (shaderAlgo_ == ALGO_OCCSH){
+    init_textures();
+    init_FrameBuffer();
   }
   CHECK_OPENGL_ERROR();
   if (use_shading)
@@ -465,6 +530,8 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
     light = mv.unproject(light);
     light = t.unproject(light);
     light.safe_normalize();
+    shader->setLocalTexture(2);
+    shader->setLocalTexture(3);
     shader->setLocalParam(0, light.x(), light.y(), light.z(), 1.0);
     shader->setLocalParam(1, ambient_, diffuse_, specular_, shine_);
   }
@@ -501,8 +568,10 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
     shader->setLocalParam(2, 1, 0, 0, 0);
   }
   CHECK_OPENGL_ERROR();
+
   if (levels == 1)
   {
+
 #ifdef __APPLE__
     // Blend mode for no texture palette support.
     if (!ShaderProgramARB::shaders_supported() && mode_ == MODE_OVER)
@@ -519,9 +588,8 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
       glColor4f(1.0, 1.0, 1.0, alpha);
     }
 #endif
-
     vector<TextureBrick*>& bs  = bricks[0];
-    //std::cout << "bs.size(): " << bs.size() << std::endl;
+    //std::cout << "Num bricks: " << bs.size() << std::endl;
     for (unsigned int i=0; i < bs.size(); i++) {
       TextureBrick* b = bs[i];
       if (!test_against_view(b->bbox())) continue; // Clip against view.
@@ -529,14 +597,21 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
       texcoord.clear();
       mask.clear();
       size.clear();
+      //b->compute_polygons(view_ray, dt, vertex, texcoord, size);
       b->compute_polygons(view_ray, (double)rate, vertex, texcoord, size);
       b->mask_polygons(size, vertex, texcoord, mask, planes_);
       if (vertex.size() == 0) { continue; }
       load_brick(bs, i, use_cmap2);
       shader->setLocalParam(4, 1.0/b->nx(), 1.0/b->ny(), 1.0/b->nz(), 0.0);
-      draw_polygons(vertex, texcoord, size, false, use_fog,
+      shader->setLocalParam(5, (use_cmap2==true?0.9:0.1), (shading_==true?0.9:0.1), 0.0, 0.0);
+      if (shaderAlgo_ == ALGO_OCCSH)
+        draw_polygonsOccSh(vertex, texcoord, size, false, use_fog,
+                           &mask, shader, shaderTexture);
+      else
+        draw_polygons(vertex, texcoord, size, false, use_fog,
                     &mask, shader);
     }
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   }
   else
   {

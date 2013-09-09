@@ -43,16 +43,24 @@ class SLIVRSHARE ShaderProgramARB
 {
   public:
     ShaderProgramARB(const std::string& program);
+    ShaderProgramARB(const std::string& programFrag, const std::string& programVert);
     ~ShaderProgramARB();
     
     bool create(std::string& error);
+    bool createBoth(std::string& error);
     bool valid();
     void destroy();
 
     void bind();
+    void setTextures();
+
+    inline unsigned int getID(){return id_;}
+
+    int activate();
     void release();
 
     void setLocalParam(int, float, float, float, float);
+    void setLocalTexture(int i);
 
     // Call init_shaders_supported before shaders_supported queries!
     static bool init_shaders_supported(std::string& error);
@@ -81,11 +89,22 @@ class SLIVRSHARE ShaderProgramARB
       // Oddly enough true meant that the creation failed
       return (!ret);
     }
+
+    bool createVertandFrag()
+    {
+      std::string error;
+      bool ret = createBoth(error);
+      if (!ret) std::cerr << error;
+      // Oddly enough true meant that the creation failed
+      return (!ret);
+    }
     
   protected:
     unsigned int type_;
     unsigned int id_;
     std::string  program_;
+    std::string  programVert_;
+    std::string  programFrag_;
 
     static bool init_;
     static bool supported_;

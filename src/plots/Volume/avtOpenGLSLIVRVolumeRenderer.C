@@ -414,6 +414,16 @@ avtOpenGLSLIVRVolumeRenderer::Render(
     const double *matProp = props.atts.GetMaterialProperties();
     context->renderer->set_material(matProp[0], matProp[1], matProp[2], matProp[3]);
 
+    context->renderer->set_occSh_ambIntensity(props.atts.GetAmbientIntensity());
+    context->renderer->set_occSh_blurAngle(props.atts.GetAmbientAngle());
+    int algoChosen = props.atts.GetOcclusionShadingOn();
+    debug5 << mName << "AlgoChosen: " << algoChosen << endl;
+    context->renderer->set_shaderAlgo(algoChosen);
+    
+    debug5 << mName << "Material properties: " <<  matProp[0] << " ,  " <<  matProp[1] << " ,  " <<  matProp[2] << " ,  " <<  matProp[3]<< endl;
+    debug5 << mName << "Alpha: " <<  props.atts.GetOpacityAttenuation()*2.0 - 1.0 << endl;
+
+
     // Render the context.
     debug5 << mName << "Rendering..." << endl;
     if(props.reducedDetail)
@@ -422,10 +432,12 @@ avtOpenGLSLIVRVolumeRenderer::Render(
              context->renderer->set_shading(false);
 
         context->renderer->set_sampling_rate(1.);
+        context->renderer->set_shaderAlgo(0);
 
         context->renderer->draw(false, true);
 
         context->renderer->set_sampling_rate(samplingRate);
+        context->renderer->set_shaderAlgo(props.atts.GetOcclusionShadingOn());
 
         if(props.atts.GetLightingFlag())
              context->renderer->set_shading(true);
@@ -798,6 +810,7 @@ avtOpenGLSLIVRVolumeRenderer::CreateContext(vtkRectilinearGrid *grid,
         context->cm, context->cmap2, context->planes, vcm*1024*1024);
     context->renderer->set_sampling_rate(samplingRate);
     context->renderer->set_shading(atts.GetLightingFlag());
+    context->renderer->reloadShaders(true);
 
     debug5 << mName << "Built renderer" << endl;
 }

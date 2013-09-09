@@ -97,6 +97,7 @@ avtPODICAlgorithm.C
 avtPOSBalanceICAlgorithm.C
 avtPointToGlyphFilter.C
 avtRayCompositer.C
+avtDummy.C
 avtRayTracer.C
 avtResampleFilter.C
 avtSamplePointCommunicator.C

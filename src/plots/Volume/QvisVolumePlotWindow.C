@@ -1983,7 +1983,11 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
             matKd->setValue(mat[1]);
             matKs->setValue(mat[2]);
             matN->setValue(mat[3]);
-
+            
+            matKa->setEnabled(matEnabled);
+            matKd->setEnabled(matEnabled);
+            matKs->setEnabled(matEnabled);
+            matN->setEnabled(matEnabled);
             Ka->setEnabled(matEnabled);
             Kd->setEnabled(matEnabled);
             Ks->setEnabled(matEnabled);

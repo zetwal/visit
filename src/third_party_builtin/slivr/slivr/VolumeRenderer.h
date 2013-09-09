@@ -46,9 +46,9 @@ class SLIVRSHARE VolumeRenderer : public TextureRenderer
 {
 public:
   VolumeRenderer(Texture* tex, 
-		 ColorMap* cmap1, 
-		 const vector<ColorMap2*> &cmap2,
-		 const vector<Plane*> &planes,
+     ColorMap* cmap1, 
+     const vector<ColorMap2*> &cmap2,
+     const vector<Plane*> &planes,
                  int tex_mem);
   VolumeRenderer(const VolumeRenderer&);
   virtual ~VolumeRenderer();
@@ -65,8 +65,8 @@ public:
   inline void set_light(int light) { light_ = light; }
   
   virtual void draw(bool draw_wireframe_p, 
-		    bool interactive_mode_p, 
-		    bool orthographic_p = false);
+        bool interactive_mode_p, 
+        bool orthographic_p = false);
 
   void draw_wireframe(bool orthographic_p = false);
   void draw_volume(bool interactive_mode_p, bool orthographic_p = false);
@@ -79,6 +79,7 @@ public:
   void set_planes(const vector<Plane*> &p);
 
   bool get_shading() const { return shading_; }
+  void createShader();
 
 protected:
   double grange_, goffset_;
@@ -86,9 +87,13 @@ protected:
   double ambient_, diffuse_, specular_, shine_;
   int light_;
   bool adaptive_;
+  int shadingType_;
   vector< bool > draw_level_;
   vector< double > level_alpha_;
   vector<Plane *> planes_;
+  ShaderProgramARB *shader;
+  FragmentProgramARB *shaderLightON, *shaderLightOFF;
+  ShaderProgramARB *shaderProg, *shaderTexture, *shaderOccSh;
   GLuint depth_rb_;
 };
 

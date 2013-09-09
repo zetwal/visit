@@ -64,6 +64,7 @@
 #include <avtVolume.h>
 #include <avtWorldSpaceToImageSpaceTransform.h>
 
+
 #ifdef PARALLEL
 #include <avtImageCommunicator.h>
 #include <avtSamplePointCommunicator.h>
@@ -473,15 +474,19 @@ avtRayTracer::Execute(void)
         timingVolToImg = visitTimer->StartTimer();
 
     avtDataObject_p samples = extractor.GetOutput();
+
+    
     
     if (rayCastingSLIVR == true){
         //std::cout << PAR_Rank() << "   avtRayTracer::Execute     starting RayCasting SLIVR  ...... " << std::endl;    
 
         // only required to force an update - Need to find a way to get rid of that!!!!
         avtRayCompositer rc(rayfoo);
+
         rc.SetInput(samples);
         avtImage_p image  = rc.GetTypedOutput();
         image->Update(GetGeneralContract());
+
 
         
         //
@@ -1115,34 +1120,40 @@ avtRayTracer::Execute(void)
 
         // create images structures to hold these
         avtImage_p whole_image, tempImage;
-        unsigned char *imgTest = NULL;
-        float *zbuffer = NULL;
-
-        tempImage = new avtImage(this);     // for processors other than proc 0
+    
+        tempImage = new avtImage(this);     // for processors other than proc 0 ; a dummy
         
         // Processor 0 does a special compositing
         if (PAR_Rank() == 0)
         {
-            //std::cout << PAR_Rank() << "   avtRayTracer::Execute procs compositing patches .......... screen: " << screen[0] << " x " << screen[1] << std::endl;
+            std::cout << "\n\n" << PAR_Rank() << "   avtRayTracer::Execute procs compositing patches .......... screen: " << screen[0] << " x " << screen[1] << std::endl;
             whole_image = new avtImage(this);
 
+            float *zbuffer = new float[screen[0] * screen[1]];
+            unsigned char *imgTest = NULL;
+
+            // creates input for the
             vtkImageData *img = avtImageRepresentation::NewImage(screen[0], screen[1]);
             whole_image->GetImage() = img;
+
 
             imgTest = new unsigned char[screen[0] * screen[1] * 3];
             imgTest = whole_image->GetImage().GetRGBBuffer();
 
-            zbuffer = new float[screen[0] * screen[1]];
+            zbuffer = new float[screen[0] * screen[1]]();
             for (int s=0; s<screen[0] * screen[1]; s++)
-                zbuffer[s] = 1.0;
+                zbuffer[s] = 20.0;
             zbuffer = whole_image->GetImage().GetZBuffer();
 
+            
             // Get the composited image
             imgComm.getcompositedImage(screen[0], screen[1], imgTest); 
-
             img->Delete();
 
             debug5 << PAR_Rank() << "   ~ final: " << endl;
+
+            if (zbuffer != NULL)
+                delete []zbuffer;
         }
         imgComm.syncAllProcs();
 
@@ -1161,8 +1172,7 @@ avtRayTracer::Execute(void)
 
 
 
-        if (zbuffer != NULL)
-           delete []zbuffer;
+        
 
         extractor.delImgPatches();
 

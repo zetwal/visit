@@ -50,6 +50,7 @@
 #include <avtOpacityMap.h>
 #include <map>
 #include <avtImgCommunicator.h>
+//#include <avtDummy.h>
 
 
 struct imagePatch{

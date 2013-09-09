@@ -43,19 +43,31 @@
 namespace SLIVR {
 
 class FragmentProgramARB;
+class VertexProgramARB;
+class ShaderProgramARB;
 class VolShaderFactory;
+
+const float PI = 3.14159265358979323846;
+const int NUM_LOC_PARAMS = 15;
 
 class SLIVRSHARE TextureRenderer 
 {
 public:
   enum RenderMode { MODE_NONE, 
-		    MODE_OVER, 
-		    MODE_MIP, 
-		    MODE_SLICE };
+        MODE_OVER, 
+        MODE_MIP, 
+        MODE_SLICE };
+
+  enum ShaderAlgo { ALGO_NORMAL, 
+        ALGO_OCCSH,
+        ALGO_DOF };
+
+  enum RenderDirection { BACK_TO_FRONT, 
+        FRONT_TO_BACK };
 
   TextureRenderer(Texture* tex, 
-		  ColorMap* cmap1,
-		  const vector<ColorMap2*> & cmap2,
+      ColorMap* cmap1,
+      const vector<ColorMap2*> & cmap2,
                   int tex_mem);
   TextureRenderer(const TextureRenderer&);
   virtual ~TextureRenderer();
@@ -78,6 +90,12 @@ public:
   void get_bounds(BBox& bb) const { tex_->get_bounds(bb); }
 
   bool get_lighting() const { return lighting_; }
+  void reloadShaders(bool r){reloadShaders_ = r;}
+  void readShadersFromFile(bool r){readShadersFromFile_ = r;}
+
+  inline void set_shaderAlgo(int i) { shaderAlgo_ = i; }
+  inline void set_occSh_ambIntensity(float val) { occSh_ambIntensity_ = val; }
+  inline void set_occSh_blurAngle(float val) { occSh_blurAngle_ = val; }
 
 protected:
   Texture *tex_;
@@ -117,6 +135,23 @@ protected:
   bool use_stencil_;
   bool invert_opacity_;
   bool clear_pool_;
+
+  bool reloadShaders_;
+  bool readShadersFromFile_;
+
+  int shaderAlgo_;
+  float occSh_ambIntensity_;
+  float occSh_blurAngle_;
+  int textureDim_;
+  GLuint occShFrameBuffer_;
+
+  GLint viewport[4];
+  float screenSize[2];
+  GLuint eyeBuffer_tex_id0[2];
+  GLuint eyeBuffer_tex_id1[2];
+  GLenum attachmentpoints[4]; 
+  GLenum attachmentpoints1[2]; 
+  GLenum attachmentpoints2[2];
   
   struct TexParam
   {
@@ -140,18 +175,26 @@ protected:
 
   Ray compute_view();
   void load_brick(vector<TextureBrick*> &b, int i, bool use_cmap2);
+
+  bool init_FrameBuffer();
+  void init_textures();
+  void initEyeOccTex(int texWidth, int texHeight, int value);
+
+  void draw_polygonsOccSh(vector<float>& vertex, vector<float>& texcoord,
+                          vector<int>& poly, bool normal, bool fog, vector<int> *mask,
+                          ShaderProgramARB *shaderOccSh, ShaderProgramARB *shaderTexDisp);
   void draw_polygons(vector<float>& vertex, vector<float>& texcoord,
-		     vector<int>& poly,
-                     bool normal, bool fog, vector<int> *mask = 0, 
-		     FragmentProgramARB *shader = 0);
+         vector<int>& poly, bool normal, bool fog, vector<int> *mask = 0, 
+         ShaderProgramARB *shader = 0);
+
   void draw_polygons_wireframe(vector<float>& vertex, vector<float>& texcoord,
-			       vector<int>& poly,
-			       bool normal, bool fog,
-			       vector<int> *mask=0);
+             vector<int>& poly,
+             bool normal, bool fog,
+             vector<int> *mask=0);
 
   void build_colormap1(vector<float> cmap_array,
-		       unsigned int& cmap_tex, bool& cmap_dirty,
-		       bool& alpha_dirty,  double level_exponent = 0.0);
+           unsigned int& cmap_tex, bool& cmap_dirty,
+           bool& alpha_dirty,  double level_exponent = 0.0);
 
   void build_colormap2();
   void colormap2_hardware_rasterize_setup();
