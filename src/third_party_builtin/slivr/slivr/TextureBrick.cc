@@ -162,10 +162,8 @@ TextureBrick::compute_polygons(const Ray& view, double dt,
  
   int volDims[3];
   volDims[0] = nx();  volDims[1] = ny();  volDims[2] = nz();
-  // dt is now initially storing the rate
+  // dt is now storing the rate; number of slices is based on volume size + direction of view
   int numSlices = (volDims[0]*fabs(view.direction().x()) + volDims[1]*fabs(view.direction().y()) + volDims[2]*fabs(view.direction().z())) * dt;
-  //std::cout << "dimensions: " << volDims[0] << " ,  " << volDims[1] << " ,  " << volDims[2] << std::endl;
-  //std::cout << "numSlices: " << numSlices << std::endl;
 
   double tmin = Dot(corner[0] - view.origin(), view.direction());
   double tmax = tmin;

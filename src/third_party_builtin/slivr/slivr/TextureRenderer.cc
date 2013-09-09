@@ -1055,9 +1055,8 @@ TextureRenderer::draw_polygonsOccSh(vector<float>& vertex,
 
   glDisable(GL_BLEND);
     initEyeOccTex(textureDim_,textureDim_);
-    //writeTextureToPPM( "/Users/pascalgrosset/Desktop/tempImgs/DOF_FtB_", eyeBuffer_tex_id0[0], textureDim,textureDim, GL_RGBA, GL_UNSIGNED_BYTE);
 
-    
+    // First Phase: Render to eyebuffer
     glViewport(0,0,textureDim_,textureDim_);  // set the viewport for now to the texture size
     screenSize[0] = screenSize[1] = textureDim_;
 
@@ -1068,101 +1067,85 @@ TextureRenderer::draw_polygonsOccSh(vector<float>& vertex,
     location = glGetUniformLocation(programId, "angleFactor");
     glUniform1fARB(location, lengthOpp);
 
-    //location = glGetUniformLocation(programId, "numSamples");
-    //glUniform1iARB(location, 9);
-
     location = glGetUniformLocation(programId, "ambIntensity");
     glUniform1fARB(location, occSh_ambIntensity_);
 
  
-    // Phase 1: front to in-focus-plane (front-to-back)
-      //location = glGetUniformLocation(programId, "traversalDirection");
-      //glUniform1i(location, FRONT_TO_BACK);
-            
-      z = -1;
-      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, occShFrameBuffer_);
-     // glDisable(GL_BLEND);     
-      //std::cout << "poly.size(): " << poly.size() << std::endl;
-      for (unsigned int i=poly.size()-1, k=totalVerticesInPoly; i>=1; i--) {  
+    z = -1;
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, occShFrameBuffer_);
+    for (unsigned int i=poly.size()-1, k=totalVerticesInPoly; i>=1; i--) {  
 
-        //writeTextureToPPM( ("/Users/pascalgrosset/Desktop/tempImgs/DOF_FtB_"+to_string(z)).c_str(), eyeBuffer_tex_id0[readTex], textureDim,textureDim, GL_RGBA, GL_UNSIGNED_BYTE);
-        
-        if (writeTex == 0)  // need to write to eye buffer + to occlusion buffer
-            glDrawBuffers(2, attachmentpoints1);
-        else
-            glDrawBuffers(2, attachmentpoints2);
-        z++;
-        
+      if (writeTex == 0)  // need to write to eye buffer + to occlusion buffer
+          glDrawBuffers(2, attachmentpoints1);
+      else
+          glDrawBuffers(2, attachmentpoints2);
+      z++;
+      
+      glEnable(GL_TEXTURE_2D);
+      // Eye Buffer
+      glActiveTexture(GL_TEXTURE6);
+      glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id0[readTex]);
+      shaderOccSh->setLocalTexture(6);
+      
+      // Occlusion Buffer
+      glActiveTexture(GL_TEXTURE7);
+      glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id1[readTex]);
+      shaderOccSh->setLocalTexture(7);
 
-        glEnable(GL_TEXTURE_2D);
-        // Eye Buffer
-        glActiveTexture(GL_TEXTURE6);
-        glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id0[readTex]);
-        shaderOccSh->setLocalTexture(6);
-        
-        // Occlusion Buffer
-        glActiveTexture(GL_TEXTURE7);
-        glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id1[readTex]);
-        shaderOccSh->setLocalTexture(7);
-
-
-        glBegin(GL_POLYGON);
-        {
-          if (normal) {
-            float* v0 = &vertex[(k+0)*3];
-            float* v1 = &vertex[(k+1)*3];
-            float* v2 = &vertex[(k+2)*3];
-            Vector dv1(v1[0]-v0[0], v1[1]-v0[1], v1[2]-v0[2]);
-            Vector dv2(v2[0]-v0[0], v2[1]-v0[1], v2[2]-v0[2]);
-            Vector n = Cross(dv1, dv2);   n.normalize();
-            glNormal3f(n.x(), n.y(), n.z());
-          }
-
-          // draw the number of vertices making up the polygon
-          for(int j=0; j<poly[i]; j++) {
-            float* t = &texcoord[(k+j)*3];
-            float* v = &vertex[(k+j)*3];
-
-            #if defined(GL_ARB_fragment_program) || defined(GL_ATI_fragment_shader)
-            #ifdef _WIN32
-            if (glMultiTexCoord3f) {
-            #endif // _WIN32
-              glMultiTexCoord3f(GL_TEXTURE0, t[0],   t[1],     t[2]);
-              if (fog) {
-                float vz = mvmat[2]*v[0] + mvmat[6]*v[1] + mvmat[10]*v[2] + mvmat[14];
-                glMultiTexCoord3f(GL_TEXTURE1, -vz, 0.0, 0.0);
-              }
-            #ifdef _WIN32
-            }
-            else{
-              glTexCoord3f(t[0], t[1], t[2]);
-            }
-            #endif // _WIN32
-            #else
-            glTexCoord3f(t[0], t[1], t[2]);
-            #endif
-            glVertex3f(v[0], v[1], v[2]);
-          }
+      glBegin(GL_POLYGON);
+      {
+        if (normal) {
+          float* v0 = &vertex[(k+0)*3];
+          float* v1 = &vertex[(k+1)*3];
+          float* v2 = &vertex[(k+2)*3];
+          Vector dv1(v1[0]-v0[0], v1[1]-v0[1], v1[2]-v0[2]);
+          Vector dv2(v2[0]-v0[0], v2[1]-v0[1], v2[2]-v0[2]);
+          Vector n = Cross(dv1, dv2);   n.normalize();
+          glNormal3f(n.x(), n.y(), n.z());
         }
-        glEnd();
 
-        // swap read and write textures
-        writeTex = 1 - writeTex;
-        readTex = 1 - readTex;
+        // draw the number of vertices making up the polygon
+        for(int j=0; j<poly[i]; j++) {
+          float* t = &texcoord[(k+j)*3];
+          float* v = &vertex[(k+j)*3];
 
-        
-        k -= poly[i]; 
+          #if defined(GL_ARB_fragment_program) || defined(GL_ATI_fragment_shader)
+          #ifdef _WIN32
+          if (glMultiTexCoord3f) {
+          #endif // _WIN32
+            glMultiTexCoord3f(GL_TEXTURE0, t[0],   t[1],     t[2]);
+            if (fog) {
+              float vz = mvmat[2]*v[0] + mvmat[6]*v[1] + mvmat[10]*v[2] + mvmat[14];
+              glMultiTexCoord3f(GL_TEXTURE1, -vz, 0.0, 0.0);
+            }
+          #ifdef _WIN32
+          }
+          else{
+            glTexCoord3f(t[0], t[1], t[2]);
+          }
+          #endif // _WIN32
+          #else
+          glTexCoord3f(t[0], t[1], t[2]);
+          #endif
+          glVertex3f(v[0], v[1], v[2]);
+        }
       }
-      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+      glEnd();
+
+      // swap read and write textures
+      writeTex = 1 - writeTex;
+      readTex = 1 - readTex;
+
+      k -= poly[i]; 
+    }
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
       
     lastWritePhase1 = readTex;
     shaderOccSh->release();
 
-
     glEnable(GL_BLEND);
 
 
-//std::cout << "inal Phase: Render to texture " <<  std::endl;
     // Final Phase: Render to texture
     glViewport(viewport[0],viewport[1],viewport[2],viewport[3]);
     glPushMatrix();
@@ -1336,7 +1319,7 @@ TextureRenderer::bind_colormap2()
   if (ShaderProgramARB::shaders_supported() && glActiveTexture)
   {
     // bind texture to unit 2
-    glActiveTexture(GL_TEXTURE3_ARB);   //glActiveTexture(GL_TEXTURE2_ARB);
+    glActiveTexture(GL_TEXTURE3_ARB);   // 2D transnfer fn changed from GL_TEXTURE2_ARB as this is now using the new shaders
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glEnable(GL_TEXTURE_2D);
 
@@ -1393,7 +1376,7 @@ TextureRenderer::release_colormap2()
 #if defined(GL_ARB_fragment_program) || defined(GL_ATI_fragment_shader)
   if (ShaderProgramARB::shaders_supported() && glActiveTexture)
   {
-    glActiveTexture(GL_TEXTURE3_ARB);  // glActiveTexture(GL_TEXTURE2_ARB);
+    glActiveTexture(GL_TEXTURE3_ARB);  // 2D transnfer fn changed from GL_TEXTURE2_ARB as this is now using the new shaders
     glDisable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0); 
     glActiveTexture(GL_TEXTURE1_ARB); 

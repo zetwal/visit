@@ -536,8 +536,6 @@ ShaderProgramARB::setLocalTexture(int i)
 void
 ShaderProgramARB::setLocalParam(int i, float x, float y, float z, float w)
 {
-  //cout << "\nloc " << loc_strings[i] << " for " << i << endl;
-  //cout << "val " << x << " ,  " << y << " ,  " << z << " ,  " << w << endl;
   CHECK_OPENGL_ERROR();
   if (shaders_supported())
   {
