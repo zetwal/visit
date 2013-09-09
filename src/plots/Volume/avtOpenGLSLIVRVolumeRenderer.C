@@ -428,7 +428,7 @@ avtOpenGLSLIVRVolumeRenderer::Render(
     debug5 << mName << "Rendering..." << endl;
     if(props.reducedDetail)
     {
-        if(props.atts.GetLightingFlag())
+        if (props.atts.GetLightingFlag())
              context->renderer->set_shading(false);
 
         context->renderer->set_sampling_rate(1.);

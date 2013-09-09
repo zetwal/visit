@@ -185,7 +185,6 @@ TextureRenderer::set_texture(Texture* tex)
 void
 TextureRenderer::set_colormap1(ColorMap* cmap1)
 {
-  std::cout << " TextureRenderer::set_colormap1 " << std::endl;
   cmap1_ = cmap1;
   cmap1_dirty_ = true;
 }
@@ -193,7 +192,6 @@ TextureRenderer::set_colormap1(ColorMap* cmap1)
 void
 TextureRenderer::set_colormap2(const vector<ColorMap2*> &cmap2)
 {
-  std::cout << " TextureRenderer::set_colormap2 " << std::endl;
   cmap2_ = cmap2;
   cmap2_dirty_ = true;
 }
@@ -204,8 +202,6 @@ TextureRenderer::set_colormap2_width(int size)
   if (cmap2_width_ != size) {
     cmap2_width_ = size;
     cmap2_dirty_ = true;
-
-    std::cout << " TextureRenderer::set_colormap2: cmap2_width_ " << std::endl;
   }
 }
 
@@ -1269,7 +1265,6 @@ TextureRenderer::colormap2_hardware_rasterize_setup()
 void
 TextureRenderer::build_colormap2()
 {
-  std::cout << " TextureRenderer::build_colormap2 " << std::endl;
   CHECK_OPENGL_ERROR();
   if (!ShaderProgramARB::shaders_supported()) return;
   if (!cmap2_dirty_ && !alpha_dirty_) return;
@@ -1302,7 +1297,7 @@ TextureRenderer::bind_colormap1(vector<float> cmap_array,
     glEnable(GL_TEXTURE_1D);
     glBindTexture(GL_TEXTURE_1D, cmap_tex);
     // enable data texture unit 1
-    glActiveTexture(GL_TEXTURE2_ARB);   //glActiveTexture(GL_TEXTURE1_ARB);
+    glActiveTexture(GL_TEXTURE1_ARB);  
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glEnable(GL_TEXTURE_3D);
     glActiveTexture(GL_TEXTURE0_ARB);
@@ -1341,13 +1336,13 @@ TextureRenderer::bind_colormap2()
   if (ShaderProgramARB::shaders_supported() && glActiveTexture)
   {
     // bind texture to unit 2
-    glActiveTexture(GL_TEXTURE2_ARB);
+    glActiveTexture(GL_TEXTURE3_ARB);   //glActiveTexture(GL_TEXTURE2_ARB);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glEnable(GL_TEXTURE_2D);
 
     glBindTexture(GL_TEXTURE_2D, cmap2_tex_id_);
     // enable data texture unit 1
-    glActiveTexture(GL_TEXTURE3_ARB);   //glActiveTexture(GL_TEXTURE1_ARB);
+    glActiveTexture(GL_TEXTURE1_ARB);   
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glEnable(GL_TEXTURE_3D);
     glActiveTexture(GL_TEXTURE0_ARB);
@@ -1370,7 +1365,7 @@ TextureRenderer::release_colormap1()
     glDisable(GL_TEXTURE_1D);
     glBindTexture(GL_TEXTURE_1D, 0);
     // enable data texture unit 1
-    glActiveTexture(GL_TEXTURE2_ARB);   //glActiveTexture(GL_TEXTURE1_ARB);
+    glActiveTexture(GL_TEXTURE1_ARB);  
     glDisable(GL_TEXTURE_3D);
     glBindTexture(GL_TEXTURE_3D, 0);
     glActiveTexture(GL_TEXTURE0_ARB);
@@ -1398,10 +1393,10 @@ TextureRenderer::release_colormap2()
 #if defined(GL_ARB_fragment_program) || defined(GL_ATI_fragment_shader)
   if (ShaderProgramARB::shaders_supported() && glActiveTexture)
   {
-    glActiveTexture(GL_TEXTURE2_ARB);
+    glActiveTexture(GL_TEXTURE3_ARB);  // glActiveTexture(GL_TEXTURE2_ARB);
     glDisable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0); 
-    glActiveTexture(GL_TEXTURE3_ARB); //glActiveTexture(GL_TEXTURE1_ARB);
+    glActiveTexture(GL_TEXTURE1_ARB); 
     glDisable(GL_TEXTURE_3D);
     glBindTexture(GL_TEXTURE_3D, 0);
     glActiveTexture(GL_TEXTURE0_ARB);

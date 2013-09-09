@@ -359,6 +359,8 @@ VolShader::LoadShaderFromFile(string& s, string shaderFilename)
   }
 
   s = z.str(); 
+  //std::cout << "Shader: " << std::endl;
+  //std::cout << s << std::endl << std::endl;
   return false;
 }
 
