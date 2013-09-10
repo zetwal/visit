@@ -2098,7 +2098,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
 
             if (indices[2] < 0 || indices[2]>dims[1]-2)
-                valid_sample[i] = false;
+                valid_sample[i] = false;CCcc
 
             if (indices[3] < 0 || indices[3]>dims[1]-2)
                 valid_sample[i] = false;
