@@ -2031,7 +2031,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
    // std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable:  "<< std::endl;
     bool inrun = false;
     int  count = 0;
-    int stepsZ = 0;
 
     avtRay *ray = volume->GetRay(w, h);
     int myInd[3];
@@ -2315,11 +2314,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         AssignEight(cell_vartypes[l], values, indexT, cell_size[l], m, cell_array);         
                         double val = trilinearInterpolate(values, dist_from_left, dist_from_bottom, dist_from_front);
 
-                        //if (val > 0.01){
-                        //    std::cout << w << " ,  " <<  h  << " ,  " << i << "  :  "  << val << " : " << vals[0] << " ,  "  << vals[1] << " ,  "  << vals[2] << " ,  "  << vals[3] << " ,  "  << vals[4] << " ,  "  << vals[5] << "    *    " << gradient[0] << " , " << gradient[1] << " , " << gradient[2]<< std::endl;
-                        //}
-                        
-                        stepsZ++;
                         if (rayCastingSLIVR)
                             computePixelColor(val, dest_rgb);
                         else
@@ -2330,7 +2324,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
             if (npt_arrays > 0)
             {
-                //std::cout << "dfgdfgdfg" << std::endl;
                 int indexT[8];
                 computeIndicesVert(dims, indices, indexT);
 
@@ -2343,7 +2336,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         AssignEight(pt_vartypes[l], values, indexT, pt_size[l], m, pt_array);
                         double val = trilinearInterpolate(values, x_left, y_bottom, z_front);
 
-                        stepsZ++;
                         if (rayCastingSLIVR)
                             computePixelColor(val, dest_rgb);
                         else
