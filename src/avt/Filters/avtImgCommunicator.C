@@ -1045,7 +1045,7 @@ void avtImgCommunicator::gatherEncodingSizes(int *sizeEncoding, int numDivisions
 }
 
 
-float clamp(float x){
+float avtImgCommunicator::clamp(float x){
 	if (x > 1.0)
 		x = 1.0;
 

@@ -103,6 +103,7 @@ public:
 	int GetNumProcs(){ return num_procs;};
 	int GetMyId(){ return my_id;};
 
+	float clamp(float x);
 	void setBackground(unsigned char _background[3]){ for (int i=0; i<3; i++) background[i] = _background[i]; }
 	
 #ifdef PARALLEL

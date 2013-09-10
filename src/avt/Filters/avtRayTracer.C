@@ -478,7 +478,7 @@ avtRayTracer::Execute(void)
     
     
     if (rayCastingSLIVR == true){
-        //std::cout << PAR_Rank() << "   avtRayTracer::Execute     starting RayCasting SLIVR  ...... " << std::endl;    
+        bool parallelOn = (imgComm.GetNumProcs() == 1)?false:true;
 
         // only required to force an update - Need to find a way to get rid of that!!!!
         avtRayCompositer rc(rayfoo);
@@ -487,6 +487,123 @@ avtRayTracer::Execute(void)
         avtImage_p image  = rc.GetTypedOutput();
         image->Update(GetGeneralContract());
 
+        //
+        // Single Processor
+        //
+        if (parallelOn == false){
+            
+            //
+            // Get the metadata
+            //
+            std::vector<imgMetaData> allImgMetaData;          // to contain the metadata to composite
+            int numPatches = extractor.getImgPatchSize();     // get the number of patches
+        
+            for (int i=0; i<numPatches; i++){
+                imgMetaData temp;
+                temp = extractor.getImgMetaPatch(i);
+
+                allImgMetaData.push_back(temp);
+            }
+
+            //
+            // Sort with the largest z first
+            //
+            std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgMetaDataByDepth);
+
+            //
+            // Composite the images
+            //
+            
+            // Create a buffer to store the composited image
+            float *composedData = new float[screen[0] * screen[1] * 4];
+
+            // Front to back
+            for (int i=0; i<(screen[0] * screen[1] * 4); i+=4){
+                composedData[i+0] = background[0]/255.0;   
+                composedData[i+1] = background[1]/255.0; 
+                composedData[i+2] = background[2]/255.0; 
+                composedData[i+3] = 1.0;
+            }
+
+            for (int i=0; i<numPatches; i++){
+                imgMetaData currentPatch = allImgMetaData[i];
+
+                imgData tempImgData;
+                tempImgData.imagePatch = new float[currentPatch.dims[0] * currentPatch.dims[1] * 4];
+                extractor.getnDelImgData(currentPatch.patchNumber, tempImgData);
+
+                for (int j=0; j<currentPatch.dims[1]; j++){
+                    for (int k=0; k<currentPatch.dims[0]; k++){
+
+                        int startingX = currentPatch.screen_ll[0];
+                        int startingY = currentPatch.screen_ll[1]; 
+
+                        if ((startingX + k) > screen[0])
+                            continue;
+
+                        if ((startingY + j) > screen[1])
+                            continue;
+                        
+                        int subImgIndex = currentPatch.dims[0]*j*4 + k*4;                                   // index in the subimage 
+                        int bufferIndex = (startingY*screen[0]*4 + j*screen[0]*4) + (startingX*4 + k*4);    // index in the big buffer
+
+                        // back to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
+                        composedData[bufferIndex+0] = imgComm.clamp((composedData[bufferIndex+0] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+0]);
+                        composedData[bufferIndex+1] = imgComm.clamp((composedData[bufferIndex+1] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+1]);
+                        composedData[bufferIndex+2] = imgComm.clamp((composedData[bufferIndex+2] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+2]);
+                        composedData[bufferIndex+3] = imgComm.clamp((composedData[bufferIndex+3] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+3]);
+                    }
+                }
+
+                if (tempImgData.imagePatch != NULL)
+                    delete []tempImgData.imagePatch;
+                tempImgData.imagePatch = NULL;
+            }
+            allImgMetaData.clear();
+
+
+            // create an image structure to hold the image
+            avtImage_p whole_image;
+            whole_image = new avtImage(this);
+
+            float *zbuffer = new float[screen[0] * screen[1]];
+            unsigned char *imgTest = NULL;
+
+            // creates input for the
+            vtkImageData *img = avtImageRepresentation::NewImage(screen[0], screen[1]);
+            whole_image->GetImage() = img;
+
+            imgTest = new unsigned char[screen[0] * screen[1] * 3];
+            imgTest = whole_image->GetImage().GetRGBBuffer();
+
+            zbuffer = new float[screen[0] * screen[1]]();
+            for (int s=0; s<screen[0] * screen[1]; s++)
+                zbuffer[s] = 20.0;
+            zbuffer = whole_image->GetImage().GetZBuffer();
+
+
+            // Get the composited image
+            for (int i=0; i< screen[1]; i++)
+                for (int j=0; j<screen[0]; j++){
+                    int bufferIndex = (screen[0]*4*i) + (j*4);
+                    int wholeImgIndex = (screen[0]*3*i) + (j*3);
+
+                    imgTest[wholeImgIndex+0] = (composedData[bufferIndex+0] ) * 255;
+                    imgTest[wholeImgIndex+1] = (composedData[bufferIndex+1] ) * 255;
+                    imgTest[wholeImgIndex+2] = (composedData[bufferIndex+2] ) * 255;
+                }
+
+            img->Delete();
+
+            if (zbuffer != NULL)
+                delete []zbuffer;
+
+            SetOutput(whole_image);
+            return;
+        }
+        //
+        // Parallel
+        //
 
         
         //
