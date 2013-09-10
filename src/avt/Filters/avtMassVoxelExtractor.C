@@ -729,6 +729,8 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     imgHeight = yMax - yMin;
 
     if (rayCastingSLIVR == true){
+        //std::cout << "imgWidth: " << imgWidth << "  x  " << "imgHeight: " << imgHeight << std::endl;
+
         imgArray = new float[((imgWidth)*4) * imgHeight];
 
         for (int i=0; i<imgHeight * imgWidth * 4; i++)
@@ -1700,6 +1702,21 @@ avtMassVoxelExtractor::computeIndices(int dims[3], int indices[6], int returnInd
     returnIndices[7] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[1]);
 }
 
+void 
+avtMassVoxelExtractor::computeIndicesVert(int dims[3], int indices[6], int returnIndices[8]){
+    returnIndices[0] = (indices[4])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[0]);
+    returnIndices[1] = (indices[4])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[1]);
+
+    returnIndices[2] = (indices[4])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[0]);
+    returnIndices[3] = (indices[4])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[1]);
+
+    returnIndices[4] = (indices[5])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[0]);
+    returnIndices[5] = (indices[5])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[1]);
+
+    returnIndices[6] = (indices[5])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[0]);
+    returnIndices[7] = (indices[5])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[1]);
+}
+
 
 
 
@@ -2011,7 +2028,7 @@ void
 avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 {
 
-    //std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable:  "<< std::endl;
+   // std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable:  "<< std::endl;
     bool inrun = false;
     int  count = 0;
     int stepsZ = 0;
@@ -2124,6 +2141,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
             continue;
         }
 
+       // std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable: valid_sample[i] "<< std::endl;
 
         double vals[6];
         //
@@ -2287,7 +2305,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         if (trilinearInterpolation || rayCastingSLIVR){
             if (ncell_arrays > 0){
                 int indexT[8];
-
                 computeIndices(dims, indices, indexT);
                 
                 for (int l = 0 ; l < ncell_arrays ; l++)            // ncell_arrays: usually 1
@@ -2298,9 +2315,9 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         AssignEight(cell_vartypes[l], values, indexT, cell_size[l], m, cell_array);         
                         double val = trilinearInterpolate(values, dist_from_left, dist_from_bottom, dist_from_front);
 
-                       // if (val > 0.1){
-                       //     std::cout << w << " ,  " <<  h  << " ,  " << i << "  :  "  << val << " : " << vals[0] << " ,  "  << vals[1] << " ,  "  << vals[2] << " ,  "  << vals[3] << " ,  "  << vals[4] << " ,  "  << vals[5] << "    *    " << gradient[0] << " , " << gradient[1] << " , " << gradient[2]<< std::endl;
-                       // }
+                        //if (val > 0.01){
+                        //    std::cout << w << " ,  " <<  h  << " ,  " << i << "  :  "  << val << " : " << vals[0] << " ,  "  << vals[1] << " ,  "  << vals[2] << " ,  "  << vals[3] << " ,  "  << vals[4] << " ,  "  << vals[5] << "    *    " << gradient[0] << " , " << gradient[1] << " , " << gradient[2]<< std::endl;
+                        //}
                         
                         stepsZ++;
                         if (rayCastingSLIVR)
@@ -2310,61 +2327,88 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                     }
                 }
             }
-        }
-        else{
-            for (int l = 0 ; l < ncell_arrays ; l++)
+
+            if (npt_arrays > 0)
             {
-                for (int m = 0 ; m < cell_size[l] ; m++)
-                    tmpSampleList[count][cell_index[l]+m] = 
-                                     ConvertToDouble(cell_vartypes[l], index,
-                                                  cell_size[l], m, cell_arrays[l]);
+                //std::cout << "dfgdfgdfg" << std::endl;
+                int indexT[8];
+                computeIndicesVert(dims, indices, indexT);
+
+                for (int l = 0 ; l < npt_arrays ; l++)
+                {
+                    void  *pt_array = pt_arrays[l];
+                    double values[8];
+                    for (int m = 0 ; m < pt_size[l] ; m++)
+                    {
+                        AssignEight(pt_vartypes[l], values, indexT, pt_size[l], m, pt_array);
+                        double val = trilinearInterpolate(values, x_left, y_bottom, z_front);
+
+                        stepsZ++;
+                        if (rayCastingSLIVR)
+                            computePixelColor(val, dest_rgb);
+                        else
+                            tmpSampleList[count][pt_index[l]+m] = val;
+                    }
+                }
             }
         }
-
-        if (npt_arrays > 0)
-        {
-            int index[8];
-            index[0] = (ind[2])*dims[0]*dims[1] +(ind[1])*dims[0] + (ind[0]);
-            index[1] = (ind[2])*dims[0]*dims[1] + 
-                                                 (ind[1])*dims[0] + (ind[0]+1);
-            index[2] = (ind[2])*dims[0]*dims[1] + 
-                                                 (ind[1]+1)*dims[0] + (ind[0]);
-            index[3] = (ind[2])*dims[0]*dims[1] + 
-                                                (ind[1]+1)*dims[0]+ (ind[0]+1);
-            index[4] = (ind[2]+1)*dims[0]*dims[1] + 
-                                                   (ind[1])*dims[0] + (ind[0]);
-            index[5] = (ind[2]+1)*dims[0]*dims[1] + 
-                                                  (ind[1])*dims[0]+ (ind[0]+1);
-            index[6] = (ind[2]+1)*dims[0]*dims[1] + 
-                                                  (ind[1]+1)*dims[0]+ (ind[0]);
-            index[7] = (ind[2]+1)*dims[0]*dims[1] +
-                                               (ind[1]+1)*dims[0] + (ind[0]+1);
-            double x_right = prop[0];
-            double x_left = 1. - prop[0];
-            double y_top = prop[1];
-            double y_bottom = 1. - prop[1];
-            double z_back = prop[2];
-            double z_front = 1. - prop[2];
-            for (int l = 0 ; l < npt_arrays ; l++)
-            {
-                void  *pt_array = pt_arrays[l];
-                int    s = pt_size[l];
-                for (int m = 0 ; m < s ; m++)
+        else{
+            if (ncell_arrays > 0){
+                for (int l = 0 ; l < ncell_arrays ; l++)
                 {
-                    double vals[8];
-                    AssignEight(pt_vartypes[l], vals, index, s, m, pt_array);
-                    double val = 
-                      x_left*y_bottom*z_front*vals[0] +
-                      x_right*y_bottom*z_front*vals[1] +
-                      x_left*y_top*z_front*vals[2] +
-                      x_right*y_top*z_front*vals[3] +
-                      x_left*y_bottom*z_back*vals[4] +
-                      x_right*y_bottom*z_back*vals[5] +
-                      x_left*y_top*z_back*vals[6] +
-                      x_right*y_top*z_back*vals[7];
-                    tmpSampleList[count][pt_index[l]+m] = val;
+                    for (int m = 0 ; m < cell_size[l] ; m++)
+                        tmpSampleList[count][cell_index[l]+m] = 
+                                         ConvertToDouble(cell_vartypes[l], index,
+                                                      cell_size[l], m, cell_arrays[l]);
                 }
-            }    
+            }
+        
+
+            if (npt_arrays > 0)
+            {
+                int index[8];
+                index[0] = (ind[2])*dims[0]*dims[1] +(ind[1])*dims[0] + (ind[0]);
+                index[1] = (ind[2])*dims[0]*dims[1] + 
+                                                     (ind[1])*dims[0] + (ind[0]+1);
+                index[2] = (ind[2])*dims[0]*dims[1] + 
+                                                     (ind[1]+1)*dims[0] + (ind[0]);
+                index[3] = (ind[2])*dims[0]*dims[1] + 
+                                                    (ind[1]+1)*dims[0]+ (ind[0]+1);
+                index[4] = (ind[2]+1)*dims[0]*dims[1] + 
+                                                       (ind[1])*dims[0] + (ind[0]);
+                index[5] = (ind[2]+1)*dims[0]*dims[1] + 
+                                                      (ind[1])*dims[0]+ (ind[0]+1);
+                index[6] = (ind[2]+1)*dims[0]*dims[1] + 
+                                                      (ind[1]+1)*dims[0]+ (ind[0]);
+                index[7] = (ind[2]+1)*dims[0]*dims[1] +
+                                                   (ind[1]+1)*dims[0] + (ind[0]+1);
+                double x_right = prop[0];
+                double x_left = 1. - prop[0];
+                double y_top = prop[1];
+                double y_bottom = 1. - prop[1];
+                double z_back = prop[2];
+                double z_front = 1. - prop[2];
+                for (int l = 0 ; l < npt_arrays ; l++)
+                {
+                    void  *pt_array = pt_arrays[l];
+                    int    s = pt_size[l];
+                    for (int m = 0 ; m < s ; m++)
+                    {
+                        double vals[8];
+                        AssignEight(pt_vartypes[l], vals, index, s, m, pt_array);
+                        double val = 
+                          x_left*y_bottom*z_front*vals[0] +
+                          x_right*y_bottom*z_front*vals[1] +
+                          x_left*y_top*z_front*vals[2] +
+                          x_right*y_top*z_front*vals[3] +
+                          x_left*y_bottom*z_back*vals[4] +
+                          x_right*y_bottom*z_back*vals[5] +
+                          x_left*y_top*z_back*vals[6] +
+                          x_right*y_top*z_back*vals[7];
+                        tmpSampleList[count][pt_index[l]+m] = val;
+                    }
+                }    
+            }
         }
 
         inrun = true;
