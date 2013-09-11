@@ -475,6 +475,10 @@ avtRayTracer::Execute(void)
 
     avtDataObject_p samples = extractor.GetOutput();
 
+    imgComm.syncAllProcs(); // only required for time testing purposes
+
+    visitTimer->StopTimer(timingVolToImg, "VolToImg");
+    visitTimer->DumpTimings();
     
     
     if (rayCastingSLIVR == true){
@@ -605,12 +609,8 @@ avtRayTracer::Execute(void)
         // Parallel
         //
 
-        
         //
         // --- Timing -- //
-        visitTimer->StopTimer(timingVolToImg, "VolToImg");
-        visitTimer->DumpTimings();
-        
         int  timingComm = visitTimer->StartTimer();
         int  timingCommMeta = visitTimer->StartTimer();
 
@@ -1158,7 +1158,10 @@ avtRayTracer::Execute(void)
         allImgMetaData.clear();
         imgDataToCompose.clear();
 
+        imgComm.syncAllProcs();     // only required for time testing purposes
+
         debug5 << PAR_Rank() << "   ~ composing patch done: " << endl;
+
 
         //
         // --- Timing -- 
@@ -1182,9 +1185,8 @@ avtRayTracer::Execute(void)
             delete []buffer;
         buffer = NULL;
         
-
-        debug5 << PAR_Rank() << "   ~ encoding done: " << endl;
-        //cout << PAR_Rank() << "   ~ encoding done: " << endl;
+        imgComm.syncAllProcs();     // only required for time testing purposes
+        debug5 << PAR_Rank() << "   ~ encoding done!  "<< endl;
 
         //
         // --- Timing -- 
