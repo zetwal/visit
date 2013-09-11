@@ -226,7 +226,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
                                               int &, int &);
 
     // Computes a pixel color
-    void             computePixelColor(double scalarValue, double dest_rgb[4]);
+    void             computePixelColor(double source_rgb[4], double dest_rgb[4]);
     double           trilinearInterpolate(double vals[8], float distRight, float distTop, float distBack);
     void             computeIndices(int dims[3], int indices[6], int returnIndices[8]);
     void             computeIndicesVert(int dims[3], int indices[6], int returnIndices[8]);

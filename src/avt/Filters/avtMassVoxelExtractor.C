@@ -1497,10 +1497,10 @@ avtMassVoxelExtractor::FindSegmentIntersections(const double *origin,
 // ****************************************************************************
 
 void
-avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4]){
-    double source_rgb[4];
-    int retVal;
-    retVal = transferFn1D->QueryTF(scalarValue,source_rgb);
+avtMassVoxelExtractor::computePixelColor(double source_rgb[4], double dest_rgb[4]){
+    //double source_rgb[4];
+    //int retVal;
+    //retVal = transferFn1D->QueryTF(scalarValue,source_rgb);
 
 
     // might need to add opacity correction later
@@ -1508,18 +1508,17 @@ avtMassVoxelExtractor::computePixelColor(double scalarValue, double dest_rgb[4])
     //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
     //source_rgb[3] = alpha;
 
-    if (retVal == 0)
-        return;
+    //if (retVal == 0)
+    //    return;
 
-    if (source_rgb[3] == 0.0)
-        return;
+    //if (source_rgb[3] == 0.0)
+    //    return;
 
     //double opacityCorrection = 1.0;
     //source_rgb[3] = 1.0 - pow((1.0-source_rgb[3]), opacityCorrection);
 
     // Phong Shading
     if (lighting == true){
-    //if (0){
         float dir[3];          // The view "right" vector.
         double view_right[3];   // view_direction cross view_up
                                 
@@ -2139,169 +2138,11 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         if (!valid_sample[i]){
             continue;
         }
-
-       // std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable: valid_sample[i] "<< std::endl;
-
-        double vals[6];
-        //
-        // Computing Gradient using finite differences
-        //
-        if (rayCastingSLIVR && lighting)
-        //if (0)
-            if (ncell_arrays > 0){
-                // h = offset = 1/2 the distance between grids
-                // grad = 1/2*h * ( f(x+h,y,z)-f(x-h,y,z)    f(x,y+h,z)-f(x,y-h,z)   f(x,y,z-h)-f(x,y,z-h)  )
-                
-                float distFromRight, distFromLeft, distFromTop, distFromBottom, distFromFront, distFromBack;
-                int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
-                float gradientOffset = 0.5;
-
-                double gradVals[8];
-                int indexGrad[8], gradInd[3], gradIndices[6];
-                float xRight, yTop, zBack;
-
-                void  *cell_array = cell_arrays[0];
-
-
-                //
-                // X
-                //
-                for (int i=0; i<6; i++)
-                    gradIndices[i] = indices[i];
-
-                //
-                // find x-h
-                //
-                if (x_right - gradientOffset < 0.0){
-                    xRight = (x_right - gradientOffset)+1.0;
-                    gradInd[0] = ind[0]-1;
-                }
-                else{
-                    xRight = x_right - gradientOffset;
-                    gradInd[0] = ind[0];
-                }
-                
-                getIndexandDistFromCenter(xRight, gradInd[0],  indexLeft, indexRight,  distFromLeft, distFromRight);
-                gradIndices[0] = indexLeft;    gradIndices[1] = indexRight;
-                computeIndices(dims, gradIndices, indexGrad);
-                AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
-                vals[0] = trilinearInterpolate(gradVals, distFromLeft, dist_from_bottom, dist_from_front);
-
-                //
-                // find x+h
-                //
-                if (x_right + gradientOffset > 1.0){
-                    xRight = (x_right + gradientOffset)-1.0;
-                    gradInd[0] = ind[0]+1;
-                }else{
-                    xRight = x_right + gradientOffset;
-                    gradInd[0] = ind[0];
-                }
-
-                getIndexandDistFromCenter(xRight, gradInd[0],  indexLeft, indexRight,  distFromLeft, distFromRight);
-                gradIndices[0] = indexLeft;    gradIndices[1] = indexRight;
-                computeIndices(dims, gradIndices, indexGrad);
-                AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
-                vals[1] = trilinearInterpolate(gradVals, distFromLeft, dist_from_bottom, dist_from_front);
-
-                
-
-                //
-                // Y
-                //
-                for (int i=0; i<6; i++)
-                    gradIndices[i] = indices[i];
-
-                //
-                // find y-h
-                //
-                if (y_top - gradientOffset < 0.0){
-                    yTop = (y_top - gradientOffset)+1.0;
-                    gradInd[1] = ind[1]-1;
-                }
-                else{
-                    yTop = y_top - gradientOffset;
-                    gradInd[1] = ind[1];
-                }
-                
-                getIndexandDistFromCenter(yTop, gradInd[1],  indexBottom, indexTop,  distFromBottom, distFromTop);
-                gradIndices[2] = indexBottom ;    gradIndices[3] = indexTop;
-                computeIndices(dims, gradIndices, indexGrad);
-                AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
-                vals[2] = trilinearInterpolate(gradVals, dist_from_left, distFromBottom, dist_from_front);
-
-                //
-                // find y+h
-                //
-                yTop = y_top;
-                if (y_top + gradientOffset > 1.0){
-                    yTop = (y_top + gradientOffset)-1.0;
-                    gradInd[1] = ind[1]+1;
-                }else{
-                    yTop = y_top + gradientOffset;
-                    gradInd[1] = ind[1];
-                }
-
-                getIndexandDistFromCenter(yTop, gradInd[1],  indexBottom, indexTop,  distFromBottom, distFromTop);
-                gradIndices[2] = indexBottom;    gradIndices[3] = indexTop;
-                computeIndices(dims, gradIndices, indexGrad);
-                AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
-                vals[3] = trilinearInterpolate(gradVals, dist_from_left, distFromBottom, dist_from_front);
-
-                
-
-                //
-                // Z
-                //
-                for (int i=0; i<6; i++)
-                    gradIndices[i] = indices[i];
-
-                //
-                // z-h
-                //
-                if (z_back - gradientOffset < 0.0){
-                    zBack = (z_back - gradientOffset)+1.0;
-                    gradInd[2] = ind[2]-1;
-                }
-                else{
-                    zBack = z_back - gradientOffset;
-                    gradInd[2] = ind[2];
-                }
-                
-                getIndexandDistFromCenter(zBack, gradInd[2],  indexFront, indexBack,  distFromFront, distFromBack);
-                gradIndices[4] = indexFront;    gradIndices[5] = indexBack;
-                computeIndices(dims, gradIndices, indexGrad);
-                AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
-                vals[4] = trilinearInterpolate(gradVals, dist_from_left, dist_from_bottom, distFromFront);
-
-                //
-                // z+h
-                //
-                if (z_back + gradientOffset > 1.0){
-                    zBack = (z_back + gradientOffset)-1.0;
-                    gradInd[2] = ind[2]+1;
-                }else{
-                    zBack = z_back + gradientOffset;
-                    gradInd[2] = ind[2];
-                }
-
-                getIndexandDistFromCenter(zBack, gradInd[2],  indexFront, indexBack,  distFromFront, distFromBack);
-                gradIndices[4] = indexFront;    gradIndices[5] = indexBack;
-                computeIndices(dims, gradIndices, indexGrad);
-                AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
-                vals[5] = trilinearInterpolate(gradVals, dist_from_left, dist_from_bottom, distFromFront);
-
-
-               gradient[0] = (1.0/(2.0*gradientOffset)) * (vals[1] - vals[0]);
-               gradient[1] = (1.0/(2.0*gradientOffset)) * (vals[3] - vals[2]);
-               gradient[2] = (1.0/(2.0*gradientOffset)) * (vals[5] - vals[4]);
-
-                normalize(gradient);
-
-
-            }
         
         if (trilinearInterpolation || rayCastingSLIVR){
+            //
+            // Cell centered data
+            //
             if (ncell_arrays > 0){
                 int indexT[8];
                 computeIndices(dims, indices, indexT);
@@ -2312,16 +2153,186 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                     double values[8];
                     for (int m = 0 ; m < cell_size[l] ; m++){       // cell_size[l] usually 1
                         AssignEight(cell_vartypes[l], values, indexT, cell_size[l], m, cell_array);         
-                        double val = trilinearInterpolate(values, dist_from_left, dist_from_bottom, dist_from_front);
+                        double scalarValue = trilinearInterpolate(values, dist_from_left, dist_from_bottom, dist_from_front);
 
-                        if (rayCastingSLIVR)
-                            computePixelColor(val, dest_rgb);
+                        if (rayCastingSLIVR){
+                            double source_rgb[4];
+                            int retVal = transferFn1D->QueryTF(scalarValue,source_rgb);
+
+                            if ( ((retVal == 0)||(source_rgb[3]==0)) || (source_rgb[0]==0 && source_rgb[1]==0 && source_rgb[2]==0) ){
+                                // no need to do anything more if there will be no color
+                            }
+                            else{
+
+                                //
+                                // Compute Lighting (if needed)
+                                //
+                                if (lighting == true){
+                                    double vals[6];
+
+                                    // h = offset = 1/2 the distance between grids
+                                    // grad = 1/2*h * ( f(x+h,y,z)-f(x-h,y,z)    f(x,y+h,z)-f(x,y-h,z)   f(x,y,z-h)-f(x,y,z-h)  )
+                                    
+                                    float distFromRight, distFromLeft, distFromTop, distFromBottom, distFromFront, distFromBack;
+                                    int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
+                                    float gradientOffset = 0.5;
+
+                                    double gradVals[8];
+                                    int indexGrad[8], gradInd[3], gradIndices[6];
+                                    float xRight, yTop, zBack;
+
+                                    void  *cell_array = cell_arrays[0];
+
+                                    //
+                                    // X
+                                    //
+                                    for (int i=0; i<6; i++)
+                                        gradIndices[i] = indices[i];
+
+                                    //
+                                    // find x-h
+                                    //
+                                    if (x_right - gradientOffset < 0.0){
+                                        xRight = (x_right - gradientOffset)+1.0;
+                                        gradInd[0] = ind[0]-1;
+                                    }
+                                    else{
+                                        xRight = x_right - gradientOffset;
+                                        gradInd[0] = ind[0];
+                                    }
+                                    
+                                    getIndexandDistFromCenter(xRight, gradInd[0],  indexLeft, indexRight,  distFromLeft, distFromRight);
+                                    gradIndices[0] = indexLeft;    gradIndices[1] = indexRight;
+                                    computeIndices(dims, gradIndices, indexGrad);
+                                    AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
+                                    vals[0] = trilinearInterpolate(gradVals, distFromLeft, dist_from_bottom, dist_from_front);
+
+                                    //
+                                    // find x+h
+                                    //
+                                    if (x_right + gradientOffset > 1.0){
+                                        xRight = (x_right + gradientOffset)-1.0;
+                                        gradInd[0] = ind[0]+1;
+                                    }else{
+                                        xRight = x_right + gradientOffset;
+                                        gradInd[0] = ind[0];
+                                    }
+
+                                    getIndexandDistFromCenter(xRight, gradInd[0],  indexLeft, indexRight,  distFromLeft, distFromRight);
+                                    gradIndices[0] = indexLeft;    gradIndices[1] = indexRight;
+                                    computeIndices(dims, gradIndices, indexGrad);
+                                    AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
+                                    vals[1] = trilinearInterpolate(gradVals, distFromLeft, dist_from_bottom, dist_from_front);
+
+                                    
+
+                                    //
+                                    // Y
+                                    //
+                                    for (int i=0; i<6; i++)
+                                        gradIndices[i] = indices[i];
+
+                                    //
+                                    // find y-h
+                                    //
+                                    if (y_top - gradientOffset < 0.0){
+                                        yTop = (y_top - gradientOffset)+1.0;
+                                        gradInd[1] = ind[1]-1;
+                                    }
+                                    else{
+                                        yTop = y_top - gradientOffset;
+                                        gradInd[1] = ind[1];
+                                    }
+                                    
+                                    getIndexandDistFromCenter(yTop, gradInd[1],  indexBottom, indexTop,  distFromBottom, distFromTop);
+                                    gradIndices[2] = indexBottom ;    gradIndices[3] = indexTop;
+                                    computeIndices(dims, gradIndices, indexGrad);
+                                    AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
+                                    vals[2] = trilinearInterpolate(gradVals, dist_from_left, distFromBottom, dist_from_front);
+
+                                    //
+                                    // find y+h
+                                    //
+                                    yTop = y_top;
+                                    if (y_top + gradientOffset > 1.0){
+                                        yTop = (y_top + gradientOffset)-1.0;
+                                        gradInd[1] = ind[1]+1;
+                                    }else{
+                                        yTop = y_top + gradientOffset;
+                                        gradInd[1] = ind[1];
+                                    }
+
+                                    getIndexandDistFromCenter(yTop, gradInd[1],  indexBottom, indexTop,  distFromBottom, distFromTop);
+                                    gradIndices[2] = indexBottom;    gradIndices[3] = indexTop;
+                                    computeIndices(dims, gradIndices, indexGrad);
+                                    AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
+                                    vals[3] = trilinearInterpolate(gradVals, dist_from_left, distFromBottom, dist_from_front);
+
+                                    
+                                    //
+                                    // Z
+                                    //
+                                    for (int i=0; i<6; i++)
+                                        gradIndices[i] = indices[i];
+
+                                    //
+                                    // z-h
+                                    //
+                                    if (z_back - gradientOffset < 0.0){
+                                        zBack = (z_back - gradientOffset)+1.0;
+                                        gradInd[2] = ind[2]-1;
+                                    }
+                                    else{
+                                        zBack = z_back - gradientOffset;
+                                        gradInd[2] = ind[2];
+                                    }
+                                    
+                                    getIndexandDistFromCenter(zBack, gradInd[2],  indexFront, indexBack,  distFromFront, distFromBack);
+                                    gradIndices[4] = indexFront;    gradIndices[5] = indexBack;
+                                    computeIndices(dims, gradIndices, indexGrad);
+                                    AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
+                                    vals[4] = trilinearInterpolate(gradVals, dist_from_left, dist_from_bottom, distFromFront);
+
+                                    //
+                                    // z+h
+                                    //
+                                    if (z_back + gradientOffset > 1.0){
+                                        zBack = (z_back + gradientOffset)-1.0;
+                                        gradInd[2] = ind[2]+1;
+                                    }else{
+                                        zBack = z_back + gradientOffset;
+                                        gradInd[2] = ind[2];
+                                    }
+
+                                    getIndexandDistFromCenter(zBack, gradInd[2],  indexFront, indexBack,  distFromFront, distFromBack);
+                                    gradIndices[4] = indexFront;    gradIndices[5] = indexBack;
+                                    computeIndices(dims, gradIndices, indexGrad);
+                                    AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
+                                    vals[5] = trilinearInterpolate(gradVals, dist_from_left, dist_from_bottom, distFromFront);
+
+
+                                    gradient[0] = (1.0/(2.0*gradientOffset)) * (vals[1] - vals[0]);
+                                    gradient[1] = (1.0/(2.0*gradientOffset)) * (vals[3] - vals[2]);
+                                    gradient[2] = (1.0/(2.0*gradientOffset)) * (vals[5] - vals[4]);
+
+                                    normalize(gradient);
+                                }
+
+                                //
+                                // Compute the color
+                                //
+                                computePixelColor(source_rgb, dest_rgb);
+                            }
+                        }
                         else
-                            tmpSampleList[count][cell_index[l]+m] = val; 
+                            tmpSampleList[count][cell_index[l]+m] = scalarValue; 
                     }
                 }
             }
 
+            //
+            // Node centered data
+            //
             if (npt_arrays > 0)
             {
                 int indexT[8];
@@ -2334,12 +2345,170 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                     for (int m = 0 ; m < pt_size[l] ; m++)
                     {
                         AssignEight(pt_vartypes[l], values, indexT, pt_size[l], m, pt_array);
-                        double val = trilinearInterpolate(values, x_left, y_bottom, z_front);
+                        double scalarValue = trilinearInterpolate(values, x_left, y_bottom, z_front);
 
-                        if (rayCastingSLIVR)
-                            computePixelColor(val, dest_rgb);
+                        if (rayCastingSLIVR){
+                            double source_rgb[4];
+                            int retVal = transferFn1D->QueryTF(scalarValue,source_rgb);
+                            if ( ((retVal == 0)||(source_rgb[3]==0)) || (source_rgb[0]==0 && source_rgb[1]==0 && source_rgb[2]==0) ){
+                                // no need to do anything more if there will be no color
+                            }else{
+                                //
+                                // Compute Lighting (if needed)
+                                //
+                                if (lighting == true){
+                                    double vals[6];
+
+                                    // h = offset = 1/2 the distance between grids
+                                    // grad = 1/2*h * ( f(x+h,y,z)-f(x-h,y,z)    f(x,y+h,z)-f(x,y-h,z)   f(x,y,z-h)-f(x,y,z-h)  )
+                                    
+                                    float distFromRight, distFromLeft, distFromTop, distFromBottom, distFromFront, distFromBack;
+                                    int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
+                                    float gradientOffset = 0.5;
+
+                                    double gradVals[8];
+                                    int indexGrad[8], gradInd[3], gradIndices[6];
+                                    float xRight, yTop, zBack;
+
+                                
+
+                                    //
+                                    // X
+                                    //
+                                    for (int i=0; i<6; i++)
+                                        gradIndices[i] = indices[i];
+
+                                    //
+                                    // find x-h
+                                    //
+                                    if (x_right - gradientOffset < 0.0){
+                                        xRight = (x_right - gradientOffset)+1.0;
+                                        gradInd[0] = ind[0]-1;
+                                    }
+                                    else{
+                                        xRight = x_right - gradientOffset;
+                                        gradInd[0] = ind[0];
+                                    }
+                                    
+                                    getIndexandDistFromCenter(xRight, gradInd[0],  indexLeft, indexRight,  distFromLeft, distFromRight);
+                                    gradIndices[0] = indexLeft;    gradIndices[1] = indexRight;
+                                    computeIndicesVert(dims, gradIndices, indexGrad);
+                                    AssignEight(pt_vartypes[0], gradVals, indexGrad, 1, 0, pt_array);
+                                    vals[0] = trilinearInterpolate(gradVals, x_left-gradientOffset, y_bottom, z_front);
+
+                                    //
+                                    // find x+h
+                                    //
+                                    if (x_right + gradientOffset > 1.0){
+                                        xRight = (x_right + gradientOffset)-1.0;
+                                        gradInd[0] = ind[0]+1;
+                                    }else{
+                                        xRight = x_right + gradientOffset;
+                                        gradInd[0] = ind[0];
+                                    }
+
+                                    getIndexandDistFromCenter(xRight, gradInd[0],  indexLeft, indexRight,  distFromLeft, distFromRight);
+                                    gradIndices[0] = indexLeft;    gradIndices[1] = indexRight;
+                                    computeIndices(dims, gradIndices, indexGrad);
+                                    AssignEight(pt_vartypes[0], gradVals, indexGrad, 1, 0, pt_array);
+                                    vals[1] = trilinearInterpolate(gradVals, x_left+gradientOffset, y_bottom, z_front);
+
+                                    
+
+                                    //
+                                    // Y
+                                    //
+                                    for (int i=0; i<6; i++)
+                                        gradIndices[i] = indices[i];
+
+                                    //
+                                    // find y-h
+                                    //
+                                    if (y_top - gradientOffset < 0.0){
+                                        yTop = (y_top - gradientOffset)+1.0;
+                                        gradInd[1] = ind[1]-1;
+                                    }
+                                    else{
+                                        yTop = y_top - gradientOffset;
+                                        gradInd[1] = ind[1];
+                                    }
+                                    
+                                    getIndexandDistFromCenter(yTop, gradInd[1],  indexBottom, indexTop,  distFromBottom, distFromTop);
+                                    gradIndices[2] = indexBottom ;    gradIndices[3] = indexTop;
+                                    computeIndices(dims, gradIndices, indexGrad);
+                                    AssignEight(pt_vartypes[0], gradVals, indexGrad, 1, 0, pt_array);
+                                    vals[2] = trilinearInterpolate(gradVals, x_left, y_bottom-gradientOffset, z_front);
+
+                                    //
+                                    // find y+h
+                                    //
+                                    yTop = y_top;
+                                    if (y_top + gradientOffset > 1.0){
+                                        yTop = (y_top + gradientOffset)-1.0;
+                                        gradInd[1] = ind[1]+1;
+                                    }else{
+                                        yTop = y_top + gradientOffset;
+                                        gradInd[1] = ind[1];
+                                    }
+
+                                    getIndexandDistFromCenter(yTop, gradInd[1],  indexBottom, indexTop,  distFromBottom, distFromTop);
+                                    gradIndices[2] = indexBottom;    gradIndices[3] = indexTop;
+                                    computeIndices(dims, gradIndices, indexGrad);
+                                    AssignEight(pt_vartypes[0], gradVals, indexGrad, 1, 0, pt_array);
+                                    vals[3] = trilinearInterpolate(gradVals, x_left, y_bottom+gradientOffset, z_front);
+
+                                    
+                                    //
+                                    // Z
+                                    //
+                                    for (int i=0; i<6; i++)
+                                        gradIndices[i] = indices[i];
+
+                                    //
+                                    // z-h
+
+                                    gradInd[2] = ind[2]-1;
+    
+                                    
+                                    getIndexandDistFromCenter(zBack, gradInd[2],  indexFront, indexBack,  distFromFront, distFromBack);
+                                    gradIndices[4] = indexFront;    gradIndices[5] = indexBack;
+                                    computeIndices(dims, gradIndices, indexGrad);
+                                    AssignEight(pt_vartypes[0], gradVals, indexGrad, 1, 0, pt_array);
+                                    vals[4] = trilinearInterpolate(gradVals, x_left, y_bottom, z_front-gradientOffset);
+
+                                    //
+                                    // z+h
+                                    //
+                                    if (z_back + gradientOffset > 1.0){
+                                        zBack = (z_back + gradientOffset)-1.0;
+                                        gradInd[2] = ind[2]+1;
+                                    }else{
+                                        zBack = z_back + gradientOffset;
+                                        gradInd[2] = ind[2];
+                                    }
+
+                                    getIndexandDistFromCenter(zBack, gradInd[2],  indexFront, indexBack,  distFromFront, distFromBack);
+                                    gradIndices[4] = indexFront;    gradIndices[5] = indexBack;
+                                    computeIndices(dims, gradIndices, indexGrad);
+                                    AssignEight(pt_vartypes[0], gradVals, indexGrad, 1, 0, pt_array);
+                                    vals[5] = trilinearInterpolate(gradVals, x_left, y_bottom, z_front+gradientOffset);
+
+
+                                    gradient[0] = (1.0/(2.0*gradientOffset)) * (vals[1] - vals[0]);
+                                    gradient[1] = (1.0/(2.0*gradientOffset)) * (vals[3] - vals[2]);
+                                    gradient[2] = (1.0/(2.0*gradientOffset)) * (vals[5] - vals[4]);
+
+                                    normalize(gradient);
+                                }
+
+                                //
+                                // Compute the color
+                                //
+                                computePixelColor(source_rgb, dest_rgb);
+                            }
+                        }
                         else
-                            tmpSampleList[count][pt_index[l]+m] = val;
+                            tmpSampleList[count][pt_index[l]+m] = scalarValue;
                     }
                 }
             }
