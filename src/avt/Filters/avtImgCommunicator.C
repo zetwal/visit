@@ -5,6 +5,7 @@
 #include <ImproperUseException.h>
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
 

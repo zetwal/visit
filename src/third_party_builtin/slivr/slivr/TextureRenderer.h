@@ -50,6 +50,9 @@ class VolShaderFactory;
 const float PI = 3.14159265358979323846;
 const int NUM_LOC_PARAMS = 15;
 
+const int DOF_AUTO = 0;
+const int DOF_USER = 1;
+
 class SLIVRSHARE TextureRenderer 
 {
 public:
@@ -139,11 +142,21 @@ protected:
   bool reloadShaders_;
   bool readShadersFromFile_;
 
+  int textureDim_;
+
   int shaderAlgo_;
   float occSh_ambIntensity_;
   float occSh_blurAngle_;
-  int textureDim_;
   GLuint occShFrameBuffer_;
+
+  float dof_focusPosition_;
+  float dof_focusRange_;
+  float dof_blurAngle_;
+  int dof_focusMode_;
+  float dof_aperture_;
+  float dof_threshold_;
+  GLuint dofFrameBuffer_;
+
 
   GLint viewport[4];
   float screenSize[2];
@@ -183,9 +196,14 @@ protected:
   void draw_polygonsOccSh(vector<float>& vertex, vector<float>& texcoord,
                           vector<int>& poly, bool normal, bool fog, vector<int> *mask,
                           ShaderProgramARB *shaderOccSh, ShaderProgramARB *shaderTexDisp);
+
+  void draw_polygonsDOF(vector<float>& vertex, vector<float>& texcoord,
+                        vector<int>& poly, bool normal, bool fog, vector<int> *mask,
+                        ShaderProgramARB *shaderDOF, ShaderProgramARB *shaderTexDisp);
+
   void draw_polygons(vector<float>& vertex, vector<float>& texcoord,
-         vector<int>& poly, bool normal, bool fog, vector<int> *mask = 0, 
-         ShaderProgramARB *shader = 0);
+                    vector<int>& poly, bool normal, bool fog, vector<int> *mask = 0, 
+                    ShaderProgramARB *shader = 0);
 
   void draw_polygons_wireframe(vector<float>& vertex, vector<float>& texcoord,
              vector<int>& poly,

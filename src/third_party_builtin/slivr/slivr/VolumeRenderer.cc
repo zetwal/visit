@@ -493,10 +493,20 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
       shaderOccSh->bind();
       shaderOccSh->release();
 
+      shaderDOF = vol_shader_factory_->shaderProgram(use_cmap2 ? 2 : 1, nb0, tex_->nc(),
+                                                true, false, use_fog, blend_mode, cmap2_.size(),
+                                                "slivrShaders/dofShader.vert","slivrShaders/dofShader.frag");
+      shaderDOF->createVertandFrag();
+      shaderDOF->bind();
+      shaderDOF->release();
+
       if (shaderAlgo_ == ALGO_OCCSH)
         shader = shaderOccSh;
       else
-        shader = shaderProg;
+        if (shaderAlgo_ == ALGO_DOF)
+          shader = shaderDOF;
+        else
+          shader = shaderProg;
     }
     shader->activate();
 
@@ -510,15 +520,19 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
       if (shaderAlgo_ == ALGO_OCCSH)
         shader = shaderOccSh;
       else
-        shader = shaderProg;
+        if (shaderAlgo_ == ALGO_DOF)
+          shader = shaderDOF;
+        else
+          shader = shaderProg;
 
     shader->activate();
   }
 
-  if (shaderAlgo_ == ALGO_OCCSH){
+  if (shaderAlgo_ == ALGO_OCCSH || shaderAlgo_ == ALGO_DOF){
     init_textures();
     init_FrameBuffer();
   }
+
   CHECK_OPENGL_ERROR();
   if (use_shading)
   {
@@ -610,8 +624,12 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
         draw_polygonsOccSh(vertex, texcoord, size, false, use_fog,
                            &mask, shader, shaderTexture);
       else
-        draw_polygons(vertex, texcoord, size, false, use_fog,
-                    &mask, shader);
+        if (shaderAlgo_ == ALGO_DOF)
+          draw_polygonsDOF(vertex, texcoord, size, false, use_fog,
+                           &mask, shader, shaderTexture);
+        else
+          draw_polygons(vertex, texcoord, size, false, use_fog,
+                        &mask, shader);
     }
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   }

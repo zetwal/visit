@@ -1187,6 +1187,330 @@ TextureRenderer::draw_polygonsOccSh(vector<float>& vertex,
 
 
 
+
+
+void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
+                               vector<float>& texcoord,
+                               vector<int>& poly,
+                               bool normal, bool fog,
+                               vector<int> *mask,
+                               ShaderProgramARB *shaderDoF, ShaderProgramARB *shaderTexDisp)
+{
+  //cout << endl << "!!!!!!!!!!!!!!!!!" << endl << "TextureRenderer::draw_polygonsDOF  - program Id: " << programId << endl;
+
+  CHECK_OPENGL_ERROR();
+  float mvmat[16];
+  if (fog) {
+    glGetFloatv(GL_MODELVIEW_MATRIX, mvmat);
+  }
+
+  int location;
+  int writeTex, readTex;
+  int lastWritePhase1, lastWritePhase2;
+  lastWritePhase1 = lastWritePhase2 = 0;
+
+  float Cz, radS;
+  int z;          // current z slice position
+  int zf;         // focal plane
+  int zf_slicer;  // focal plane for slicer operation order - from poly.size to 0 for front to back
+
+  zf = poly.size() * dof_focusPosition_;
+  zf_slicer = poly.size() - (poly.size() * dof_focusPosition_);
+      
+  int totalVerticesInPoly = 0;
+  for (unsigned int i=0; i<poly.size(); i++)
+    totalVerticesInPoly += poly[i];
+    
+  float focusRange = (dof_focusRange_ * poly.size());
+  float lengthSlice = textureDim_/(float)poly.size();
+  float lengthOpp = (lengthSlice * tan(dof_blurAngle_ * PI/180.0))/2.0;
+    
+  writeTex = 1; readTex = 0;
+    
+  //cout << "screenSize: " << screenSize[0] << ", " << screenSize[1] << endl;
+  //cout << "lengthOpp: " << lengthOpp << endl;
+  if (dof_focusMode_ == DOF_USER)
+    cout << "DOF USER" << endl;
+  else
+    cout << "DOF AUTO" << endl;
+
+
+
+  glPushAttrib(GL_ALL_ATTRIB_BITS);
+  glPushMatrix();
+
+    glDisable(GL_BLEND);
+    //initEyeTex(textureDim_,textureDim_);
+    initEyeOccTex(textureDim_,textureDim_);
+
+    glViewport(0,0,textureDim_,textureDim_);  // set the viewport for now to the texture size
+    screenSize[0] = screenSize[1] = textureDim_;
+
+
+    int programId = shaderDoF->activate();
+
+    location = glGetUniformLocation(programId, "windowSize");
+    glUniform2fv(location, 1, screenSize);
+
+    location = glGetUniformLocation(programId, "angleFactor");
+    glUniform1fARB(location, lengthOpp);
+
+             
+  // Phase 1: front to in-focus-plane (front-to-back)
+    location = glGetUniformLocation(programId, "traversalDirection");
+    glUniform1i(location, FRONT_TO_BACK);
+    cout << "FRONT TO BACK traversal" << endl;
+
+    z = 0;
+    for (unsigned int i=poly.size()-1, k=totalVerticesInPoly; i>=zf_slicer; i--) {  
+      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, dofFrameBuffer_);
+      glDrawBuffer(attachmentpoints[writeTex]);
+      
+    //  writeTextureToPPM( ("/Users/pascalgrosset/Desktop/tempImgs/DOF_FtB_"+to_string(z)).c_str(), eyeBuffer_tex_id0[readTex], textureDim,textureDim, GL_RGBA, GL_UNSIGNED_BYTE);
+      z++;
+      if (dof_focusMode_ == DOF_USER){
+        if ( (z >= (zf-focusRange)) && (z <= (zf+focusRange)) )
+            radS = 1.0;
+        else
+            radS = 4.0;
+      }
+      else{
+        Cz = dof_aperture_ * ((zf-z)/(float)z);
+
+        if (radS <= dof_threshold_)
+            radS = 1.0;
+        else
+            radS = Cz/dof_threshold_;
+      }
+
+              
+      if (radS <= 2.0){
+        location = glGetUniformLocation(programId, "numSamples");
+        glUniform1i(location, 1);
+      }
+      else
+        if (radS <= 5.0){
+          location = glGetUniformLocation(programId, "numSamples");
+          glUniform1i(location, 5);
+        }
+        else{
+          location = glGetUniformLocation(programId, "numSamples");
+          glUniform1i(location, 9);
+        }
+                      
+      glEnable(GL_TEXTURE_2D);
+      glActiveTexture(GL_TEXTURE6);
+      glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id0[readTex]);
+      shaderDoF->setLocalTexture(6);
+
+      glBegin(GL_POLYGON);
+      {
+        if (normal) {
+          float* v0 = &vertex[(k+0)*3];
+          float* v1 = &vertex[(k+1)*3];
+          float* v2 = &vertex[(k+2)*3];
+          Vector dv1(v1[0]-v0[0], v1[1]-v0[1], v1[2]-v0[2]);
+          Vector dv2(v2[0]-v0[0], v2[1]-v0[1], v2[2]-v0[2]);
+          Vector n = Cross(dv1, dv2);   n.normalize();
+          glNormal3f(n.x(), n.y(), n.z());
+        }
+
+        // draw the number of vertices making up the polygon
+        for(int j=0; j<poly[i]; j++) {
+          float* t = &texcoord[(k+j)*3];
+          float* v = &vertex[(k+j)*3];
+
+          #if defined(GL_ARB_fragment_program) || defined(GL_ATI_fragment_shader)
+          #ifdef _WIN32
+          if (glMultiTexCoord3f) {
+          #endif // _WIN32
+            glMultiTexCoord3f(GL_TEXTURE0, t[0],   t[1],     t[2]);
+            if (fog) {
+              float vz = mvmat[2]*v[0] + mvmat[6]*v[1] + mvmat[10]*v[2] + mvmat[14];
+              glMultiTexCoord3f(GL_TEXTURE1, -vz, 0.0, 0.0);
+            }
+          #ifdef _WIN32
+          }
+          else{
+            glTexCoord3f(t[0], t[1], t[2]);
+          }
+          #endif // _WIN32
+          #else
+          glTexCoord3f(t[0], t[1], t[2]);
+          #endif
+          glVertex3f(v[0], v[1], v[2]);
+        }
+      }
+      glEnd();
+      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+
+      // swap read and write textures
+      writeTex = 1 - writeTex;
+      readTex = 1 - readTex;
+
+      k -= poly[i];
+      lastWritePhase1 = readTex;
+    }
+
+        
+  // Phase 2: fp to back (front-to-back rendering)
+    location = glGetUniformLocation(programId, "traversalDirection");
+    glUniform1i(location, BACK_TO_FRONT);
+    //cout << "BACK TO FRONT traversal" << endl;
+      
+    writeTex = 1; readTex = 0; 
+    z = poly.size();  
+    //cout << "Phase 2 (back to front) rendering: from " << 0 << " to " << zf_slicer << endl; 
+
+    for (unsigned int i=0, k=0; i<zf_slicer; i++) {  // back to front
+      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, dofFrameBuffer_);
+      glDrawBuffer(attachmentpoints[2+writeTex]);
+
+      z--;
+      if (dof_focusMode_ == DOF_USER){
+        if ( (z >= (zf-focusRange)) && (z <= (zf+focusRange)) )
+          radS = 1.0;
+        else
+          radS = 4.0;
+      }
+      else{
+        Cz = dof_aperture_ * ((z-zf)/(float)z);
+        if (radS <= dof_threshold_)
+          radS = 1.0;
+        else
+          radS = Cz/dof_threshold_;
+      }
+    
+      if (radS <= 2.0){
+        location = glGetUniformLocation(programId, "numSamples");
+        glUniform1i(location, 1);
+        //cout << "Num samples:  1" << endl;
+      }
+      else
+        if (radS <= 5.0){
+          location = glGetUniformLocation(programId, "numSamples");
+          glUniform1i(location, 5);
+ 
+          //cout << "Num samples:  9" << endl;
+          //cout << "z: " << z << "    radS: " << radS << endl;
+        }
+        else{
+          location = glGetUniformLocation(programId, "numSamples");
+          glUniform1i(location, 9);
+          //cout << "Num samples:  9" << endl;
+          //cout << "z: " << z << "    radS: " << radS << endl;
+        }
+                
+        glEnable(GL_TEXTURE_2D);
+        location = glGetUniformLocation(programId, "tex6");
+        glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id1[readTex]);
+        glUniform1i(location, 6);
+
+        glBegin(GL_POLYGON);
+        {
+          if (normal) {
+            float* v0 = &vertex[(k+0)*3];
+            float* v1 = &vertex[(k+1)*3];
+            float* v2 = &vertex[(k+2)*3];
+            Vector dv1(v1[0]-v0[0], v1[1]-v0[1], v1[2]-v0[2]);
+            Vector dv2(v2[0]-v0[0], v2[1]-v0[1], v2[2]-v0[2]);
+            Vector n = Cross(dv1, dv2);   n.normalize();
+            glNormal3f(n.x(), n.y(), n.z());
+          }
+
+          for(int j=0; j<poly[i]; j++) {
+            float* t = &texcoord[(k+j)*3];
+            float* v = &vertex[(k+j)*3];
+
+            #if defined(GL_ARB_fragment_program) || defined(GL_ATI_fragment_shader)
+            #ifdef _WIN32
+            if (glMultiTexCoord3f) {
+            #endif // _WIN32
+              glMultiTexCoord3f(GL_TEXTURE0, t[0], t[1], t[2]);
+              if (fog) {
+                float vz = mvmat[2]*v[0] + mvmat[6]*v[1] + mvmat[10]*v[2] + mvmat[14];
+                glMultiTexCoord3f(GL_TEXTURE1, -vz, 0.0, 0.0);
+              }
+            #ifdef _WIN32
+            }
+            else {
+              glTexCoord3f(t[0], t[1], t[2]);
+            }
+            #endif // _WIN32
+            #else
+            glTexCoord3f(t[0], t[1], t[2]);
+            #endif
+            glVertex3f(v[0], v[1], v[2]);
+          }
+        }
+        glEnd();
+
+        
+        // swap read and write textures
+        writeTex = 1 - writeTex;
+        readTex = 1 - readTex;
+
+        k += poly[i]; 
+    }
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+
+    lastWritePhase2 = readTex;
+    shaderDoF->release();
+
+    //    writeTextureToPPM( "/Users/pascalgrosset/Desktop/tempImgs/DOF_FtB_", eyeBuffer_tex_id0[lastWritePhase1], textureDim,textureDim, GL_RGBA, GL_UNSIGNED_BYTE);
+    //    writeTextureToPPM( "/Users/pascalgrosset/Desktop/tempImgs/DOF_BtF_", eyeBuffer_tex_id1[lastWritePhase2], textureDim,textureDim, GL_RGBA, GL_UNSIGNED_BYTE);
+        
+        
+    // Final Phase: Render to texture
+    glEnable(GL_BLEND);
+    glViewport(viewport[0],viewport[1],viewport[2],viewport[3]);
+    glPushMatrix();
+      glMatrixMode(GL_MODELVIEW);
+      glPushMatrix();
+        glLoadIdentity();
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+          glLoadIdentity();
+          programId = shaderTexDisp->activate();
+            glEnable(GL_TEXTURE_2D);
+
+            location = glGetUniformLocation(programId, "tex7");
+            glActiveTexture(GL_TEXTURE7);
+            glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id0[lastWritePhase1]);
+            glUniform1i(location, 7);
+
+            location = glGetUniformLocation(programId, "tex8");
+            glActiveTexture(GL_TEXTURE8);
+            glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id1[lastWritePhase2]);
+            glUniform1i(location, 8);
+            
+            location = glGetUniformLocation(programId, "option");
+            glUniform1i(location, 1);
+
+            glBegin (GL_QUADS);
+              glTexCoord2f(0.0, 0.0);  glVertex3f (-1, -1, 0.5);
+              glTexCoord2f(1.0, 0.0);  glVertex3f ( 1, -1, 0.5);
+              glTexCoord2f(1.0, 1.0);  glVertex3f ( 1,  1, 0.5);
+              glTexCoord2f(0.0, 1.0);  glVertex3f (-1,  1, 0.5);
+            glEnd ();
+
+          shaderTexDisp->release();
+
+        glPopMatrix ();
+        glMatrixMode (GL_MODELVIEW);
+      glPopMatrix ();
+    glPopMatrix();
+
+  glPopMatrix();
+  glPopAttrib();
+
+  CHECK_OPENGL_ERROR();
+}
+
+
+
+
 void
 TextureRenderer::colormap2_hardware_destroy_buffers()
 {
