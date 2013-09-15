@@ -354,7 +354,7 @@ VolShader::LoadShaderFromFile(string& s, string shaderFilename)
     shaderFile.close();
   }
   else{
-    std::cout << "cannot open file"  << std::endl; 
+    std::cout << "Cannot open shader file!!!"  << std::endl; 
     return true;
   }
 
