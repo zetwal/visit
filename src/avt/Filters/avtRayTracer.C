@@ -397,6 +397,7 @@ avtRayTracer::Execute(void)
 {
     //std::cout << "avtRayTracer::Execute" << std::endl;
     int  timingIndex = visitTimer->StartTimer();
+    bool parallelOn = (imgComm.GetNumProcs() == 1)?false:true;
 
     if (rayfoo == NULL)
     {
@@ -468,22 +469,16 @@ avtRayTracer::Execute(void)
 
 
     //
-    // --- Timing -- //
+    // -- -- -- Timing --
     int  timingVolToImg;
-    if (rayCastingSLIVR == true)
+    if (rayCastingSLIVR == true && parallelOn)
         timingVolToImg = visitTimer->StartTimer();
 
     avtDataObject_p samples = extractor.GetOutput();
 
-    imgComm.syncAllProcs(); // only required for time testing purposes
-
-    visitTimer->StopTimer(timingVolToImg, "VolToImg");
-    visitTimer->DumpTimings();
-    
     
     if (rayCastingSLIVR == true){
-        bool parallelOn = (imgComm.GetNumProcs() == 1)?false:true;
-
+        
         // only required to force an update - Need to find a way to get rid of that!!!!
         avtRayCompositer rc(rayfoo);
 
@@ -605,12 +600,21 @@ avtRayTracer::Execute(void)
             SetOutput(whole_image);
             return;
         }
+
         //
         // Parallel
         //
 
+        if (rayCastingSLIVR == true && parallelOn){
+            imgComm.syncAllProcs(); // only required for time testing purposes
+
+            visitTimer->StopTimer(timingVolToImg, "VolToImg");
+            visitTimer->DumpTimings();
+        }
+
+
         //
-        // --- Timing -- //
+        // -- -- -- Timing -- 
         int  timingComm = visitTimer->StartTimer();
         int  timingCommMeta = visitTimer->StartTimer();
 
@@ -647,22 +651,20 @@ avtRayTracer::Execute(void)
             tempSendBuffer[i*7 + 6] = temp.avg_z;
 
             debug5 << PAR_Rank() << "   ~ has patch #: " << temp.patchNumber << "   avg_z: " << temp.avg_z << endl;
-
         }
-
 
         imgComm.gatherIotaMetaData(numPatches*7, tempSendBuffer); 
 
         delete []tempSendBuffer;
         tempSendBuffer = NULL;
 
-        debug5 << PAR_Rank() << "   avtRayTracer::Execute  - Send/Receive the patches iota " << endl;
-
         //
-        // --- Timing -- //
+        // -- -- Timing --
         visitTimer->StopTimer(timingCommMeta, "Communicating metadata");
         visitTimer->DumpTimings();
         
+        debug5 << PAR_Rank() << "   avtRayTracer::Execute  - Send/Receive the patches iota " << endl;
+
         int  timingCommDecision = visitTimer->StartTimer();
 
 
@@ -797,6 +799,8 @@ avtRayTracer::Execute(void)
 
         //
         // --- Timing -- //
+        imgComm.syncAllProcs();
+
         visitTimer->StopTimer(timingLocalCompositing, "Local compositing");
         visitTimer->DumpTimings();
         

@@ -1020,10 +1020,6 @@ void avtImgCommunicator::gatherEncodingSizes(int *sizeEncoding, int numDivisions
 			compressedSizePerDiv = new int[totalDivisions];
 		}
 
-		//if (numDivisions > 0)
-		//	for (int i=0; i<numDivisions; i++)
-		//		std::cout << my_id << " ~  encoding size of " << i << " :  "<< sizeEncoding[i] << std::endl;
-		
         //  send   recv  others
 		MPI_Gatherv(sizeEncoding, numDivisions, MPI_INT,    compressedSizePerDiv, recvSizePerProc, offsetBuffer,MPI_INT,      0, MPI_COMM_WORLD); // all send to proc 0
 
@@ -1086,7 +1082,6 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 			for (int i=0; i<num_procs; i++){
 				int numBoundsPerBlock = boundsPerBlockVec[i].size()/2;
 				totalDivisions += numBoundsPerBlock;
-				//std::cout << i << " ~ "<< "boundsPerBlockVec[i].size(): " << numBoundsPerBlock << std::endl;
 				
 				int sizeEncoded = 0;
 				for (int j=0; j<boundsPerBlockVec[i].size(); j+=2){
@@ -1104,11 +1099,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 			}
 
 			tempRecvBuffer = new float[ totalSize ];
-
-			//std::cout << "divIndex: " << divIndex << "   totalDivisions: " << totalDivisions << std::endl;	
 		}
-
-		//std::cout << my_id << " ~ numDivisions: " << numDivisions << "   size encoding: " << sizeSending << std::endl;
 
         //  send   recv  others
 		MPI_Gatherv(images, sizeSending, MPI_FLOAT,    tempRecvBuffer, recvSizePerProc, offsetBuffer,MPI_FLOAT,        0, MPI_COMM_WORLD);		// all send to proc 0
@@ -1131,13 +1122,6 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 			int offset = 0;
 			int index = 0;
 
-			// do{
-			// 	--it;
-			// 	std::cout << it->first << " => " << it->second << "  compressedSizePerDiv[count]" << compressedSizePerDiv[count] << std::endl;
-			// 	//std::cout << it->first << " => " << it->second << '\n';
-
-			// }while( it!=depthPartitions.begin());
-
 			it=depthPartitions.end();
 			do{
 				--it;
@@ -1154,20 +1138,8 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 					for (int k=0; k<index; k++)
 						offset += compressedSizePerDiv[k];
 				}
-					//offset += compressedSizePerDiv[index-1];
-					//offset += compressedSizePerDiv[count-1];
 
-				//std::cout << my_id << " ~ compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << "   count: " << count << "   offset: " << offset << std::endl;
 				rleDecode(compressedSizePerDiv[index], tempRecvBuffer, offset*5, temp.image);
-
-				
-				//if (count == 1){
-            	//	for (int i=0; i<compressedSizePerDiv[count]; i++){
-                //		std::cout <<  " @0 ~ " << i << " server " << tempRecvBuffer[offset*5 + i*5+0] << " : " << tempRecvBuffer[offset*5 +i*5+1] << " ,  " << tempRecvBuffer[offset*5 +i*5+2] << " ,  " << tempRecvBuffer[offset*5 +i*5+3] << " ,  " << tempRecvBuffer[offset*5 + i*5+4] << std::endl;
-            	//	}
-				//}
-
-				//memcpy(temp.image, &tempRecvBuffer[(count*(sizex*sizey*4))], (sizex*sizey*4)*sizeof(float) );
 
 				//std::string imgFilenameFinal = "/home/pascal/Desktop/Decoded_Gathered_on_0_" + NumbToString(count) + "_Buffer.ppm";
 	        	//createPpm(temp.image, sizex, sizey, imgFilenameFinal);
