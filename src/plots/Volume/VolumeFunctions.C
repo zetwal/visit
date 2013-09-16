@@ -1211,10 +1211,7 @@ void
 VolumeHistograms(const VolumeAttributes &atts, 
     vtkDataArray *data, vtkDataArray *gm, 
     float *hist, float *hist2, int hist_size)
-{
-    std::cout << " VolumeHistograms -- ################### " << std::endl;
-
-    
+{  
     const char *mName = "VolumeHistogram2D: ";
     StackTimer t("VolumeHistogram2D");
 

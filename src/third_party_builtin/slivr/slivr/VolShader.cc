@@ -354,7 +354,7 @@ VolShader::LoadShaderFromFile(string& s, string shaderFilename)
     shaderFile.close();
   }
   else{
-    std::cout << "Cannot open shader file!!!"  << std::endl; 
+    std::cout << "Cannot open SLIVR shader file " << shaderFilename << std::endl; 
     return true;
   }
 
