@@ -189,6 +189,9 @@ protected:
     QWidget *Create2DTransferFunctionGroup();
     QWidget *CreateRendererOptionsGroup(int);
     void CreateMatLightGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth);
+
+    void CreateSLIVRRenderOptionsGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth);
+    void CreateDoFGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth);
     void CreateOccShGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth);
     void CreateColorGroup(QWidget *, QVBoxLayout *, int);
     void CreateOpacityGroup(QWidget *, QVBoxLayout *, int);
@@ -243,6 +246,17 @@ private slots:
     void setAmbIntensity(double val);
     void setAngleFac(double val);
     void occlusionToggled(bool value);
+
+    void setDOFFocusClicked(int val);
+    void DOFFocusRangeChanged(int val);
+    void DOFFocusChanged(int val);
+    void setBlurAngleDOF(double val);
+    void DOFangleSliderChanged(int val);
+    void setThresholdDOF(double val);
+    void setapertureDiameterDOF(double val);
+
+    void SLIVRRenderTypeChanged(int val);
+
 private:
     int                      plotType;
     VolumeAttributes         *volumeAtts;
@@ -338,5 +352,16 @@ private:
     QDoubleSpinBox           *angleFac;
     QLabel* ambientIntensityLabel;
     QLabel* angleLabel;
+
+    QGroupBox                *DOFGroup;
+    QButtonGroup             *DOFfocusMode;
+    QvisOpacitySlider        *DOFfocusSliderRange;
+    QvisOpacitySlider        *DOFfocusSlider;
+    QDoubleSpinBox           *DOFblurAngle;
+    QDoubleSpinBox           *DOFthreshold;
+    QDoubleSpinBox           *DOFapertureDiameter;
+
+    QGroupBox                *renderOptionsGroup;
+    QComboBox                *slivrRendererTypesComboBox;
 };
 #endif

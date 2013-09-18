@@ -12,7 +12,7 @@ uniform sampler2D tex6;   //Buffer of last slice
 uniform sampler2D tex7;   //Occlusion Buffer       
  
 uniform vec2 windowSize;           
-//iform int numSamples;            
+//uniform int numSamples;            
 uniform float angleFactor;         
 uniform float ambIntensity;        
  

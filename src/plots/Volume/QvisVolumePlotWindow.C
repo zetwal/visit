@@ -510,6 +510,169 @@ QvisVolumePlotWindow::CreateOccShGroup(QWidget *parent, QGridLayout *pLayout, in
     connect(angleFac, SIGNAL(valueChanged(double)), this, SLOT(setAngleFac(double))); 
 }
 
+
+// ****************************************************************************
+// Method: QvisVolumePlotWindow::CreateDoFGroup
+//
+// Purpose: 
+//   Creates the widgets in the Depth of Field
+//
+// Note:       Adapted from CreateWindowContents when porting to Qt 4.
+//
+// Programmer: Pascal Grosset
+// Creation:   Wed Sep 2013
+//
+// Modifications:
+//
+// ****************************************************************************
+void
+QvisVolumePlotWindow::CreateDoFGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth)
+{
+    // Add the group box that will contain the options.
+    DOFGroup = new QGroupBox(parent);
+    DOFGroup->setTitle(tr("DOF Options"));
+    pLayout->addWidget(DOFGroup);
+
+    QGridLayout *innerDOFLayout = new QGridLayout(DOFGroup);
+    innerDOFLayout->setHorizontalSpacing (5);
+    innerDOFLayout->setVerticalSpacing(20);
+    QLabel* spacer = new QLabel(tr("           "), DOFGroup);
+
+    QLabel* focusLabel = new QLabel(tr("DoF Mode:"), central);
+    innerDOFLayout->addWidget(focusLabel, 0,0);
+
+
+    // DoF Choice
+    DOFfocusMode = new QButtonGroup(central);
+    QRadioButton *rbChoice;
+    rbChoice = new QRadioButton(tr("Auto"), central);
+    rbChoice->setChecked(true);
+    DOFfocusMode->addButton(rbChoice, 0);
+    innerDOFLayout->addWidget(rbChoice, 0,1, 1,2);
+
+    rbChoice = new QRadioButton(tr("User"), central);
+    DOFfocusMode->addButton(rbChoice, 1);
+    innerDOFLayout->addWidget(rbChoice, 0,3, 1,2);
+
+    connect(DOFfocusMode, SIGNAL(buttonClicked(int)), this, SLOT(setDOFFocusClicked(int)));
+
+
+    // focus position
+    DOFfocusSlider = new QvisOpacitySlider(0, 100, 1, 50, DOFGroup);
+    QLabel *DOFattenuationLabel = new QLabel(tr("Focus Position"), DOFGroup);
+    DOFattenuationLabel->setBuddy(DOFfocusSlider);
+    
+    innerDOFLayout->addWidget(DOFattenuationLabel, 1,0, 1,1, Qt::AlignLeft);
+    innerDOFLayout->addWidget(DOFfocusSlider, 1,1, 1,3);
+
+    connect(DOFfocusSlider, SIGNAL(valueChanged(int)), this, SLOT(DOFFocusChanged(int)));
+
+
+    // Threshold
+    DOFthreshold = new QDoubleSpinBox(central);
+    DOFthreshold->setMinimum(0);
+    DOFthreshold->setMaximum(10);
+    DOFthreshold->setDecimals(2);
+    DOFthreshold->setSingleStep(0.01);
+    DOFthreshold->setValue(0.5);
+
+    QLabel* DOFthresholdLabel = new QLabel(tr("Threshold:"), central);
+    DOFthresholdLabel->setBuddy(DOFthreshold);
+    innerDOFLayout->addWidget(DOFthresholdLabel, 1,4, 1,1, Qt::AlignRight);
+    innerDOFLayout->addWidget(DOFthreshold, 1,5, 1,1, Qt::AlignLeft);
+    connect(DOFthreshold, SIGNAL(valueChanged(double)), this, SLOT(setThresholdDOF(double)));
+
+    // DOFapertureDiameter
+    DOFapertureDiameter = new QDoubleSpinBox(central);
+    DOFapertureDiameter->setMinimum(0);
+    DOFapertureDiameter->setMaximum(10);
+    DOFapertureDiameter->setDecimals(2);
+    DOFapertureDiameter->setSingleStep(0.01);
+    DOFapertureDiameter->setValue(1.0);
+
+    QLabel* DOFapertureDiameterLabel = new QLabel(tr("Aperture:"), central);
+    DOFapertureDiameterLabel->setBuddy(DOFapertureDiameter);
+    innerDOFLayout->addWidget(DOFapertureDiameterLabel,1,6, 1,1, Qt::AlignRight);
+    innerDOFLayout->addWidget(DOFapertureDiameter,1,7, 1,1, Qt::AlignLeft);
+    connect(DOFapertureDiameter, SIGNAL(valueChanged(double)), this, SLOT(setapertureDiameterDOF(double))); 
+
+
+    
+
+    // focus DOFfocusSliderRange
+    DOFfocusSliderRange = new QvisOpacitySlider(0, 100, 1, 50, DOFGroup);
+    QLabel *DOFattenuationLabelRange = new QLabel(tr("Focus Range"), DOFGroup);
+    DOFattenuationLabelRange->setBuddy(DOFfocusSliderRange);
+    
+    innerDOFLayout->addWidget(DOFattenuationLabelRange, 2,0, 1,1, Qt::AlignLeft);
+    innerDOFLayout->addWidget(DOFfocusSliderRange, 2,1, 1,3);
+    
+    connect(DOFfocusSliderRange, SIGNAL(valueChanged(int)), this, SLOT(DOFFocusRangeChanged(int)));
+
+
+    // Blur Angle
+    DOFblurAngle = new QDoubleSpinBox(central);
+    DOFblurAngle->setMinimum(0);
+    DOFblurAngle->setMaximum(89);
+    DOFblurAngle->setDecimals(0);
+    DOFblurAngle->setSingleStep(1.0);
+    DOFblurAngle->setValue(45);
+
+    QLabel* DOFblurLabel = new QLabel(tr("Blur angle:"), central);
+    DOFblurLabel->setBuddy(DOFblurAngle);
+    innerDOFLayout->addWidget(DOFblurLabel, 2,4, 1,1, Qt::AlignRight);
+    innerDOFLayout->addWidget(DOFblurAngle, 2,5, 1,2, Qt::AlignLeft);
+    
+    connect(DOFblurAngle, SIGNAL(valueChanged(double)), this, SLOT(setBlurAngleDOF(double)));
+
+
+    
+}
+
+
+
+// ****************************************************************************
+// Method: QvisVolumePlot::CreateSLIVRRenderOptionsGroup
+//
+// Purpose: 
+//   Creates the different options for SLIVR
+//
+// Programmer: Pascal Grosset
+// Creation:   Tue Apr 10
+//
+// Modifications:
+//   
+// ****************************************************************************
+void
+QvisVolumePlotWindow::CreateSLIVRRenderOptionsGroup(QWidget *parent, QGridLayout *pLayout, int maxWidth)
+{
+    // Add the group box that will contain the options.
+    renderOptionsGroup = new QGroupBox(parent);
+    renderOptionsGroup->setTitle(tr("Render Options"));
+    pLayout->addWidget(renderOptionsGroup);
+    //pLayout->setStretchFactor(renderOptionsGroup,200);
+
+    QHBoxLayout *innerLayout = new QHBoxLayout(renderOptionsGroup);
+    innerLayout->setMargin(3);
+    innerLayout->setSpacing(0);
+
+    // Show the render options
+    slivrRendererTypesComboBox = new QComboBox(central);
+    slivrRendererTypesComboBox->addItem(tr("Normal"));
+    slivrRendererTypesComboBox->addItem(tr("Occlusion Shading"));
+    slivrRendererTypesComboBox->addItem(tr("Depth of Field"));
+    
+    innerLayout->addWidget(slivrRendererTypesComboBox, 0,0);
+    QSpacerItem* spacer = new QSpacerItem( 200, 20, QSizePolicy::Minimum, QSizePolicy::Expanding );
+    innerLayout->addItem(spacer);
+    innerLayout->addItem(spacer);
+    innerLayout->addItem(spacer);
+    connect(slivrRendererTypesComboBox, SIGNAL(activated(int)), this, SLOT(SLIVRRenderTypeChanged(int)));
+}
+
+
+
+
 // ****************************************************************************
 // Method: QvisVolumePlot::Create1DTransferFunctionGroup
 //
@@ -1261,7 +1424,10 @@ QvisVolumePlotWindow::CreateRendererOptionsGroup(int maxWidth)
     miscLayout->addWidget(smoothDataToggle,0,2);
 
     CreateMatLightGroup(parent, rendererOptionsLayout, maxWidth);
+
+    CreateSLIVRRenderOptionsGroup(parent, rendererOptionsLayout, maxWidth);
     CreateOccShGroup(parent, rendererOptionsLayout, maxWidth);
+    CreateDoFGroup(parent, rendererOptionsLayout, maxWidth);
 
     return parent;
 }
@@ -1999,9 +2165,9 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
             matN->blockSignals(false);
             break;
 
-        case VolumeAttributes::ID_occlusionShadingOn:
-            occlusionShadingToggle->setChecked(volumeAtts->GetOcclusionShadingOn());
-            break;
+       // case VolumeAttributes::ID_occlusionShadingOn:
+       //     occlusionShadingToggle->setChecked(volumeAtts->GetOcclusionShadingOn());
+       //     break;
         case VolumeAttributes::ID_ambientIntensity:
             ambIntensity->setValue(volumeAtts->GetAmbientIntensity());
             break;
@@ -4241,10 +4407,188 @@ QvisVolumePlotWindow::setAngleFac(double val){
     Apply();
 }
 
+//void
+//QvisVolumePlotWindow::occlusionToggled(bool value)
+//{
+//    volumeAtts->SetOcclusionShadingOn(value);
+//    SetUpdate(false);
+//    Apply();
+//}
+
+
+
+// ****************************************************************************
+// Method:  QvisVolumePlotWindow::DOFFocusChanged(int val)
+//
+// Purpose:
+//   
+//
+//  Arguments:
+//    val        
+//
+// Programmer:  Pascal Grosset
+// Creation:    Tue Apr 10 2012
+//
+// Modifications:
+//
+// ****************************************************************************
 void
-QvisVolumePlotWindow::occlusionToggled(bool value)
-{
-    volumeAtts->SetOcclusionShadingOn(value);
+QvisVolumePlotWindow::DOFFocusChanged(int val){
+    volumeAtts->SetDOFfocusPosition(val/100.0);
+    SetUpdate(true);
+    Apply(true);
+}
+
+
+// ****************************************************************************
+// Method:  QvisVolumePlotWindow::setDOFFocusClicked(int val)
+//
+// Purpose:
+//   
+//
+//  Arguments:
+//    val        
+//
+// Programmer:  Pascal Grosset
+// Creation:    Tue Apr 10 2012
+//
+// Modifications:
+//
+// ****************************************************************************
+void QvisVolumePlotWindow::setDOFFocusClicked(int val){
+    switch (val)
+    {
+        case 0:
+           volumeAtts->SetDOFMode(VolumeAttributes::Auto);
+           break;
+
+         case 1:
+           volumeAtts->SetDOFMode(VolumeAttributes::User);
+              break;
+
+        default:
+           EXCEPTION1(ImproperUseException,
+                  "That should never have happened. "
+                  "Something went very wrong here");
+            break;
+    }
+    Apply();
+}
+
+
+// ****************************************************************************
+// Method:  QvisVolumePlotWindow::DOFFocusRangeChanged(int val)
+//
+// Purpose:
+//   
+//
+//  Arguments:
+//    val        
+//
+// Programmer:  Pascal Grosset
+// Creation:    Tue Apr 10 2012
+//
+// Modifications:
+//
+// ****************************************************************************
+void QvisVolumePlotWindow::DOFFocusRangeChanged(int val){
+    volumeAtts->SetDOFfocusRange(val/100.0);
     SetUpdate(false);
+    Apply();
+}
+
+
+// ****************************************************************************
+// Method:  QvisVolumePlotWindow::setBlurAngleDOF(double val)
+//
+// Purpose:
+//   
+//
+//  Arguments:
+//    val        
+//
+// Programmer:  Pascal Grosset
+// Creation:    Tue Apr 10 2012
+//
+// Modifications:
+//
+// ****************************************************************************
+void
+QvisVolumePlotWindow::setBlurAngleDOF(double val){
+    volumeAtts->SetDOFblurAngle(val);
+    SetUpdate(true);
+    Apply(true);
+}
+
+
+// ****************************************************************************
+// Method:  QvisVolumePlotWindow::setThresholdDOF(double val)
+//
+// Purpose:
+//   
+//
+//  Arguments:
+//    val        
+//
+// Programmer:  Pascal Grosset
+// Creation:    Tue Apr 10 2012
+//
+// Modifications:
+//
+// ****************************************************************************
+void
+QvisVolumePlotWindow::setThresholdDOF(double val){
+    volumeAtts->SetDOFthreshold(val);
+    SetUpdate(false);
+    Apply();
+}
+
+
+// ****************************************************************************
+// Method:  QvisVolumePlotWindow::setapertureDiameterDOF(double val)
+//
+// Purpose:
+//   
+//
+//  Arguments:
+//    val        
+//
+// Programmer:  Pascal Grosset
+// Creation:    Tue Apr 10 2012
+//
+// Modifications:
+//
+// ****************************************************************************
+void
+QvisVolumePlotWindow::setapertureDiameterDOF(double val){
+    volumeAtts->SetDOFapertureD(val);
+    SetUpdate(false);
+    Apply();
+}
+
+
+void
+QvisVolumePlotWindow::SLIVRRenderTypeChanged(int val)
+{
+    switch (val)
+    {
+      case 0:
+        volumeAtts->SetSLIVRAlgo(VolumeAttributes::Normal);
+        break;
+        
+      case 1:
+        volumeAtts->SetSLIVRAlgo(VolumeAttributes::OccSh);
+        break;
+
+      case 2:
+        volumeAtts->SetSLIVRAlgo(VolumeAttributes::DoF);
+        break;
+        
+      default:
+        EXCEPTION1(ImproperUseException,
+                   "The Volume plot received a signal for a renderer "
+                   "that it didn't understand");
+        break;
+    }
     Apply();
 }

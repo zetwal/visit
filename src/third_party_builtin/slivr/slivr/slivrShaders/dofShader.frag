@@ -143,8 +143,9 @@ void main()
   	vec4 source, destination, composited;
    	source = c;
     vec2 fclip = (0.5 * clip_Vertex.xy/clip_Vertex.w) + vec2(0.5);
-   	//destination = texture2D(tex3, fclip);		// normal
-   	destination = blur(texture2D(tex6, fclip));
+
+   	//destination = texture2D(tex6, fclip);		// normal
+   	destination = blur(texture2D(tex6, fclip));	// dof
 
    	if (traversalDirection == FRONT_TO_BACK)    
        composited = source * (1.0 - destination.a) + destination;  

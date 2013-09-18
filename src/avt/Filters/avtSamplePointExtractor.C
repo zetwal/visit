@@ -1063,14 +1063,14 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                                     varnames, varsizes);
  
         if (rayCastingSLIVR == true){
-            //std::cout << "   rayCastingSLIVR == true   " << std::endl;
+            std::cout << "   rayCastingSLIVR == true   " << std::endl;
             imgMetaData tmpImageMetaPatch;
             tmpImageMetaPatch = initMetaPatch(patchCount);
 
             massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
-            //std::cout << "   massVoxelExtractor->getImageDimension   " << std::endl;
+            std::cout << "   massVoxelExtractor->getImageDimension   " << std::endl;
             if (tmpImageMetaPatch.inUse == 1){
-                //std::cout << "   tmpImageMetaPatch.inUse == 1   " << std::endl;
+                std::cout << "   tmpImageMetaPatch.inUse == 1   " << std::endl;
                 tmpImageMetaPatch.destProcId = tmpImageMetaPatch.procId;
                 imageMetaPatchVector.push_back(tmpImageMetaPatch);
                 

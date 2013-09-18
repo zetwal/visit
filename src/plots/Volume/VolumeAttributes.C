@@ -308,6 +308,81 @@ VolumeAttributes::LowGradientLightingReduction_FromString(const std::string &s, 
     return false;
 }
 
+//
+// Enum conversion methods for VolumeAttributes::SLIVRAlgoOptions
+//
+
+static const char *SLIVRAlgoOptions_strings[] = {
+"Normal", "OccSh", "DoF"
+};
+
+std::string
+VolumeAttributes::SLIVRAlgoOptions_ToString(VolumeAttributes::SLIVRAlgoOptions t)
+{
+    int index = int(t);
+    if(index < 0 || index >= 3) index = 0;
+    return SLIVRAlgoOptions_strings[index];
+}
+
+std::string
+VolumeAttributes::SLIVRAlgoOptions_ToString(int t)
+{
+    int index = (t < 0 || t >= 3) ? 0 : t;
+    return SLIVRAlgoOptions_strings[index];
+}
+
+bool
+VolumeAttributes::SLIVRAlgoOptions_FromString(const std::string &s, VolumeAttributes::SLIVRAlgoOptions &val)
+{
+    val = VolumeAttributes::Normal;
+    for(int i = 0; i < 3; ++i)
+    {
+        if(s == SLIVRAlgoOptions_strings[i])
+        {
+            val = (SLIVRAlgoOptions)i;
+            return true;
+        }
+    }
+    return false;
+}
+
+//
+// Enum conversion methods for VolumeAttributes::SLIVR_DOFMode
+//
+
+static const char *SLIVR_DOFMode_strings[] = {
+"Auto", "User"};
+
+std::string
+VolumeAttributes::SLIVR_DOFMode_ToString(VolumeAttributes::SLIVR_DOFMode t)
+{
+    int index = int(t);
+    if(index < 0 || index >= 2) index = 0;
+    return SLIVR_DOFMode_strings[index];
+}
+
+std::string
+VolumeAttributes::SLIVR_DOFMode_ToString(int t)
+{
+    int index = (t < 0 || t >= 2) ? 0 : t;
+    return SLIVR_DOFMode_strings[index];
+}
+
+bool
+VolumeAttributes::SLIVR_DOFMode_FromString(const std::string &s, VolumeAttributes::SLIVR_DOFMode &val)
+{
+    val = VolumeAttributes::Auto;
+    for(int i = 0; i < 2; ++i)
+    {
+        if(s == SLIVR_DOFMode_strings[i])
+        {
+            val = (SLIVR_DOFMode)i;
+            return true;
+        }
+    }
+    return false;
+}
+
 // ****************************************************************************
 // Method: VolumeAttributes::VolumeAttributes
 //
@@ -360,9 +435,16 @@ void VolumeAttributes::Init()
     materialProperties[1] = 0.75;
     materialProperties[2] = 0;
     materialProperties[3] = 15;
-    occlusionShadingOn = false;
+    SLIVRAlgo = Normal;
     ambientIntensity = 1;
     ambientAngle = 45;
+    DOFMode = Auto;
+    DOFfocusRange = 0.2;
+    DOFfocusPosition = 0.5;
+    DOFthreshold = 0.5;
+    DOFblurAngle = 45;
+    DOFambientIntensity = 1;
+    DOFapertureD = 1;
 
     VolumeAttributes::SelectAll();
 }
@@ -439,9 +521,16 @@ void VolumeAttributes::Copy(const VolumeAttributes &obj)
     for(int i = 0; i < 4; ++i)
         materialProperties[i] = obj.materialProperties[i];
 
-    occlusionShadingOn = obj.occlusionShadingOn;
+    SLIVRAlgo = obj.SLIVRAlgo;
     ambientIntensity = obj.ambientIntensity;
     ambientAngle = obj.ambientAngle;
+    DOFMode = obj.DOFMode;
+    DOFfocusRange = obj.DOFfocusRange;
+    DOFfocusPosition = obj.DOFfocusPosition;
+    DOFthreshold = obj.DOFthreshold;
+    DOFblurAngle = obj.DOFblurAngle;
+    DOFambientIntensity = obj.DOFambientIntensity;
+    DOFapertureD = obj.DOFapertureD;
 
     VolumeAttributes::SelectAll();
 }
@@ -659,9 +748,16 @@ VolumeAttributes::operator == (const VolumeAttributes &obj) const
             (lowGradientLightingClampFlag == obj.lowGradientLightingClampFlag) &&
             (lowGradientLightingClampValue == obj.lowGradientLightingClampValue) &&
             materialProperties_equal &&
-            (occlusionShadingOn == obj.occlusionShadingOn) &&
+            (SLIVRAlgo == obj.SLIVRAlgo) &&
             (ambientIntensity == obj.ambientIntensity) &&
-            (ambientAngle == obj.ambientAngle));
+            (ambientAngle == obj.ambientAngle) &&
+            (DOFMode == obj.DOFMode) &&
+            (DOFfocusRange == obj.DOFfocusRange) &&
+            (DOFfocusPosition == obj.DOFfocusPosition) &&
+            (DOFthreshold == obj.DOFthreshold) &&
+            (DOFblurAngle == obj.DOFblurAngle) &&
+            (DOFambientIntensity == obj.DOFambientIntensity) &&
+            (DOFapertureD == obj.DOFapertureD));
 }
 
 // ****************************************************************************
@@ -840,9 +936,16 @@ VolumeAttributes::SelectAll()
     Select(ID_lowGradientLightingClampFlag,  (void *)&lowGradientLightingClampFlag);
     Select(ID_lowGradientLightingClampValue, (void *)&lowGradientLightingClampValue);
     Select(ID_materialProperties,            (void *)materialProperties, 4);
-    Select(ID_occlusionShadingOn,            (void *)&occlusionShadingOn);
+    Select(ID_SLIVRAlgo,                     (void *)&SLIVRAlgo);
     Select(ID_ambientIntensity,              (void *)&ambientIntensity);
     Select(ID_ambientAngle,                  (void *)&ambientAngle);
+    Select(ID_DOFMode,                       (void *)&DOFMode);
+    Select(ID_DOFfocusRange,                 (void *)&DOFfocusRange);
+    Select(ID_DOFfocusPosition,              (void *)&DOFfocusPosition);
+    Select(ID_DOFthreshold,                  (void *)&DOFthreshold);
+    Select(ID_DOFblurAngle,                  (void *)&DOFblurAngle);
+    Select(ID_DOFambientIntensity,           (void *)&DOFambientIntensity);
+    Select(ID_DOFapertureD,                  (void *)&DOFapertureD);
 }
 
 // ****************************************************************************
@@ -1119,10 +1222,10 @@ VolumeAttributes::CreateNode(DataNode *parentNode, bool completeSave, bool force
         node->AddNode(new DataNode("materialProperties", materialProperties, 4));
     }
 
-    if(completeSave || !FieldsEqual(ID_occlusionShadingOn, &defaultObject))
+    if(completeSave || !FieldsEqual(ID_SLIVRAlgo, &defaultObject))
     {
         addToParent = true;
-        node->AddNode(new DataNode("occlusionShadingOn", occlusionShadingOn));
+        node->AddNode(new DataNode("SLIVRAlgo", SLIVRAlgoOptions_ToString(SLIVRAlgo)));
     }
 
     if(completeSave || !FieldsEqual(ID_ambientIntensity, &defaultObject))
@@ -1135,6 +1238,48 @@ VolumeAttributes::CreateNode(DataNode *parentNode, bool completeSave, bool force
     {
         addToParent = true;
         node->AddNode(new DataNode("ambientAngle", ambientAngle));
+    }
+
+    if(completeSave || !FieldsEqual(ID_DOFMode, &defaultObject))
+    {
+        addToParent = true;
+        node->AddNode(new DataNode("DOFMode", SLIVR_DOFMode_ToString(DOFMode)));
+    }
+
+    if(completeSave || !FieldsEqual(ID_DOFfocusRange, &defaultObject))
+    {
+        addToParent = true;
+        node->AddNode(new DataNode("DOFfocusRange", DOFfocusRange));
+    }
+
+    if(completeSave || !FieldsEqual(ID_DOFfocusPosition, &defaultObject))
+    {
+        addToParent = true;
+        node->AddNode(new DataNode("DOFfocusPosition", DOFfocusPosition));
+    }
+
+    if(completeSave || !FieldsEqual(ID_DOFthreshold, &defaultObject))
+    {
+        addToParent = true;
+        node->AddNode(new DataNode("DOFthreshold", DOFthreshold));
+    }
+
+    if(completeSave || !FieldsEqual(ID_DOFblurAngle, &defaultObject))
+    {
+        addToParent = true;
+        node->AddNode(new DataNode("DOFblurAngle", DOFblurAngle));
+    }
+
+    if(completeSave || !FieldsEqual(ID_DOFambientIntensity, &defaultObject))
+    {
+        addToParent = true;
+        node->AddNode(new DataNode("DOFambientIntensity", DOFambientIntensity));
+    }
+
+    if(completeSave || !FieldsEqual(ID_DOFapertureD, &defaultObject))
+    {
+        addToParent = true;
+        node->AddNode(new DataNode("DOFapertureD", DOFapertureD));
     }
 
 
@@ -1364,12 +1509,54 @@ VolumeAttributes::SetFromNode(DataNode *parentNode)
         SetLowGradientLightingClampValue(node->AsDouble());
     if((node = searchNode->GetNode("materialProperties")) != 0)
         SetMaterialProperties(node->AsDoubleArray());
-    if((node = searchNode->GetNode("occlusionShadingOn")) != 0)
-        SetOcclusionShadingOn(node->AsBool());
+    if((node = searchNode->GetNode("SLIVRAlgo")) != 0)
+    {
+        // Allow enums to be int or string in the config file
+        if(node->GetNodeType() == INT_NODE)
+        {
+            int ival = node->AsInt();
+            if(ival >= 0 && ival < 3)
+                SetSLIVRAlgo(SLIVRAlgoOptions(ival));
+        }
+        else if(node->GetNodeType() == STRING_NODE)
+        {
+            SLIVRAlgoOptions value;
+            if(SLIVRAlgoOptions_FromString(node->AsString(), value))
+                SetSLIVRAlgo(value);
+        }
+    }
     if((node = searchNode->GetNode("ambientIntensity")) != 0)
         SetAmbientIntensity(node->AsDouble());
     if((node = searchNode->GetNode("ambientAngle")) != 0)
         SetAmbientAngle(node->AsDouble());
+    if((node = searchNode->GetNode("DOFMode")) != 0)
+    {
+        // Allow enums to be int or string in the config file
+        if(node->GetNodeType() == INT_NODE)
+        {
+            int ival = node->AsInt();
+            if(ival >= 0 && ival < 2)
+                SetDOFMode(SLIVR_DOFMode(ival));
+        }
+        else if(node->GetNodeType() == STRING_NODE)
+        {
+            SLIVR_DOFMode value;
+            if(SLIVR_DOFMode_FromString(node->AsString(), value))
+                SetDOFMode(value);
+        }
+    }
+    if((node = searchNode->GetNode("DOFfocusRange")) != 0)
+        SetDOFfocusRange(node->AsDouble());
+    if((node = searchNode->GetNode("DOFfocusPosition")) != 0)
+        SetDOFfocusPosition(node->AsDouble());
+    if((node = searchNode->GetNode("DOFthreshold")) != 0)
+        SetDOFthreshold(node->AsDouble());
+    if((node = searchNode->GetNode("DOFblurAngle")) != 0)
+        SetDOFblurAngle(node->AsDouble());
+    if((node = searchNode->GetNode("DOFambientIntensity")) != 0)
+        SetDOFambientIntensity(node->AsDouble());
+    if((node = searchNode->GetNode("DOFapertureD")) != 0)
+        SetDOFapertureD(node->AsDouble());
     if(colorControlPoints.GetNumControlPoints() < 2)
          SetDefaultColorControlPoints();
 
@@ -1627,10 +1814,10 @@ VolumeAttributes::SetMaterialProperties(const double *materialProperties_)
 }
 
 void
-VolumeAttributes::SetOcclusionShadingOn(bool occlusionShadingOn_)
+VolumeAttributes::SetSLIVRAlgo(VolumeAttributes::SLIVRAlgoOptions SLIVRAlgo_)
 {
-    occlusionShadingOn = occlusionShadingOn_;
-    Select(ID_occlusionShadingOn, (void *)&occlusionShadingOn);
+    SLIVRAlgo = SLIVRAlgo_;
+    Select(ID_SLIVRAlgo, (void *)&SLIVRAlgo);
 }
 
 void
@@ -1645,6 +1832,55 @@ VolumeAttributes::SetAmbientAngle(double ambientAngle_)
 {
     ambientAngle = ambientAngle_;
     Select(ID_ambientAngle, (void *)&ambientAngle);
+}
+
+void
+VolumeAttributes::SetDOFMode(VolumeAttributes::SLIVR_DOFMode DOFMode_)
+{
+    DOFMode = DOFMode_;
+    Select(ID_DOFMode, (void *)&DOFMode);
+}
+
+void
+VolumeAttributes::SetDOFfocusRange(double DOFfocusRange_)
+{
+    DOFfocusRange = DOFfocusRange_;
+    Select(ID_DOFfocusRange, (void *)&DOFfocusRange);
+}
+
+void
+VolumeAttributes::SetDOFfocusPosition(double DOFfocusPosition_)
+{
+    DOFfocusPosition = DOFfocusPosition_;
+    Select(ID_DOFfocusPosition, (void *)&DOFfocusPosition);
+}
+
+void
+VolumeAttributes::SetDOFthreshold(double DOFthreshold_)
+{
+    DOFthreshold = DOFthreshold_;
+    Select(ID_DOFthreshold, (void *)&DOFthreshold);
+}
+
+void
+VolumeAttributes::SetDOFblurAngle(double DOFblurAngle_)
+{
+    DOFblurAngle = DOFblurAngle_;
+    Select(ID_DOFblurAngle, (void *)&DOFblurAngle);
+}
+
+void
+VolumeAttributes::SetDOFambientIntensity(double DOFambientIntensity_)
+{
+    DOFambientIntensity = DOFambientIntensity_;
+    Select(ID_DOFambientIntensity, (void *)&DOFambientIntensity);
+}
+
+void
+VolumeAttributes::SetDOFapertureD(double DOFapertureD_)
+{
+    DOFapertureD = DOFapertureD_;
+    Select(ID_DOFapertureD, (void *)&DOFapertureD);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1903,10 +2139,10 @@ VolumeAttributes::GetMaterialProperties()
     return materialProperties;
 }
 
-bool
-VolumeAttributes::GetOcclusionShadingOn() const
+VolumeAttributes::SLIVRAlgoOptions
+VolumeAttributes::GetSLIVRAlgo() const
 {
-    return occlusionShadingOn;
+    return SLIVRAlgoOptions(SLIVRAlgo);
 }
 
 double
@@ -1919,6 +2155,48 @@ double
 VolumeAttributes::GetAmbientAngle() const
 {
     return ambientAngle;
+}
+
+VolumeAttributes::SLIVR_DOFMode
+VolumeAttributes::GetDOFMode() const
+{
+    return SLIVR_DOFMode(DOFMode);
+}
+
+double
+VolumeAttributes::GetDOFfocusRange() const
+{
+    return DOFfocusRange;
+}
+
+double
+VolumeAttributes::GetDOFfocusPosition() const
+{
+    return DOFfocusPosition;
+}
+
+double
+VolumeAttributes::GetDOFthreshold() const
+{
+    return DOFthreshold;
+}
+
+double
+VolumeAttributes::GetDOFblurAngle() const
+{
+    return DOFblurAngle;
+}
+
+double
+VolumeAttributes::GetDOFambientIntensity() const
+{
+    return DOFambientIntensity;
+}
+
+double
+VolumeAttributes::GetDOFapertureD() const
+{
+    return DOFapertureD;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2223,9 +2501,16 @@ VolumeAttributes::GetFieldName(int index) const
     case ID_lowGradientLightingClampFlag:  return "lowGradientLightingClampFlag";
     case ID_lowGradientLightingClampValue: return "lowGradientLightingClampValue";
     case ID_materialProperties:            return "materialProperties";
-    case ID_occlusionShadingOn:            return "occlusionShadingOn";
+    case ID_SLIVRAlgo:                     return "SLIVRAlgo";
     case ID_ambientIntensity:              return "ambientIntensity";
     case ID_ambientAngle:                  return "ambientAngle";
+    case ID_DOFMode:                       return "DOFMode";
+    case ID_DOFfocusRange:                 return "DOFfocusRange";
+    case ID_DOFfocusPosition:              return "DOFfocusPosition";
+    case ID_DOFthreshold:                  return "DOFthreshold";
+    case ID_DOFblurAngle:                  return "DOFblurAngle";
+    case ID_DOFambientIntensity:           return "DOFambientIntensity";
+    case ID_DOFapertureD:                  return "DOFapertureD";
     default:  return "invalid index";
     }
 }
@@ -2285,9 +2570,16 @@ VolumeAttributes::GetFieldType(int index) const
     case ID_lowGradientLightingClampFlag:  return FieldType_bool;
     case ID_lowGradientLightingClampValue: return FieldType_double;
     case ID_materialProperties:            return FieldType_doubleArray;
-    case ID_occlusionShadingOn:            return FieldType_bool;
+    case ID_SLIVRAlgo:                     return FieldType_enum;
     case ID_ambientIntensity:              return FieldType_double;
     case ID_ambientAngle:                  return FieldType_double;
+    case ID_DOFMode:                       return FieldType_enum;
+    case ID_DOFfocusRange:                 return FieldType_double;
+    case ID_DOFfocusPosition:              return FieldType_double;
+    case ID_DOFthreshold:                  return FieldType_double;
+    case ID_DOFblurAngle:                  return FieldType_double;
+    case ID_DOFambientIntensity:           return FieldType_double;
+    case ID_DOFapertureD:                  return FieldType_double;
     default:  return FieldType_unknown;
     }
 }
@@ -2347,9 +2639,16 @@ VolumeAttributes::GetFieldTypeName(int index) const
     case ID_lowGradientLightingClampFlag:  return "bool";
     case ID_lowGradientLightingClampValue: return "double";
     case ID_materialProperties:            return "doubleArray";
-    case ID_occlusionShadingOn:            return "bool";
+    case ID_SLIVRAlgo:                     return "enum";
     case ID_ambientIntensity:              return "double";
     case ID_ambientAngle:                  return "double";
+    case ID_DOFMode:                       return "enum";
+    case ID_DOFfocusRange:                 return "double";
+    case ID_DOFfocusPosition:              return "double";
+    case ID_DOFthreshold:                  return "double";
+    case ID_DOFblurAngle:                  return "double";
+    case ID_DOFambientIntensity:           return "double";
+    case ID_DOFapertureD:                  return "double";
     default:  return "invalid index";
     }
 }
@@ -2570,9 +2869,9 @@ VolumeAttributes::FieldsEqual(int index_, const AttributeGroup *rhs) const
         retval = materialProperties_equal;
         }
         break;
-    case ID_occlusionShadingOn:
+    case ID_SLIVRAlgo:
         {  // new scope
-        retval = (occlusionShadingOn == obj.occlusionShadingOn);
+        retval = (SLIVRAlgo == obj.SLIVRAlgo);
         }
         break;
     case ID_ambientIntensity:
@@ -2583,6 +2882,41 @@ VolumeAttributes::FieldsEqual(int index_, const AttributeGroup *rhs) const
     case ID_ambientAngle:
         {  // new scope
         retval = (ambientAngle == obj.ambientAngle);
+        }
+        break;
+    case ID_DOFMode:
+        {  // new scope
+        retval = (DOFMode == obj.DOFMode);
+        }
+        break;
+    case ID_DOFfocusRange:
+        {  // new scope
+        retval = (DOFfocusRange == obj.DOFfocusRange);
+        }
+        break;
+    case ID_DOFfocusPosition:
+        {  // new scope
+        retval = (DOFfocusPosition == obj.DOFfocusPosition);
+        }
+        break;
+    case ID_DOFthreshold:
+        {  // new scope
+        retval = (DOFthreshold == obj.DOFthreshold);
+        }
+        break;
+    case ID_DOFblurAngle:
+        {  // new scope
+        retval = (DOFblurAngle == obj.DOFblurAngle);
+        }
+        break;
+    case ID_DOFambientIntensity:
+        {  // new scope
+        retval = (DOFambientIntensity == obj.DOFambientIntensity);
+        }
+        break;
+    case ID_DOFapertureD:
+        {  // new scope
+        retval = (DOFapertureD == obj.DOFapertureD);
         }
         break;
     default: retval = false;

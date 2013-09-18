@@ -997,8 +997,8 @@ TextureRenderer::init_textures()
 bool
 TextureRenderer::init_FrameBuffer()
 {
-  glGenFramebuffersEXT(1, &occShFrameBuffer_);
-  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, occShFrameBuffer_);
+  glGenFramebuffersEXT(1, &frmBuffer_);
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, frmBuffer_);
 
   // attach two textures to FBO
   glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, attachmentpoints[0], GL_TEXTURE_2D, eyeBuffer_tex_id0[0], 0);
@@ -1072,7 +1072,7 @@ TextureRenderer::draw_polygonsOccSh(vector<float>& vertex,
 
  
     z = -1;
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, occShFrameBuffer_);
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, frmBuffer_);
     for (unsigned int i=poly.size()-1, k=totalVerticesInPoly; i>=1; i--) {  
 
       if (writeTex == 0)  // need to write to eye buffer + to occlusion buffer
@@ -1196,7 +1196,7 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
                                vector<int> *mask,
                                ShaderProgramARB *shaderDoF, ShaderProgramARB *shaderTexDisp)
 {
-  //cout << endl << "!!!!!!!!!!!!!!!!!" << endl << "TextureRenderer::draw_polygonsDOF  - program Id: " << programId << endl;
+//  cout << endl << "!!!!!!!!!!!!!!!!!" << endl << "TextureRenderer::draw_polygonsDOF  - program Id: " << programId << endl;
 
   CHECK_OPENGL_ERROR();
   float mvmat[16];
@@ -1224,6 +1224,15 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
   float focusRange = (dof_focusRange_ * poly.size());
   float lengthSlice = textureDim_/(float)poly.size();
   float lengthOpp = (lengthSlice * tan(dof_blurAngle_ * PI/180.0))/2.0;
+
+  cout << "\n\ndof_focusPosition_: " << dof_focusPosition_ << endl;
+  cout << "zf: " << zf << endl;
+  cout << "zf_slicer: " << zf_slicer << endl;
+  cout << "poly.size(): " << poly.size() << endl;
+  cout << "focusRange: " << focusRange << endl;
+  cout << "focusRange: " << focusRange << endl;
+  cout << "lengthSlice: " << lengthSlice << endl;
+  cout << "lengthOpp: " << lengthOpp << endl;
     
   writeTex = 1; readTex = 0;
     
@@ -1263,7 +1272,7 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
 
     z = 0;
     for (unsigned int i=poly.size()-1, k=totalVerticesInPoly; i>=zf_slicer; i--) {  
-      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, dofFrameBuffer_);
+      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, frmBuffer_);
       glDrawBuffer(attachmentpoints[writeTex]);
       
     //  writeTextureToPPM( ("/Users/pascalgrosset/Desktop/tempImgs/DOF_FtB_"+to_string(z)).c_str(), eyeBuffer_tex_id0[readTex], textureDim,textureDim, GL_RGBA, GL_UNSIGNED_BYTE);
@@ -1363,7 +1372,7 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
     //cout << "Phase 2 (back to front) rendering: from " << 0 << " to " << zf_slicer << endl; 
 
     for (unsigned int i=0, k=0; i<zf_slicer; i++) {  // back to front
-      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, dofFrameBuffer_);
+      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, frmBuffer_);
       glDrawBuffer(attachmentpoints[2+writeTex]);
 
       z--;
@@ -1489,10 +1498,10 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
             glUniform1i(location, 1);
 
             glBegin (GL_QUADS);
-              glTexCoord2f(0.0, 0.0);  glVertex3f (-1, -1, 0.5);
-              glTexCoord2f(1.0, 0.0);  glVertex3f ( 1, -1, 0.5);
-              glTexCoord2f(1.0, 1.0);  glVertex3f ( 1,  1, 0.5);
-              glTexCoord2f(0.0, 1.0);  glVertex3f (-1,  1, 0.5);
+              glTexCoord2f(0.0, 0.0);  glVertex3f (-1, -1, 0.0);
+              glTexCoord2f(1.0, 0.0);  glVertex3f ( 1, -1, 0.0);
+              glTexCoord2f(1.0, 1.0);  glVertex3f ( 1,  1, 0.0);
+              glTexCoord2f(0.0, 1.0);  glVertex3f (-1,  1, 0.0);
             glEnd ();
 
           shaderTexDisp->release();

@@ -729,7 +729,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     imgHeight = yMax - yMin;
 
     if (rayCastingSLIVR == true){
-        //std::cout << "imgWidth: " << imgWidth << "  x  " << "imgHeight: " << imgHeight << std::endl;
+        std::cout << "imgWidth: " << imgWidth << "  x  " << "imgHeight: " << imgHeight << std::endl;
 
         imgArray = new float[((imgWidth)*4) * imgHeight];
 
@@ -744,7 +744,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     for (int i = xMin ; i < xMax ; i++)
         for (int j = yMin ; j < yMax ; j++)
         {
-           // std::cout << "i: " << i << "   j: " << j << std::endl;
+            //std::cout << "i: " << i << "   j: " << j << std::endl;
             double origin[4];       // starting point where we start sampling
             double terminus[4];     // ending point where we stop sampling
             GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
@@ -2027,7 +2027,7 @@ void
 avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 {
 
-   // std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable:  "<< std::endl;
+    //std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable:  "<< std::endl;
     bool inrun = false;
     int  count = 0;
 
@@ -2052,9 +2052,14 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
         if (ghosts != NULL)
         {
+             
             if (ghosts[index] != 0)
                valid_sample[i] = false;
+
+
+           std::cout << w << " , " << h << "  ghosts != NULL  ;  valid_sample[i]: " << valid_sample[i] << "   true: " << true << "   false: " << false << std::endl;
         }
+        //std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable: valid =  " << valid_sample[i] << std::endl;
 
         if (!valid_sample[i] && inrun)
         {
@@ -2135,9 +2140,13 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 valid_sample[i] = false;
         }
 
+       // std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable: valid =  " << valid_sample[i] << "  dims: " << dims[0] << " ,  " << dims[1] << " ,  " << dims[2] << "   indices: " << indices[0] << " ,  " << indices[1] << " ,  " << indices[2] << std::endl;
+
         if (!valid_sample[i]){
             continue;
         }
+
+      // std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable: valid!!!  "<< std::endl;
         
         if (trilinearInterpolation || rayCastingSLIVR){
             //
@@ -2322,6 +2331,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                 // Compute the color
                                 //
                                 computePixelColor(source_rgb, dest_rgb);
+
+                             //   std::cout << "computePixelColor" << std::endl;
                             }
                         }
                         else

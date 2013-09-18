@@ -416,13 +416,33 @@ avtOpenGLSLIVRVolumeRenderer::Render(
 
     context->renderer->set_occSh_ambIntensity(props.atts.GetAmbientIntensity());
     context->renderer->set_occSh_blurAngle(props.atts.GetAmbientAngle());
-    int algoChosen = props.atts.GetOcclusionShadingOn();
+
+    context->renderer->set_dof_focusMode(props.atts.GetDOFMode());
+
+    context->renderer->set_dof_focusPosition(props.atts.GetDOFfocusPosition());
+    context->renderer->set_dof_threshold(props.atts.GetDOFthreshold());
+    context->renderer->set_dof_aperture(props.atts.GetDOFapertureD());
+
+    context->renderer->set_dof_focusRange(props.atts.GetDOFfocusRange());
+    context->renderer->set_dof_blurAngle(props.atts.GetDOFblurAngle());
+
+    // cout << "\n\nprops.atts.GetDOFMode(): " << props.atts.GetDOFMode() << endl;
+
+    // cout << "props.atts.GetDOFfocusPosition(): " << props.atts.GetDOFfocusPosition() << endl;
+    // cout << "props.atts.GetDOFthreshold(): " << props.atts.GetDOFthreshold() << endl;
+    // cout << "props.atts.GetDOFapertureD(): " << props.atts.GetDOFapertureD() << endl;
+
+    // cout << "props.atts.GetDOFfocusRange(): " << props.atts.GetDOFfocusRange() << endl;
+    // cout << "props.atts.GetDOFblurAngle(): " << props.atts.GetDOFblurAngle() << endl;
+
+          
+
+    int algoChosen = props.atts.GetSLIVRAlgo();
     debug5 << mName << "AlgoChosen: " << algoChosen << endl;
     context->renderer->set_shaderAlgo(algoChosen);
     
     debug5 << mName << "Material properties: " <<  matProp[0] << " ,  " <<  matProp[1] << " ,  " <<  matProp[2] << " ,  " <<  matProp[3]<< endl;
     debug5 << mName << "Alpha: " <<  props.atts.GetOpacityAttenuation()*2.0 - 1.0 << endl;
-
 
     // Render the context.
     debug5 << mName << "Rendering..." << endl;
@@ -437,10 +457,22 @@ avtOpenGLSLIVRVolumeRenderer::Render(
         context->renderer->draw(false, true);
 
         context->renderer->set_sampling_rate(samplingRate);
-        context->renderer->set_shaderAlgo(props.atts.GetOcclusionShadingOn());
+        context->renderer->set_shaderAlgo(props.atts.GetSLIVRAlgo());
 
-        if(props.atts.GetLightingFlag())
-             context->renderer->set_shading(true);
+        context->renderer->set_dof_focusMode(props.atts.GetDOFMode());
+
+        context->renderer->set_dof_focusPosition(props.atts.GetDOFfocusPosition());
+        context->renderer->set_dof_threshold(props.atts.GetDOFthreshold());
+        context->renderer->set_dof_aperture(props.atts.GetDOFapertureD());
+
+        context->renderer->set_dof_focusRange(props.atts.GetDOFfocusRange());
+        context->renderer->set_dof_blurAngle(props.atts.GetDOFblurAngle());
+    
+
+        if (props.atts.GetLightingFlag())
+            context->renderer->set_shading(true);
+
+          
     }
     else
     {

@@ -544,6 +544,16 @@ VolumeAttributes::SetRendererType(VolumeAttributes::Renderer rendererType_)
         SetTransferFunctionDim(1);
 }
 
+Function: SetSLIVRAlgo
+Declaration: void SetSLIVRAlgo(SLIVRAlgoOptions SLIVRAlgo_);
+Definition:
+void
+VolumeAttributes::SetSLIVRAlgo(VolumeAttributes::SLIVRAlgoOptions SLIVRAlgo_)
+{
+    SLIVRAlgo = SLIVRAlgo_;
+    Select(ID_SLIVRAlgo, (void *)&SLIVRAlgo);
+}
+
 Function: SetTransferFunctionDim
 Declaration: void SetTransferFunctionDim(int transferFunctionDim_);
 Definition:

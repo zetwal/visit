@@ -100,6 +100,16 @@ public:
   inline void set_occSh_ambIntensity(float val) { occSh_ambIntensity_ = val; }
   inline void set_occSh_blurAngle(float val) { occSh_blurAngle_ = val; }
 
+  inline void set_dof_focusPosition(float focusPos){dof_focusPosition_ = focusPos;}
+  inline void set_dof_threshold(float thresh){dof_threshold_ = thresh;}
+  inline void set_dof_blurAngle(float blurAng){dof_blurAngle_ = blurAng;}
+  inline void set_dof_ambIntensity(float ambInt){occSh_ambIntensity_ = ambInt;}
+  inline void set_dof_aperture(float aper){dof_aperture_ = aper;}
+  inline void set_dof_focusMode(int fM){dof_focusMode_ = fM;}
+  inline void set_dof_focusRange(float focusRange){dof_focusRange_ = focusRange;}
+
+  inline void set_algoChoice(float algoChc){ algoChoice = algoChc;}
+
 protected:
   Texture *tex_;
   ColorMap *cmap1_;
@@ -145,17 +155,21 @@ protected:
   int textureDim_;
 
   int shaderAlgo_;
+  GLuint frmBuffer_;
+
   float occSh_ambIntensity_;
   float occSh_blurAngle_;
-  GLuint occShFrameBuffer_;
-
+  
   float dof_focusPosition_;
   float dof_focusRange_;
   float dof_blurAngle_;
   int dof_focusMode_;
   float dof_aperture_;
   float dof_threshold_;
-  GLuint dofFrameBuffer_;
+
+  int algoChoice; 
+
+
 
 
   GLint viewport[4];

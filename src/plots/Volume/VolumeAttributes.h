@@ -112,6 +112,17 @@ public:
         Higher,
         Highest
     };
+    enum SLIVRAlgoOptions
+    {
+        Normal,
+        OccSh,
+        DoF
+    };
+    enum SLIVR_DOFMode
+    {
+        Auto,
+        User
+    };
 
     // These constructors are for objects of this class
     VolumeAttributes();
@@ -181,9 +192,16 @@ public:
     void SetLowGradientLightingClampFlag(bool lowGradientLightingClampFlag_);
     void SetLowGradientLightingClampValue(double lowGradientLightingClampValue_);
     void SetMaterialProperties(const double *materialProperties_);
-    void SetOcclusionShadingOn(bool occlusionShadingOn_);
+    void SetSLIVRAlgo(SLIVRAlgoOptions SLIVRAlgo_);
     void SetAmbientIntensity(double ambientIntensity_);
     void SetAmbientAngle(double ambientAngle_);
+    void SetDOFMode(SLIVR_DOFMode DOFMode_);
+    void SetDOFfocusRange(double DOFfocusRange_);
+    void SetDOFfocusPosition(double DOFfocusPosition_);
+    void SetDOFthreshold(double DOFthreshold_);
+    void SetDOFblurAngle(double DOFblurAngle_);
+    void SetDOFambientIntensity(double DOFambientIntensity_);
+    void SetDOFapertureD(double DOFapertureD_);
 
     // Property getting methods
     bool                           GetLegendFlag() const;
@@ -228,9 +246,16 @@ public:
     double                         GetLowGradientLightingClampValue() const;
     const double                   *GetMaterialProperties() const;
           double                   *GetMaterialProperties();
-    bool                           GetOcclusionShadingOn() const;
+    SLIVRAlgoOptions               GetSLIVRAlgo() const;
     double                         GetAmbientIntensity() const;
     double                         GetAmbientAngle() const;
+    SLIVR_DOFMode                  GetDOFMode() const;
+    double                         GetDOFfocusRange() const;
+    double                         GetDOFfocusPosition() const;
+    double                         GetDOFthreshold() const;
+    double                         GetDOFblurAngle() const;
+    double                         GetDOFambientIntensity() const;
+    double                         GetDOFapertureD() const;
 
     // Persistence methods
     virtual bool CreateNode(DataNode *node, bool completeSave, bool forceAdd);
@@ -283,6 +308,16 @@ public:
     static bool LowGradientLightingReduction_FromString(const std::string &, LowGradientLightingReduction &);
 protected:
     static std::string LowGradientLightingReduction_ToString(int);
+public:
+    static std::string SLIVRAlgoOptions_ToString(SLIVRAlgoOptions);
+    static bool SLIVRAlgoOptions_FromString(const std::string &, SLIVRAlgoOptions &);
+protected:
+    static std::string SLIVRAlgoOptions_ToString(int);
+public:
+    static std::string SLIVR_DOFMode_ToString(SLIVR_DOFMode);
+    static bool SLIVR_DOFMode_FromString(const std::string &, SLIVR_DOFMode &);
+protected:
+    static std::string SLIVR_DOFMode_ToString(int);
 public:
 
     // Keyframing methods
@@ -340,9 +375,16 @@ public:
         ID_lowGradientLightingClampFlag,
         ID_lowGradientLightingClampValue,
         ID_materialProperties,
-        ID_occlusionShadingOn,
+        ID_SLIVRAlgo,
         ID_ambientIntensity,
         ID_ambientAngle,
+        ID_DOFMode,
+        ID_DOFfocusRange,
+        ID_DOFfocusPosition,
+        ID_DOFthreshold,
+        ID_DOFblurAngle,
+        ID_DOFambientIntensity,
+        ID_DOFapertureD,
         ID__LAST
     };
 
@@ -384,14 +426,21 @@ private:
     bool                     lowGradientLightingClampFlag;
     double                   lowGradientLightingClampValue;
     double                   materialProperties[4];
-    bool                     occlusionShadingOn;
+    int                      SLIVRAlgo;
     double                   ambientIntensity;
     double                   ambientAngle;
+    int                      DOFMode;
+    double                   DOFfocusRange;
+    double                   DOFfocusPosition;
+    double                   DOFthreshold;
+    double                   DOFblurAngle;
+    double                   DOFambientIntensity;
+    double                   DOFapertureD;
 
     // Static class format string for type map.
     static const char *TypeMapFormatString;
     static const private_tmfs_t TmfsStruct;
 };
-#define VOLUMEATTRIBUTES_TMFS "bbafiabissUbfbfbfbfbiiiiidiifa*iibdDbdd"
+#define VOLUMEATTRIBUTES_TMFS "bbafiabissUbfbfbfbfbiiiiidiifa*iibdDiddidddddd"
 
 #endif

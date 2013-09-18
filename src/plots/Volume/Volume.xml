@@ -228,14 +228,44 @@
         0.0
         15
       </Field>
-      <Field name="occlusionShadingOn" label="Algorithm Type" type="bool">
-        false
+      <Enum name="SLIVRAlgoOptions">
+        Normal
+        OccSh
+        DoF
+      </Enum>
+      <Enum name="SLIVR_DOFMode">
+        Auto
+        User
+      </Enum>
+      <Field name="SLIVRAlgo" label="SLIVR Algorithm Type" type="enum" subtype="SLIVRAlgoOptions">
+        Normal
       </Field>
       <Field name="ambientIntensity" label="Ambient Intensity" type="double">
         1.0
       </Field>
       <Field name="ambientAngle" label="Ambient Angle" type="double">
         45.0
+      </Field>
+      <Field name="DOFMode" label="DOFMode" type="enum" subtype="SLIVR_DOFMode">
+        Auto
+      </Field>
+      <Field name="DOFfocusRange" label="DOFfocusRange" type="double">
+        0.2
+      </Field>
+      <Field name="DOFfocusPosition" label="DOFfocusPosition" type="double">
+        0.5
+      </Field>
+      <Field name="DOFthreshold" label="DOFthreshold" type="double">
+        0.5
+      </Field>
+       <Field name="DOFblurAngle" label="DOFblurAngle" type="double">
+        45.0
+      </Field>
+      <Field name="DOFambientIntensity" label="DOFambientIntensity" type="double">
+        1.000000
+      </Field>
+      <Field name="DOFapertureD" label="DOFapertureD" type="double">
+        1.000000
       </Field>
       <Function name="ChangesRequireRecalculation" user="true" member="true">
       </Function>
@@ -260,6 +290,8 @@
       <Function name="VolumeAttributes_SetFreeformOpacity" user="false" member="true">
       </Function>
       <Function name="SetRendererType" user="false" member="true">
+      </Function>
+      <Function name="SetSLIVRAlgo" user="false" member="true">
       </Function>
       <Function name="SetTransferFunctionDim" user="false" member="true">
       </Function>
