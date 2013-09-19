@@ -505,7 +505,7 @@ QvisVolumePlotWindow::CreateOccShGroup(QWidget *parent, QGridLayout *pLayout, in
     angleLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
     
 
-    connect(occlusionShadingToggle, SIGNAL(toggled(bool)),  this, SLOT(occlusionToggled(bool)));
+    //connect(occlusionShadingToggle, SIGNAL(toggled(bool)),  this, SLOT(occlusionToggled(bool)));
     connect(ambIntensity, SIGNAL(valueChanged(double)), this, SLOT(setAmbIntensity(double))); 
     connect(angleFac, SIGNAL(valueChanged(double)), this, SLOT(setAngleFac(double))); 
 }

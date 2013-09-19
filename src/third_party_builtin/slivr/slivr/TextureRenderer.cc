@@ -937,7 +937,7 @@ TextureRenderer::colormap2_hardware_rasterize()
 
 
 void 
-TextureRenderer::initEyeOccTex(int texWidth, int texHeight, int value=0){
+TextureRenderer::initEyeTex(int texWidth, int texHeight, int value=0){
   unsigned char *textureArray = new unsigned char[4*texWidth*texHeight];
   for (int i=0; i<(textureDim_*textureDim_); i++)
     textureArray[i*4 +0] = textureArray[i*4 +1] = textureArray[i*4 +2] =  textureArray[i*4 +3] = value;
@@ -1054,7 +1054,7 @@ TextureRenderer::draw_polygonsOccSh(vector<float>& vertex,
   glPushMatrix();
 
   glDisable(GL_BLEND);
-    initEyeOccTex(textureDim_,textureDim_);
+    initEyeTex(textureDim_,textureDim_);
 
     // First Phase: Render to eyebuffer
     glViewport(0,0,textureDim_,textureDim_);  // set the viewport for now to the texture size
@@ -1233,6 +1233,7 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
   cout << "focusRange: " << focusRange << endl;
   cout << "lengthSlice: " << lengthSlice << endl;
   cout << "lengthOpp: " << lengthOpp << endl;
+  cout << "dof_focusMode_: " << dof_focusMode_ << endl;
     
   writeTex = 1; readTex = 0;
     
@@ -1243,18 +1244,14 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
   else
     cout << "DOF AUTO" << endl;
 
-
-
   glPushAttrib(GL_ALL_ATTRIB_BITS);
   glPushMatrix();
 
     glDisable(GL_BLEND);
-    //initEyeTex(textureDim_,textureDim_);
-    initEyeOccTex(textureDim_,textureDim_);
+    initEyeTex(textureDim_,textureDim_);
 
-    glViewport(0,0,textureDim_,textureDim_);  // set the viewport for now to the texture size
+    glViewport(0,0,textureDim_,textureDim_);
     screenSize[0] = screenSize[1] = textureDim_;
-
 
     int programId = shaderDoF->activate();
 
@@ -1268,14 +1265,13 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
   // Phase 1: front to in-focus-plane (front-to-back)
     location = glGetUniformLocation(programId, "traversalDirection");
     glUniform1i(location, FRONT_TO_BACK);
-    cout << "FRONT TO BACK traversal" << endl;
+    //cout << "FRONT TO BACK traversal" << endl;
 
     z = 0;
-    for (unsigned int i=poly.size()-1, k=totalVerticesInPoly; i>=zf_slicer; i--) {  
+    for (unsigned int i=poly.size()-1, k=totalVerticesInPoly; i>=zf_slicer; i--){  
       glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, frmBuffer_);
       glDrawBuffer(attachmentpoints[writeTex]);
       
-    //  writeTextureToPPM( ("/Users/pascalgrosset/Desktop/tempImgs/DOF_FtB_"+to_string(z)).c_str(), eyeBuffer_tex_id0[readTex], textureDim,textureDim, GL_RGBA, GL_UNSIGNED_BYTE);
       z++;
       if (dof_focusMode_ == DOF_USER){
         if ( (z >= (zf-focusRange)) && (z <= (zf+focusRange)) )
@@ -1365,13 +1361,11 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
   // Phase 2: fp to back (front-to-back rendering)
     location = glGetUniformLocation(programId, "traversalDirection");
     glUniform1i(location, BACK_TO_FRONT);
-    //cout << "BACK TO FRONT traversal" << endl;
-      
+
     writeTex = 1; readTex = 0; 
     z = poly.size();  
-    //cout << "Phase 2 (back to front) rendering: from " << 0 << " to " << zf_slicer << endl; 
 
-    for (unsigned int i=0, k=0; i<zf_slicer; i++) {  // back to front
+    for (unsigned int i=0, k=0; i<zf_slicer; i++){
       glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, frmBuffer_);
       glDrawBuffer(attachmentpoints[2+writeTex]);
 
@@ -1393,21 +1387,15 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
       if (radS <= 2.0){
         location = glGetUniformLocation(programId, "numSamples");
         glUniform1i(location, 1);
-        //cout << "Num samples:  1" << endl;
       }
       else
         if (radS <= 5.0){
           location = glGetUniformLocation(programId, "numSamples");
           glUniform1i(location, 5);
- 
-          //cout << "Num samples:  9" << endl;
-          //cout << "z: " << z << "    radS: " << radS << endl;
         }
         else{
           location = glGetUniformLocation(programId, "numSamples");
           glUniform1i(location, 9);
-          //cout << "Num samples:  9" << endl;
-          //cout << "z: " << z << "    radS: " << radS << endl;
         }
                 
         glEnable(GL_TEXTURE_2D);
@@ -1466,10 +1454,6 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
 
     lastWritePhase2 = readTex;
     shaderDoF->release();
-
-    //    writeTextureToPPM( "/Users/pascalgrosset/Desktop/tempImgs/DOF_FtB_", eyeBuffer_tex_id0[lastWritePhase1], textureDim,textureDim, GL_RGBA, GL_UNSIGNED_BYTE);
-    //    writeTextureToPPM( "/Users/pascalgrosset/Desktop/tempImgs/DOF_BtF_", eyeBuffer_tex_id1[lastWritePhase2], textureDim,textureDim, GL_RGBA, GL_UNSIGNED_BYTE);
-        
         
     // Final Phase: Render to texture
     glEnable(GL_BLEND);
@@ -1482,6 +1466,7 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
         glPushMatrix();
           glLoadIdentity();
           programId = shaderTexDisp->activate();
+
             glEnable(GL_TEXTURE_2D);
 
             location = glGetUniformLocation(programId, "tex7");

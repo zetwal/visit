@@ -19,7 +19,6 @@ uniform int traversalDirection;    // required for DoF
 varying vec4 clip_Vertex;          
 varying vec2 transformed_c;        
 
-
 vec4 blur(vec4 source){
     int num_of_samples;
 

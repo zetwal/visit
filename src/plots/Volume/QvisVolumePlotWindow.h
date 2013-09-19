@@ -245,13 +245,13 @@ private slots:
     void setMaterialN(double val);
     void setAmbIntensity(double val);
     void setAngleFac(double val);
-    void occlusionToggled(bool value);
+    //void occlusionToggled(bool value);
 
     void setDOFFocusClicked(int val);
     void DOFFocusRangeChanged(int val);
     void DOFFocusChanged(int val);
     void setBlurAngleDOF(double val);
-    void DOFangleSliderChanged(int val);
+    //void DOFangleSliderChanged(int val);
     void setThresholdDOF(double val);
     void setapertureDiameterDOF(double val);
 
