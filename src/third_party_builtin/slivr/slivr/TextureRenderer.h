@@ -205,7 +205,7 @@ protected:
 
   bool init_FrameBuffer();
   void init_textures();
-  void initEyeTex(int texWidth, int texHeight, int value);
+  void initEyeTex(int texWidth, int texHeight, int value1, int value2);
 
   void draw_polygonsOccSh(vector<float>& vertex, vector<float>& texcoord,
                           vector<int>& poly, bool normal, bool fog, vector<int> *mask,

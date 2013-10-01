@@ -245,7 +245,7 @@ public:
     bool                           GetLowGradientLightingClampFlag() const;
     double                         GetLowGradientLightingClampValue() const;
     const double                   *GetMaterialProperties() const;
-          double                   *GetMaterialProperties();
+    double                         *GetMaterialProperties();
     SLIVRAlgoOptions               GetSLIVRAlgo() const;
     double                         GetAmbientIntensity() const;
     double                         GetAmbientAngle() const;

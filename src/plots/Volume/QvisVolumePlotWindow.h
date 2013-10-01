@@ -245,7 +245,6 @@ private slots:
     void setMaterialN(double val);
     void setAmbIntensity(double val);
     void setAngleFac(double val);
-    //void occlusionToggled(bool value);
 
     void setDOFFocusClicked(int val);
     void DOFFocusRangeChanged(int val);
@@ -345,20 +344,29 @@ private:
     QLabel                   *Ka;
     QLabel                   *Kd;
     QLabel                   *Ks;
+
     QLabel                   *specPow;
+
     QGroupBox                *ambOccPropGroup;
-    QCheckBox                *occlusionShadingToggle;
-    QDoubleSpinBox           *ambIntensity;
-    QDoubleSpinBox           *angleFac;
     QLabel* ambientIntensityLabel;
+    QDoubleSpinBox           *ambIntensity;
     QLabel* angleLabel;
+    QDoubleSpinBox           *angleFac;
 
     QGroupBox                *DOFGroup;
+    QLabel                   *DOFfocusModeLabel;
     QButtonGroup             *DOFfocusMode;
+    QRadioButton             *rbFocusModeAuto;
+    QRadioButton             *rbFocusModeUser;
+    QLabel                   *DOFfocusSliderRangeLabel;
     QvisOpacitySlider        *DOFfocusSliderRange;
+    QLabel                   *DOFfocusSliderLabel;
     QvisOpacitySlider        *DOFfocusSlider;
+    QLabel                   *DOFblurAngleLabel;
     QDoubleSpinBox           *DOFblurAngle;
+    QLabel                   *DOFthresholdLabel;
     QDoubleSpinBox           *DOFthreshold;
+    QLabel                   *DOFapertureDiameterLabel;
     QDoubleSpinBox           *DOFapertureDiameter;
 
     QGroupBox                *renderOptionsGroup;

@@ -462,10 +462,6 @@ QvisVolumePlotWindow::CreateOccShGroup(QWidget *parent, QGridLayout *pLayout, in
     QLabel* spacer = new QLabel(tr(" "), central);
 
 
-    // Algo
-    occlusionShadingToggle = new QCheckBox(tr("Occlusion"), central);
-    
-
     // Ambient Occlusion properties
     ambientIntensityLabel = new QLabel(tr("Ambient intensity:"), central);
     ambIntensity = new QDoubleSpinBox(central);
@@ -487,25 +483,19 @@ QvisVolumePlotWindow::CreateOccShGroup(QWidget *parent, QGridLayout *pLayout, in
     angleLabel->setBuddy(angleFac);
     
 
-    occlusionShadingPropLayout->addWidget(occlusionShadingToggle, 0,0, 1,1, Qt::AlignLeft);
-    occlusionShadingPropLayout->addWidget(spacer, 0,1, 1,1, Qt::AlignLeft);
+    occlusionShadingPropLayout->addWidget(ambientIntensityLabel, 0,0, 1,1, Qt::AlignRight);
+    occlusionShadingPropLayout->addWidget(ambIntensity, 0,1, 1,1, Qt::AlignLeft);
 
-    occlusionShadingPropLayout->addWidget(ambientIntensityLabel, 0,3, 1,1, Qt::AlignRight);
-    occlusionShadingPropLayout->addWidget(ambIntensity, 0,4, 1,1, Qt::AlignLeft);
-
-    occlusionShadingPropLayout->addWidget(angleLabel, 0,6, 1,1, Qt::AlignRight);
-    occlusionShadingPropLayout->addWidget(angleFac, 0,7, 1,1, Qt::AlignLeft);
+    occlusionShadingPropLayout->addWidget(angleLabel, 0,3, 1,1, Qt::AlignRight);
+    occlusionShadingPropLayout->addWidget(angleFac, 0,4, 1,1, Qt::AlignLeft);
 
 
-    ambOccPropGroup->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
-    occlusionShadingToggle->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
-    ambIntensity->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
-    angleFac->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
-    ambientIntensityLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
-    angleLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
-    
-
-    //connect(occlusionShadingToggle, SIGNAL(toggled(bool)),  this, SLOT(occlusionToggled(bool)));
+    ambOccPropGroup->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    ambIntensity->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    angleFac->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    ambientIntensityLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    angleLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+   
     connect(ambIntensity, SIGNAL(valueChanged(double)), this, SLOT(setAmbIntensity(double))); 
     connect(angleFac, SIGNAL(valueChanged(double)), this, SLOT(setAngleFac(double))); 
 }
@@ -538,31 +528,32 @@ QvisVolumePlotWindow::CreateDoFGroup(QWidget *parent, QGridLayout *pLayout, int 
     innerDOFLayout->setVerticalSpacing(20);
     QLabel* spacer = new QLabel(tr("           "), DOFGroup);
 
-    QLabel* focusLabel = new QLabel(tr("DoF Mode:"), central);
-    innerDOFLayout->addWidget(focusLabel, 0,0);
+    DOFfocusModeLabel = new QLabel(tr("DoF Mode:"), central);
+    innerDOFLayout->addWidget(DOFfocusModeLabel, 0,0);
 
 
     // DoF Choice
     DOFfocusMode = new QButtonGroup(central);
-    QRadioButton *rbChoice;
-    rbChoice = new QRadioButton(tr("Auto"), central);
-    rbChoice->setChecked(true);
-    DOFfocusMode->addButton(rbChoice, 0);
-    innerDOFLayout->addWidget(rbChoice, 0,1, 1,2);
+    rbFocusModeAuto = new QRadioButton(tr("Auto"), central);
+    rbFocusModeAuto->setChecked(true);
+    DOFfocusMode->addButton(rbFocusModeAuto, 0);
+    innerDOFLayout->addWidget(rbFocusModeAuto, 0,1, 1,2);
 
-    rbChoice = new QRadioButton(tr("User"), central);
-    DOFfocusMode->addButton(rbChoice, 1);
-    innerDOFLayout->addWidget(rbChoice, 0,3, 1,2);
+    rbFocusModeUser = new QRadioButton(tr("User"), central);
+    DOFfocusMode->addButton(rbFocusModeUser, 1);
+    innerDOFLayout->addWidget(rbFocusModeUser, 0,3, 1,2);
 
     connect(DOFfocusMode, SIGNAL(buttonClicked(int)), this, SLOT(setDOFFocusClicked(int)));
 
 
+
+
     // focus position
     DOFfocusSlider = new QvisOpacitySlider(0, 100, 1, 50, DOFGroup);
-    QLabel *DOFattenuationLabel = new QLabel(tr("Focus Position"), DOFGroup);
-    DOFattenuationLabel->setBuddy(DOFfocusSlider);
+    DOFfocusSliderLabel = new QLabel(tr("Focus Position"), DOFGroup);
+    DOFfocusSliderLabel->setBuddy(DOFfocusSlider);
     
-    innerDOFLayout->addWidget(DOFattenuationLabel, 1,0, 1,1, Qt::AlignLeft);
+    innerDOFLayout->addWidget(DOFfocusSliderLabel, 1,0, 1,1, Qt::AlignLeft);
     innerDOFLayout->addWidget(DOFfocusSlider, 1,1, 1,3);
 
     connect(DOFfocusSlider, SIGNAL(valueChanged(int)), this, SLOT(DOFFocusChanged(int)));
@@ -576,11 +567,12 @@ QvisVolumePlotWindow::CreateDoFGroup(QWidget *parent, QGridLayout *pLayout, int 
     DOFthreshold->setSingleStep(0.01);
     DOFthreshold->setValue(0.5);
 
-    QLabel* DOFthresholdLabel = new QLabel(tr("Threshold:"), central);
+    DOFthresholdLabel = new QLabel(tr("Threshold:"), central);
     DOFthresholdLabel->setBuddy(DOFthreshold);
     innerDOFLayout->addWidget(DOFthresholdLabel, 1,4, 1,1, Qt::AlignRight);
     innerDOFLayout->addWidget(DOFthreshold, 1,5, 1,1, Qt::AlignLeft);
     connect(DOFthreshold, SIGNAL(valueChanged(double)), this, SLOT(setThresholdDOF(double)));
+
 
     // DOFapertureDiameter
     DOFapertureDiameter = new QDoubleSpinBox(central);
@@ -590,7 +582,7 @@ QvisVolumePlotWindow::CreateDoFGroup(QWidget *parent, QGridLayout *pLayout, int 
     DOFapertureDiameter->setSingleStep(0.01);
     DOFapertureDiameter->setValue(1.0);
 
-    QLabel* DOFapertureDiameterLabel = new QLabel(tr("Aperture:"), central);
+    DOFapertureDiameterLabel = new QLabel(tr("Aperture:"), central);
     DOFapertureDiameterLabel->setBuddy(DOFapertureDiameter);
     innerDOFLayout->addWidget(DOFapertureDiameterLabel,1,6, 1,1, Qt::AlignRight);
     innerDOFLayout->addWidget(DOFapertureDiameter,1,7, 1,1, Qt::AlignLeft);
@@ -599,12 +591,14 @@ QvisVolumePlotWindow::CreateDoFGroup(QWidget *parent, QGridLayout *pLayout, int 
 
     
 
+
+
     // focus DOFfocusSliderRange
     DOFfocusSliderRange = new QvisOpacitySlider(0, 100, 1, 50, DOFGroup);
-    QLabel *DOFattenuationLabelRange = new QLabel(tr("Focus Range"), DOFGroup);
-    DOFattenuationLabelRange->setBuddy(DOFfocusSliderRange);
+    DOFfocusSliderRangeLabel = new QLabel(tr("Focus Range"), DOFGroup);
+    DOFfocusSliderRangeLabel->setBuddy(DOFfocusSliderRange);
     
-    innerDOFLayout->addWidget(DOFattenuationLabelRange, 2,0, 1,1, Qt::AlignLeft);
+    innerDOFLayout->addWidget(DOFfocusSliderRangeLabel, 2,0, 1,1, Qt::AlignLeft);
     innerDOFLayout->addWidget(DOFfocusSliderRange, 2,1, 1,3);
     
     connect(DOFfocusSliderRange, SIGNAL(valueChanged(int)), this, SLOT(DOFFocusRangeChanged(int)));
@@ -618,10 +612,24 @@ QvisVolumePlotWindow::CreateDoFGroup(QWidget *parent, QGridLayout *pLayout, int 
     DOFblurAngle->setSingleStep(1.0);
     DOFblurAngle->setValue(45);
 
-    QLabel* DOFblurLabel = new QLabel(tr("Blur angle:"), central);
-    DOFblurLabel->setBuddy(DOFblurAngle);
-    innerDOFLayout->addWidget(DOFblurLabel, 2,4, 1,1, Qt::AlignRight);
+    DOFblurAngleLabel = new QLabel(tr("Blur angle:"), central);
+    DOFblurAngleLabel->setBuddy(DOFblurAngle);
+    innerDOFLayout->addWidget(DOFblurAngleLabel, 2,4, 1,1, Qt::AlignRight);
     innerDOFLayout->addWidget(DOFblurAngle, 2,5, 1,2, Qt::AlignLeft);
+
+    DOFfocusModeLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    rbFocusModeAuto->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    rbFocusModeUser->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSliderRangeLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSliderRange->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSliderLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSlider->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFblurAngleLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFblurAngle->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFthresholdLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFthreshold->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFapertureDiameterLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFapertureDiameter->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
     
     connect(DOFblurAngle, SIGNAL(valueChanged(double)), this, SLOT(setBlurAngleDOF(double)));
 
@@ -1833,12 +1841,13 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 lowGradientLightingReductionLabel->setEnabled(true);
                 lowGradientLightingReductionCombo->setEnabled(true);
                 lowGradientClampToggle->setEnabled(
-                            volumeAtts->GetLowGradientLightingReduction() !=
-                                                        VolumeAttributes::Off);
+                volumeAtts->GetLowGradientLightingReduction() !=
+                                            VolumeAttributes::Off);
                 lowGradientClamp->setEnabled(
-                            volumeAtts->GetLowGradientLightingReduction() !=
-                                                      VolumeAttributes::Off &&
-                            volumeAtts->GetLowGradientLightingClampFlag());
+                volumeAtts->GetLowGradientLightingReduction() !=
+                                            VolumeAttributes::Off &&
+                volumeAtts->GetLowGradientLightingClampFlag());
+
 #ifdef HAVE_LIBSLIVR
                 rendererSamplesLabel->setEnabled(false);
                 rendererSamples->setEnabled(false);
@@ -1870,12 +1879,12 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 lowGradientLightingReductionLabel->setEnabled(true);
                 lowGradientLightingReductionCombo->setEnabled(true);
                 lowGradientClampToggle->setEnabled(
-                            volumeAtts->GetLowGradientLightingReduction() !=
+                volumeAtts->GetLowGradientLightingReduction() !=
                                                         VolumeAttributes::Off);
                 lowGradientClamp->setEnabled(
-                            volumeAtts->GetLowGradientLightingReduction() !=
+                volumeAtts->GetLowGradientLightingReduction() !=
                                                       VolumeAttributes::Off &&
-                            volumeAtts->GetLowGradientLightingClampFlag());
+                volumeAtts->GetLowGradientLightingClampFlag());
 #ifdef HAVE_LIBSLIVR
                 rendererSamplesLabel->setEnabled(false);
                 rendererSamples->setEnabled(false);
@@ -1907,12 +1916,12 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 lowGradientLightingReductionLabel->setEnabled(true);
                 lowGradientLightingReductionCombo->setEnabled(true);
                 lowGradientClampToggle->setEnabled(
-                            volumeAtts->GetLowGradientLightingReduction() !=
+                volumeAtts->GetLowGradientLightingReduction() !=
                                                         VolumeAttributes::Off);
                 lowGradientClamp->setEnabled(
-                            volumeAtts->GetLowGradientLightingReduction() !=
+                volumeAtts->GetLowGradientLightingReduction() !=
                                                       VolumeAttributes::Off &&
-                            volumeAtts->GetLowGradientLightingClampFlag());
+                volumeAtts->GetLowGradientLightingClampFlag());
 #ifdef HAVE_LIBSLIVR
                 rendererSamplesLabel->setEnabled(false);
                 rendererSamples->setEnabled(false);
@@ -2058,9 +2067,9 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 lowGradientLightingReductionLabel->setEnabled(true);
                 lowGradientLightingReductionCombo->setEnabled(true);
                 lowGradientClampToggle->setEnabled(
-                        volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off);
+                volumeAtts->GetLowGradientLightingReduction() != VolumeAttributes::Off);
                 lowGradientClamp->setEnabled(
-                        volumeAtts->GetLowGradientLightingReduction() !=
+                volumeAtts->GetLowGradientLightingReduction() !=
                             VolumeAttributes::Off && volumeAtts->GetLowGradientLightingClampFlag());
                 }
 #ifdef HAVE_LIBSLIVR
@@ -2074,6 +2083,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
 #endif
             rendererTypesComboBox->blockSignals(false);
             break;
+
         case VolumeAttributes::ID_gradientType:
             gradientButtonGroup->blockSignals(true);
             if (volumeAtts->GetGradientType() == VolumeAttributes::CenteredDifferences)
@@ -2082,11 +2092,13 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                 gradientButtonGroup->button(1)->setChecked(true);
             gradientButtonGroup->blockSignals(false);
             break;
+
         case VolumeAttributes::ID_num3DSlices:
             num3DSlices->blockSignals(true);
             num3DSlices->setValue(volumeAtts->GetNum3DSlices());
             num3DSlices->blockSignals(false);
             break;
+
         case VolumeAttributes::ID_scaling:
             scalingButtons->blockSignals(true);
             scalingButtons->button(volumeAtts->GetScaling())->setChecked(true);
@@ -2095,10 +2107,12 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
             skewLineEdit->setEnabled( volumeAtts->GetScaling() ==
                                       VolumeAttributes::Skew);
             break;
+
         case VolumeAttributes::ID_skewFactor:
             temp.setNum(volumeAtts->GetSkewFactor());
             skewLineEdit->setText(temp);
             break;
+
         case VolumeAttributes::ID_sampling:
             samplingButtonGroup->blockSignals(true);
             if (volumeAtts->GetSampling() == VolumeAttributes::Rasterization)
@@ -2110,6 +2124,7 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
                     samplingButtonGroup->button(2)->setChecked(true);
             samplingButtonGroup->blockSignals(false);
             break;
+
         case VolumeAttributes::ID_rendererSamples:
 #ifdef HAVE_LIBSLIVR
             rendererSamples->blockSignals(true);
@@ -2117,11 +2132,13 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
             rendererSamples->blockSignals(false);
 #endif
             break;
+
         case VolumeAttributes::ID_transferFunction2DWidgets:
 #ifdef HAVE_LIBSLIVR
             Update2DTransferFunction();
 #endif
             break;
+
         case VolumeAttributes::ID_transferFunctionDim:
 #ifdef HAVE_LIBSLIVR
             transferFunctionGroup->blockSignals(true);
@@ -2149,6 +2166,9 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
             matKd->setValue(mat[1]);
             matKs->setValue(mat[2]);
             matN->setValue(mat[3]);
+
+            if (volumeAtts->GetLightingFlag())
+                matEnabled = true;
             
             matKa->setEnabled(matEnabled);
             matKd->setEnabled(matEnabled);
@@ -2159,15 +2179,30 @@ QvisVolumePlotWindow::UpdateWindow(bool doAll)
             Ks->setEnabled(matEnabled);
             specPow->setEnabled(matEnabled);
 
+            ambIntensity->setValue(volumeAtts->GetAmbientIntensity());
+            angleFac->setValue(volumeAtts->GetAmbientAngle());
+
+            if (volumeAtts->GetDOFMode() == VolumeAttributes::Auto)
+                rbFocusModeAuto->setChecked(true);
+            else
+                rbFocusModeAuto->setChecked(false);
+            if (volumeAtts->GetDOFMode() == VolumeAttributes::User)
+                rbFocusModeUser->setChecked(true);
+            else
+                rbFocusModeUser->setChecked(false);
+
+            DOFfocusSlider->setValue(int(volumeAtts->GetDOFfocusPosition()*100));
+            DOFfocusSliderRange->setValue(int(volumeAtts->GetDOFfocusRange()*100));
+            DOFblurAngle->setValue(volumeAtts->GetDOFblurAngle());
+            DOFthreshold->setValue(volumeAtts->GetDOFthreshold());
+            DOFapertureDiameter->setValue(volumeAtts->GetDOFapertureD());
+
             matKa->blockSignals(false);
             matKd->blockSignals(false);
             matKs->blockSignals(false);
             matN->blockSignals(false);
             break;
 
-       // case VolumeAttributes::ID_occlusionShadingOn:
-       //     occlusionShadingToggle->setChecked(volumeAtts->GetOcclusionShadingOn());
-       //     break;
         case VolumeAttributes::ID_ambientIntensity:
             ambIntensity->setValue(volumeAtts->GetAmbientIntensity());
             break;
@@ -4049,6 +4084,7 @@ QvisVolumePlotWindow::rendererTypeChanged(int val)
         if (volumeAtts->GetLightingFlag())
             matEnabled = true;
 
+#ifdef HAVE_LIBSLIVR
     matKa->setEnabled(matEnabled);
     matKd->setEnabled(matEnabled);
     matKs->setEnabled(matEnabled);
@@ -4058,13 +4094,28 @@ QvisVolumePlotWindow::rendererTypeChanged(int val)
     Ks->setEnabled(matEnabled);
     specPow->setEnabled(matEnabled);
 
-    ambOccPropGroup->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
-    occlusionShadingToggle->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
-    ambIntensity->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
-    angleFac->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
-    ambientIntensityLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
-    angleLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+    ambOccPropGroup->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    ambIntensity->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    angleFac->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    ambientIntensityLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    angleLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
 
+    DOFfocusModeLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    rbFocusModeAuto->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    rbFocusModeUser->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSliderRangeLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSliderRange->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSliderLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSlider->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFblurAngleLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFblurAngle->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFthresholdLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFthreshold->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFapertureDiameterLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFapertureDiameter->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+
+    renderOptionsGroup->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR);
+#endif
     Apply();
 }
 
@@ -4407,37 +4458,7 @@ QvisVolumePlotWindow::setAngleFac(double val){
     Apply();
 }
 
-//void
-//QvisVolumePlotWindow::occlusionToggled(bool value)
-//{
-//    volumeAtts->SetOcclusionShadingOn(value);
-//    SetUpdate(false);
-//    Apply();
-//}
 
-
-
-// ****************************************************************************
-// Method:  QvisVolumePlotWindow::DOFFocusChanged(int val)
-//
-// Purpose:
-//   
-//
-//  Arguments:
-//    val        
-//
-// Programmer:  Pascal Grosset
-// Creation:    Tue Apr 10 2012
-//
-// Modifications:
-//
-// ****************************************************************************
-void
-QvisVolumePlotWindow::DOFFocusChanged(int val){
-    volumeAtts->SetDOFfocusPosition(val/100.0);
-    SetUpdate(true);
-    Apply(true);
-}
 
 
 // ****************************************************************************
@@ -4472,6 +4493,29 @@ void QvisVolumePlotWindow::setDOFFocusClicked(int val){
                   "Something went very wrong here");
             break;
     }
+    Apply();
+}
+
+
+// ****************************************************************************
+// Method:  QvisVolumePlotWindow::DOFFocusChanged(int val)
+//
+// Purpose:
+//   
+//
+//  Arguments:
+//    val        
+//
+// Programmer:  Pascal Grosset
+// Creation:    Tue Apr 10 2012
+//
+// Modifications:
+//
+// ****************************************************************************
+void
+QvisVolumePlotWindow::DOFFocusChanged(int val){
+    volumeAtts->SetDOFfocusPosition(val/100.0);
+    SetUpdate(false);
     Apply();
 }
 
@@ -4590,5 +4634,28 @@ QvisVolumePlotWindow::SLIVRRenderTypeChanged(int val)
                    "that it didn't understand");
         break;
     }
+
+    ambOccPropGroup->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    ambIntensity->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    angleFac->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    ambientIntensityLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+    angleLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::OccSh);
+
+
+    DOFfocusModeLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    rbFocusModeAuto->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    rbFocusModeUser->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSliderRangeLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSliderRange->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSliderLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFfocusSlider->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFblurAngleLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFblurAngle->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFthresholdLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFthreshold->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFapertureDiameterLabel->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+    DOFapertureDiameter->setEnabled(volumeAtts->GetRendererType() == VolumeAttributes::SLIVR && volumeAtts->GetSLIVRAlgo()==VolumeAttributes::DoF);
+
+
     Apply();
 }

@@ -729,7 +729,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     imgHeight = yMax - yMin;
 
     if (rayCastingSLIVR == true){
-        std::cout << "imgWidth: " << imgWidth << "  x  " << "imgHeight: " << imgHeight << std::endl;
+     //   std::cout << "imgWidth: " << imgWidth << "  x  " << "imgHeight: " << imgHeight << std::endl;
 
         imgArray = new float[((imgWidth)*4) * imgHeight];
 
@@ -1481,164 +1481,6 @@ avtMassVoxelExtractor::FindSegmentIntersections(const double *origin,
 }
 
 
-// ****************************************************************************
-//  Method: avtMassVoxelExtractor::computePixelColor
-//
-//  Purpose:
-//      Computes color
-//
-//  Programmer: Pascal Grosset
-//  Creation:   June 10, 2013
-//
-//  Modifications:
-//      Need to take into account lighting
-//      Need to take into accoujnt multiple light sources
-//
-// ****************************************************************************
-
-void
-avtMassVoxelExtractor::computePixelColor(double source_rgb[4], double dest_rgb[4]){
-    //double source_rgb[4];
-    //int retVal;
-    //retVal = transferFn1D->QueryTF(scalarValue,source_rgb);
-
-
-    // might need to add opacity correction later
-    //float opacityCorrectiong = 0.8;  // need to be properly set according to number of slices; 0.8 is too arbitrary
-    //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
-    //source_rgb[3] = alpha;
-
-    //if (retVal == 0)
-    //    return;
-
-    //if (source_rgb[3] == 0.0)
-    //    return;
-
-    //double opacityCorrection = 1.0;
-    //source_rgb[3] = 1.0 - pow((1.0-source_rgb[3]), opacityCorrection);
-
-    // Phong Shading
-    if (lighting == true){
-        float dir[3];          // The view "right" vector.
-        double view_right[3];   // view_direction cross view_up
-                                
-        view_right[0] = view_direction[1]*view_up[2] - view_direction[2]*view_up[1];
-        view_right[1] = view_direction[2]*view_up[0] - view_direction[0]*view_up[2];
-        view_right[2] = view_direction[0]*view_up[1] - view_direction[1]*view_up[0];
-
-        // A camera light's components are scaling factors of
-        // view_right, view_up, and view_direction.  Scale the
-        // components and set to the dir vector.
-        double comp1[3];
-        comp1[0] = view_right[0] * lightDirection[0];
-        comp1[1] = view_right[1] * lightDirection[0];
-        comp1[2] = view_right[2] * lightDirection[0];
-
-        double comp2[3];
-        comp2[0] = view_up[0] * lightDirection[1];
-        comp2[1] = view_up[1] * lightDirection[1];
-        comp2[2] = view_up[2] * lightDirection[1];
-
-        double comp3[3];
-        comp3[0] = -view_direction[0] * lightDirection[2];
-        comp3[1] = -view_direction[1] * lightDirection[2];
-        comp3[2] = -view_direction[2] * lightDirection[2];
-
-        dir[0] = comp1[0] + comp2[0] + comp3[0];
-        dir[1] = comp1[1] + comp2[1] + comp3[1];
-        dir[2] = comp1[2] + comp2[2] + comp3[2];
-        normalize(dir);
-
-        // head light
-        //lightDirection[0] = dir[0];
-        //lightDirection[1] = dir[1];
-        //lightDirection[2] = dir[2];
-
-        dir[0] = lightDirection[0];
-        dir[1] = lightDirection[1];
-        dir[2] = lightDirection[2];
-
-        //
-        // Transform gradient
-        //
-        // the incoming surface normals have to be transformed into eye space as well.
-        // You accomplish this by transforming surface normals by the
-        // inverse transpose of the upper leftmost 3 x 3 matrix taken from the modelview matrix
-
-        // vtkMatrix3x3 *invTransModelView = vtkMatrix3x3::New();
-
-        // invTransModelView->SetElement(0,0, modelViewMatrix[0]);
-        // invTransModelView->SetElement(0,1, modelViewMatrix[1]);
-        // invTransModelView->SetElement(0,2, modelViewMatrix[2]);
-
-        // invTransModelView->SetElement(1,0, modelViewMatrix[4]);
-        // invTransModelView->SetElement(1,1, modelViewMatrix[5]);
-        // invTransModelView->SetElement(1,2, modelViewMatrix[6]);
-
-        // invTransModelView->SetElement(2,0, modelViewMatrix[8]);
-        // invTransModelView->SetElement(2,1, modelViewMatrix[9]);
-        // invTransModelView->SetElement(2,2, modelViewMatrix[10]);
-
-        // invTransModelView->Invert();
-        // invTransModelView->Transpose();
-
-    
-        dir[0] = -view_direction[0];
-        dir[1] = -view_direction[1];
-        dir[2] = -view_direction[2];
-        
-        double gradientDouble[3], transformedGradient[3];
-        for (int i=0; i<3; i++)
-            transformedGradient[i] = gradientDouble[i] = gradient[i];
-
-        // probably not required here coz of the way gradient is computed
-        // invTransModelView->MultiplyPoint(gradientDouble, transformedGradient);
-        //  invTransModelView->MultiplyPoint(lightDir, lightDir);
-
-        // float transformedGradientFloat[3];
-        // for (int i=0; i<3; i++)
-        //     transformedGradientFloat[i] = transformedGradient[i];
-
-        // normalize(transformedGradientFloat);
-        // invTransModelView->Delete();
-
-
-        // cos(angle) = a.b;  angle between normal and light
-        float normal_dot_light = dot(gradient,dir);   // angle between light and normal;
-        normal_dot_light = std::max(0.0, std::min(fabs(normal_dot_light),1.0) );
-
-        // opacity correction
-        float opacityCorrectiong = 0.7;
-        float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
-        source_rgb[3] = alpha;
-
-        // Calculate color using phong shading
-        // I = (I  * ka) + [ (I_i  * kd * (L.N)) + (Ia_i * ks * (R.V)^ns) ]_for each light source i
-        // I = (I  * ka) +   (I  * kd*abs(cos(angle))) + (Ia * ks*abs(cos(angle))^ns)
-        for (int i=0; i<3; i++)
-            source_rgb[i] = source_rgb[i] * materialProperties[0];                          // I  * ka
-
-        for (int i=0; i<3; i++)
-            source_rgb[i] += source_rgb[i] * materialProperties[1] * normal_dot_light;      // I  * kd*abs(cos(angle))
-
-        for (int i=0; i<3; i++)
-            source_rgb[i] += materialProperties[2] * pow(normal_dot_light,materialProperties[3]) * source_rgb[3];   // I  * kd*abs(cos(angle))
-    }
-
-    // front to back compositing
-    for (int i=0; i<4; i++){
-        if (source_rgb[i] > 1.0)
-            source_rgb[i] = 1.0;
-        
-        dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
-    }
-
-    // back to front
-    //    dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
-
-    patchDrawn = 1;
-}
-
 
 
 
@@ -1757,252 +1599,9 @@ avtMassVoxelExtractor::trilinearInterpolate(double vals[8], float distRight, flo
 
 
 
-// ****************************************************************************
-//  Function: FindMatch
-//
-//  Purpose:
-//      Traverses an ordered array in logarithmic time.
-//
-//  Programmer: Hank Childs
-//  Creation:   November 22, 2004
-//
-//  Modifications:
-//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
-//    Use double instead of float.
-//
-// ****************************************************************************
-
-static inline int FindMatch(const double *A, const double &a, const int &nA)
-{
-    if ((a < A[0]) || (a > A[nA-1]))
-        return -1;
-
-    int low = 0;
-    int hi  = nA-1;
-    while ((hi - low) > 1)
-    {
-        int guess = (hi+low)/2;
-        if (A[guess] == a)
-            return guess;
-        if (a < A[guess])
-            hi = guess;
-        else
-            low = guess;
-    }
 
 
-    return low;
-}
 
-
-// ****************************************************************************
-//  Method: avtMassVoxelExtractor::SampleAlongSegment
-//
-//  Purpose:
-//      Samples the grid along a line segment.
-//
-//  Programmer: Hank Childs
-//  Creation:   November 20, 2004
-//
-//  Modifications:
-//
-//    Hank Childs, Tue Jan  3 17:26:11 PST 2006
-//    Fix bug that ultimately led to UMR where sampling occurred along 
-//    invalid values.
-//
-//    Hank Childs, Wed Dec 24 11:22:43 PST 2008
-//    No longer use the ProportionSpaceToZBufferSpace data member, as we now 
-//    do our sampling in even intervals (wbuffer).
-//
-//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
-//    Use double instead of float.
-//
-// ****************************************************************************
-
-void
-avtMassVoxelExtractor::SampleAlongSegment(const double *origin, 
-                                          const double *terminus, int w, int h)
-{
-    //std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleAlongSegment  " << dims[0] << " x " << dims[1] << " x " << dims[2] << std::endl;
-
-    int first = 0;
-    int last = 0;
-    bool hasIntersections = FindSegmentIntersections(origin, terminus,
-                                                     first, last);
-    if (!hasIntersections)
-        return;
-
-    bool foundHit = false;
-    int curX = -1;
-    int curY = -1;
-    int curZ = -1;
-    bool xGoingUp = (terminus[0] > origin[0]);
-    bool yGoingUp = (terminus[1] > origin[1]);
-    bool zGoingUp = (terminus[2] > origin[2]);
-
-    double x_dist = (terminus[0]-origin[0]);
-    double y_dist = (terminus[1]-origin[1]);
-    double z_dist = (terminus[2]-origin[2]);
-
-    double pt[3];
-    bool hasSamples = false;
-
-    for (int i = first ; i < last ; i++)
-    {
-        //std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleAlongSegment:  " <<  i << std::endl;
-
-        int *ind = ind_buffer + 3*i;
-        double *dProp = prop_buffer + 3*i;
-        valid_sample[i] = false;
-
-        double proportion = ((double)i)/((double)depth);
-        pt[0] = origin[0] + proportion * x_dist;
-        pt[1] = origin[1] + proportion * y_dist;
-        pt[2] = origin[2] + proportion * z_dist;
-
-       // std::cout << "proportion: " << proportion << "    x_dist: " << x_dist << "    y_dist: " << y_dist << "    z_dist: " << z_dist << std::endl;
-
-        ind[0] = -1;
-        ind[1] = -1;
-        ind[2] = -1;
-
-        if (!foundHit)
-        {
-            //
-            // We haven't found any hits previously.  Exhaustively search
-            // through arrays and try to find a hit.
-            //
-            ind[0] = FindMatch(X, pt[0], dims[0]);
-            if (ind[0] >= 0)
-                dProp[0] = (pt[0] - X[ind[0]]) * divisors_X[ind[0]];
-            ind[1] = FindMatch(Y, pt[1], dims[1]);
-            if (ind[1] >= 0)
-                dProp[1] = (pt[1] - Y[ind[1]]) * divisors_Y[ind[1]];
-            ind[2] = FindMatch(Z, pt[2], dims[2]);
-            if (ind[2] >= 0)
-                dProp[2] = (pt[2] - Z[ind[2]]) * divisors_Z[ind[2]];
-        }
-        else
-        {
-            //
-            // We have found a hit before.  Try to locate the next sample 
-            // based on what we already found.
-            //
-            if (xGoingUp)
-            {
-                for ( ; curX < dims[0]-1 ; curX++)
-                {
-                    if (pt[0] >= X[curX] && pt[0] <= X[curX+1])
-                    {
-                        dProp[0] = (pt[0] - X[curX]) * divisors_X[curX];
-                        ind[0] = curX;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                for ( ; curX >= 0 ; curX--)
-                {
-                    if (pt[0] >= X[curX] && pt[0] <= X[curX+1])
-                    {
-                        dProp[0] = (pt[0] - X[curX]) * divisors_X[curX];
-                        ind[0] = curX;
-                        break;
-                    }
-                }
-            }
-
-
-            if (yGoingUp)
-            {
-                for ( ; curY < dims[1]-1 ; curY++)
-                {
-                    if (pt[1] >= Y[curY] && pt[1] <= Y[curY+1])
-                    {
-                        dProp[1] = (pt[1] - Y[curY]) * divisors_Y[curY];
-                        ind[1] = curY;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                for ( ; curY >= 0 ; curY--)
-                {
-                    if (pt[1] >= Y[curY] && pt[1] <= Y[curY+1])
-                    {
-                        dProp[1] = (pt[1] - Y[curY]) * divisors_Y[curY];
-                        ind[1] = curY;
-                        break;
-                    }
-                }
-            }
-
-
-            if (zGoingUp)
-            {
-                for ( ; curZ < dims[2]-1 ; curZ++)
-                {
-                    if (pt[2] >= Z[curZ] && pt[2] <= Z[curZ+1])
-                    {
-                        dProp[2] = (pt[2] - Z[curZ]) * divisors_Z[curZ];
-                        ind[2] = curZ;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                for ( ; curZ >= 0 ; curZ--)
-                {
-                    if (pt[2] >= Z[curZ] && pt[2] <= Z[curZ+1])
-                    {
-                        dProp[2] = (pt[2] - Z[curZ]) * divisors_Z[curZ];
-                        ind[2] = curZ;
-                        break;
-                    }
-                }
-            }
-        }
-
-        bool intersectedDataset = !(ind[0] < 0 || ind[1] < 0 || ind[2] < 0);
-        if (!intersectedDataset)
-        {
-            if (!foundHit) 
-            {
-                // We still haven't found the start.  Keep looking.
-                continue;
-            }
-            else
-            {
-                // This is the true terminus.
-                last = i;
-                break;
-            }
-        }
-        else  // Did intersect data set.
-        {
-            if (!foundHit)
-            {
-                // This is the first true sample.  "The true start"
-                first = i;
-            }
-        }
-
-        valid_sample[i] = true;
-        foundHit = true;
-        hasSamples = true;
-
-        curX = ind[0];
-        curY = ind[1];
-        curZ = ind[2];
-    }
-
-    //patchDrawn = 1;
-    if (hasSamples)
-        SampleVariable(first, last, w, h);
-}
 
 
 // ****************************************************************************
@@ -2057,7 +1656,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                valid_sample[i] = false;
 
 
-           std::cout << w << " , " << h << "  ghosts != NULL  ;  valid_sample[i]: " << valid_sample[i] << "   true: " << true << "   false: " << false << std::endl;
+          // std::cout << w << " , " << h << "  ghosts != NULL  ;  valid_sample[i]: " << valid_sample[i] << "   true: " << true << "   false: " << false << std::endl;
         }
         //std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable: valid =  " << valid_sample[i] << std::endl;
 
@@ -2599,6 +2198,415 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
     else
         if (inrun)
             ray->SetSamples(last-count, last-1, tmpSampleList);
+}
+
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::computePixelColor
+//
+//  Purpose:
+//      Computes color
+//
+//  Programmer: Pascal Grosset
+//  Creation:   June 10, 2013
+//
+//  Modifications:
+//      Need to take into account lighting
+//      Need to take into accoujnt multiple light sources
+//
+// ****************************************************************************
+
+void
+avtMassVoxelExtractor::computePixelColor(double source_rgb[4], double dest_rgb[4]){
+    //double source_rgb[4];
+    //int retVal;
+    //retVal = transferFn1D->QueryTF(scalarValue,source_rgb);
+
+
+    // might need to add opacity correction later
+    //float opacityCorrectiong = 0.8;  // need to be properly set according to number of slices; 0.8 is too arbitrary
+    //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
+    //source_rgb[3] = alpha;
+
+    //if (retVal == 0)
+    //    return;
+
+    //if (source_rgb[3] == 0.0)
+    //    return;
+
+    //double opacityCorrection = 1.0;
+    //source_rgb[3] = 1.0 - pow((1.0-source_rgb[3]), opacityCorrection);
+
+    // Phong Shading
+    if (lighting == true){
+        float dir[3];          // The view "right" vector.
+        double view_right[3];   // view_direction cross view_up
+                                
+        view_right[0] = view_direction[1]*view_up[2] - view_direction[2]*view_up[1];
+        view_right[1] = view_direction[2]*view_up[0] - view_direction[0]*view_up[2];
+        view_right[2] = view_direction[0]*view_up[1] - view_direction[1]*view_up[0];
+
+        // A camera light's components are scaling factors of
+        // view_right, view_up, and view_direction.  Scale the
+        // components and set to the dir vector.
+        double comp1[3];
+        comp1[0] = view_right[0] * lightDirection[0];
+        comp1[1] = view_right[1] * lightDirection[0];
+        comp1[2] = view_right[2] * lightDirection[0];
+
+        double comp2[3];
+        comp2[0] = view_up[0] * lightDirection[1];
+        comp2[1] = view_up[1] * lightDirection[1];
+        comp2[2] = view_up[2] * lightDirection[1];
+
+        double comp3[3];
+        comp3[0] = -view_direction[0] * lightDirection[2];
+        comp3[1] = -view_direction[1] * lightDirection[2];
+        comp3[2] = -view_direction[2] * lightDirection[2];
+
+        dir[0] = comp1[0] + comp2[0] + comp3[0];
+        dir[1] = comp1[1] + comp2[1] + comp3[1];
+        dir[2] = comp1[2] + comp2[2] + comp3[2];
+        normalize(dir);
+
+        // head light
+        //lightDirection[0] = dir[0];
+        //lightDirection[1] = dir[1];
+        //lightDirection[2] = dir[2];
+
+        dir[0] = lightDirection[0];
+        dir[1] = lightDirection[1];
+        dir[2] = lightDirection[2];
+
+        //
+        // Transform gradient
+        //
+        // the incoming surface normals have to be transformed into eye space as well.
+        // You accomplish this by transforming surface normals by the
+        // inverse transpose of the upper leftmost 3 x 3 matrix taken from the modelview matrix
+
+        // vtkMatrix3x3 *invTransModelView = vtkMatrix3x3::New();
+
+        // invTransModelView->SetElement(0,0, modelViewMatrix[0]);
+        // invTransModelView->SetElement(0,1, modelViewMatrix[1]);
+        // invTransModelView->SetElement(0,2, modelViewMatrix[2]);
+
+        // invTransModelView->SetElement(1,0, modelViewMatrix[4]);
+        // invTransModelView->SetElement(1,1, modelViewMatrix[5]);
+        // invTransModelView->SetElement(1,2, modelViewMatrix[6]);
+
+        // invTransModelView->SetElement(2,0, modelViewMatrix[8]);
+        // invTransModelView->SetElement(2,1, modelViewMatrix[9]);
+        // invTransModelView->SetElement(2,2, modelViewMatrix[10]);
+
+        // invTransModelView->Invert();
+        // invTransModelView->Transpose();
+
+    
+        dir[0] = -view_direction[0];
+        dir[1] = -view_direction[1];
+        dir[2] = -view_direction[2];
+        
+        double gradientDouble[3], transformedGradient[3];
+        for (int i=0; i<3; i++)
+            transformedGradient[i] = gradientDouble[i] = gradient[i];
+
+        // probably not required here coz of the way gradient is computed
+        // invTransModelView->MultiplyPoint(gradientDouble, transformedGradient);
+        //  invTransModelView->MultiplyPoint(lightDir, lightDir);
+
+        // float transformedGradientFloat[3];
+        // for (int i=0; i<3; i++)
+        //     transformedGradientFloat[i] = transformedGradient[i];
+
+        // normalize(transformedGradientFloat);
+        // invTransModelView->Delete();
+
+
+        // cos(angle) = a.b;  angle between normal and light
+        float normal_dot_light = dot(gradient,dir);   // angle between light and normal;
+        normal_dot_light = std::max(0.0, std::min(fabs(normal_dot_light),1.0) );
+
+        // opacity correction
+        float opacityCorrectiong = 0.7;
+        float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
+        source_rgb[3] = alpha;
+
+        // Calculate color using phong shading
+        // I = (I  * ka) + [ (I_i  * kd * (L.N)) + (Ia_i * ks * (R.V)^ns) ]_for each light source i
+        // I = (I  * ka) +   (I  * kd*abs(cos(angle))) + (Ia * ks*abs(cos(angle))^ns)
+        for (int i=0; i<3; i++)
+            source_rgb[i] = source_rgb[i] * materialProperties[0];                          // I  * ka
+
+        for (int i=0; i<3; i++)
+            source_rgb[i] += source_rgb[i] * materialProperties[1] * normal_dot_light;      // I  * kd*abs(cos(angle))
+
+        for (int i=0; i<3; i++)
+            source_rgb[i] += materialProperties[2] * pow(normal_dot_light,materialProperties[3]) * source_rgb[3];   // I  * kd*abs(cos(angle))
+    }
+
+    // front to back compositing
+    for (int i=0; i<4; i++){
+        if (source_rgb[i] > 1.0)
+            source_rgb[i] = 1.0;
+        
+        dest_rgb[i] = source_rgb[i] * (1.0 - dest_rgb[3]) + dest_rgb[i];
+    }
+
+    // back to front
+    //    dest_rgb[i] = dest_rgb[i] * (1.0 - source_rgb[3]) + source_rgb[i];
+
+    patchDrawn = 1;
+}
+
+
+// ****************************************************************************
+//  Function: FindMatch
+//
+//  Purpose:
+//      Traverses an ordered array in logarithmic time.
+//
+//  Programmer: Hank Childs
+//  Creation:   November 22, 2004
+//
+//  Modifications:
+//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
+//    Use double instead of float.
+//
+// ****************************************************************************
+
+static inline int FindMatch(const double *A, const double &a, const int &nA)
+{
+    if ((a < A[0]) || (a > A[nA-1]))
+        return -1;
+
+    int low = 0;
+    int hi  = nA-1;
+    while ((hi - low) > 1)
+    {
+        int guess = (hi+low)/2;
+        if (A[guess] == a)
+            return guess;
+        if (a < A[guess])
+            hi = guess;
+        else
+            low = guess;
+    }
+
+
+    return low;
+}
+
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::SampleAlongSegment
+//
+//  Purpose:
+//      Samples the grid along a line segment.
+//
+//  Programmer: Hank Childs
+//  Creation:   November 20, 2004
+//
+//  Modifications:
+//
+//    Hank Childs, Tue Jan  3 17:26:11 PST 2006
+//    Fix bug that ultimately led to UMR where sampling occurred along 
+//    invalid values.
+//
+//    Hank Childs, Wed Dec 24 11:22:43 PST 2008
+//    No longer use the ProportionSpaceToZBufferSpace data member, as we now 
+//    do our sampling in even intervals (wbuffer).
+//
+//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
+//    Use double instead of float.
+//
+// ****************************************************************************
+
+void
+avtMassVoxelExtractor::SampleAlongSegment(const double *origin, 
+                                          const double *terminus, int w, int h)
+{
+    //std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleAlongSegment  " << dims[0] << " x " << dims[1] << " x " << dims[2] << std::endl;
+
+    int first = 0;
+    int last = 0;
+    bool hasIntersections = FindSegmentIntersections(origin, terminus,
+                                                     first, last);
+    if (!hasIntersections)
+        return;
+
+    bool foundHit = false;
+    int curX = -1;
+    int curY = -1;
+    int curZ = -1;
+    bool xGoingUp = (terminus[0] > origin[0]);
+    bool yGoingUp = (terminus[1] > origin[1]);
+    bool zGoingUp = (terminus[2] > origin[2]);
+
+    double x_dist = (terminus[0]-origin[0]);
+    double y_dist = (terminus[1]-origin[1]);
+    double z_dist = (terminus[2]-origin[2]);
+
+    double pt[3];
+    bool hasSamples = false;
+
+    for (int i = first ; i < last ; i++)
+    {
+        //std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleAlongSegment:  " <<  i << std::endl;
+
+        int *ind = ind_buffer + 3*i;
+        double *dProp = prop_buffer + 3*i;
+        valid_sample[i] = false;
+
+        double proportion = ((double)i)/((double)depth);
+        pt[0] = origin[0] + proportion * x_dist;
+        pt[1] = origin[1] + proportion * y_dist;
+        pt[2] = origin[2] + proportion * z_dist;
+
+       // std::cout << "proportion: " << proportion << "    x_dist: " << x_dist << "    y_dist: " << y_dist << "    z_dist: " << z_dist << std::endl;
+
+        ind[0] = -1;
+        ind[1] = -1;
+        ind[2] = -1;
+
+        if (!foundHit)
+        {
+            //
+            // We haven't found any hits previously.  Exhaustively search
+            // through arrays and try to find a hit.
+            //
+            ind[0] = FindMatch(X, pt[0], dims[0]);
+            if (ind[0] >= 0)
+                dProp[0] = (pt[0] - X[ind[0]]) * divisors_X[ind[0]];
+            ind[1] = FindMatch(Y, pt[1], dims[1]);
+            if (ind[1] >= 0)
+                dProp[1] = (pt[1] - Y[ind[1]]) * divisors_Y[ind[1]];
+            ind[2] = FindMatch(Z, pt[2], dims[2]);
+            if (ind[2] >= 0)
+                dProp[2] = (pt[2] - Z[ind[2]]) * divisors_Z[ind[2]];
+        }
+        else
+        {
+            //
+            // We have found a hit before.  Try to locate the next sample 
+            // based on what we already found.
+            //
+            if (xGoingUp)
+            {
+                for ( ; curX < dims[0]-1 ; curX++)
+                {
+                    if (pt[0] >= X[curX] && pt[0] <= X[curX+1])
+                    {
+                        dProp[0] = (pt[0] - X[curX]) * divisors_X[curX];
+                        ind[0] = curX;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for ( ; curX >= 0 ; curX--)
+                {
+                    if (pt[0] >= X[curX] && pt[0] <= X[curX+1])
+                    {
+                        dProp[0] = (pt[0] - X[curX]) * divisors_X[curX];
+                        ind[0] = curX;
+                        break;
+                    }
+                }
+            }
+
+
+            if (yGoingUp)
+            {
+                for ( ; curY < dims[1]-1 ; curY++)
+                {
+                    if (pt[1] >= Y[curY] && pt[1] <= Y[curY+1])
+                    {
+                        dProp[1] = (pt[1] - Y[curY]) * divisors_Y[curY];
+                        ind[1] = curY;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for ( ; curY >= 0 ; curY--)
+                {
+                    if (pt[1] >= Y[curY] && pt[1] <= Y[curY+1])
+                    {
+                        dProp[1] = (pt[1] - Y[curY]) * divisors_Y[curY];
+                        ind[1] = curY;
+                        break;
+                    }
+                }
+            }
+
+
+            if (zGoingUp)
+            {
+                for ( ; curZ < dims[2]-1 ; curZ++)
+                {
+                    if (pt[2] >= Z[curZ] && pt[2] <= Z[curZ+1])
+                    {
+                        dProp[2] = (pt[2] - Z[curZ]) * divisors_Z[curZ];
+                        ind[2] = curZ;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for ( ; curZ >= 0 ; curZ--)
+                {
+                    if (pt[2] >= Z[curZ] && pt[2] <= Z[curZ+1])
+                    {
+                        dProp[2] = (pt[2] - Z[curZ]) * divisors_Z[curZ];
+                        ind[2] = curZ;
+                        break;
+                    }
+                }
+            }
+        }
+
+        bool intersectedDataset = !(ind[0] < 0 || ind[1] < 0 || ind[2] < 0);
+        if (!intersectedDataset)
+        {
+            if (!foundHit) 
+            {
+                // We still haven't found the start.  Keep looking.
+                continue;
+            }
+            else
+            {
+                // This is the true terminus.
+                last = i;
+                break;
+            }
+        }
+        else  // Did intersect data set.
+        {
+            if (!foundHit)
+            {
+                // This is the first true sample.  "The true start"
+                first = i;
+            }
+        }
+
+        valid_sample[i] = true;
+        foundHit = true;
+        hasSamples = true;
+
+        curX = ind[0];
+        curY = ind[1];
+        curZ = ind[2];
+    }
+
+    //patchDrawn = 1;
+    if (hasSamples)
+        SampleVariable(first, last, w, h);
 }
 
 

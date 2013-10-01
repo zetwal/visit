@@ -1116,53 +1116,55 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 				imgBuffer[i+3] = 1.0;
 			}
 
-			std::map< float,int >::iterator it;
-			it=depthPartitions.end();
+			
 			int count = 0;
 			int offset = 0;
 			int index = 0;
+			if (depthPartitions.size() > 0){
+				std::map< float,int >::iterator it;
+				it=depthPartitions.end();
+				it=depthPartitions.end();
 
-			it=depthPartitions.end();
-			do{
-				--it;
-				debug5 << it->first << " => " << it->second << "    compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << std::endl;
-				//std::cout << it->first << " => " << it->second << "    compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << std::endl;
-				imageBuffer temp;
-				temp.image = new float[sizex*sizey*4];
-				index = it->second;
+				do{
+					--it;
+					debug5 << it->first << " => " << it->second << "    compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << std::endl;
+					imageBuffer temp;
+					temp.image = new float[sizex*sizey*4];
+					index = it->second;
 
-				if (index == 0)
-					offset = 0;
-				else{
-					offset = 0;
-					for (int k=0; k<index; k++)
-						offset += compressedSizePerDiv[k];
-				}
-
-				rleDecode(compressedSizePerDiv[index], tempRecvBuffer, offset*5, temp.image);
-
-				//std::string imgFilenameFinal = "/home/pascal/Desktop/Decoded_Gathered_on_0_" + NumbToString(count) + "_Buffer.ppm";
-	        	//createPpm(temp.image, sizex, sizey, imgFilenameFinal);
-
-	        	for (int j=0; j<sizey; j++){
-					for (int k=0; k<sizex; k++){
-						int imgIndex = sizex*4*j + k*4;										// index in the image 
-
-						// Back to front compositing
-						imgBuffer[imgIndex+0] = clamp((imgBuffer[imgIndex+0] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+0]);
-						imgBuffer[imgIndex+1] = clamp((imgBuffer[imgIndex+1] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+1]);
-						imgBuffer[imgIndex+2] = clamp((imgBuffer[imgIndex+2] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+2]);
+					if (index == 0)
+						offset = 0;
+					else{
+						offset = 0;
+						for (int k=0; k<index; k++)
+							offset += compressedSizePerDiv[k];
 					}
-				}
 
-				//std::string imgFilename_Final = "/home/pascal/Desktop/_"+ NumbToString(count) + "_Numfinal.ppm";
-	        	//createPpm(imgBuffer, sizex, sizey, imgFilename_Final);
+					rleDecode(compressedSizePerDiv[index], tempRecvBuffer, offset*5, temp.image);
 
-	        	delete []temp.image;
-	        	temp.image = NULL;
+					//std::string imgFilenameFinal = "/home/pascal/Desktop/Decoded_Gathered_on_0_" + NumbToString(count) + "_Buffer.ppm";
+		        	//createPpm(temp.image, sizex, sizey, imgFilenameFinal);
 
-	        	count++;
-			}while( it!=depthPartitions.begin() );
+		        	for (int j=0; j<sizey; j++){
+						for (int k=0; k<sizex; k++){
+							int imgIndex = sizex*4*j + k*4;										// index in the image 
+
+							// Back to front compositing
+							imgBuffer[imgIndex+0] = clamp((imgBuffer[imgIndex+0] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+0]);
+							imgBuffer[imgIndex+1] = clamp((imgBuffer[imgIndex+1] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+1]);
+							imgBuffer[imgIndex+2] = clamp((imgBuffer[imgIndex+2] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+2]);
+						}
+					}
+
+					//std::string imgFilename_Final = "/home/pascal/Desktop/_"+ NumbToString(count) + "_Numfinal.ppm";
+		        	//createPpm(imgBuffer, sizex, sizey, imgFilename_Final);
+
+		        	delete []temp.image;
+		        	temp.image = NULL;
+
+		        	count++;
+				}while( it!=depthPartitions.begin() );
+			}
 			
 			//std::string imgFilename_Final = "/home/pascal/Desktop/_final.ppm";
 	        //createPpm(imgBuffer, sizex, sizey, imgFilename_Final);

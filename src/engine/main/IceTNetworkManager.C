@@ -186,6 +186,7 @@ extern "C" void render();
 // ****************************************************************************
 IceTNetworkManager::IceTNetworkManager(void): NetworkManager(), renderings(0)
 {
+    std::cout << "IceTNetworkManager::IceTNetworkManager" << std::endl;
     this->comm = icetCreateMPICommunicator(VISIT_MPI_COMM);
     DEBUG_ONLY(ICET_CHECK_ERROR);
     this->context = icetCreateContext(comm);
@@ -218,6 +219,7 @@ IceTNetworkManager::IceTNetworkManager(void): NetworkManager(), renderings(0)
 // ****************************************************************************
 IceTNetworkManager::~IceTNetworkManager(void)
 {
+    std::cout << "IceTNetworkManager::~IceTNetworkManager" << std::endl;
     ICET(icetDestroyContext(this->context));
     ICET(icetDestroyMPICommunicator(this->comm));
 }
@@ -237,7 +239,7 @@ IceTNetworkManager::~IceTNetworkManager(void)
 void
 IceTNetworkManager::TileLayout(size_t width, size_t height) const
 {
-    //std::cout << "IceTNetworkManager::TileLayout" << std::endl;
+    std::cout << "IceTNetworkManager::TileLayout" << std::endl;
     debug2 << "IceTNM: configuring " << width << "x" << height
            << " single tile display." << std::endl;
 
@@ -245,7 +247,7 @@ IceTNetworkManager::TileLayout(size_t width, size_t height) const
     const GLint this_mpi_rank_gets_an_image = 0;
     ICET(icetAddTile(0,0, width, height, this_mpi_rank_gets_an_image));
 
-    //std::cout << "      IceTNetworkManager::TileLayout End!!!" << std::endl;
+    std::cout << "      IceTNetworkManager::TileLayout End!!!" << std::endl;
 }
 
 // ****************************************************************************
@@ -311,7 +313,7 @@ avtDataObject_p
 IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZBuffer,
                            int annotMode, int windowID, bool leftEye)
 {
-    //std::cout << "IceTNetworkManager::Render 0" << std::endl;
+    std::cout << "IceTNetworkManager::Render 0" << std::endl;
     int t0 = visitTimer->StartTimer();
     DataNetwork *origWorkingNet = workingNet;
     avtDataObject_p retval;
@@ -487,7 +489,7 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
     workingNet = origWorkingNet;
     visitTimer->StopTimer(t0, "Ice-T Render");
 
-    //std::cout << "      IceTNetworkManager::Render End!!!" << std::endl;
+    std::cout << "      IceTNetworkManager::Render End!!!" << std::endl;
     return retval;
 }
 
@@ -521,7 +523,7 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
 void
 IceTNetworkManager::RealRender()
 {
-    ////std::cout << "IceTNetworkManager::RealRender" << std::endl;
+    std::cout << "IceTNetworkManager::RealRender" << std::endl;
     avtImage_p dob = this->RenderGeometry();
     if(avtDebugDumpOptions::DumpEnabled())
     {
@@ -544,7 +546,7 @@ IceTNetworkManager::RealRender()
     }
     this->renderings++;
 
-    //std::cout << "      IceTNetworkManager::RealRender End!!" << std::endl;
+    std::cout << "      IceTNetworkManager::RealRender End!!" << std::endl;
 }
 
 // ****************************************************************************
@@ -568,7 +570,7 @@ IceTNetworkManager::RealRender()
 avtImage_p
 IceTNetworkManager::RenderGeometry()
 {
-    //std::cout << "IceTNetworkManager::RenderGeometry" << std::endl;
+    std::cout << "IceTNetworkManager::RenderGeometry" << std::endl;
     VisWindow *viswin = viswinMap.find(this->r_mgmt.windowID)->second.viswin;
     if(this->MemoMultipass(viswin))
     {
@@ -578,7 +580,7 @@ IceTNetworkManager::RenderGeometry()
         viswin->ScreenRender(this->r_mgmt.viewportedMode, true);
     CallProgressCallback("IceTNetworkManager", "Render geometry", 0, 1);
 
-    //std::cout << "     IceTNetworkManager::RenderGeometry End!!!" << std::endl;
+    std::cout << "     IceTNetworkManager::RenderGeometry End!!!" << std::endl;
     return NULL;
 }
 
@@ -631,7 +633,7 @@ IceTNetworkManager::RenderTranslucent(int windowID, const avtImage_p& input)
     // read it back from IceT instead!
     //
 
-    //std::cout << "     IceTNetworkManager::RenderTranslucent End!!!" << std::endl;
+    std::cout << "     IceTNetworkManager::RenderTranslucent End!!!" << std::endl;
     return NULL;
 }
 
@@ -678,7 +680,7 @@ avtImage_p
 IceTNetworkManager::Readback(VisWindow * const viswin,
                              bool readZ) const
 {
-    //std::cout << "IceTNetworkManager::Readback" << std::endl;
+    std::cout << "IceTNetworkManager::Readback" << std::endl;
     GLboolean have_image;
 
     ICET(icetGetBooleanv(ICET_COLOR_BUFFER_VALID, &have_image));
@@ -837,7 +839,7 @@ void IceTNetworkManager::FormatDebugImage(char* out, size_t len,
 void
 IceTNetworkManager::VerifyColorFormat() const
 {
-    //std::cout << "IceTNetworkManager VerifyColorFormat" << std::endl;
+    std::cout << "IceTNetworkManager VerifyColorFormat" << std::endl;
     GLint color_format;
     ICET(icetGetIntegerv(ICET_COLOR_FORMAT, &color_format));
     if(color_format != GL_RGBA)
@@ -852,7 +854,7 @@ IceTNetworkManager::VerifyColorFormat() const
         }
         EXCEPTION2(UnexpectedValueException, "GL_RGBA", std::string(str));
     }
-    //std::cout << "IceTNetworkManager VerifyColorFormat End!!!" << std::endl;
+    std::cout << "IceTNetworkManager VerifyColorFormat End!!!" << std::endl;
 }
 
 // ****************************************************************************
@@ -870,7 +872,7 @@ IceTNetworkManager::VerifyColorFormat() const
 extern "C" void
 render()
 {
-    //std::cout << "IceTNetworkManager render" << std::endl;
+    std::cout << "IceTNetworkManager render" << std::endl;
     debug2 << "IceT has invoked our render function." << std::endl;
     Engine *engy = Engine::Instance();
     IceTNetworkManager *net_mgr;
@@ -878,7 +880,7 @@ render()
     net_mgr = dynamic_cast<IceTNetworkManager*>(engy->GetNetMgr());
     net_mgr->RealRender();
 
-    //std::cout << "     IceTNetworkManager render End!!!" << std::endl;
+    std::cout << "     IceTNetworkManager render End!!!" << std::endl;
 }
 
 // ****************************************************************************
@@ -902,7 +904,7 @@ SendImageToRenderNodes(int width, int height, bool Z,
                        GLubyte * const pixels,
                        GLuint * const depth)
 {
-    //std::cout << " IceTNetworkManager - SendImageToRenderNodes() " << std::endl;
+    std::cout << " IceTNetworkManager - SendImageToRenderNodes() " << std::endl;
     GLint n_tiles, n_procs, rank;
     GLboolean have_image;
 
@@ -918,5 +920,5 @@ SendImageToRenderNodes(int width, int height, bool Z,
         MPI_Bcast(depth, width*height, MPI_UNSIGNED, 0, VISIT_MPI_COMM);
     }
 
-    //std::cout << " IceTNetworkManager - SendImageToRenderNodes() End!!!" << std::endl;
+    std::cout << " IceTNetworkManager - SendImageToRenderNodes() End!!!" << std::endl;
 }

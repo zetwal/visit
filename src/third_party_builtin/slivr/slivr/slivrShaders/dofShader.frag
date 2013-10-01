@@ -146,7 +146,7 @@ void main()
    	//destination = texture2D(tex6, fclip);		// normal
    	destination = blur(texture2D(tex6, fclip));	// dof
 
-   	if (traversalDirection == FRONT_TO_BACK)    
+   	if (traversalDirection == FRONT_TO_BACK) 
        composited = source * (1.0 - destination.a) + destination;  
    	else    
        composited = destination * (1.0 - source.a) + source;       

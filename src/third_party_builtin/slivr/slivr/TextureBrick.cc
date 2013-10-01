@@ -255,7 +255,7 @@ TextureBrick::compute_polygons(const Ray& view,
       Vector vc(0.0, 0.0, 0.0), tc(0.0, 0.0, 0.0);
       for (int j=0; j<degree; j++)
       {
-	vc += vv[j]; tc += tt[j];
+	     vc += vv[j]; tc += tt[j];
       }
       vc /= (double)degree; tc /= (double)degree;
       

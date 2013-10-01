@@ -426,7 +426,16 @@ avtOpenGLSLIVRVolumeRenderer::Render(
     context->renderer->set_dof_focusRange(props.atts.GetDOFfocusRange());
     context->renderer->set_dof_blurAngle(props.atts.GetDOFblurAngle());
 
-    // cout << "\n\nprops.atts.GetDOFMode(): " << props.atts.GetDOFMode() << endl;
+    debug5 << mName << "nprops.atts.GetDOFMode(): " << props.atts.GetDOFMode() << endl;
+
+    debug5 << mName << "props.atts.GetDOFfocusPosition(): " << props.atts.GetDOFfocusPosition() << endl;
+    debug5 << mName << "props.atts.GetDOFthreshold(): " << props.atts.GetDOFthreshold() << endl;
+    debug5 << mName << "props.atts.GetDOFapertureD(): " << props.atts.GetDOFapertureD() << endl;
+
+    debug5 << mName << "props.atts.GetDOFfocusRange(): " << props.atts.GetDOFfocusRange() << endl;
+    debug5 << mName << "props.atts.GetDOFblurAngle(): " << props.atts.GetDOFblurAngle() << endl;
+
+    // cout << "nprops.atts.GetDOFMode(): " << props.atts.GetDOFMode() << endl;
 
     // cout << "props.atts.GetDOFfocusPosition(): " << props.atts.GetDOFfocusPosition() << endl;
     // cout << "props.atts.GetDOFthreshold(): " << props.atts.GetDOFthreshold() << endl;
@@ -435,7 +444,6 @@ avtOpenGLSLIVRVolumeRenderer::Render(
     // cout << "props.atts.GetDOFfocusRange(): " << props.atts.GetDOFfocusRange() << endl;
     // cout << "props.atts.GetDOFblurAngle(): " << props.atts.GetDOFblurAngle() << endl;
 
-          
 
     int algoChosen = props.atts.GetSLIVRAlgo();
     debug5 << mName << "AlgoChosen: " << algoChosen << endl;
@@ -449,7 +457,7 @@ avtOpenGLSLIVRVolumeRenderer::Render(
     if(props.reducedDetail)
     {
         if (props.atts.GetLightingFlag())
-             context->renderer->set_shading(false);
+            context->renderer->set_shading(false);
 
         context->renderer->set_sampling_rate(1.);
         context->renderer->set_shaderAlgo(0);
@@ -468,11 +476,8 @@ avtOpenGLSLIVRVolumeRenderer::Render(
         context->renderer->set_dof_focusRange(props.atts.GetDOFfocusRange());
         context->renderer->set_dof_blurAngle(props.atts.GetDOFblurAngle());
     
-
         if (props.atts.GetLightingFlag())
             context->renderer->set_shading(true);
-
-          
     }
     else
     {
