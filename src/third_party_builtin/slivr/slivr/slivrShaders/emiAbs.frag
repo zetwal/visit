@@ -5,9 +5,6 @@ uniform sampler3D tex1; // gradient
 uniform sampler1D tex2;	// 1D transfer function
 uniform sampler2D tex3; // 2D transfer function
 
-uniform sampler3D tex4; // scalar values - medium
-uniform sampler3D tex5; // scalar values - fine
-
 void main()
 {
 	vec4 l = loc0; 		// {lx, ly, lz, alpha} VOL_LIT_HEAD
@@ -30,7 +27,6 @@ void main()
    	else
    		lightingOn = true;
 
-   	
 	// Lighting calculation
 	// Compute normal
 	if ((lightingOn == true) || (transferFn1D == false)){

@@ -40,6 +40,10 @@
 #include <slivr/CM2Widget.h>
 #include <slivr/CM2Shader.h>
 
+#include <slivr/Colors.h>
+
+#include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 using std::string;
 
@@ -64,6 +68,42 @@ static const string Cmap2ShaderStringGLSL =
 "   c.xyz = c.xyz * c.w;\n"
 "   gl_FragColor = c;\n"
 "}\n";
+
+//#include <sstream>
+//#include <string>
+//inline std::string toStr(int x){ std::ostringstream ss; ss << x; std::string s(ss.str()); return s;}
+void writeTextureToPPM( const char* fileName , GLuint tex, GLuint m_iSizeX, GLuint m_iSizeY, GLenum m_format, GLenum m_type)
+{
+    //cout << "m_iSizeX: " <<m_iSizeX << "  m_iSizeY: " << m_iSizeY << endl;
+    GLuint m_iSizePerElement = sizeof(GL_UNSIGNED_BYTE);
+    
+    unsigned char*content = new unsigned char[m_iSizeX * m_iSizeY * m_iSizePerElement];
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glGetTexImage(GL_TEXTURE_2D, 0, m_format, m_type, content);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    Image img(m_iSizeX, m_iSizeY);
+    // Image img(m_iSizeXX, m_iSizeYY);
+    
+    
+    for(GLuint y = 0; y < m_iSizeY; y++){
+        for(GLuint x = 0; x < m_iSizeX; x++){
+            Colors C;
+            size_t index = y * m_iSizeX + x;
+            double alpha = double(content[4 * index + 3]) / 255.0;
+            //alpha = 1.0;
+            C.set_r(double(content[4 * index + 0]) / 255.0 * alpha);
+            C.set_g(double(content[4 * index + 1]) / 255.0 * alpha);
+            C.set_b(double(content[4 * index + 2]) / 255.0 * alpha);
+            img.set(x, y, C);
+        }
+    }
+    img.write(std::string(fileName) + ".ppm");
+    
+    delete [] content;
+    content = NULL;
+}
+
 
 TextureRenderer::TextureRenderer(Texture* tex,
                                  ColorMap* cmap1, 
@@ -994,6 +1034,14 @@ TextureRenderer::init_textures()
     }
 }
 
+void
+TextureRenderer::destroy_textures()
+{
+  glDeleteTextures(2, eyeBuffer_tex_id0);
+  glDeleteTextures(2, eyeBuffer_tex_id1);
+}
+
+
 bool
 TextureRenderer::init_FrameBuffer()
 {
@@ -1018,6 +1066,12 @@ TextureRenderer::init_FrameBuffer()
   return true;
 }
 
+
+void
+TextureRenderer::destroy_FrameBuffer()
+{
+  glDeleteFramebuffers(1, &frmBuffer_);
+}
 
 
 void 
@@ -1225,24 +1279,23 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
   screenSize[0] = screenSize[1] = textureDim_;
 
 
-  cout << "-------------------------------------------" << endl;
-  cout << "dof_focusPosition_: " << dof_focusPosition_ << endl;
-  cout << "zf: " << zf << endl;
-  cout << "zf_slicer: " << zf_slicer << endl;
-  cout << "poly.size(): " << poly.size() << endl;
-  cout << "focusRange: " << focusRange << endl;
-  cout << "focusRange: " << focusRange << endl;
-  cout << "lengthSlice: " << lengthSlice << endl;
-  cout << "lengthOpp: " << lengthOpp << endl;
-  cout << "dof_focusMode_: " << dof_focusMode_ << endl;
-  cout << "screenSize: " << screenSize[0] << ", " << screenSize[1] << endl;
-    
+  // cout << "-------------------------------------------" << endl;
+  // cout << "dof_focusPosition_: " << dof_focusPosition_ << endl;
+  // cout << "zf: " << zf << endl;
+  // cout << "zf_slicer: " << zf_slicer << endl;
+  // cout << "poly.size(): " << poly.size() << endl;
+  // cout << "focusRange: " << focusRange << endl;
+  // cout << "focusRange: " << focusRange << endl;
+  // cout << "lengthSlice: " << lengthSlice << endl;
+  // cout << "lengthOpp: " << lengthOpp << endl;
+  // cout << "dof_focusMode_: " << dof_focusMode_ << endl;
+  // cout << "screenSize: " << screenSize[0] << ", " << screenSize[1] << endl;
+  // if (dof_focusMode_ == DOF_USER)
+  //   cout << "DOF USER" << endl;
+  // else
+  //   cout << "DOF AUTO" << endl;
+
   writeTex = 1; readTex = 0;
-    
-  if (dof_focusMode_ == DOF_USER)
-    cout << "DOF USER" << endl;
-  else
-    cout << "DOF AUTO" << endl;
 
   glPushAttrib(GL_ALL_ATTRIB_BITS);
   glPushMatrix();
@@ -1352,9 +1405,12 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
       readTex = 1 - readTex;
 
       k -= poly[i];
+
+      //writeTextureToPPM(("/home/pascal/Desktop/buffer/buffer_eye_pass1_read _" + toStr(z)).c_str(), eyeBuffer_tex_id0[readTex], textureDim_,textureDim_, GL_RGBA, GL_UNSIGNED_BYTE);
+      //writeTextureToPPM(("/home/pascal/Desktop/buffer/buffer_eye_pass1_write_" + toStr(z)).c_str(), eyeBuffer_tex_id0[writeTex], textureDim_,textureDim_, GL_RGBA, GL_UNSIGNED_BYTE);
     }
     lastWritePhase1 = readTex;
-
+    //writeTextureToPPM("/home/pascal/Desktop/lastWritePhase1" , eyeBuffer_tex_id0[readTex], textureDim_,textureDim_, GL_RGBA, GL_UNSIGNED_BYTE);
 
         
   // Phase 2: fp to back (front-to-back rendering)
@@ -1447,12 +1503,18 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
         readTex = 1 - readTex;
 
         k += poly[i]; 
+
+        //writeTextureToPPM(("/home/pascal/Desktop/buffer/buffer_eye_pass2_read _" + toStr(z)).c_str(), eyeBuffer_tex_id1[readTex], textureDim_,textureDim_, GL_RGBA, GL_UNSIGNED_BYTE);
+        //writeTextureToPPM(("/home/pascal/Desktop/buffer/buffer_eye_pass2_write_" + toStr(z)).c_str(), eyeBuffer_tex_id1[writeTex], textureDim_,textureDim_, GL_RGBA, GL_UNSIGNED_BYTE);
     }
     lastWritePhase2 = readTex;
+    //writeTextureToPPM("/home/pascal/Desktop/lastWritePhase2" , eyeBuffer_tex_id1[readTex], textureDim_,textureDim_, GL_RGBA, GL_UNSIGNED_BYTE);
 
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
     shaderDoF->release();
         
+       
+      
 
     // Final Phase: Render to texture
     glEnable(GL_BLEND);

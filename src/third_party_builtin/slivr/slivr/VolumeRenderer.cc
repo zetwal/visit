@@ -632,6 +632,11 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
                         &mask, shader);
     }
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    if (shaderAlgo_ == ALGO_OCCSH || shaderAlgo_ == ALGO_DOF){
+      destroy_textures();
+      destroy_FrameBuffer();
+    }
   }
   else
   {
