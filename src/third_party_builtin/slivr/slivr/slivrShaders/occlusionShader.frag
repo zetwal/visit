@@ -131,9 +131,8 @@ void main()
 		n.w = clamp(abs(dot(l.xyz,n.xyz)),0.0,1.0);	// angle between light and normal; clamping & abs: two-sided lighting
 
 		// Calculate color using phong shading
-		c.xyz  = k.x * c.rgb;				// I  * ka		
-		c.xyz += k.y * n.w * c.rgb; 		// I  * kd*abs(cos(angle))  
-		c.xyz += k.z * pow(n.w, k.w) * c.w;	// Ia * ks*abs(cos(angle))^ns 
+		// 			I  * ka	   + I  * kd*abs(cos(angle)) + ks*abs(cos(angle))^ns
+		c.xyz  = (c.xyz * k.x) +  (c.xyz * (n.w * k.y))  + k.z * pow(n.w, k.w) * c.w;	// Ia * ks*abs(cos(angle))^ns 
 	}
 
 	// Get combine color with occlusion shading
