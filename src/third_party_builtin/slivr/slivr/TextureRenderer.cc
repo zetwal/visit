@@ -1279,21 +1279,21 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
   screenSize[0] = screenSize[1] = textureDim_;
 
 
-  // cout << "-------------------------------------------" << endl;
-  // cout << "dof_focusPosition_: " << dof_focusPosition_ << endl;
-  // cout << "zf: " << zf << endl;
-  // cout << "zf_slicer: " << zf_slicer << endl;
-  // cout << "poly.size(): " << poly.size() << endl;
-  // cout << "focusRange: " << focusRange << endl;
-  // cout << "focusRange: " << focusRange << endl;
-  // cout << "lengthSlice: " << lengthSlice << endl;
-  // cout << "lengthOpp: " << lengthOpp << endl;
-  // cout << "dof_focusMode_: " << dof_focusMode_ << endl;
-  // cout << "screenSize: " << screenSize[0] << ", " << screenSize[1] << endl;
-  // if (dof_focusMode_ == DOF_USER)
-  //   cout << "DOF USER" << endl;
-  // else
-  //   cout << "DOF AUTO" << endl;
+  cout << "-------------------------------------------" << endl;
+  cout << "dof_focusPosition_: " << dof_focusPosition_ << endl;
+  cout << "zf: " << zf << endl;
+  cout << "zf_slicer: " << zf_slicer << endl;
+  cout << "poly.size(): " << poly.size() << endl;
+  cout << "focusRange: " << focusRange << endl;
+  cout << "focusRange: " << focusRange << endl;
+  cout << "lengthSlice: " << lengthSlice << endl;
+  cout << "lengthOpp: " << lengthOpp << endl;
+  cout << "dof_focusMode_: " << dof_focusMode_ << endl;
+  cout << "screenSize/textureDim_: " << screenSize[0] << ", " << screenSize[1] << endl;
+  if (dof_focusMode_ == DOF_USER)
+    cout << "DOF USER" << endl;
+  else
+    cout << "DOF AUTO" << endl;
 
   writeTex = 1; readTex = 0;
 

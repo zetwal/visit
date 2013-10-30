@@ -6,6 +6,9 @@
 #include <avtSamplePointExtractor.h>
 #include <algorithm>
 #include <string>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #ifdef PARALLEL
 #   include <mpi.h>
@@ -30,9 +33,12 @@ class avtImgCommunicator
 	int numPatchesToCompose;
 	int *processorPatchesCount;
 
+	// each processor maintains a list of its neighbours that resides on the same node - local compositing takes advantage of that
+	int numMyNeighboursOnNode;
+	std::vector<int> neighboursId;
+
 	float *imgBuffer;
 	iotaMeta *allRecvIotaMeta;
-
 
 	std::set<float> all_avgZ_proc0;
 	std::vector<std::vector<float> > boundsPerBlockVec;
@@ -56,11 +62,13 @@ class avtImgCommunicator
 
     int 		num_procs;
     int 		my_id;
+    std::string hostname;
 
     imgMetaData setImg(int _inUse, int _procId, int _patchNumber, float dim_x, float dim_y, float screen_ll_x, float screen_ll_y, float screen_ur_x, float screen_ur_y, float _avg_z);
     iotaMeta setIota(int _procId, int _patchNumber, int dim_x, int dim_y, int screen_ll_x, int screen_ll_y, float _avg_z);
     int getDataPatchID(int procID, int patchID);
-   
+
+    int getHostname(hostname);
 
 public:
 	avtImgCommunicator();

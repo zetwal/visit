@@ -668,6 +668,7 @@ LoadBalancer::Reduce(avtContract_p input)
 
     if (scheme == LOAD_BALANCE_STREAM)
     {
+        std::cout << "LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER" << std::endl;
         if (pipelineInfo[input->GetPipelineIndex()].current < 0)
         {
             pipelineInfo[input->GetPipelineIndex()].current = 0;
@@ -744,6 +745,7 @@ LoadBalancer::Reduce(avtContract_p input)
 
         if (theScheme == LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER)
         {
+            std::cout << "LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER" << std::endl;
             int amountPer = list.size() / nProcs;
             int oneExtraUntil = list.size() % nProcs;
             int lastDomain = 0;
@@ -762,6 +764,7 @@ LoadBalancer::Reduce(avtContract_p input)
         }
         else if (theScheme == LOAD_BALANCE_STRIDE_ACROSS_BLOCKS)
         {
+            std::cout << "LOAD_BALANCE_STRIDE_ACROSS_BLOCKS" << std::endl;
             for (int j = 0 ; j < list.size() ; j++)
             {
                 if (j % nProcs == rank)
@@ -770,6 +773,7 @@ LoadBalancer::Reduce(avtContract_p input)
         }
         else if (theScheme == LOAD_BALANCE_ABSOLUTE)
         {
+            std::cout << "LOAD_BALANCE_ABSOLUTE" << std::endl;
             for (int j = 0 ; j < list.size() ; j++)
             {
                 if (list[j] % nProcs == rank)
@@ -778,6 +782,7 @@ LoadBalancer::Reduce(avtContract_p input)
         }
         else if (theScheme == LOAD_BALANCE_RESTRICTED)
         {
+            std::cout << "LOAD_BALANCE_RESTRICTED" << std::endl;
             LBInfo &lbInfo(pipelineInfo[input->GetPipelineIndex()]);
             IOInfo &ioInfo(ioMap[lbInfo.db]);
             const HintList &hints(ioInfo.ioInfo.GetHints());
@@ -801,6 +806,7 @@ LoadBalancer::Reduce(avtContract_p input)
         }
         else if (theScheme == LOAD_BALANCE_RANDOM_ASSIGNMENT)
         {
+            std::cout << "LOAD_BALANCE_RANDOM_ASSIGNMENT" << std::endl;
             // all procs randomly jumble the list of domain ids
             // all procs compute same jumbled list due to same seed
             // [ which won't be true on a heterogeneous platform ]
@@ -824,6 +830,7 @@ LoadBalancer::Reduce(avtContract_p input)
         }
         else if (theScheme == LOAD_BALANCE_DBPLUGIN_DYNAMIC)
         {
+            std::cout << "LOAD_BALANCE_DBPLUGIN_DYNAMIC" << std::endl;
             // Every processor gets the complete list
             mylist = list;
         }
@@ -833,6 +840,7 @@ LoadBalancer::Reduce(avtContract_p input)
     }
     else
     {
+        std::cout << "else in load balance!!!" << std::endl;
         // disable progress updates from the filters this time around
         avtDataObjectSource::RegisterProgressCallback(NULL,NULL);
 

@@ -123,6 +123,7 @@ avtImgCommunicator::avtImgCommunicator(){
 #ifdef PARALLEL
 	ierr = MPI_Comm_size(VISIT_MPI_COMM, &num_procs);
 	ierr = MPI_Comm_rank(VISIT_MPI_COMM, &my_id);
+	getHostname(hostname);
 
 	// create a new mpi data type matching the one we need
 	_img_mpi = createMetaDataType();
@@ -227,6 +228,27 @@ avtImgCommunicator::~avtImgCommunicator(){
 	//boundsPerBlockVec.clear();
 }
 
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+int avtImgCommunicator::getHostname(std::string &hostname){
+	char buffer[512];
+
+	int retVal = gethostname(buffer,sizeodf(buffer));
+	hostname = std::string(buffer);
+
+	return retVal;
+}
 
 
 // ****************************************************************************
