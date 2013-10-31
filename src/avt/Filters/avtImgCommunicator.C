@@ -244,7 +244,7 @@ avtImgCommunicator::~avtImgCommunicator(){
 int avtImgCommunicator::getHostname(std::string &hostname){
 	char buffer[512];
 
-	int retVal = gethostname(buffer,sizeodf(buffer));
+	int retVal = gethostname(buffer,sizeof(buffer));
 	hostname = std::string(buffer);
 
 	return retVal;
@@ -304,7 +304,6 @@ void avtImgCommunicator::syncAllProcs(){
 	MPI_Barrier(MPI_COMM_WORLD);
 #endif
 }
-
 
 
 // ****************************************************************************

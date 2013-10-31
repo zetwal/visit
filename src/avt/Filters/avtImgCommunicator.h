@@ -68,7 +68,7 @@ class avtImgCommunicator
     iotaMeta setIota(int _procId, int _patchNumber, int dim_x, int dim_y, int screen_ll_x, int screen_ll_y, float _avg_z);
     int getDataPatchID(int procID, int patchID);
 
-    int getHostname(hostname);
+    int getHostname(std::string & hostname);
 
 public:
 	avtImgCommunicator();
