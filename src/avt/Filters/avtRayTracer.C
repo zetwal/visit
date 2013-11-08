@@ -1174,10 +1174,10 @@ avtRayTracer::Execute(void)
         }
 
        
-        //for (int i=0; i<numZDivisions; i++){
-        //    std::string imgFilenameFinal = "/home/pascal/Desktop/Generated_" + NumbToString(PAR_Rank()) + "_" + NumbToString(i) + "_Buffer.ppm";
-        //    createPpmWithOffset(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal,imgBufferWidth*imgBufferHeight*4*i);
-        //}
+      //  for (int i=0; i<numZDivisions; i++){
+     //       std::string imgFilenameFinal = "/home/pascal/Desktop/Generated_" + NumbToString(PAR_Rank()) + "_" + NumbToString(i) + "_Buffer.ppm";
+      //      createPpmWithOffset(buffer, imgBufferWidth, imgBufferHeight, imgFilenameFinal,imgBufferWidth*imgBufferHeight*4*i);
+      //  }
 
 
         allImgMetaData.clear();
