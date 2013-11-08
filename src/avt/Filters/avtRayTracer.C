@@ -64,6 +64,11 @@
 #include <avtVolume.h>
 #include <avtWorldSpaceToImageSpaceTransform.h>
 
+#include <avtCallback.h>
+#include <avtDatabase.h>
+#include <avtDatabaseMetaData.h>
+#include <avtMeshMetaData.h>
+
 
 #ifdef PARALLEL
 #include <avtImageCommunicator.h>
@@ -476,7 +481,14 @@ avtRayTracer::Execute(void)
 
     avtDataObject_p samples = extractor.GetOutput();
 
-    
+    const avtDataAttributes &datts = samples->GetInfo().GetAttributes();
+    std::string db = samples->GetInfo().GetAttributes().GetFullDBName();
+    ref_ptr<avtDatabase> dbp = avtCallback::GetDatabase(db, datts.GetTimeIndex(), NULL);
+    avtDatabaseMetaData *md = dbp->GetMetaData(datts.GetTimeIndex(), 1);
+    std::string mesh = md->MeshForVar(datts.GetVariableName());
+    const avtMeshMetaData *mmd = md->GetMesh(mesh);
+
+
     if (rayCastingSLIVR == true){
         
         // only required to force an update - Need to find a way to get rid of that!!!!
@@ -485,6 +497,15 @@ avtRayTracer::Execute(void)
         rc.SetInput(samples);
         avtImage_p image  = rc.GetTypedOutput();
         image->Update(GetGeneralContract());
+
+
+        std::cout << "Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
+        double meshMin[3], meshMax[3];
+        for (int i=0; i<3; i++){
+            meshMin[i] = mmd->minSpatialExtents[i];
+            meshMax[i] = mmd->maxSpatialExtents[i];
+        }
+        extractor.SetMeshDims(meshMin,meshMax);
 
         //
         // Single Processor

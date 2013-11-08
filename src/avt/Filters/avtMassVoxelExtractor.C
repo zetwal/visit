@@ -158,6 +158,7 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     pretendGridsAreInWorldSpace = false;
     trilinearInterpolation = false;
     rayCastingSLIVR = false;
+    
     aspect = 1;
     view_to_world_transform = vtkMatrix4x4::New();
     world_to_view_transform = vtkMatrix4x4::New();
@@ -376,6 +377,7 @@ void
 avtMassVoxelExtractor::Extract(vtkRectilinearGrid *rgrid,
                 std::vector<std::string> &varnames, std::vector<int> &varsizes)
 {
+    std::cout << "avtMassVoxelExtractor::Extract" << std::endl;
     if (gridsAreInWorldSpace || pretendGridsAreInWorldSpace)
         //if (rayCastingSLIVR || trilinearInterpolation)
         if (rayCastingSLIVR)
@@ -729,7 +731,10 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     imgHeight = yMax - yMin;
 
     if (rayCastingSLIVR == true){
-     //   std::cout << "imgWidth: " << imgWidth << "  x  " << "imgHeight: " << imgHeight << std::endl;
+        patchMin[0] = X[0];         patchMin[1] = Y[0];         patchMin[2] = Z[0];
+        patchMax[0] = X[dims[0]-1]; patchMax[1] = Y[dims[1]-1]; patchMax[2] = Z[dims[2]-1];
+        std::cout << proc << " - " << patch << "  imgWidth: " << imgWidth << "  x  " << "imgHeight: " << imgHeight << std::endl <<
+                 "  dims: " << patchMin[0] << " ,  " << patchMax[0] <<  "  -  " << patchMin[1] << " ,  " << patchMax[1] <<  "  -  " << patchMin[2] << " ,  " << patchMax[2] <<  std::endl;
 
         imgArray = new float[((imgWidth)*4) * imgHeight];
 
@@ -1626,7 +1631,7 @@ void
 avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 {
 
-    //std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable:  "<< std::endl;
+   // std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable:  "<< std::endl;
     bool inrun = false;
     int  count = 0;
 
@@ -1691,6 +1696,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         indices[2] = index_bottom;      indices[3] = index_top;
         indices[0] = index_left;        indices[1] = index_right;
 
+        int lowerLimit, upperLimit;
+       // std::cout << "dims: " << dims[0] << " ,  " << dims[1] << " ,  " << dims[2] << std::endl;
         if (trilinearInterpolation){
             if (indices[0] < 0 || indices[0]>dims[0]-2)
                 valid_sample[i] = false;
@@ -1715,7 +1722,9 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 valid_sample[i] = false;
         }
 
+
         if (rayCastingSLIVR){
+        /*
             if (indices[0] < 2 || indices[0]>dims[0]-3)
                 valid_sample[i] = false;
 
@@ -1730,12 +1739,36 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
             if (indices[3] < 2 || indices[3]>dims[1]-3)
                 valid_sample[i] = false;
 
-
+        /*
 
             if (indices[4] < 2 || indices[4]>dims[2]-3)
                 valid_sample[i] = false;
 
             if (indices[5] < 2 || indices[5]>dims[2]-3)
+                valid_sample[i] = false;
+        */
+
+        
+            if (indices[0] < 1 || indices[0]>dims[0]-2)
+                valid_sample[i] = false;
+
+            if (indices[1] < 1 || indices[1]>dims[0]-2)
+                valid_sample[i] = false;
+
+
+
+            if (indices[2] < 1 || indices[2]>dims[1]-2)
+                valid_sample[i] = false;
+
+            if (indices[3] < 1 || indices[3]>dims[1]-2)
+                valid_sample[i] = false;
+
+        
+
+            if (indices[4] < 0 || indices[4]>dims[2]-2)
+                valid_sample[i] = false;
+
+            if (indices[5] < 0 || indices[5]>dims[2]-2)
                 valid_sample[i] = false;
         }
 
@@ -1745,7 +1778,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
             continue;
         }
 
-      // std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable: valid!!!  "<< std::endl;
+      //  std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable: valid!!!  "<< std::endl;
         
         if (trilinearInterpolation || rayCastingSLIVR){
             //
@@ -2428,7 +2461,7 @@ void
 avtMassVoxelExtractor::SampleAlongSegment(const double *origin, 
                                           const double *terminus, int w, int h)
 {
-    //std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleAlongSegment  " << dims[0] << " x " << dims[1] << " x " << dims[2] << std::endl;
+   // std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleAlongSegment  " << dims[0] << " x " << dims[1] << " x " << dims[2] << std::endl;
 
     int first = 0;
     int last = 0;

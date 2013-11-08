@@ -124,6 +124,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetModelViewMatrix(double _modelViewMatrix[16]) { for (int i=0;i<16;i++) modelViewMatrix[i]=_modelViewMatrix[i]; }
     void             SetViewDirection(double *vd){ for (int i=0; i<3; i++) view_direction[i] = vd[i]; }
     void             SetViewUp(double *vu){ for (int i=0; i<3; i++) view_up[i] = vu[i]; }
+    void             SetMeshDims(double _meshMin[3], double _meshMax[3]){ for (int i=0; i<3; i++) {meshMin[i] = _meshMin[i]; meshMax[i] = _meshMax[i];}}
 
     // Getting the image
     void             getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
@@ -179,6 +180,11 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
 
     double           view_direction[3];
     double           view_up[3];
+
+    double           meshMin[3];
+    double           meshMax[3];
+    double           patchMin[3];
+    double           patchMax[3];
 
     int debugOn;
     int countt;
