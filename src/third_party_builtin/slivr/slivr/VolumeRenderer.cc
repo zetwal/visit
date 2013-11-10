@@ -502,12 +502,12 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
 
 
 
-      shaderBuf = vol_shader_factory_->shaderProgram(use_cmap2 ? 2 : 1, nb0, tex_->nc(),
-                                                true, false, use_fog, blend_mode, cmap2_.size(),
-                                                "slivrShaders/dofShader.vert","slivrShaders/emiAbsBuf.frag");
-      shaderBuf->createVertandFrag();
-      shaderBuf->bind();
-      shaderBuf->release();
+      // shaderBuf = vol_shader_factory_->shaderProgram(use_cmap2 ? 2 : 1, nb0, tex_->nc(),
+      //                                           true, false, use_fog, blend_mode, cmap2_.size(),
+      //                                           "slivrShaders/dofShader.vert","slivrShaders/emiAbsBuf.frag");
+      // shaderBuf->createVertandFrag();
+      // shaderBuf->bind();
+      // shaderBuf->release();
 
       //std::cout << "Created shaders" << std::endl;
 
