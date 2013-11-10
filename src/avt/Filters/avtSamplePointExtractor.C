@@ -702,8 +702,8 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
     
     unsigned long m_size, m_rss;
     GetMemorySize(m_size, m_rss);
-   // std::cout << PAR_Rank() << " ~ avtSamplePointExtractor::ExecuteTree  .. .  " 
-   //           << "    Memory use before: " << m_size << "  rss (MB): " << m_rss/(1024*1024) << std::endl;
+    //std::cout << PAR_Rank() << " ~ avtSamplePointExtractor::ExecuteTree  .. .  " 
+    //          << "    Memory use before: " << m_size << "  rss (MB): " << m_rss/(1024*1024) << std::endl;
 
     debug5 << PAR_Rank() << " ~ avtSamplePointExtractor::ExecuteTree  .. .  " 
               << "    Memory use before: " << m_size << "  rss (MB): " << m_rss/(1024*1024) << endl;
@@ -711,7 +711,8 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
 
 
     totalAssignedPatches = dt->GetNChildren();
-    std::cout << "dt->GetNChildren(): " << totalAssignedPatches << std::endl;
+    debug5 << PAR_Rank() << "dt->GetNChildren(): " << totalAssignedPatches << endl;
+    std::cout << PAR_Rank() << "dt->GetNChildren(): " << totalAssignedPatches << std::endl;
     
     patchCount = 0;
     //imageDataVector.clear();
@@ -745,10 +746,12 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
             UpdateProgress(10*currentNode+9, 10*totalNodes);
             currentNode++;
         }
+
+        //std::cout << "Proc: " << PAR_Rank() << " ~ patch: " << i << std::endl;
     }
 
     GetMemorySize(m_size, m_rss);
-    //std::cout << PAR_Rank() << " ~ Memory use after: " << m_size << "  rss (MB): " << m_rss/(1024*1024)
+    //std::cout << PAR_Rank() << "   patch: " << i << "  ~ Memory use after: " << m_size << "  rss (MB): " << m_rss/(1024*1024)
     //          <<  "   ... avtSamplePointExtractor::ExecuteTree done@!!!" << std::endl;
     debug5 << PAR_Rank() << " ~ Memory use after: " << m_size << "  rss (MB): " << m_rss/(1024*1024)
               <<  "   ... avtSamplePointExtractor::ExecuteTree done@!!!" << endl;
@@ -1076,6 +1079,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             //std::cout << "   massVoxelExtractor->getImageDimension   " << std::endl;
             if (tmpImageMetaPatch.inUse == 1){
                 //std::cout << "   tmpImageMetaPatch.inUse == 1   " << std::endl;
+                //std::cout << "proc: " << tmpImageMetaPatch.procId << "   patch: " << tmpImageMetaPatch.patchNumber << "   area: " << tmpImageMetaPatch.dims[0] << " x " << tmpImageMetaPatch.dims[1] << std::endl;
                 tmpImageMetaPatch.destProcId = tmpImageMetaPatch.procId;
                 imageMetaPatchVector.push_back(tmpImageMetaPatch);
                 

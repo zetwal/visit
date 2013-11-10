@@ -500,12 +500,24 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
       shaderDOF->bind();
       shaderDOF->release();
 
+
+
+      shaderBuf = vol_shader_factory_->shaderProgram(use_cmap2 ? 2 : 1, nb0, tex_->nc(),
+                                                true, false, use_fog, blend_mode, cmap2_.size(),
+                                                "slivrShaders/dofShader.vert","slivrShaders/emiAbsBuf.frag");
+      shaderBuf->createVertandFrag();
+      shaderBuf->bind();
+      shaderBuf->release();
+
+      //std::cout << "Created shaders" << std::endl;
+
       if (shaderAlgo_ == ALGO_OCCSH)
         shader = shaderOccSh;
       else
         if (shaderAlgo_ == ALGO_DOF)
           shader = shaderDOF;
         else
+          //shader = shaderBuf;
           shader = shaderProg;
     }
     shader->activate();
@@ -523,15 +535,21 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
         if (shaderAlgo_ == ALGO_DOF)
           shader = shaderDOF;
         else
+          //shader = shaderBuf;
           shader = shaderProg;
 
     shader->activate();
   }
 
+  //std::cout << "Allocated shaders" << std::endl;
+
   if (shaderAlgo_ == ALGO_OCCSH || shaderAlgo_ == ALGO_DOF){
     init_textures();
+    //initEyeTex(textureDimX_,textureDimY_,0,0);
     init_FrameBuffer();
   }
+
+    //std::cout << "Initialized textures" << std::endl;
 
   CHECK_OPENGL_ERROR();
   if (use_shading)
@@ -620,6 +638,8 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
       load_brick(bs, i, use_cmap2);
       shader->setLocalParam(4, 1.0/b->nx(), 1.0/b->ny(), 1.0/b->nz(), 0.0);
       shader->setLocalParam(5, (use_cmap2==true?0.9:0.1), (shading_==true?0.9:0.1), 0.0, 0.0);
+
+      //std::cout << "Calling draw" << std::endl;
       if (shaderAlgo_ == ALGO_OCCSH)
         draw_polygonsOccSh(vertex, texcoord, size, false, use_fog,
                            &mask, shader, shaderTexture);
@@ -628,8 +648,12 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
           draw_polygonsDOF(vertex, texcoord, size, false, use_fog,
                            &mask, shader, shaderTexture);
         else
+          //draw_polygonsBuf(vertex, texcoord, size, false, use_fog,
+          //                 &mask, shader, shaderTexture);
           draw_polygons(vertex, texcoord, size, false, use_fog,
                         &mask, shader);
+
+
     }
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 

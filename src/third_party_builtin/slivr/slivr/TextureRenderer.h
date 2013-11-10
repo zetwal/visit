@@ -108,6 +108,7 @@ public:
   inline void set_dof_focusMode(int fM){dof_focusMode_ = fM;}
   inline void set_dof_focusRange(float focusRange){dof_focusRange_ = focusRange;}
 
+  inline void set_texDim(int textureDimX, int textureDimY){textureDimX_ = textureDimX; textureDimY_ = textureDimY;}
   inline void set_algoChoice(float algoChc){ algoChoice = algoChc;}
 
 protected:
@@ -153,6 +154,8 @@ protected:
   bool readShadersFromFile_;
 
   int textureDim_;
+  int textureDimX_;
+  int textureDimY_;
 
   int shaderAlgo_;
   GLuint frmBuffer_;
@@ -222,6 +225,10 @@ protected:
   void draw_polygons(vector<float>& vertex, vector<float>& texcoord,
                     vector<int>& poly, bool normal, bool fog, vector<int> *mask = 0, 
                     ShaderProgramARB *shader = 0);
+
+  void draw_polygonsBuf(vector<float>& vertex, vector<float>& texcoord,
+                    vector<int>& poly, bool normal, bool fog, vector<int> *mask,
+                    ShaderProgramARB *shader, ShaderProgramARB *shaderTexDisp);
 
   void draw_polygons_wireframe(vector<float>& vertex, vector<float>& texcoord,
              vector<int>& poly,

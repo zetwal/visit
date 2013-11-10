@@ -93,7 +93,7 @@ protected:
   vector<Plane *> planes_;
   ShaderProgramARB *shader;
   FragmentProgramARB *shaderLightON, *shaderLightOFF;
-  ShaderProgramARB *shaderProg, *shaderTexture, *shaderOccSh, *shaderDOF;
+  ShaderProgramARB *shaderProg, *shaderTexture, *shaderOccSh, *shaderDOF, *shaderBuf;
   GLuint depth_rb_;
 };
 

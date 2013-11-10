@@ -426,6 +426,8 @@ avtOpenGLSLIVRVolumeRenderer::Render(
     context->renderer->set_dof_focusRange(props.atts.GetDOFfocusRange());
     context->renderer->set_dof_blurAngle(props.atts.GetDOFblurAngle());
 
+    context->renderer->set_texDim(2048,2048);
+
     debug5 << mName << "nprops.atts.GetDOFMode(): " << props.atts.GetDOFMode() << endl;
 
     debug5 << mName << "props.atts.GetDOFfocusPosition(): " << props.atts.GetDOFfocusPosition() << endl;

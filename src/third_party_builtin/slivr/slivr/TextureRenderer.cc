@@ -74,7 +74,7 @@ static const string Cmap2ShaderStringGLSL =
 //inline std::string toStr(int x){ std::ostringstream ss; ss << x; std::string s(ss.str()); return s;}
 void writeTextureToPPM( const char* fileName , GLuint tex, GLuint m_iSizeX, GLuint m_iSizeY, GLenum m_format, GLenum m_type)
 {
-    //cout << "m_iSizeX: " <<m_iSizeX << "  m_iSizeY: " << m_iSizeY << endl;
+    cout << "m_iSizeX: " <<m_iSizeX << "  m_iSizeY: " << m_iSizeY << endl;
     GLuint m_iSizePerElement = sizeof(GL_UNSIGNED_BYTE);
     
     unsigned char*content = new unsigned char[m_iSizeX * m_iSizeY * m_iSizePerElement];
@@ -86,6 +86,7 @@ void writeTextureToPPM( const char* fileName , GLuint tex, GLuint m_iSizeX, GLui
     // Image img(m_iSizeXX, m_iSizeYY);
     
     
+    cout << "Image img  m_iSizeX: " <<m_iSizeX << "  m_iSizeY: " << m_iSizeY << endl;
     for(GLuint y = 0; y < m_iSizeY; y++){
         for(GLuint x = 0; x < m_iSizeX; x++){
             Colors C;
@@ -98,6 +99,8 @@ void writeTextureToPPM( const char* fileName , GLuint tex, GLuint m_iSizeX, GLui
             img.set(x, y, C);
         }
     }
+
+    cout << "Image img  writing " <<std::endl;
     img.write(std::string(fileName) + ".ppm");
     
     delete [] content;
@@ -142,6 +145,8 @@ TextureRenderer::TextureRenderer(Texture* tex,
   reloadShaders_(true),
   readShadersFromFile_(true),
   textureDim_(256),
+  textureDimX_(256),
+  textureDimY_(256),
   shaderAlgo_(ALGO_NORMAL)
 {
   attachmentpoints[0] = GL_COLOR_ATTACHMENT0_EXT;
@@ -182,6 +187,8 @@ TextureRenderer::TextureRenderer(const TextureRenderer& copy) :
   reloadShaders_(true),
   readShadersFromFile_(true),
   textureDim_(256),
+  textureDimX_(256),
+  textureDimY_(256),
   shaderAlgo_(ALGO_NORMAL)
 {
   attachmentpoints[0] = GL_COLOR_ATTACHMENT0_EXT;
@@ -979,7 +986,7 @@ TextureRenderer::colormap2_hardware_rasterize()
 void 
 TextureRenderer::initEyeTex(int texWidth, int texHeight, int value1=0, int value2=255){
   unsigned char *textureArray = new unsigned char[4*texWidth*texHeight];
-  for (int i=0; i<(textureDim_*textureDim_); i++)
+  for (int i=0; i<(texWidth*texHeight); i++)
     textureArray[i*4 +0] = textureArray[i*4 +1] = textureArray[i*4 +2] =  textureArray[i*4 +3] = value1;
 
     // Eye buffer
@@ -994,7 +1001,7 @@ TextureRenderer::initEyeTex(int texWidth, int texHeight, int value1=0, int value
     }
     
     // Occlusion Buffer - initialize to white
-    for (int i=0; i<(textureDim_*textureDim_); i++)
+    for (int i=0; i<(texWidth*texHeight); i++)
     textureArray[i*4 +0] = textureArray[i*4 +1] = textureArray[i*4 +2] =  textureArray[i*4 +3] = value2;
     
     for (int i=0; i<2; i++){
@@ -1564,6 +1571,161 @@ void TextureRenderer::draw_polygonsDOF(vector<float>& vertex,
 }
 
 
+
+void TextureRenderer::draw_polygonsBuf(vector<float>& vertex,
+                               vector<float>& texcoord,
+                               vector<int>& poly,
+                               bool normal, bool fog,
+                               vector<int> *mask,
+                               ShaderProgramARB *shader, ShaderProgramARB *shaderTexDisp)
+{
+
+  std::cout << "TextureRenderer::draw_polygonsBuf" << std::endl; 
+  CHECK_OPENGL_ERROR();
+  float mvmat[16];
+  if (fog) {
+    glGetFloatv(GL_MODELVIEW_MATRIX, mvmat);
+  }
+
+  int location;
+  int writeTex, readTex;
+  int lastWritePhase1;
+
+  int totalVerticesInPoly = 0;
+  for (unsigned int i=0; i<poly.size(); i++)
+    totalVerticesInPoly += poly[i];
+    
+ 
+  writeTex = 1; readTex = 0;
+
+  glPushAttrib(GL_ALL_ATTRIB_BITS);
+  glPushMatrix();
+
+    glDisable(GL_BLEND);
+    initEyeTex(textureDimX_,textureDimY_,0,0);
+
+    glViewport(0,0,textureDimX_,textureDimY_);
+    
+    int programId = shader->activate();
+
+
+    std::cout << "TextureRenderer::drawing  ~ " << poly.size()-1 << std::endl; 
+
+    for (unsigned int i=poly.size()-1, k=totalVerticesInPoly; i>0; i--){ 
+
+      std::cout << "TextureRenderer::i " << i << std::endl; 
+      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, frmBuffer_);
+      glDrawBuffer(attachmentpoints[writeTex]);
+      
+      glEnable(GL_TEXTURE_2D);
+      glActiveTexture(GL_TEXTURE6);
+      glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id0[readTex]);
+      shader->setLocalTexture(6);
+
+      glBegin(GL_POLYGON);
+      {
+        if (normal) {
+          float* v0 = &vertex[(k+0)*3];
+          float* v1 = &vertex[(k+1)*3];
+          float* v2 = &vertex[(k+2)*3];
+          Vector dv1(v1[0]-v0[0], v1[1]-v0[1], v1[2]-v0[2]);
+          Vector dv2(v2[0]-v0[0], v2[1]-v0[1], v2[2]-v0[2]);
+          Vector n = Cross(dv1, dv2);   n.normalize();
+          glNormal3f(n.x(), n.y(), n.z());
+        }
+
+        // draw the number of vertices making up the polygon
+        for(int j=0; j<poly[i]; j++) {
+          float* t = &texcoord[(k+j)*3];
+          float* v = &vertex[(k+j)*3];
+
+          #if defined(GL_ARB_fragment_program) || defined(GL_ATI_fragment_shader)
+          #ifdef _WIN32
+          if (glMultiTexCoord3f) {
+          #endif // _WIN32
+            glMultiTexCoord3f(GL_TEXTURE0, t[0],   t[1],     t[2]);
+            if (fog) {
+              float vz = mvmat[2]*v[0] + mvmat[6]*v[1] + mvmat[10]*v[2] + mvmat[14];
+              glMultiTexCoord3f(GL_TEXTURE1, -vz, 0.0, 0.0);
+            }
+          #ifdef _WIN32
+          }
+          else{
+            glTexCoord3f(t[0], t[1], t[2]);
+          }
+          #endif // _WIN32
+          #else
+          glTexCoord3f(t[0], t[1], t[2]);
+          #endif
+          glVertex3f(v[0], v[1], v[2]);
+        }
+      }
+      glEnd();
+      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+
+      // swap read and write textures
+      writeTex = 1 - writeTex;
+      readTex = 1 - readTex;
+
+      k -= poly[i];
+
+      //writeTextureToPPM(("/home/pascal/Desktop/buffer/buffer_eye_pass1_read _" + toStr(z)).c_str(), eyeBuffer_tex_id0[readTex], textureDim_,textureDim_, GL_RGBA, GL_UNSIGNED_BYTE);
+      //writeTextureToPPM(("/home/pascal/Desktop/buffer/buffer_eye_pass1_write_" + toStr(z)).c_str(), eyeBuffer_tex_id0[writeTex], textureDim_,textureDim_, GL_RGBA, GL_UNSIGNED_BYTE);
+    }
+    std::cout << "TextureRenderer::time to write" << std::endl; 
+    lastWritePhase1 = readTex;
+    
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+    shader->release();
+
+    writeTextureToPPM("/home/pascal/Desktop/lastWritePhase1" , eyeBuffer_tex_id0[readTex], textureDimX_,textureDimY_, GL_RGBA, GL_UNSIGNED_BYTE);
+ 
+        
+    std::cout << "TextureRenderer::display to buffer" << std::endl;    
+      
+
+    // Final Phase: Render to texture
+    glEnable(GL_BLEND);
+    glViewport(viewport[0],viewport[1],viewport[2],viewport[3]);
+    glPushMatrix();
+      glMatrixMode(GL_MODELVIEW);
+      glPushMatrix();
+        glLoadIdentity();
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+          glLoadIdentity();
+          programId = shaderTexDisp->activate();
+
+            glEnable(GL_TEXTURE_2D);
+
+            location = glGetUniformLocation(programId, "tex7");
+            glActiveTexture(GL_TEXTURE7);
+            glBindTexture(GL_TEXTURE_2D, eyeBuffer_tex_id0[lastWritePhase1]);
+            glUniform1i(location, 7);
+            
+            location = glGetUniformLocation(programId, "option");
+            glUniform1i(location, 0);
+
+            glBegin (GL_QUADS);
+              glTexCoord2f(0.0, 0.0);  glVertex3f (-1, -1, 0.0);
+              glTexCoord2f(1.0, 0.0);  glVertex3f ( 1, -1, 0.0);
+              glTexCoord2f(1.0, 1.0);  glVertex3f ( 1,  1, 0.0);
+              glTexCoord2f(0.0, 1.0);  glVertex3f (-1,  1, 0.0);
+            glEnd ();
+
+          shaderTexDisp->release();
+
+        glPopMatrix ();
+        glMatrixMode (GL_MODELVIEW);
+      glPopMatrix ();
+    glPopMatrix();
+    
+
+  glPopMatrix();
+  glPopAttrib();
+
+  CHECK_OPENGL_ERROR();
+}
 
 
 void
