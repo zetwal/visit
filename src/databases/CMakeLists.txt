@@ -350,6 +350,7 @@ Xmdv
 lata
 volimage
 unv
+udaReaderMTMD
 )
 
 IF(TARGET vtkIOEnSight)
