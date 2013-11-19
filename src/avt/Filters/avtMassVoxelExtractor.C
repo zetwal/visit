@@ -1498,7 +1498,9 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
     bool inrun = false;
     int  count = 0;
 
-    avtRay *ray = volume->GetRay(w, h);
+    avtRay *ray;
+    if (rayCastingSLIVR == false)
+        ray = volume->GetRay(w, h);
     int myInd[3];
     bool calc_cell_index = ((ncell_arrays > 0) || (ghosts != NULL));
 
@@ -1572,25 +1574,30 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 valid_sample[i] = false;
         }
 
+
+        int offsetLow[3], offsetHigh[3];
+        offsetLow[0] = offsetLow[1] = offsetLow[2] = 1;
+        offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 2;
+
         if (rayCastingSLIVR){
-            if (indices[0] < 1 || indices[0]>dims[0]-2)
+            if (indices[0] < offsetLow[0] || indices[0]>dims[0]-offsetHigh[0])
                 valid_sample[i] = false;
 
-            if (indices[1] < 1 || indices[1]>dims[0]-2)
-                valid_sample[i] = false;
-
-
-            if (indices[2] < 1 || indices[2]>dims[1]-2)
-                valid_sample[i] = false;
-
-            if (indices[3] < 1 || indices[3]>dims[1]-2)
+            if (indices[1] < offsetLow[0] || indices[1]>dims[0]-offsetHigh[0])
                 valid_sample[i] = false;
 
 
-            if (indices[4] < 1 || indices[4]>dims[2]-2)
+            if (indices[2] < offsetLow[1] || indices[2]>dims[1]-offsetHigh[1])
                 valid_sample[i] = false;
 
-            if (indices[5] < 1 || indices[5]>dims[2]-2)
+            if (indices[3] < offsetLow[2] || indices[3]>dims[1]-offsetHigh[1])
+                valid_sample[i] = false;
+
+
+            if (indices[4] < offsetLow[2] || indices[4]>dims[2]-offsetHigh[2])
+                valid_sample[i] = false;
+
+            if (indices[5] < offsetLow[2] || indices[5]>dims[2]-offsetHigh[2])
                 valid_sample[i] = false;
         }
 
@@ -1634,7 +1641,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     
                                     float distFromRight, distFromLeft, distFromTop, distFromBottom, distFromFront, distFromBack;
                                     int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
-                                    float gradientOffset = 0.5;
+                                    float gradientOffset = 0.05;
 
                                     double gradVals[8];
                                     int indexGrad[8], gradInd[3], gradIndices[6];
