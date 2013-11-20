@@ -1103,10 +1103,17 @@ avtRayTracer::Execute(void)
             for (int j=0; j<allImgMetaData[patchIndex].dims[1]; j++){
                 for (int k=0; k<allImgMetaData[patchIndex].dims[0]; k++){
 
-                    if ((startingX + k) >= imgBufferWidth)
+                    // if ((startingX + k) >= imgBufferWidth)
+                    //     continue;
+
+                    // if ((startingY + j) >= imgBufferHeight)
+                    //     continue;
+
+
+                    if ( ((startingX + k) < 0) || ((startingX + k) > imgBufferWidth) )
                         continue;
 
-                    if ((startingY + j) >= imgBufferHeight)
+                    if ( ((startingY + j) < 0) || ((startingY + j) > imgBufferHeight) )
                         continue;
                     
                     int subImgIndex = allImgMetaData[patchIndex].dims[0]*j*4 + k*4;                             // index in the subimage 
