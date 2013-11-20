@@ -45,6 +45,7 @@
 
 #include <pipeline_exports.h>
 #include <iostream>
+#include <float.h>
 
 struct RGBA
 {
@@ -226,6 +227,9 @@ avtOpacityMap::QuantizeValF(const double &val){
 // ****************************************************************************
 inline int
 avtOpacityMap::QueryTF(double scalarValue, double color[4]){
+    if (scalarValue != scalarValue) // checking for NAN
+        return 0;
+
     if (scalarValue <= min){
         int index = 0;
 

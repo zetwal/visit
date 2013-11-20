@@ -1012,7 +1012,16 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             varnames.push_back(samples->GetVariableName(i));
             varsizes.push_back(samples->GetVariableSize(i));
         }
-        massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
+
+        double scRange[2];
+        ds->GetScalarRange(scRange);
+
+        double bounds[6];
+        ds->GetBounds(bounds);
+
+        //std::cout << PAR_Rank() << " ~ " << num << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << std::endl;
+        
+        massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num); 
         massVoxelExtractor->SetLighting(lighting);
         massVoxelExtractor->SetLightDirection(lightDirection);
         massVoxelExtractor->SetMatProperties(materialProperties);

@@ -570,6 +570,17 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     //std::cout << " avtMassVoxelExtractor::simpleExtractWorldSpaceGrid "  << std::endl;
     patchDrawn = 0;
 
+    double scRange[2];
+    rgrid->GetScalarRange(scRange);
+
+    double bounds[6];
+    rgrid->GetBounds(bounds);
+
+    int data[3];
+    rgrid->GetDimensions(data);
+    
+        
+
     //
     // Some of our sampling routines need a chance to pre-process the data.
     // Register the grid here so we can do that.
@@ -610,6 +621,9 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     coordinates[5][0] = X[dims[0]-1];   coordinates[5][1] = Y[0];           coordinates[5][2] = Z[dims[2]-1];
     coordinates[6][0] = X[dims[0]-1];   coordinates[6][1] = Y[dims[1]-1];   coordinates[6][2] = Z[dims[2]-1];
     coordinates[7][0] = X[0];           coordinates[7][1] = Y[dims[1]-1];   coordinates[7][2] = Z[dims[2]-1];
+
+    //std::cout << proc << " ~ " << patch << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << "   |  dims_from_ds: " << data[0] <<", " << data[1] << ", " << data[2] << "  |  dims: " << dims[0] << ",  " << dims[1] << ", " << dims[2] << std::endl;
+
 
     double _world[4], _view[4];
     _world[3] = 1.0;
@@ -1577,28 +1591,41 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
         int offsetLow[3], offsetHigh[3];
         offsetLow[0] = offsetLow[1] = offsetLow[2] = 1;
-        offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 2;
+        offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 1;
 
         if (rayCastingSLIVR){
-            if (indices[0] < offsetLow[0] || indices[0]>dims[0]-offsetHigh[0])
+            /*
+            if (!(indices[0] >= offsetLow[0] && indices[0] <= (dims[0]-1) - offsetHigh[0]))
                 valid_sample[i] = false;
 
-            if (indices[1] < offsetLow[0] || indices[1]>dims[0]-offsetHigh[0])
-                valid_sample[i] = false;
-
-
-            if (indices[2] < offsetLow[1] || indices[2]>dims[1]-offsetHigh[1])
-                valid_sample[i] = false;
-
-            if (indices[3] < offsetLow[2] || indices[3]>dims[1]-offsetHigh[1])
+            if (!(indices[1] >= offsetLow[0] && indices[1] <= (dims[0]-1) - offsetHigh[0]))
                 valid_sample[i] = false;
 
 
-            if (indices[4] < offsetLow[2] || indices[4]>dims[2]-offsetHigh[2])
+            if (!(indices[2] >= offsetLow[1] && indices[2] <= (dims[1]-1) - offsetHigh[1]))
                 valid_sample[i] = false;
 
-            if (indices[5] < offsetLow[2] || indices[5]>dims[2]-offsetHigh[2])
+            if (!(indices[3] >= offsetLow[1] && indices[3] <= (dims[1]-1) - offsetHigh[1]))
                 valid_sample[i] = false;
+
+
+            if (!(indices[4] >= offsetLow[2] && indices[4] <= (dims[2]-1) - offsetHigh[2]))
+                valid_sample[i] = false;
+
+            if (!(indices[5] >= offsetLow[2] && indices[5] <= (dims[2]-1) - offsetHigh[2]))
+                valid_sample[i] = false;
+                */
+
+            if (!(ind[0] >= offsetLow[0] && ind[0] <= (dims[0]-1) - offsetHigh[0]))
+                valid_sample[i] = false;
+
+            if (!(ind[1] >= offsetLow[1] && ind[1] <= (dims[1]-1) - offsetHigh[1]))
+                valid_sample[i] = false;
+
+            if (!(ind[2] >= offsetLow[2] && ind[2] <= (dims[2]-1) - offsetHigh[2]))
+                valid_sample[i] = false;
+
+           
         }
 
         if (!valid_sample[i]){
@@ -1613,14 +1640,31 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 int indexT[8];
                 computeIndices(dims, indices, indexT);
                 
+                
                 for (int l = 0 ; l < ncell_arrays ; l++)            // ncell_arrays: usually 1
                 {
 
                     void  *cell_array = cell_arrays[l];
                     double values[8];
+                    bool enableDebug = true;
                     for (int m = 0 ; m < cell_size[l] ; m++){       // cell_size[l] usually 1
                         AssignEight(cell_vartypes[l], values, indexT, cell_size[l], m, cell_array);         
                         double scalarValue = trilinearInterpolate(values, dist_from_left, dist_from_bottom, dist_from_front);
+
+                        for (int xx=0; xx<8; xx++){
+                            if (values[xx] < 0.1)
+                                enableDebug = false;
+                        }
+/*
+                        if (scalarValue != scalarValue){ // checking for inf
+                            std::cout << proc << " ~ " << patch << "  |   Values: " << values[0] << ", " << values[1] << ",  " << values[2] << ", " << values[3] << ", " << values[4] << ", " << values[5] << ", " << values[6] << ", " << values[7] << "   _ _  "
+                                                                << "  |   dists: " << dist_from_left << ", " << dist_from_bottom << ", " << dist_from_front << "  |  scalar value: " << scalarValue
+                                                                << "  |   ind: " << ind[0] << ", " << ind[1] << ", " << ind[2] 
+                                                                << "  |   indices: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", " << indices[3] << ", " << indices[4] << ", " << indices[5]
+                                                                << "  |   indexT: " << indexT[0] << ", " << indexT[1] << ", " << indexT[2] << ", " << indexT[3] << ", " << indexT[4] << ", " << indexT[5] << ", " << indexT[6] << ", " << indexT[7] << std::endl;
+                                
+                        }
+                        */
 
                         if (rayCastingSLIVR){
                             double source_rgb[4];
@@ -1628,8 +1672,13 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
                             if ( ((retVal == 0)||(source_rgb[3]==0)) || (source_rgb[0]==0 && source_rgb[1]==0 && source_rgb[2]==0) ){
                                 // no need to do anything more if there will be no color
+                                enableDebug = false;
                             }
                             else{
+                                //if (enableDebug == true){
+                                //    std::cout << proc << " ~ " << patch << "  |   Values: " << values[0] << ", " << values[1] << ",  " << values[2] << ", " << values[3] << ", " << values[4] << ", " << values[5] ", " << values[6] << ", " << values[7] << "   _ _  "
+                                //    << "  |   dists: " << dist_from_left << ", " << dist_from_bottom << ", " << dist_from_front << "  |  scalar value: " << scalarValue << std::endl;
+                                //}
                                 //
                                 // Compute Lighting (if needed)
                                 //
@@ -1641,7 +1690,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     
                                     float distFromRight, distFromLeft, distFromTop, distFromBottom, distFromFront, distFromBack;
                                     int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
-                                    float gradientOffset = 0.05;
+                                    float gradientOffset = 0.25;
 
                                     double gradVals[8];
                                     int indexGrad[8], gradInd[3], gradIndices[6];
@@ -1672,6 +1721,10 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     computeIndices(dims, gradIndices, indexGrad);
                                     AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
                                     vals[0] = trilinearInterpolate(gradVals, distFromLeft, dist_from_bottom, dist_from_front);
+
+                                   // std::cout << proc << " ~ " << patch << "  |   Values: " << gradVals[0] << ", " << gradVals[1] << ",  " << gradVals[2] << ", " << values[3] << ", " << gradVals[4] << ", " << gradVals[5] ", " << gradVals[6] << ", " << gradVals[7] << "   _ _  "
+                                   // << "  |   dists: " << distFromLeft << ", " << dist_from_bottom << ", " << dist_from_front << "  |  scalar value: " << scalarValue << std::endl;
+
 
                                     //
                                     // find x+h
