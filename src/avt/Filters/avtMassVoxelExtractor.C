@@ -1594,28 +1594,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 2;
 
         if (rayCastingSLIVR){
-            
-            // if (!(indices[0] >= offsetLow[0] && indices[0] <= (dims[0]-1) - offsetHigh[0]))
-            //     valid_sample[i] = false;
-
-            // if (!(indices[1] >= offsetLow[0] && indices[1] <= (dims[0]-1) - offsetHigh[0]))
-            //     valid_sample[i] = false;
-
-
-            // if (!(indices[2] >= offsetLow[1] && indices[2] <= (dims[1]-1) - offsetHigh[1]))
-            //     valid_sample[i] = false;
-
-            // if (!(indices[3] >= offsetLow[1] && indices[3] <= (dims[1]-1) - offsetHigh[1]))
-            //     valid_sample[i] = false;
-
-
-            // if (!(indices[4] >= offsetLow[2] && indices[4] <= (dims[2]-1) - offsetHigh[2]))
-            //     valid_sample[i] = false;
-
-            // if (!(indices[5] >= offsetLow[2] && indices[5] <= (dims[2]-1) - offsetHigh[2]))
-            //     valid_sample[i] = false;
-                
-
             if (!(ind[0] >= offsetLow[0] && ind[0] <= (dims[0]-1) - offsetHigh[0]))
                 valid_sample[i] = false;
 
@@ -1624,7 +1602,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
             if (!(ind[2] >= offsetLow[2] && ind[2] <= (dims[2]-1) - offsetHigh[2]))
                 valid_sample[i] = false;
-           
         }
 
         if (!valid_sample[i]){
@@ -1650,19 +1627,19 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         AssignEight(cell_vartypes[l], values, indexT, cell_size[l], m, cell_array);         
                         double scalarValue = trilinearInterpolate(values, dist_from_left, dist_from_bottom, dist_from_front);
 
-                        for (int xx=0; xx<8; xx++){
-                            if (values[xx] < 0.1)
-                                enableDebug = false;
-                        }
+                        // for (int xx=0; xx<8; xx++){
+                        //     if (values[xx] < 0.1)
+                        //         enableDebug = false;
+                        // }
 
-                        if (scalarValue != scalarValue){ // checking for nsn
-                            std::cout << proc << " ~ " << patch << "  |   Values: " << values[0] << ", " << values[1] << ",  " << values[2] << ", " << values[3] << ", " << values[4] << ", " << values[5] << ", " << values[6] << ", " << values[7] << "   _ _  "
-                                                                << "  |   dists: " << dist_from_left << ", " << dist_from_bottom << ", " << dist_from_front << "  |  scalar value: " << scalarValue
-                                                                << "  |   dims: " << dims[0] << ", " << dims[1] << ", " << dims[2]<< "  |   ind: " << ind[0] << ", " << ind[1] << ", " << ind[2]
-                                                                << "  |   indices: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", " << indices[3] << ", " << indices[4] << ", " << indices[5]
-                                                                << "  |   indexT: " << indexT[0] << ", " << indexT[1] << ", " << indexT[2] << ", " << indexT[3] << ", " << indexT[4] << ", " << indexT[5] << ", " << indexT[6] << ", " << indexT[7] << std::endl;
-                                
-                        }
+                        // if (enableDebug == true){ // checking for nsn
+                        //     std::cout << proc << " ~ " << patch << "  |   Values: " << values[0] << ", " << values[1] << ",  " << values[2] << ", " << values[3] << ", " << values[4] << ", " << values[5] << ", " << values[6] << ", " << values[7] << "   _ _  "
+                        //                                         << "  |   dists: " << dist_from_left << ", " << dist_from_bottom << ", " << dist_from_front << "  |  scalar value: " << scalarValue
+                        //                                         << "  |   pos: " << x_right << ", " << y_top << ", " << z_back << "  |  w, h: " << w << ", " << h 
+                        //                                         << "  |   dims: " << dims[0] << ", " << dims[1] << ", " << dims[2]<< "  |   ind: " << ind[0] << ", " << ind[1] << ", " << ind[2]
+                        //                                         << "  |   indices: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", " << indices[3] << ", " << indices[4] << ", " << indices[5]
+                        //                                         << "  |   indexT: " << indexT[0] << ", " << indexT[1] << ", " << indexT[2] << ", " << indexT[3] << ", " << indexT[4] << ", " << indexT[5] << ", " << indexT[6] << ", " << indexT[7] << std::endl;
+                        // }
                         
 
                         if (rayCastingSLIVR){
