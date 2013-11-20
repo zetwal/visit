@@ -1038,7 +1038,6 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             varsizes.push_back(samples->GetVariableSize(i));
         }
 
-        
 
         if (rayCastingSLIVR == true){
             double scRange[2];
@@ -1056,13 +1055,6 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 return;
         }
 
-        // massVoxelExtractor->SetLighting(lighting);
-        // massVoxelExtractor->SetLightDirection(lightDirection);
-        // massVoxelExtractor->SetMatProperties(materialProperties);
-        // massVoxelExtractor->SetModelViewMatrix(modelViewMatrix);
-        // massVoxelExtractor->SetTransferFn(transferFn1D);
-        // massVoxelExtractor->SetViewDirection(view_direction);
-        // massVoxelExtractor->SetViewUp(view_up);
         massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
