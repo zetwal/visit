@@ -355,6 +355,16 @@ avtSamplePointExtractor::Execute(void)
 
     SetUpExtractors();
 
+    if (rayCastingSLIVR == true){
+        massVoxelExtractor->SetLighting(lighting);
+        massVoxelExtractor->SetLightDirection(lightDirection);
+        massVoxelExtractor->SetMatProperties(materialProperties);
+        massVoxelExtractor->SetModelViewMatrix(modelViewMatrix);
+        massVoxelExtractor->SetTransferFn(transferFn1D);
+        massVoxelExtractor->SetViewDirection(view_direction);
+        massVoxelExtractor->SetViewUp(view_up);
+    }
+
     avtDataTree_p tree = GetInputDataTree();
     totalNodes = tree->GetNumberOfLeaves();
     currentNode = 0;
@@ -1013,22 +1023,32 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             varsizes.push_back(samples->GetVariableSize(i));
         }
 
-        double scRange[2];
-        ds->GetScalarRange(scRange);
-
-        double bounds[6];
-        ds->GetBounds(bounds);
-
-        //std::cout << PAR_Rank() << " ~ " << num << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << std::endl;
         
-        massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num); 
-        massVoxelExtractor->SetLighting(lighting);
-        massVoxelExtractor->SetLightDirection(lightDirection);
-        massVoxelExtractor->SetMatProperties(materialProperties);
-        massVoxelExtractor->SetModelViewMatrix(modelViewMatrix);
-        massVoxelExtractor->SetTransferFn(transferFn1D);
-        massVoxelExtractor->SetViewDirection(view_direction);
-        massVoxelExtractor->SetViewUp(view_up);
+
+        if (rayCastingSLIVR == true){
+            double scRange[2];
+            ds->GetScalarRange(scRange);
+
+            double minUsedScalar = transferFn1D->GetMinUsedScalar();
+            double maxUsedScalar = transferFn1D->GetMaxUsedScalar();
+
+            debug5 << PAR_Rank() << " ~ " << num << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   used scalar: " << minUsedScalar << ", " << maxUsedScalar << " || Tests: " << (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar) << " , " << (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar) << endl;
+        
+            if (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar)
+                return;
+
+            if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
+                return;
+        }
+
+        // massVoxelExtractor->SetLighting(lighting);
+        // massVoxelExtractor->SetLightDirection(lightDirection);
+        // massVoxelExtractor->SetMatProperties(materialProperties);
+        // massVoxelExtractor->SetModelViewMatrix(modelViewMatrix);
+        // massVoxelExtractor->SetTransferFn(transferFn1D);
+        // massVoxelExtractor->SetViewDirection(view_direction);
+        // massVoxelExtractor->SetViewUp(view_up);
+        massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
         if (rayCastingSLIVR == true){

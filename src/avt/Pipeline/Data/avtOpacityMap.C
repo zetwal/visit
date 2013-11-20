@@ -94,6 +94,7 @@ avtOpacityMap::avtOpacityMap(int te)
 */
     min = 0.;
     max = 1.;
+
     SetIntermediateVars();
 }
 
@@ -319,6 +320,8 @@ avtOpacityMap::SetTable(unsigned char *arr, int te, double attenuation, float ov
 void
 avtOpacityMap::SetTableFloat(unsigned char *arr, int te, double attenuation, float over)
 {
+    minTFIndex = maxTFIndex = -1;
+
     if (attenuation < -1. || attenuation > 1.)
     {
         debug1 << "Bad attenuation value " << attenuation << std::endl;
@@ -342,7 +345,16 @@ avtOpacityMap::SetTableFloat(unsigned char *arr, int te, double attenuation, flo
         transferFn1D[i].G = (float)arr[i*4+1]/255.*alpha;
         transferFn1D[i].B = (float)arr[i*4+2]/255.*alpha;
         transferFn1D[i].A = alpha;
+
+        if (minTFIndex == -1)
+            if (alpha > 0)
+                minTFIndex = i;
+            
+        if (alpha > 0)
+            maxTFIndex = i; 
     }
+
+
 
     //
     // We need to set the intermediate vars again since the table size has
@@ -350,6 +362,28 @@ avtOpacityMap::SetTableFloat(unsigned char *arr, int te, double attenuation, flo
     //
     SetIntermediateVars();
 }
+
+
+
+// ****************************************************************************
+//  Method: avtOpacityMap::computeUsedScalarRange
+//
+//  Purpose:
+//      Compute the min and max used scalar values that the transfer function
+//      covers. This allows us to quickly discard some points or whole bricks.
+//
+//  Programmer: Pascal Grosset
+//  Creation:   Nove 20, 2013
+//
+// ****************************************************************************
+void 
+avtOpacityMap::computeUsedScalarRange(){
+    minUsedScalarValue = min + minTFIndex * (max-min)/tableEntries;
+    maxUsedScalarValue = min + maxTFIndex * (max-min)/tableEntries;
+
+    //std::cout << "Tf   indices: " << minTFIndex << ", " << maxTFIndex << "      ~     scalars: " << minUsedScalarValue << ", " <<  maxUsedScalarValue << std::endl;
+}
+
 
 // ****************************************************************************
 //  Method: avtOpacityMap::SetTable

@@ -408,6 +408,9 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
     }
     om.SetMin(range[0]);
     om.SetMax(range[1]);
+    om.computeUsedScalarRange();
+
+    debug5 << "Scalar range: " << range[0] << ", " << range[1] << endl;
     
    
 
@@ -632,13 +635,11 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
         return RenderImageRaycastingSLIVR(opaque_image,window);
     }
     
-
     //
     // We need to create a dummy pipeline with the volume renderer that we
     // can force to execute within our "Execute".  Start with the source.
     //
     avtSourceFromAVTDataset termsrc(GetTypedInput());
-
 
     //
     // Set up the volume renderer.
