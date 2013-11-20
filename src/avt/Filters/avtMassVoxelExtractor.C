@@ -1591,7 +1591,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
         int offsetLow[3], offsetHigh[3];
         offsetLow[0] = offsetLow[1] = offsetLow[2] = 1;
-        offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 1;
+        offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 2;
 
         if (rayCastingSLIVR){
             
@@ -1624,7 +1624,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
             if (!(ind[2] >= offsetLow[2] && ind[2] <= (dims[2]-1) - offsetHigh[2]))
                 valid_sample[i] = false;
-
            
         }
 
@@ -1690,7 +1689,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     
                                     float distFromRight, distFromLeft, distFromTop, distFromBottom, distFromFront, distFromBack;
                                     int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
-                                    float gradientOffset = 0.25;
+                                    float gradientOffset = 0.49;
 
                                     double gradVals[8];
                                     int indexGrad[8], gradInd[3], gradIndices[6];
