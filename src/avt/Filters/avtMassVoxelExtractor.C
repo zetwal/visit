@@ -570,17 +570,6 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     //std::cout << " avtMassVoxelExtractor::simpleExtractWorldSpaceGrid "  << std::endl;
     patchDrawn = 0;
 
-    double scRange[2];
-    rgrid->GetScalarRange(scRange);
-
-    double bounds[6];
-    rgrid->GetBounds(bounds);
-
-    int data[3];
-    rgrid->GetDimensions(data);
-    
-        
-
     //
     // Some of our sampling routines need a chance to pre-process the data.
     // Register the grid here so we can do that.
@@ -622,8 +611,12 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     coordinates[6][0] = X[dims[0]-1];   coordinates[6][1] = Y[dims[1]-1];   coordinates[6][2] = Z[dims[2]-1];
     coordinates[7][0] = X[0];           coordinates[7][1] = Y[dims[1]-1];   coordinates[7][2] = Z[dims[2]-1];
 
-    //std::cout << proc << " ~ " << patch << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << "   |  dims_from_ds: " << data[0] <<", " << data[1] << ", " << data[2] << "  |  dims: " << dims[0] << ",  " << dims[1] << ", " << dims[2] << std::endl;
-
+     double scRange[2], bounds[6];
+     int dDims[3];
+     rgrid->GetScalarRange(scRange);
+     rgrid->GetBounds(bounds);
+     rgrid->GetDimensions(dDims);
+     std::cout << proc << " ~ " << patch << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << "   |  dims_from_ds: " << dDims[0] <<", " << dDims[1] << ", " << dDims[2] << "  |  dims: " << dims[0] << ",  " << dims[1] << ", " << dims[2] << std::endl;
 
     double _world[4], _view[4];
     _world[3] = 1.0;
@@ -676,42 +669,23 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     xMax = xMax + offset;
     yMax = yMax + offset;
 
-    if (xMin < 0)
-        xMin = 0;
+    if (xMin < 0) xMin = 0;
+    if (yMin < 0) yMin = 0;
+    if (xMax < 0) xMax = 0;
+    if (yMax < 0) yMax = 0;
 
-    if (yMin < 0)
-        yMin = 0;
+    if (xMin >= w_max) xMin = w_max-1;
+    if (yMin >= h_max) yMin = h_max-1;
+    if (xMax >= w_max) xMax = w_max-1;
+    if (yMax >= h_max) yMax = h_max-1;
 
-    if (xMax < 0)
-        xMax = 0;
-
-    if (yMax < 0)
-        yMax = 0;
-
-
-    if (xMin >= w_max)
-        xMin = w_max-1;
-
-    if (yMin >= h_max)
-        yMin = h_max-1;
-
-    if (xMax >= w_max)
-        xMax = w_max-1;
-
-    if (yMax >= h_max)
-        yMax = h_max-1;
-
-    xMin = xMin - 1;    xMax = xMax + 1;
-    yMin = yMin - 1;    yMax = yMax + 1;
-
-    imgWidth = xMax - xMin +1;
-    imgHeight = yMax - yMin +1;
+    xMin = xMin - 1;    xMax = xMax + 1;    imgWidth = xMax - xMin +1;
+    yMin = yMin - 1;    yMax = yMax + 1;    imgHeight = yMax - yMin +1;
 
 
-    imgArray = new float[((imgWidth)*4) * imgHeight];
-
-    for (int i=0; i<imgHeight * imgWidth * 4; i++)
-            imgArray[i] = 0.0;
+    // imgArray = new float[((imgWidth)*4) * imgHeight];
+    // for (int i=0; i<imgHeight * imgWidth * 4; i++) imgArray[i] = 0.0;
+    imgArray = new float[((imgWidth)*4) * imgHeight]();
 
     imgDims[0] = imgWidth;       imgDims[1] = imgHeight;
     imgLowerLeft[0] = xMin;      imgLowerLeft[1] = yMin;
@@ -734,7 +708,6 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         imgArray = NULL;
     }
 }
-
 
 
 // ****************************************************************************

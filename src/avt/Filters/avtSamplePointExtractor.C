@@ -362,6 +362,7 @@ avtSamplePointExtractor::Execute(void)
         massVoxelExtractor->SetTransferFn(transferFn1D);
         massVoxelExtractor->SetViewDirection(view_direction);
         massVoxelExtractor->SetViewUp(view_up);
+        massVoxelExtractor->SetMeshDims(meshMin,meshMax);
     }
 
     avtDataTree_p tree = GetInputDataTree();
