@@ -1628,6 +1628,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                 //    std::cout << proc << " ~ " << patch << "  |   Values: " << values[0] << ", " << values[1] << ",  " << values[2] << ", " << values[3] << ", " << values[4] << ", " << values[5] ", " << values[6] << ", " << values[7] << "   _ _  "
                                 //    << "  |   dists: " << dist_from_left << ", " << dist_from_bottom << ", " << dist_from_front << "  |  scalar value: " << scalarValue << std::endl;
                                 //}
+
+                                
                                 //
                                 // Compute Lighting (if needed)
                                 //
