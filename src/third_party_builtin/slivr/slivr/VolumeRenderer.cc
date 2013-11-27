@@ -447,7 +447,10 @@ VolumeRenderer::draw_volume(bool interactive_mode_p, bool orthographic_p)
     {
       shader->create();
     }
+
+    std::cerr<< "VolumeRenderer::draw_volume"<< std::endl;
     shader->bind();
+    std::cout<< "VolumeRenderer::draw_volume end"<< std::endl;
   }
   CHECK_OPENGL_ERROR();
   if (use_shading)

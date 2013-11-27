@@ -109,6 +109,7 @@ ShaderProgramARB::init_shaders_supported(std::string& error)
     {
       supported_ = false;
     }
+    // supported_ = false;
 
 #ifndef __sgi
     // Supported used to mean just shader programs.  However the
@@ -321,13 +322,14 @@ ShaderProgramARB::bind ()
     // check to linking of the program
     GLint program_status[1];
     glGetProgramiv(id_, GL_LINK_STATUS, program_status);
-    if (program_status[0] == GL_FALSE) {
+    if (program_status[0] == GL_TRUE) {
       char program_log[1000];
       glGetInfoLogARB(id_, 1000, NULL, program_log);
       cerr << "Program Log: " << endl << program_log << endl;
     }
 
     glUseProgram(id_);
+    std::cout << "id: " << id_ << std::endl;
 
     /* get the variable and texture locations */
     const char *tex_strings[] = {"tex0", "tex1", "tex2", "tex3",

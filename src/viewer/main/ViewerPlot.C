@@ -5556,15 +5556,19 @@ ViewerPlot::GetWindowId() const
 avtMeshType
 ViewerPlot::GetMeshType() const
 {
+    std::cout << "ViewerPlot::GetMeshType()" << std::endl;
     const avtDatabaseMetaData *md = GetMetaData();
     if (!md)
         return AVT_UNKNOWN_MESH;
     
     const avtMeshMetaData *mmd = md->GetMesh(meshName);
+    std::cout << "ViewerPlot::GetMeshType() end" << std::endl;
     if (mmd)
         return mmd->meshType;
     else 
         return AVT_UNKNOWN_MESH;
+
+
 }
 
 // ****************************************************************************
