@@ -134,6 +134,7 @@ avtMTMDFileFormatInterface::~avtMTMDFileFormatInterface()
 vtkDataSet *
 avtMTMDFileFormatInterface::GetMesh(int ts, int dom, const char *mesh)
 {
+    std::cout << "avtMTMDFileFormatInterface::GetMesh" << std::endl;
     int tsGroup = GetTimestepGroupForTimestep(ts);
     int localTS = GetTimestepWithinGroup(ts);
     return chunks[tsGroup]->GetMesh(localTS, dom, mesh);

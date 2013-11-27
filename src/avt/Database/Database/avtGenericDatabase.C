@@ -152,6 +152,7 @@ bool avtGenericDatabase::issuedOriginalConnectivityWarning = false;
 
 avtGenericDatabase::avtGenericDatabase(avtFileFormatInterface *inter)
 {
+    std::cout << "avtGenericDatabase::avtGenericDatabase" << std::endl;
     Interface = inter;
     Interface->SetCache(&cache);
     xformManager = new avtTransformManager(&cache);
@@ -175,6 +176,7 @@ avtGenericDatabase::avtGenericDatabase(avtFileFormatInterface *inter)
 
 avtGenericDatabase::~avtGenericDatabase()
 {
+    std::cout << "avtGenericDatabase::~avtGenericDatabase" << std::endl;
     if (Interface != NULL)
     {
         delete Interface;
@@ -251,6 +253,7 @@ void
 avtGenericDatabase::SetDatabaseMetaData(avtDatabaseMetaData *md, int timeState,
     bool forceReadAllCyclesTimes)
 {
+    std::cout << "avtGenericDatabase::SetDatabaseMetaData" << std::endl;
     int t0 = visitTimer->StartTimer();
     Interface->SetDatabaseMetaData(md, timeState, forceReadAllCyclesTimes);
     visitTimer->StopTimer(t0, "Getting database meta data");
@@ -502,6 +505,7 @@ avtDataTree_p
 avtGenericDatabase::GetOutput(avtDataRequest_p spec,
                               avtSourceFromDatabase *src)
 {
+    std::cout << "avtGenericDatabase::GetOutput" << std::endl;
     avtDataValidity &validity = src->GetOutput()->GetInfo().GetValidity();
     bool canDoCollectiveCommunication = !validity.AreWeStreaming();
     Interface->DoingStreaming(validity.AreWeStreaming());
@@ -1201,6 +1205,8 @@ avtGenericDatabase::GetScalarVarDataset(const char *varname, int ts,
                                         int domain, const char *material,
                                          const avtDataRequest_p dataRequest)
 {
+
+    std::cout << "avtGenericDatabase::GetScalarVarDataset  " << PAR_Rank() << " ~ " << varname << " , " << ts << " , " << domain << std::endl;
     const avtScalarMetaData *smd = GetMetaData(ts)->GetScalar(varname);
     if (smd == NULL)
     {
@@ -2218,6 +2224,7 @@ avtGenericDatabase::GetScalarVariable(const char *varname, int ts, int domain,
                                       const char *material,
                                       const avtDataRequest_p dataRequest)
 {
+    std::cout << "avtGenericDatabase::GetScalarVariable" << std::endl;
     //
     // We have to be leery about doing any caching when the variables are
     // defined on sub-meshes.  This is because if we add new secondary
@@ -2945,6 +2952,8 @@ avtGenericDatabase::GetMesh(const char *meshname, int ts, int domain,
                             const char *material,
                             const avtDataRequest_p dataRequest)
 {
+
+    std::cout << "avtGenericDatabase::GetMesh" << std::endl;
     //
     // We have to be leery about doing any caching when the variables are
     // defined on sub-meshes.  This is because if we add new secondary
@@ -2993,10 +3002,13 @@ avtGenericDatabase::GetMesh(const char *meshname, int ts, int domain,
 
     if (mesh == NULL)
     {
+        std::cout << "(mesh == NULL)" << std::endl;
         //
         // We haven't read in this domain before, so fetch it from the files.
         //
         mesh = Interface->GetMesh(ts, domain, real_meshname);
+
+        std::cout << "(mesh == NULL)  endl" << std::endl;
         if (mesh == NULL)
         {
             debug4 << "Mesh returned by file format is NULL for domain "
@@ -3155,6 +3167,7 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
                                      VoidRefList &rv, const char *type, 
                                      void *args)
 {
+    std::cout << "avtGenericDatabase::GetAuxiliaryData" << std::endl;
     //
     // Don't do extents queries if we've been told to ignore 'em.
     //
@@ -3202,6 +3215,7 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
     rv.nList = domains.size();
     rv.list = new void_ref_ptr[rv.nList];
 
+    std::cout << "domains.size(): " << domains.size() << std::endl;
     for (int i = 0 ; i < domains.size() ; i++)
     {
         //
@@ -3214,17 +3228,20 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
             vr = cache.GetVoidRef(var, type, ts, domains[i]);
         if (*vr == NULL)
         {
+            std::cout << " ----- 0 ------"  << std::endl;
             vr = cache.GetVoidRef(var, type, -1, domains[i]);
         }
 
         if (*vr == NULL)
         {
+            std::cout << " ----- 1 ------"  << std::endl;
             if ((strcmp(type, AUXILIARY_DATA_DOMAIN_NESTING_INFORMATION) == 0) ||
                 (strcmp(type, AUXILIARY_DATA_DOMAIN_BOUNDARY_INFORMATION) == 0))
                 vr = cache.GetVoidRef("any_mesh", type, ts, domains[i]);
         }
         if (*vr == NULL)
         {
+            std::cout << " ----- 2 ------"  << std::endl;
             if ((strcmp(type, AUXILIARY_DATA_DOMAIN_NESTING_INFORMATION) == 0) ||
                 (strcmp(type, AUXILIARY_DATA_DOMAIN_BOUNDARY_INFORMATION) == 0))
                 vr = cache.GetVoidRef("any_mesh", type, -1, domains[i]);
@@ -3232,6 +3249,7 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
 
         if (*vr != NULL)
         {
+            std::cout << " ----- 3 ------"  << std::endl;
             //
             // We have it, so share a reference and you're done.
             //
@@ -3239,6 +3257,7 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
         }
         else
         {
+            std::cout << " ----- 4 ------"  << std::endl;
             //
             // We did not have it, so calculate it and then store it.
             //
@@ -5017,6 +5036,7 @@ avtGenericDatabase::ReadDataset(avtDatasetCollection &ds, intVector &domains,
                       avtDataRequest_p &spec, avtSourceFromDatabase *src,
                       boolVector &selectionsApplied)
 {
+    std::cout << "avtGenericDatabase::ReadDataset" << std::endl;
     int timerHandle = visitTimer->StartTimer();
     int ts = spec->GetTimestep();
 
@@ -7481,6 +7501,7 @@ avtGenericDatabase::ApplyGhostForDomainNesting(avtDatasetCollection &ds,
    intVector &doms, intVector &allDoms, avtDataRequest_p &spec, 
    bool canDoCollectiveCommunication)
 {
+    std::cout << "avtGenericDatabase::ApplyGhostForDomainNesting" << std::endl;
     bool rv = false;
 
     int ts = spec->GetTimestep();
@@ -7497,6 +7518,23 @@ avtGenericDatabase::ApplyGhostForDomainNesting(avtDatasetCollection &ds,
 
     avtDomainNesting *dn = (avtDomainNesting*)*vr;
     vector<vtkDataSet *> list;
+
+
+    vector<int> my_exts;
+    vector<int> childDomains;
+    vector<int> childExts;
+    avtStructuredDomainNesting *ddn = (avtStructuredDomainNesting*)*vr;
+
+
+    std::cout << PAR_Rank() << " ~ doms.size(): " << doms.size() << std::endl;
+    for (int k=0; k<doms.size(); k++){
+        std::cout << "k: " << doms[k] << std::endl;
+        ddn->GetNestingForDomain(doms[k], my_exts, childDomains, childExts);
+        for (int i = 0 ; i < childDomains.size() ; i++){
+            std::cout << PAR_Rank() <<  "  ~!~!~  Parent: " << doms[k] << "   child: " << childDomains[i] << std::endl;
+        }
+    }
+
 
     int shouldStop = 0;
     if (*vr != NULL)
@@ -7827,6 +7865,7 @@ avtGenericDatabase::CreateSimplifiedNestingRepresentation(
                               avtSourceFromDatabase *src,
                               avtDataRequest_p &spec)
 {
+    std::cout << "avtGenericDatabase::CreateSimplifiedNestingRepresentation" << std::endl;
     int ts = spec->GetTimestep();
     avtDatabaseMetaData *md = GetMetaData(ts);
     string meshname = md->MeshForVar(spec->GetVariable());
@@ -7974,8 +8013,10 @@ avtGenericDatabase::CreateSimplifiedNestingRepresentation(
     // which are off.
     //
     vector<bool> usesDomain(childDomains.size());
-    for (i = 0 ; i < childDomains.size() ; i++)
+    for (i = 0 ; i < childDomains.size() ; i++){
         usesDomain[i] = true;
+        std::cout <<  "  ~  Parent    child: " << childDomains[i] << std::endl;
+    }
    
     if (allDomains.size() > 0) // if it is 0, then all domains are on
     {
@@ -8614,6 +8655,7 @@ void
 avtGenericDatabase::CreateStructuredIndices(avtDatasetCollection &dsc, 
                                             avtSourceFromDatabase *src)
 {
+    std::cout << "avtGenericDatabase::CreateStructuredIndices" << std::endl;
     char  progressString[1024] = "Creating Structured Indices";
     src->DatabaseProgress(0, 0, progressString);
     for (int i = 0 ; i < dsc.GetNDomains() ; i++)
@@ -11352,6 +11394,8 @@ avtGenericDatabase::CreateAMRIndices(avtDatasetCollection &dsc,
                                      avtDataRequest_p &spec, 
                                      avtSourceFromDatabase *src, int level)
 {
+
+    std::cout << "avtGenericDatabase::CreateAMRIndices" << std::endl;
     char  progressString[1024] = "Creating AMR Indices";
     src->DatabaseProgress(0, 0, progressString);
 

@@ -64,6 +64,8 @@
 #include <avtParallel.h>
 #endif
 
+#include <avtDatabaseMetaData.h>
+
 using     std::string;
 using     std::vector;
 using     std::deque;
@@ -630,8 +632,7 @@ LoadBalancer::Reduce(avtContract_p input)
             avtDataObjectSource::RegisterProgressCallback(NULL,NULL);
             avtSILRestriction_p orig_silr   = data->GetRestriction();
             avtSILRestriction_p silr        = new avtSILRestriction(orig_silr);
-            avtDataRequest_p new_data =
-                                          new avtDataRequest(data, silr);
+            avtDataRequest_p new_data = new avtDataRequest(data, silr);
             avtSILRestrictionTraverser trav(silr);
 
             vector<int> list;
@@ -741,6 +742,26 @@ LoadBalancer::Reduce(avtContract_p input)
         // load balancing, we override the scheme here
         //
         LoadBalanceScheme theScheme = DetermineAppropriateScheme(input);
+        std::cout << "theScheme: " << theScheme << std::endl;
+
+
+    //     int ts = new_data->GetTimestep();
+    //     avtDatabaseMetaData *md = GetMetaData(ts);
+    //     string meshname = md->MeshForVar(new_data->GetVariable());
+    //     std::cout << "meshname: " << meshname << std::endl;
+
+
+             int index = input->GetPipelineIndex();
+     const LBInfo &lbinfo = pipelineInfo[index];
+     std::string dbname = lbinfo.db;
+     avtDatabase *db = dbMap[dbname];
+
+    avtDataRequest_p data = input->GetDataRequest();
+    avtDatabaseMetaData *md = db->GetMetaData(db->GetMostRecentTimestep());
+    string meshname = md->MeshForVar(new_data->GetVariable());
+    std::cout << "meshname: " << meshname << std::endl;
+
+
 
         if (theScheme == LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER)
         {
@@ -826,6 +847,10 @@ LoadBalancer::Reduce(avtContract_p input)
         {
             // Every processor gets the complete list
             mylist = list;
+        }
+
+        for (int z=0; z<mylist.size(); z++){
+            std::cout << PAR_Rank() << " ~ " << mylist[z] << std::endl;
         }
 
         silr->RestrictDomainsForLoadBalance(mylist);

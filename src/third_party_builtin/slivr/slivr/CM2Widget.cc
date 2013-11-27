@@ -339,7 +339,9 @@ RectangleCM2Widget::rasterize(CM2ShaderFactory& factory)
   double width = width_*scalex;
   double height = height_*scaley;
     
+    std::cout<< "RectangleCM2Widget::rasterize"<< std::endl;
   shader->bind();
+  std::cout<< "RectangleCM2Widget::rasterize end"<< std::endl;
   shader->setLocalParam(0, color_.r(), color_.g(), color_.b(), alpha_);
   shader->setLocalParam(1, left_x, left_y, width, height);
 

@@ -491,9 +491,9 @@ avtRayTracer::Execute(void)
         }
         
         extractor.SetMeshDims(meshMin,meshMax);
-        std::cout << PAR_Rank() << " ~ Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
-                                "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
-                                "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
+        // std::cout << PAR_Rank() << " ~ Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
+        //                         "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
+        //                         "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
     }
 
     avtDataObject_p samples = extractor.GetOutput();
@@ -1244,7 +1244,7 @@ avtRayTracer::Execute(void)
             unsigned char *imgTest = NULL;
 
             // creates input for the
-            vtkImageData *img = avtImageRepresentation::NewImage(screen[0], screen[1]);
+            vtkImageData *img = avtImageRepresentation ::NewImage(screen[0], screen[1]);
             whole_image->GetImage() = img;
 
 
@@ -1308,6 +1308,16 @@ avtRayTracer::Execute(void)
     //
     avtRayCompositer rc(rayfoo);
     rc.SetBackgroundColor(background);
+    
+    if (PAR_Rank() == 0)
+        rc.setColor(255,0,0);
+    if (PAR_Rank() == 1)
+        rc.setColor(0,255,0);
+    if (PAR_Rank() == 2)
+        rc.setColor(0,0,255);
+    if (PAR_Rank() == 3)
+        rc.setColor(255,255,0);
+
     rc.SetBackgroundMode(backgroundMode);
     rc.SetGradientBackgroundColors(gradBG1, gradBG2);
     if (*opaqueImage != NULL)
@@ -1358,6 +1368,7 @@ avtRayTracer::Execute(void)
     CopyTo(dob, image);
     imageCommunicator.SetInput(dob);
     image = imageCommunicator.GetTypedOutput();
+
 #endif
 
     //

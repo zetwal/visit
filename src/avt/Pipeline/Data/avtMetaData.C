@@ -546,6 +546,7 @@ avtMetaData::GetMixedVar(const char *varname,
 avtDomainNesting *
 avtMetaData::GetDomainNesting(void)
 {
+    std::cout << "avtMetaData::GetDomainNesting &&&&&& " << std::endl;
     VoidRefList list;
     avtContract_p spec = GetContract();
     source->GetMeshAuxiliaryData(AUXILIARY_DATA_DOMAIN_NESTING_INFORMATION,

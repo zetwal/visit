@@ -866,7 +866,9 @@ TextureRenderer::colormap2_hardware_rasterize()
 
     // Draw the widget texture with the alpha computing shader.
     FragmentProgramARB* shader = cmap2_shader_glsl_;
+    std::cout << "cmap2_shader_glsl_" << std::endl;
     shader->bind();
+    std::cout << "cmap2_shader_glsl_ end" << std::endl;
     double bp = mode_ == MODE_MIP ? 1.0 : 
       tan(1.570796327 * (0.5 - slice_alpha_*0.49999));
     shader->setLocalParam(0, bp, imode_ ? 1.0/irate_ : 1.0/sampling_rate_, 
@@ -995,6 +997,7 @@ TextureRenderer::bind_colormap1(vector<float> &cmap_array,
                GL_RGBA,
                GL_FLOAT,
                &cmap_array[0]);
+  std::cout << " if (defined( GL_TEXTURE_COLOR_TABLE_SGI ) && defined(__sgi)" << std::endl;
 #elif defined(GL_ARB_fragment_program) || defined(GL_ATI_fragment_shader)
   if (ShaderProgramARB::shaders_supported() && glActiveTexture)
   {
@@ -1007,12 +1010,14 @@ TextureRenderer::bind_colormap1(vector<float> &cmap_array,
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glEnable(GL_TEXTURE_3D);
     glActiveTexture(GL_TEXTURE0_ARB);
+    std::cout << " if (ShaderProgramARB::shaders_supported() && glActiveTexture)" << std::endl;
   }
   else
 #endif
 #ifndef __sgi
 #  if defined(GL_EXT_shared_texture_palette) && !defined(__APPLE__)
   {
+
     glEnable(GL_SHARED_TEXTURE_PALETTE_EXT);
     glColorTable(GL_SHARED_TEXTURE_PALETTE_EXT,
                  GL_RGBA,
@@ -1020,6 +1025,10 @@ TextureRenderer::bind_colormap1(vector<float> &cmap_array,
                  GL_RGBA,
                  GL_FLOAT,
                  &cmap_array[0]);
+
+    
+    
+    std::cout << "defined(GL_EXT_shared_texture_palette) && !defined(__APPLE__)" << std::endl;
   }
 #  else
   {
