@@ -477,6 +477,12 @@ LoadBalancer::DetermineAppropriateScheme(avtContract_p input)
 
     const avtMeshMetaData *mmd = md->GetMesh(meshName);
 
+    // for (int p=0; p<mmd->numBlocks; p++){
+    //     std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
+    //     for (int j=0; j<mmd->patch_parent[p].size(); j++)
+    //         std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
+    // }
+
     if (mmd && mmd->loadBalanceScheme != LOAD_BALANCE_UNKNOWN)
     {
         debug1 << "Default load balance scheme \""
@@ -751,17 +757,24 @@ LoadBalancer::Reduce(avtContract_p input)
     //     std::cout << "meshname: " << meshname << std::endl;
 
 
-             int index = input->GetPipelineIndex();
-     const LBInfo &lbinfo = pipelineInfo[index];
-     std::string dbname = lbinfo.db;
-     avtDatabase *db = dbMap[dbname];
+    int index = input->GetPipelineIndex();
+    const LBInfo &lbinfo = pipelineInfo[index];
+    std::string dbname = lbinfo.db;
+    avtDatabase *db = dbMap[dbname];
 
     avtDataRequest_p data = input->GetDataRequest();
     avtDatabaseMetaData *md = db->GetMetaData(db->GetMostRecentTimestep());
     string meshname = md->MeshForVar(new_data->GetVariable());
-    std::cout << "meshname: " << meshname << std::endl;
+    std::cout << "!!!! !!!! meshname: " << meshname << std::endl;
 
 
+    const avtMeshMetaData *mmd = md->GetMesh(meshname);
+
+    for (int p=0; p<mmd->numBlocks; p++){
+        std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
+        for (int j=0; j<mmd->patch_parent[p].size(); j++)
+            std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
+    }
 
         if (theScheme == LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER)
         {
@@ -820,7 +833,7 @@ LoadBalancer::Reduce(avtContract_p input)
                 }
             }
         }
-        else if (theScheme == LOAD_BALANCE_RANDOM_ASSIGNMENT)
+        else if (theScheme ==  LOAD_BALANCE_RANDOM_ASSIGNMENT)
         {
             // all procs randomly jumble the list of domain ids
             // all procs compute same jumbled list due to same seed

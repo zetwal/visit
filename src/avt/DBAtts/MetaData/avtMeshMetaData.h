@@ -210,6 +210,10 @@ public:
     int                  LODs;
     int                  presentGhostZoneTypes;
 
+    // AMR stuff
+    std::vector<int>     levels;
+    std::vector< std::vector<int> > patch_parent;
+
 private:
     // Static class format string for type map.
     static const char *TypeMapFormatString;
