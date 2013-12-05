@@ -267,6 +267,7 @@ void
 avtMTMDFileFormat::SetDatabaseMetaData(avtDatabaseMetaData *md, int ts)
 {
     metadata = md;
+    std::cout << "   ... avtMTMDFileFormat::SetDatabaseMetaData ... " << std::endl;
     PopulateDatabaseMetaData(metadata, ts);
     if ((!metadata->GetIsSimulation()) && metadata->Empty())
     {

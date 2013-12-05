@@ -406,11 +406,19 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
     double actualRange[2];
     bool artificialMin = atts.GetUseColorVarMin();
     bool artificialMax = atts.GetUseColorVarMax();
+   // std::cout << 
     if (!artificialMin || !artificialMax)
     {
         GetDataExtents(actualRange, primaryVariable);
+        std::cout <<  " Before unifying:  Min_actual_range: " << actualRange[0]  << "   Max_actual_range: " << actualRange[1] <<  std::endl;
         UnifyMinMax(actualRange, 2);
     }
+
+    VarList vl;
+    avtDataset_p input = GetTypedInput();
+    avtDatasetExaminer::GetVariableList(input, vl);
+    double ranges[2];
+    avtDatasetExaminer::GetDataExtents(input, ranges);
 
     double range[2];
     range[0] = (artificialMin ? atts.GetColorVarMin() : actualRange[0]);
@@ -443,13 +451,14 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
     om.SetMin(range[0]);
     om.SetMax(range[1]);
     
+    std::cout << artificialMin << " : " << artificialMax << "  |  Min_assigned_range: " << atts.GetColorVarMin()  << "   max_assigned_range: " << atts.GetColorVarMax() << "   |    Min_actual_range: " << actualRange[0]  << "   Max_actual_range: " << actualRange[1] << "   |   ranges: " << ranges[0] << ", " << ranges[1] << "   |   range: " << range[0] << ", " << range[1] <<std::endl;
    
 
     //
     // Determine which variables to use and tell the ray function.
     //
-    VarList vl;
-    avtDataset_p input = GetTypedInput();
+    //VarList vl;
+    //avtDataset_p input = GetTypedInput();
     avtDatasetExaminer::GetVariableList(input, vl);
 
     int primIndex = -1;
@@ -770,7 +779,7 @@ avtVolumeFilter::RenderImage(avtImage_p opaque_image,
     }
     om.SetMin(range[0]);
     om.SetMax(range[1]);
-    
+    std::cout << "   |    Min_actual_range: " << actualRange[0]  << "   Max_actual_range: " << actualRange[1] << "   |   ranges: " << range[0] << ", " << range[1] << std::endl;
     if (atts.GetRendererType() == VolumeAttributes::RayCastingIntegration)
     {
         if (!artificialMin)

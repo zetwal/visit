@@ -805,8 +805,10 @@ avtFilter::TryDataExtents(double *outexts, const char *varname)
 void
 avtFilter::GetDataExtents(double *outexts, const char *varname)
 {
+    std::cout << "avtFilter::GetDataExtents " << varname << std::endl;
     if (TryDataExtents(outexts, varname))
     {
+        std::cout << "if (TryDataExtents(outexts, varname)) " <<  std::endl;
          //
          // We had them lying around -- no parallel communication necessary.
          // 
@@ -818,27 +820,34 @@ avtFilter::GetDataExtents(double *outexts, const char *varname)
     bool checkExtents = false;
     if (varname != NULL)
     {
+        std::cout << "if (varname != NULL) " <<  std::endl;
         if (atts.ValidVariable(varname))
             checkExtents = true;
     }
     else
     {
+        std::cout << "else (varname != NULL) " <<  std::endl;
         if (atts.ValidActiveVariable())
             checkExtents = true;
     }
     if (checkExtents)
     {
+        std::cout << "if (checkExtents) " <<  std::endl;
         avtExtents *exts = atts.GetThisProcsOriginalDataExtents(varname);
         if (exts->HasExtents())
         {
+            
             atts.GetThisProcsOriginalDataExtents(varname)->CopyTo(outexts);
             hadThemAlready = true;
+            std::cout << "if (exts->HasExtents())  " << outexts[0] << " , " << outexts[1] << std::endl;
         }
     }
 
     if (!hadThemAlready)
     {
+        //std::cout << "if (!hadThemAlready)" << outexts[0] << " , " << outexts[1] << std::endl;
         SearchDataForDataExtents(outexts, varname);
+        std::cout << "if (!hadThemAlready)" << outexts[0] << " , " << outexts[1] << std::endl;
     }
 
     UnifyMinMax(outexts, 2, 2);
@@ -856,8 +865,10 @@ avtFilter::GetDataExtents(double *outexts, const char *varname)
     {
     }
     ENDTRY
-    if (e != NULL)
+    if (e != NULL){
         e->Set(outexts);
+        std::cout << "e != NULL" << outexts[0] << " , " << outexts[1] << std::endl;
+    }
 }
 
 

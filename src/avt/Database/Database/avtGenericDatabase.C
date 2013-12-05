@@ -1068,6 +1068,7 @@ avtGenericDatabase::GetDataset(const char *varname, int ts, int domain,
                         const char *matname, const vector<CharStrRef> &vars2nd, 
                         avtDataRequest_p spec,avtSourceFromDatabase *src)
 {
+    std::cout << "avtGenericDatabase::GetDataset" << std::endl;
     vtkDataSet *rv = NULL;
     avtVarType type = GetMetaData(ts)->DetermineVarType(varname);
 
@@ -1202,6 +1203,7 @@ avtGenericDatabase::GetScalarVarDataset(const char *varname, int ts,
                                         int domain, const char *material,
                                          const avtDataRequest_p dataRequest)
 {
+    std::cout << "avtGenericDatabase::GetScalarVarDataset" << std::endl;
     const avtScalarMetaData *smd = GetMetaData(ts)->GetScalar(varname);
     if (smd == NULL)
     {
@@ -2994,11 +2996,13 @@ avtGenericDatabase::GetMesh(const char *meshname, int ts, int domain,
         }
     }
 
+    std::cout << "mesh == NUL Interface->GetMesh(ts, domain, real_meshname):  ts: " << ts << std::endl;
     if (mesh == NULL)
     {
         //
         // We haven't read in this domain before, so fetch it from the files.
         //
+        std::cout << "Interface->GetMesh(ts, domain, real_meshname):  ts: " << ts << std::endl;
         mesh = Interface->GetMesh(ts, domain, real_meshname);
         if (mesh == NULL)
         {
@@ -5012,6 +5016,7 @@ avtGenericDatabase::ReadDataset(avtDatasetCollection &ds, intVector &domains,
                       avtDataRequest_p &spec, avtSourceFromDatabase *src,
                       boolVector &selectionsApplied)
 {
+    std::cout << "avtGenericDatabase::ReadDataset" << std::endl;
     int timerHandle = visitTimer->StartTimer();
     int ts = spec->GetTimestep();
 

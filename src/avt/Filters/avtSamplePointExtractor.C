@@ -1067,6 +1067,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         massVoxelExtractor->SetTransferFn(transferFn1D);
         massVoxelExtractor->SetViewDirection(view_direction);
         massVoxelExtractor->SetViewUp(view_up);
+        massVoxelExtractor->SetMeshDims(meshMin,meshMax);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
                                     varnames, varsizes);
  
@@ -1079,7 +1080,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             //std::cout << "   massVoxelExtractor->getImageDimension   " << std::endl;
             if (tmpImageMetaPatch.inUse == 1){
                 //std::cout << "   tmpImageMetaPatch.inUse == 1   " << std::endl;
-                //std::cout << "proc: " << tmpImageMetaPatch.procId << "   patch: " << tmpImageMetaPatch.patchNumber << "   area: " << tmpImageMetaPatch.dims[0] << " x " << tmpImageMetaPatch.dims[1] << std::endl;
+                std::cout << "proc: " << tmpImageMetaPatch.procId << "   patch: " << tmpImageMetaPatch.patchNumber << "   area: " << tmpImageMetaPatch.dims[0] << " x " << tmpImageMetaPatch.dims[1] << std::endl;
                 tmpImageMetaPatch.destProcId = tmpImageMetaPatch.procId;
                 imageMetaPatchVector.push_back(tmpImageMetaPatch);
                 
@@ -1091,6 +1092,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 imageDataVector[patchCount].imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
                 massVoxelExtractor->getComputedImage(imageDataVector[patchCount].imagePatch);
 */
+
                 imgData tmpImageDataHash;
                 tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;
                 tmpImageDataHash.imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];

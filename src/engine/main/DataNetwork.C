@@ -237,7 +237,7 @@ avtDataObjectWriter_p
 DataNetwork::GetWriter(avtDataObject_p dob, avtContract_p contract,
                           WindowAttributes *atts)
 {
-
+    std::cout << "DataNetwork::GetWriter" <<std::endl;
    if (*writer != NULL)
    {
       return writer;

@@ -89,7 +89,7 @@
 // ****************************************************************************
 
 QvisTimeSliderControlWidget::QvisTimeSliderControlWidget(QWidget *parent) :
-   QGroupBox(tr("Time"),parent), SimpleObserver(), GUIBase(),
+   QGroupBox(tr("Time:"),parent), SimpleObserver(), GUIBase(),
    timeStateFormat()
 {
     // Create the top layout that will contain the widgets.

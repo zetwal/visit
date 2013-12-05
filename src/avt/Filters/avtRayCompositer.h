@@ -94,8 +94,10 @@ class AVTFILTERS_API avtRayCompositer : public avtSamplePointsToImageFilter
                                                       const double [3]);
     void                  InsertOpaqueImage(avtImage_p);
     void                  UpdateCompositeProgress(int, int);
+    void                  setColor(int r, int g, int b){_r=r; _g=g; _b=b;};
 
   protected:
+    int                   _r, _g, _b;
     avtRayFunction       *rayfoo;
     int                   backgroundMode;
     unsigned char         background[3];

@@ -731,6 +731,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
     if (rayCastingSLIVR == true){
         //std::cout << proc << " - " << patch << "  imgWidth: " << imgWidth << "  x  " << "imgHeight: " << imgHeight << std::endl;
+        std::cout << proc << " ~  dims: " << dims[0] << " x " << dims[1] << " x " << dims[2] <<   "  |  limits: " << X[0] << " ,  " << Y[0] << " ,  " << Z[0] << " ~ " << X[dims[0]-1] << " ,  " << Y[dims[1]-1] << " ,  " << Z[dims[2]-1] << "   |   " << meshMin[0] << " ,  " << meshMin[1] << " ,  " << meshMin[2] <<  "   to   " << meshMax[0] << " ,  " << meshMax[1] << " ,  " << meshMax[2] << std::endl;
 
         imgArray = new float[((imgWidth)*4) * imgHeight];
 
@@ -1627,7 +1628,7 @@ void
 avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 {
 
-   // std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable:  "<< std::endl;
+   // std::cout << proc << " - " << patch << "  =  " <<  w << " , " << h << "  avtMassVoxelExtractor::SampleVariable:  "<< std::endl;
     bool inrun = false;
     int  count = 0;
 
@@ -1654,7 +1655,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
         if (ghosts != NULL)
         {
-             
             if (ghosts[index] != 0)
                valid_sample[i] = false;
 
@@ -1695,7 +1695,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         indices[0] = index_left;        indices[1] = index_right;
 
         int lowerLimit, upperLimit;
-       // std::cout << "dims: " << dims[0] << " ,  " << dims[1] << " ,  " << dims[2] << std::endl;
+        //std::cout << "dims: " << dims[0] << " ,  " << dims[1] << " ,  " << dims[2] << "   |   " << meshMin[0] << " ,  " << meshMin[1] << " ,  " << meshMin[2] <<  " - " <<meshMax[0] << " ,  " << meshMax[1] << " ,  " << meshMax[2]<< std::endl;
         if (trilinearInterpolation){
             if (indices[0] < 0 || indices[0]>dims[0]-2)
                 valid_sample[i] = false;
@@ -1720,29 +1720,45 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 valid_sample[i] = false;
         }
 
+        //std::cout << "dims: " << dims[0] << " x " << dims[1] << " x " << dims[2] <<   "  
+        //|  limits: " << X[0] << " ,  " << Y[0] << " ,  " << Z[0] << " ~ " << X[dims[0]-1] << " ,  " << Y[dims[1]-1] << " ,  " << Z[dims[2]-1] << "  
+        // |   " << meshMin[0] << " ,  " << meshMin[1] << " ,  " << meshMin[2] <<  "   to   " << meshMax[0] << " ,  " << meshMax[1] << " ,  " << meshMax[2] << std::endl;
+
+        int offsetLowX, offsetLowY, offsetLowZ, offsetHighX, offsetHighY, offsetHighZ;
+        offsetLowX = offsetLowY = offsetLowZ = 1;
+        offsetHighX = offsetHighY = offsetHighZ = 2;
+        //if (X[0] == meshMin[0])c
+        //    offsetLowX = 1;
+
+        //if (X[dims[0]-1] == meshMax[0])
+        //    offsetHighX = 1;
 
         if (rayCastingSLIVR){
         
-            if (indices[0] < 2 || indices[0]>dims[0]-3)
+            // left
+            if (indices[0] < offsetLowX || indices[0]>dims[0]-offsetHighX)
                 valid_sample[i] = false;
 
-            if (indices[1] < 2 || indices[1]>dims[0]-3)
+            // right
+            if (indices[1] < offsetLowX || indices[1]>dims[0]-offsetHighX)
                 valid_sample[i] = false;
 
 
-
-            if (indices[2] < 2 || indices[2]>dims[1]-3)
+            // bottom
+            if (indices[2] < offsetLowY || indices[2]>dims[1]-offsetHighY)
                 valid_sample[i] = false;
 
-            if (indices[3] < 2 || indices[3]>dims[1]-3)
+            // top
+            if (indices[3] < offsetLowY || indices[3]>dims[1]-offsetHighY)
                 valid_sample[i] = false;
 
-        
-
-            if (indices[4] < 2 || indices[4]>dims[2]-3)
+            
+            // front
+            if (indices[4] < offsetLowZ || indices[4]>dims[2]-offsetHighZ)
                 valid_sample[i] = false;
 
-            if (indices[5] < 2 || indices[5]>dims[2]-3)
+            // back
+            if (indices[5] < offsetLowZ || indices[5]>dims[2]-offsetHighZ)
                 valid_sample[i] = false;
         
 
@@ -1777,6 +1793,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
             continue;
         }
 
+       // std::cout << proc << " - " << patch << "  =  " <<  w << " , " << h << "  avtMassVoxelExtractor::SampleVariable: valid!!!  "<< std::endl;
       //  std::cout << w << " , " << h << "  avtMassVoxelExtractor::SampleVariable: valid!!!  "<< std::endl;
         
         if (trilinearInterpolation || rayCastingSLIVR){
@@ -1798,7 +1815,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         if (rayCastingSLIVR){
                             double source_rgb[4];
                             int retVal = transferFn1D->QueryTF(scalarValue,source_rgb);
-
+                            //std::cout << proc << " - " << patch << "  =  " <<  w << " , " << h <<  "   scalarValue:  " << scalarValue << " ~ " << retVal << " col: " << source_rgb[0] << ", " << source_rgb[1] << ", " << source_rgb[2] << ", " << source_rgb[3] << "  avtMassVoxelExtractor::SampleVariable: valid!!!  "<< std::endl;
                             if ( ((retVal == 0)||(source_rgb[3]==0)) || (source_rgb[0]==0 && source_rgb[1]==0 && source_rgb[2]==0) ){
                                 // no need to do anything more if there will be no color
                             }
@@ -1815,7 +1832,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     
                                     float distFromRight, distFromLeft, distFromTop, distFromBottom, distFromFront, distFromBack;
                                     int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
-                                    float gradientOffset = 0.5;
+                                    float gradientOffset = 0.2;
 
                                     double gradVals[8];
                                     int indexGrad[8], gradInd[3], gradIndices[6];

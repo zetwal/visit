@@ -120,6 +120,7 @@ VolumeGetRange_Impl(vtkDataArray *s, float &min, float &max)
 void
 VolumeGetRange(vtkDataArray *s, float &min, float &max)
 {
+    //std::cout << "       VolumeGetRange      " << std::endl;
     StackTimer t("VolumeGetRange");
 
     min = +FLT_MAX;
@@ -409,6 +410,7 @@ bool
 VolumeGetScalars(const VolumeAttributes &atts, vtkDataSet *ds,
     vtkDataArray *&data, vtkDataArray *&opac)
 {
+  //  std::cout << "      VolumeGetScalars        " << std::endl;
     StackTimer t("VolumeGetScalars");
     const char *ov = atts.GetOpacityVariable().c_str();
 
@@ -557,6 +559,7 @@ void
 VolumeGetOpacityExtents(const VolumeAttributes &atts, vtkDataArray *opac,
     float &omin, float &omax, float &osize)
 {
+    std::cout << "      VolumeGetOpacityExtents      " << std::endl;
     StackTimer t("VolumeGetOpacityExtents");
 
     VolumeGetRange(opac, omin, omax);
@@ -1212,6 +1215,7 @@ VolumeHistograms(const VolumeAttributes &atts,
     vtkDataArray *data, vtkDataArray *gm, 
     float *hist, float *hist2, int hist_size)
 {  
+    std::cout << "void VolumeHistograms" << std::endl;
     const char *mName = "VolumeHistogram2D: ";
     StackTimer t("VolumeHistogram2D");
 
@@ -1224,6 +1228,7 @@ VolumeHistograms(const VolumeAttributes &atts,
         var_max = atts.GetColorVarMax();
     float var_diff = var_max - var_min;
     debug5 << mName << "Var range: " << var_min << ", " << var_max << ", diff=" << var_diff << endl;
+    std::cout << "###### Var range: " << var_min << ", " << var_max << ", diff=" << var_diff << endl;
 
     // Get the range for the gradient magnitude
     float grad_min, grad_max;

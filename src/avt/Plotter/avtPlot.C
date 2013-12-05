@@ -557,9 +557,11 @@ avtPlot::Execute(avtDataObject_p input, avtContract_p contract,
 
     // if we're being called by the CombinedExecute method, don't actually
     // do any work with the writer.
+    std::cout << "if (!combinedExecute)" << std::endl;
     if (!combinedExecute)
     {
        writer->Execute(contract);
+       std::cout << "(!combinedExecute)" << std::endl;
     }
 
     //

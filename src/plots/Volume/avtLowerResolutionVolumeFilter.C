@@ -139,6 +139,7 @@ avtLowerResolutionVolumeFilter::SetAtts(const AttributeGroup *a)
 void
 avtLowerResolutionVolumeFilter::CalculateHistograms(vtkDataSet *ds)
 {
+    std::cout << "avtLowerResolutionVolumeFilter::CalculateHistogram" << std::endl;
     const char *mName = "avtLowerResolutionVolumeFilter::CalculateHistograms: ";
     vtkDataArray *data = 0, *opac = 0;
     if(VolumeGetScalars(atts, ds, data, opac))
@@ -161,6 +162,7 @@ avtLowerResolutionVolumeFilter::CalculateHistograms(vtkDataSet *ds)
         gm->SetName("gm");
         if(ds->GetDataObjectType() == VTK_RECTILINEAR_GRID)
         {
+            std::cout << " VTK_RECTILINEAR_GRID " << std::endl;
             VolumeCalculateGradient(atts, (vtkRectilinearGrid *)ds, opac, 
                                 0, // gx
                                 0, // gy
@@ -171,6 +173,7 @@ avtLowerResolutionVolumeFilter::CalculateHistograms(vtkDataSet *ds)
         }
         else
         {
+            std::cout << " NOT VTK_RECTILINEAR_GRID " << std::endl;
             // Since SPH gradient is slow, only calculate it when we have a
             // 2D transfer function since that's the only time we need it for
             // histogram calculation.

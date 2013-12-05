@@ -502,8 +502,11 @@ avtExtents::Read(char *buffer)
 
     if (hasExtents != 0)
         extents = tmpExtents; 
-    else
+    else{
         delete [] tmpExtents;
+    }
+
+    //std::cout  << " ~  @@@@@@@@@@@@@@@@ avtExtents::Read   extents: " << tmpExtents[0] << " ,  " << tmpExtents[1] << std::endl;
 
     return size;
 }
