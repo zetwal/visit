@@ -443,7 +443,7 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
         else
             ICET(icetStrategy(ICET_STRATEGY_REDUCE));
 
-        ICET(icetDrawFunc(render));
+        //ICET(icetDrawFunc(render));
         ICET(icetDrawFrame());
 
         // Now that we're done rendering, we need to post process the image.
