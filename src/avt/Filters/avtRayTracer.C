@@ -1764,4 +1764,3 @@ avtRayTracer::TightenClippingPlanes(const avtViewInfo &view,
         newFarPlane = farthest;
 }
 
-
