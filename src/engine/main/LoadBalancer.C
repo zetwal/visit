@@ -756,7 +756,7 @@ LoadBalancer::Reduce(avtContract_p input)
     //     string meshname = md->MeshForVar(new_data->GetVariable());
     //     std::cout << "meshname: " << meshname << std::endl;
 
-
+/*
     int index = input->GetPipelineIndex();
     const LBInfo &lbinfo = pipelineInfo[index];
     std::string dbname = lbinfo.db;
@@ -775,7 +775,7 @@ LoadBalancer::Reduce(avtContract_p input)
         for (int j=0; j<mmd->patch_parent[p].size(); j++)
             std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
     }
-
+*/
         if (theScheme == LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER)
         {
             int amountPer = list.size() / nProcs;
