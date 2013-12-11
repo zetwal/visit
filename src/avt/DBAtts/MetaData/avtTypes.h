@@ -159,7 +159,8 @@ enum LoadBalanceScheme
     LOAD_BALANCE_DBPLUGIN_DYNAMIC,            /* 3 */
     LOAD_BALANCE_RESTRICTED,                  /* 4 */
     LOAD_BALANCE_ABSOLUTE,                    /* 5 */
-    LOAD_BALANCE_STREAM                       /* 6 */
+    LOAD_BALANCE_STREAM,                      /* 6 */
+    LOAD_BALANCE_KDTREE                       /* 7 */
 };
 
 typedef std::vector<std::string> MaterialList;
