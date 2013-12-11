@@ -3002,13 +3002,13 @@ avtGenericDatabase::GetMesh(const char *meshname, int ts, int domain,
 
     if (mesh == NULL)
     {
-        std::cout << "(mesh == NULL)" << std::endl;
+        //std::cout << "(mesh == NULL)" << std::endl;
         //
         // We haven't read in this domain before, so fetch it from the files.
         //
         mesh = Interface->GetMesh(ts, domain, real_meshname);
 
-        std::cout << "(mesh == NULL)  endl" << std::endl;
+        //std::cout << "(mesh == NULL)  endl" << std::endl;
         if (mesh == NULL)
         {
             debug4 << "Mesh returned by file format is NULL for domain "
@@ -8015,7 +8015,7 @@ avtGenericDatabase::CreateSimplifiedNestingRepresentation(
     vector<bool> usesDomain(childDomains.size());
     for (i = 0 ; i < childDomains.size() ; i++){
         usesDomain[i] = true;
-        std::cout <<  "  ~  Parent    child: " << childDomains[i] << std::endl;
+        //std::cout <<  "  ~  Parent    child: " << childDomains[i] << std::endl;
     }
    
     if (allDomains.size() > 0) // if it is 0, then all domains are on

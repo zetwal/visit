@@ -44,7 +44,7 @@
 
 #include <stdlib.h>
 
-#include <vector>
+
 #include <deque>
 #include <set>
 
@@ -216,7 +216,8 @@ LoadBalancer::GetSchemeAsString()
 //
 // ****************************************************************************
 void          
-LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patchMetaData> patches){
+LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patchMetaData> patches, std::vector<int> &list){
+    std::cout << " LoadBalancer::kdtreeBuilding " << std::endl;
     /////////////////////////////////////////////////////////////////
     // Sort to find the order of axes from largest to smallest
     int axisOrder[3];
@@ -263,7 +264,7 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     std::multimap<int,patchMetaData> patchesTemp;
     int count = 0;
     for (std::vector<patchMetaData>::iterator it=patches.begin(); it!=patches.end(); it++){
-        std::cout << count << " : " <<  (*it).minSpatialExtents[0] << ", "<<  (*it).minSpatialExtents[1] << ", "<<  (*it).minSpatialExtents[2] << "  to  " <<  (*it).maxSpatialExtents[0] << ", " <<  (*it).maxSpatialExtents[1] << ", " <<  (*it).maxSpatialExtents[2] << std::endl;
+        std::cout << count << " _: " <<  (*it).minSpatialExtents[0] << ", "<<  (*it).minSpatialExtents[1] << ", "<<  (*it).minSpatialExtents[2] << "  to  " <<  (*it).maxSpatialExtents[0] << ", " <<  (*it).maxSpatialExtents[1] << ", " <<  (*it).maxSpatialExtents[2] << std::endl;
         patchesTemp.insert(std::pair<int,patchMetaData>(count,*it));
         count++;
     }
@@ -288,11 +289,13 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         parti++;
     }
     
+    list.clear();
     std::cout << std::endl;
     for (int i=0; i<numDivisions; i++){
         std::cout << "partition " << i <<std::endl;
         for (int j=0; j<patchesList[i].size(); j++){
             std::cout << " " << patchesList[i][j];
+            list.push_back(patchesList[i][j]);
         }
         std::cout << std::endl;
         std::cout << std::endl;
@@ -985,16 +988,27 @@ LoadBalancer::Reduce(avtContract_p input)
 
         const avtMeshMetaData *mmd = md->GetMesh(meshname);
 
-        for (int p=0; p<mmd->numBlocks; p++){
-            std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
-            for (int j=0; j<mmd->patch_parent[p].size(); j++)
-                std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
+        // for (int p=0; p<mmd->numBlocks; p++){
+        //     std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
+        //     for (int j=0; j<mmd->patch_parent[p].size(); j++)
+        //         std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
+        // }
+
+        int logicalBounds[3];
+        double minSpatialExtents[3], maxSpatialExtents[3];
+        for (int i=0; i<3; i++){
+            logicalBounds[i]=mmd->logicalBounds[i];
+            minSpatialExtents[i]=mmd->minSpatialExtents[i];
+            maxSpatialExtents[i]=mmd->maxSpatialExtents[i];
         }
-
-       // kdtreeBuilding(nProcs, mmd->logicalBounds, mmd->minSpatialExtents,mmd->maxSpatialExtents, mmd->patches);
-
+        //kdtreeBuilding(nProcs, logicalBounds, minSpatialExtents, maxSpatialExtents, mmd->patches,list);
+        std::cout << "after kdtree building" << std::endl;
+        for (int i=0; i<list.size(); i++){
+            std::cout << i << " *** " << list[i] << std::endl;
+        }
         if (theScheme == LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER)
         {
+            std::cout << "################## LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER ##########################3" << std::endl;
             int amountPer = list.size() / nProcs;
             int oneExtraUntil = list.size() % nProcs;
             int lastDomain = 0;
@@ -1079,12 +1093,17 @@ LoadBalancer::Reduce(avtContract_p input)
             mylist = list;
         }
 
-        for (int z=0; z<mylist.size(); z++){
-            std::cout << PAR_Rank() << " ~ " << mylist[z] << std::endl;
-        }
+        // for (int z=0; z<mylist.size(); z++){
+        //     std::cout << PAR_Rank() << " ~ " << mylist[z] << std::endl;
+        // }
 
         silr->RestrictDomainsForLoadBalance(mylist);
         pipelineInfo[input->GetPipelineIndex()].complete = true;
+
+        //std::cout << "after partitioning" << std::endl;
+        //for (int i=0; i<mylist.size(); i++){
+        //    std::cout << i << " *|* " << mylist[i] << std::endl;
+        //}
     }
     else
     {
