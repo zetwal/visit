@@ -215,8 +215,8 @@ LoadBalancer::GetSchemeAsString()
 //  Creation:   December 9, 2013
 //
 // ****************************************************************************
-void 
-LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patch> patches){
+void          
+LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patchMetaData> patches){
     /////////////////////////////////////////////////////////////////
     // Sort to find the order of axes from largest to smallest
     int axisOrder[3];
@@ -263,7 +263,7 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     std::multimap<int,patchMetaData> patchesTemp;
     int count = 0;
     for (std::vector<patchMetaData>::iterator it=patches.begin(); it!=patches.end(); it++){
-        std::cout << count << " : " <<  (*it).minExtents[0] << ", "<<  (*it).minExtents[1] << ", "<<  (*it).minExtents[2] << "  to  " <<  (*it).maxExtents[0] << ", " <<  (*it).maxExtents[1] << ", " <<  (*it).maxExtents[2] << std::endl;
+        std::cout << count << " : " <<  (*it).minSpatialExtents[0] << ", "<<  (*it).minSpatialExtents[1] << ", "<<  (*it).minSpatialExtents[2] << "  to  " <<  (*it).maxSpatialExtents[0] << ", " <<  (*it).maxSpatialExtents[1] << ", " <<  (*it).maxSpatialExtents[2] << std::endl;
         patchesTemp.insert(std::pair<int,patchMetaData>(count,*it));
         count++;
     }
@@ -278,9 +278,9 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         
         for (std::multimap<int,patchMetaData>::iterator it=patchesTemp.begin(); it!=patchesTemp.end(); it++){
             int key = (*it).first;
-            if ((*it).second.minExtents[0] >= minX && (*it).second.maxExtents[0] <= maxX)
-                if ((*it).second.minExtents[1] >= minY && (*it).second.maxExtents[1] <= maxY)
-                    if ((*it).second.minExtents[2] >= minZ && (*it).second.maxExtents[2] <= maxZ){
+            if ((*it).second.minSpatialExtents[0] >= minX && (*it).second.maxSpatialExtents[0] <= maxX)
+                if ((*it).second.minSpatialExtents[1] >= minY && (*it).second.maxSpatialExtents[1] <= maxY)
+                    if ((*it).second.minSpatialExtents[2] >= minZ && (*it).second.maxSpatialExtents[2] <= maxZ){
                         patchesList[parti].push_back(key);
                         patchesTemp.erase(key);
                     }
@@ -991,7 +991,7 @@ LoadBalancer::Reduce(avtContract_p input)
                 std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
         }
 
-        kdtreeBuilding(nProcs, mmd->logicalBounds, mmd->minSpatialExtents,mmd->maxSpatialExtents, mmd->patches);
+       // kdtreeBuilding(nProcs, mmd->logicalBounds, mmd->minSpatialExtents,mmd->maxSpatialExtents, mmd->patches);
 
         if (theScheme == LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER)
         {
