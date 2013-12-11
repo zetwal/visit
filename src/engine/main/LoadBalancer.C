@@ -64,6 +64,12 @@
 #include <avtParallel.h>
 #endif
 
+#include <algorithm>
+#include <map>
+#include <deque>
+#include <iterator>
+#include <vector>
+
 #include <avtDatabaseMetaData.h>
 
 using     std::string;
@@ -190,6 +196,215 @@ LoadBalancer::GetSchemeAsString()
     }
     return str;
 }
+
+
+
+// ****************************************************************************
+//  Method: LoadBalancer::chopPartition
+//
+//  Purpose:
+//      Break a partition into 2 k-d tree style
+//
+//  Arguments:
+//      parent      The parent partition.
+//      childOne    The first child
+//      childTwo    The second child
+//      axisOrder   Order of the axes to cycle through
+//
+//  Programmer: Pascal Grosset  
+//  Creation:   December 9, 2013
+//
+// ****************************************************************************
+void 
+LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patch> patches){
+    /////////////////////////////////////////////////////////////////
+    // Sort to find the order of axes from largest to smallest
+    int axisOrder[3];
+    
+    std::multimap<int,int> myMultimap;
+    for (int i=0; i<3; i++)
+        myMultimap.insert(std::pair<int,int>(logicalBounds[i],i));
+    
+    int order=2;
+    for (std::multimap<int,int>::iterator it=myMultimap.begin(); it!=myMultimap.end(); ++it){
+        axisOrder[order]=(*it).second;
+        order--;
+    }
+    std::cout << "axisOrder: " << axisOrder[0] << ", " << axisOrder[1] << ", " << axisOrder[2] << std::endl << std::endl;
+
+
+    /////////////////////////////////////////////////////////////////
+    // Do the region splitting according to a k-d tree
+    std::deque<partitionExtents> myPartitions;
+
+    partitionExtents parent, one, two;
+    parent.dims[0] = logicalBounds[0];  parent.dims[1] = logicalBounds[1];  parent.dims[2] = logicalBounds[2];
+    parent.minExtents[0] = minSpatialExtents[0];    parent.minExtents[1] = minSpatialExtents[1];    parent.minExtents[2] = minSpatialExtents[2];
+    parent.maxExtents[0] = maxSpatialExtents[0];    parent.maxExtents[1] = maxSpatialExtents[1];    parent.maxExtents[2] = maxSpatialExtents[2];
+
+    myPartitions.push_back(parent);
+
+    while (myPartitions.size() != numDivisions){
+        parent = myPartitions.front();   myPartitions.pop_front();
+        std::cout <<"Parent: "<< parent.axisIndex << "   - Extents (min-max):  " << parent.minExtents[0]<< ", " << parent.minExtents[1]<< ", " << parent.minExtents[2] << "   -   " << parent.maxExtents[0]<< ", " << parent.maxExtents[1]<< ", " << parent.maxExtents[2] << "  dims: " << parent.dims[0]<< ", " << parent.dims[1]<< ", " << parent.dims[2] << std::endl;
+        
+        chopPartition(parent,one,two,axisOrder);
+        myPartitions.push_back(one);
+        myPartitions.push_back(two);
+
+        std::cout <<"One: "<<  one.axisIndex << "   - Extents (min-max):  " << one.minExtents[0]<< ", " << one.minExtents[1]<< ", " << one.minExtents[2] << "   -   " << one.maxExtents[0]<< ", " << one.maxExtents[1]<< ", " << one.maxExtents[2] << "  dims: " << one.dims[0]<< ", " << one.dims[1]<< ", " << one.dims[2] << std::endl;
+        std::cout <<"two: "<<  two.axisIndex << "   - Extents (min-max):  " << two.minExtents[0]<< ", " << two.minExtents[1]<< ", " << two.minExtents[2] << "   -   " << two.maxExtents[0]<< ", " << two.maxExtents[1]<< ", " << two.maxExtents[2] << "  dims: " << two.dims[0]<< ", " << two.dims[1]<< ", " << two.dims[2] << std::endl;
+        std::cout << std::endl;
+    }
+
+
+    /////////////////////////////////////////////////////////////////
+    // Determine which patch is in which region
+    std::multimap<int,patchMetaData> patchesTemp;
+    int count = 0;
+    for (std::vector<patchMetaData>::iterator it=patches.begin(); it!=patches.end(); it++){
+        std::cout << count << " : " <<  (*it).minExtents[0] << ", "<<  (*it).minExtents[1] << ", "<<  (*it).minExtents[2] << "  to  " <<  (*it).maxExtents[0] << ", " <<  (*it).maxExtents[1] << ", " <<  (*it).maxExtents[2] << std::endl;
+        patchesTemp.insert(std::pair<int,patchMetaData>(count,*it));
+        count++;
+    }
+    std::vector< std::vector<int> >patchesList;
+    patchesList.reserve(numDivisions);
+
+    int parti = 0;
+    for (std::deque<partitionExtents>::iterator it_par=myPartitions.begin(); it_par!=myPartitions.end(); ++it_par){
+        double minX = (*it_par).minExtents[0];  double maxX = (*it_par).maxExtents[0];
+        double minY = (*it_par).minExtents[1];  double maxY = (*it_par).maxExtents[1];
+        double minZ = (*it_par).minExtents[2];  double maxZ = (*it_par).maxExtents[2];
+        
+        for (std::multimap<int,patchMetaData>::iterator it=patchesTemp.begin(); it!=patchesTemp.end(); it++){
+            int key = (*it).first;
+            if ((*it).second.minExtents[0] >= minX && (*it).second.maxExtents[0] <= maxX)
+                if ((*it).second.minExtents[1] >= minY && (*it).second.maxExtents[1] <= maxY)
+                    if ((*it).second.minExtents[2] >= minZ && (*it).second.maxExtents[2] <= maxZ){
+                        patchesList[parti].push_back(key);
+                        patchesTemp.erase(key);
+                    }
+        }
+        parti++;
+    }
+    
+    std::cout << std::endl;
+    for (int i=0; i<numDivisions; i++){
+        std::cout << "partition " << i <<std::endl;
+        for (int j=0; j<patchesList[i].size(); j++){
+            std::cout << " " << patchesList[i][j];
+        }
+        std::cout << std::endl;
+        std::cout << std::endl;
+    }
+}
+
+// ****************************************************************************
+//  Method: LoadBalancer::chopPartition
+//
+//  Purpose:
+//      Break a partition into 2 k-d tree style
+//
+//  Arguments:
+//      parent      The parent partition.
+//      childOne    The first child
+//      childTwo    The second child
+//      axisOrder   Order of the axes to cycle through
+//
+//  Programmer: Pascal Grosset  
+//  Creation:   December 9, 2013
+//
+// ****************************************************************************
+int
+LoadBalancer::chopPartition(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]){
+    int axisIndex = (parent.axisIndex+1)%3;
+    int axis = axisOrder[axisIndex];
+    int count = 0;
+    
+    while (true){
+        if (parent.dims[axis] >= 1)
+            break;
+        else{
+            axisIndex = (axisIndex+1)%3;
+            axis = axisOrder[axisIndex];
+        }
+        
+        count++;
+        if (count == 3)
+            break;
+    }
+    if (count == 3)
+        return -1;  // We are going to be cycling forever here! So stop!
+        
+    childOne.axisIndex = axisIndex;
+    childTwo.axisIndex = axisIndex;
+    std::cout << "axis: " << axis << std::endl;
+        
+    if (axis == 0){             // x-axis
+        childOne.dims[1] = childTwo.dims[1] = parent.dims[1];
+        childOne.dims[2] = childTwo.dims[2] = parent.dims[2];
+        
+        childOne.minExtents[1] = childTwo.minExtents[1] = parent.minExtents[1];
+        childOne.maxExtents[1] = childTwo.maxExtents[1] = parent.maxExtents[1];
+        
+        childOne.minExtents[2] = childTwo.minExtents[2] = parent.minExtents[2];
+        childOne.maxExtents[2] = childTwo.maxExtents[2] = parent.maxExtents[2];
+        
+        
+        childOne.dims[0] = parent.dims[0]/2;
+        childTwo.dims[0] = parent.dims[0]-childOne.dims[0];
+        
+        childOne.minExtents[0] = parent.minExtents[0];
+        childOne.maxExtents[0] = parent.minExtents[0] + (parent.minExtents[0]+parent.maxExtents[0])/2.0;
+        
+        childTwo.minExtents[0] = childOne.maxExtents[0];
+        childTwo.maxExtents[0] = parent.maxExtents[0];
+    }
+    else
+        if (axis == 1){         // y-axis
+            childOne.dims[0] = childTwo.dims[0] = parent.dims[0];
+            childOne.dims[2] = childTwo.dims[2] = parent.dims[2];
+            
+            childOne.minExtents[0] = childTwo.minExtents[0] = parent.minExtents[0];
+            childOne.maxExtents[0] = childTwo.maxExtents[0] = parent.maxExtents[0];
+            
+            childOne.minExtents[2] = childTwo.minExtents[2] = parent.minExtents[2];
+            childOne.maxExtents[2] = childTwo.maxExtents[2] = parent.maxExtents[2];
+            
+            childOne.dims[1] = parent.dims[1]/2;
+            childTwo.dims[1] = parent.dims[1]-childOne.dims[1];
+            
+            childOne.minExtents[1] = parent.minExtents[1];
+            childOne.maxExtents[1] = parent.minExtents[1] + (parent.minExtents[1]+parent.maxExtents[1])/2.0;
+            
+            childTwo.minExtents[1] = childOne.maxExtents[1];
+            childTwo.maxExtents[1] = parent.maxExtents[1];
+        }
+        else
+            if (axis == 2){     // z-axis
+                childOne.dims[0] = childTwo.dims[0] = parent.dims[0];
+                childOne.dims[1] = childTwo.dims[1] = parent.dims[1];
+                
+                childOne.minExtents[0] = childTwo.minExtents[0] = parent.minExtents[0];
+                childOne.maxExtents[0] = childTwo.maxExtents[0] = parent.maxExtents[0];
+                
+                childOne.minExtents[1] = childTwo.minExtents[1] = parent.minExtents[1];
+                childOne.maxExtents[1] = childTwo.maxExtents[1] = parent.maxExtents[1];
+                
+                
+                childOne.dims[2] = parent.dims[2]/2;
+                childTwo.dims[2] = parent.dims[2]-childOne.dims[2];
+                
+                childOne.minExtents[2] = parent.minExtents[2];
+                childOne.maxExtents[2] = parent.minExtents[2] + (parent.minExtents[2]+parent.maxExtents[2])/2.0;
+                
+                childTwo.minExtents[2] = childOne.maxExtents[2];
+                childTwo.maxExtents[2] = parent.maxExtents[2];
+            }
+    
+    return 0;
+}
+
 
 // ****************************************************************************
 //  Method: LoadBalancer::RegisterAbortCallback
@@ -751,31 +966,33 @@ LoadBalancer::Reduce(avtContract_p input)
         std::cout << "theScheme: " << theScheme << std::endl;
 
 
-    //     int ts = new_data->GetTimestep();
-    //     avtDatabaseMetaData *md = GetMetaData(ts);
-    //     string meshname = md->MeshForVar(new_data->GetVariable());
-    //     std::cout << "meshname: " << meshname << std::endl;
-
-/*
-    int index = input->GetPipelineIndex();
-    const LBInfo &lbinfo = pipelineInfo[index];
-    std::string dbname = lbinfo.db;
-    avtDatabase *db = dbMap[dbname];
-
-    avtDataRequest_p data = input->GetDataRequest();
-    avtDatabaseMetaData *md = db->GetMetaData(db->GetMostRecentTimestep());
-    string meshname = md->MeshForVar(new_data->GetVariable());
-    std::cout << "!!!! !!!! meshname: " << meshname << std::endl;
+        //     int ts = new_data->GetTimestep();
+        //     avtDatabaseMetaData *md = GetMetaData(ts);
+        //     string meshname = md->MeshForVar(new_data->GetVariable());
+        //     std::cout << "meshname: " << meshname << std::endl;
 
 
-    const avtMeshMetaData *mmd = md->GetMesh(meshname);
+        int index = input->GetPipelineIndex();
+        const LBInfo &lbinfo = pipelineInfo[index];
+        std::string dbname = lbinfo.db;
+        avtDatabase *db = dbMap[dbname];
 
-    for (int p=0; p<mmd->numBlocks; p++){
-        std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
-        for (int j=0; j<mmd->patch_parent[p].size(); j++)
-            std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
-    }
-*/
+        avtDataRequest_p data = input->GetDataRequest();
+        avtDatabaseMetaData *md = db->GetMetaData(db->GetMostRecentTimestep());
+        string meshname = md->MeshForVar(new_data->GetVariable());
+        std::cout << "!!!! !!!! meshname: " << meshname << std::endl;
+
+
+        const avtMeshMetaData *mmd = md->GetMesh(meshname);
+
+        for (int p=0; p<mmd->numBlocks; p++){
+            std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
+            for (int j=0; j<mmd->patch_parent[p].size(); j++)
+                std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
+        }
+
+        kdtreeBuilding(nProcs, mmd->logicalBounds, mmd->minSpatialExtents,mmd->maxSpatialExtents, mmd->patches);
+
         if (theScheme == LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER)
         {
             int amountPer = list.size() / nProcs;

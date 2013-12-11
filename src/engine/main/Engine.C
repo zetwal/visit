@@ -404,7 +404,7 @@ Engine::Engine() : viewerArgs(), destinationFormat(), rpcExecutors()
     procAtts = NULL;
 
 #if defined(PARALLEL) && defined(HAVE_ICET)
-    useIceT = false; //true;
+    useIceT = true; //false; //true;
 #else
     useIceT = false;
 #endif
@@ -819,14 +819,18 @@ Engine::InitializeCompute()
 #if defined(PARALLEL) && defined(HAVE_ICET)
     if(this->useIceT)
     {
-        if (DebugStream::Level2())
+        if (DebugStream::Level2()){
             debug2 << "Using IceT network manager." << std::endl;
+            std::cout << "Using IceT network manager." << std::endl;
+          }
         netmgr = new IceTNetworkManager;
     }
     else
     {
-        if (DebugStream::Level2())
+        if (DebugStream::Level2()){
             debug2 << "Using standard network manager." << std::endl;
+            std::cout << "Using standard network manager." << std::endl;
+        }
         netmgr = new NetworkManager;
     }
 #else
@@ -835,6 +839,9 @@ Engine::InitializeCompute()
         if(this->useIceT)
         {
             debug1 << "Error; IceT not enabled at compile time. "
+               << "Ignoring ..." << std::endl;
+
+            std::cout << "Error; IceT not enabled at compile time. "
                << "Ignoring ..." << std::endl;
         }
     }
@@ -2202,11 +2209,14 @@ Engine::ProcessCommandLine(int argc, char **argv)
             if(!haveHWAccel)
             {
               this->useIceT = true;
+               std::cout << "Ithis->useIceT = true \n";
             }
             else
             {
               if (DebugStream::Level1())
                   debug1 << "Ignoring IceT request: currently incompatible with "
+                            "parallel HW acceleration.\n";
+                   std::cout << "Ignoring IceT request: currently incompatible with "
                             "parallel HW acceleration.\n";
             }
         }

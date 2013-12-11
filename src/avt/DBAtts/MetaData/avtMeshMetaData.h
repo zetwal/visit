@@ -60,6 +60,13 @@
 //   
 // ****************************************************************************
 
+// metadata about each patch
+struct patchMetaData{
+    int level;      // AMR Level: 1,2,3, ... coarsest to finest
+    int dims[3];    // the logical x,y,z dimensions
+    double minSpatialExtents[3], maxSpatialExtents[3];  // real dimensions
+};
+
 class DBATTS_API avtMeshMetaData : public AttributeSubject
 {
 public:
@@ -213,6 +220,7 @@ public:
     // AMR stuff
     std::vector<int>     levels;
     std::vector< std::vector<int> > patch_parent;
+    std::vector<patchMetaData> patches;
 
 private:
     // Static class format string for type map.

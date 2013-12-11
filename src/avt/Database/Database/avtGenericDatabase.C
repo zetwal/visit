@@ -1206,7 +1206,7 @@ avtGenericDatabase::GetScalarVarDataset(const char *varname, int ts,
                                          const avtDataRequest_p dataRequest)
 {
 
-    std::cout << "avtGenericDatabase::GetScalarVarDataset  " << PAR_Rank() << " ~ " << varname << " , " << ts << " , " << domain << std::endl;
+   // std::cout << "avtGenericDatabase::GetScalarVarDataset  " << PAR_Rank() << " ~ " << varname << " , " << ts << " , " << domain << std::endl;
     const avtScalarMetaData *smd = GetMetaData(ts)->GetScalar(varname);
     if (smd == NULL)
     {
@@ -2224,7 +2224,7 @@ avtGenericDatabase::GetScalarVariable(const char *varname, int ts, int domain,
                                       const char *material,
                                       const avtDataRequest_p dataRequest)
 {
-    std::cout << "avtGenericDatabase::GetScalarVariable" << std::endl;
+    //std::cout << "avtGenericDatabase::GetScalarVariable" << std::endl;
     //
     // We have to be leery about doing any caching when the variables are
     // defined on sub-meshes.  This is because if we add new secondary
@@ -2953,7 +2953,7 @@ avtGenericDatabase::GetMesh(const char *meshname, int ts, int domain,
                             const avtDataRequest_p dataRequest)
 {
 
-    std::cout << "avtGenericDatabase::GetMesh" << std::endl;
+    //std::cout << "avtGenericDatabase::GetMesh" << std::endl;
     //
     // We have to be leery about doing any caching when the variables are
     // defined on sub-meshes.  This is because if we add new secondary
@@ -3167,7 +3167,7 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
                                      VoidRefList &rv, const char *type, 
                                      void *args)
 {
-    std::cout << "avtGenericDatabase::GetAuxiliaryData" << std::endl;
+    //std::cout << "avtGenericDatabase::GetAuxiliaryData" << std::endl;
     //
     // Don't do extents queries if we've been told to ignore 'em.
     //
@@ -3215,7 +3215,7 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
     rv.nList = domains.size();
     rv.list = new void_ref_ptr[rv.nList];
 
-    std::cout << "domains.size(): " << domains.size() << std::endl;
+    //std::cout << "domains.size(): " << domains.size() << std::endl;
     for (int i = 0 ; i < domains.size() ; i++)
     {
         //
@@ -3228,20 +3228,20 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
             vr = cache.GetVoidRef(var, type, ts, domains[i]);
         if (*vr == NULL)
         {
-            std::cout << " ----- 0 ------"  << std::endl;
+            //std::cout << " ----- 0 ------"  << std::endl;
             vr = cache.GetVoidRef(var, type, -1, domains[i]);
         }
 
         if (*vr == NULL)
         {
-            std::cout << " ----- 1 ------"  << std::endl;
+            //std::cout << " ----- 1 ------"  << std::endl;
             if ((strcmp(type, AUXILIARY_DATA_DOMAIN_NESTING_INFORMATION) == 0) ||
                 (strcmp(type, AUXILIARY_DATA_DOMAIN_BOUNDARY_INFORMATION) == 0))
                 vr = cache.GetVoidRef("any_mesh", type, ts, domains[i]);
         }
         if (*vr == NULL)
         {
-            std::cout << " ----- 2 ------"  << std::endl;
+            //std::cout << " ----- 2 ------"  << std::endl;
             if ((strcmp(type, AUXILIARY_DATA_DOMAIN_NESTING_INFORMATION) == 0) ||
                 (strcmp(type, AUXILIARY_DATA_DOMAIN_BOUNDARY_INFORMATION) == 0))
                 vr = cache.GetVoidRef("any_mesh", type, -1, domains[i]);
@@ -3257,7 +3257,7 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
         }
         else
         {
-            std::cout << " ----- 4 ------"  << std::endl;
+            //std::cout << " ----- 4 ------"  << std::endl;
             //
             // We did not have it, so calculate it and then store it.
             //
@@ -7526,13 +7526,13 @@ avtGenericDatabase::ApplyGhostForDomainNesting(avtDatasetCollection &ds,
     avtStructuredDomainNesting *ddn = (avtStructuredDomainNesting*)*vr;
 
 
-    std::cout << PAR_Rank() << " ~ doms.size(): " << doms.size() << std::endl;
+    //std::cout << PAR_Rank() << " ~ doms.size(): " << doms.size() << std::endl;
     for (int k=0; k<doms.size(); k++){
-        std::cout << "k: " << doms[k] << std::endl;
+        //std::cout << "k: " << doms[k] << std::endl;
         ddn->GetNestingForDomain(doms[k], my_exts, childDomains, childExts);
-        for (int i = 0 ; i < childDomains.size() ; i++){
-            std::cout << PAR_Rank() <<  "  ~!~!~  Parent: " << doms[k] << "   child: " << childDomains[i] << std::endl;
-        }
+        //for (int i = 0 ; i < childDomains.size() ; i++){
+        //    std::cout << PAR_Rank() <<  "  ~!~!~  Parent: " << doms[k] << "   child: " << childDomains[i] << std::endl;
+        //}
     }
 
 
@@ -7865,7 +7865,7 @@ avtGenericDatabase::CreateSimplifiedNestingRepresentation(
                               avtSourceFromDatabase *src,
                               avtDataRequest_p &spec)
 {
-    std::cout << "avtGenericDatabase::CreateSimplifiedNestingRepresentation" << std::endl;
+    //std::cout << "avtGenericDatabase::CreateSimplifiedNestingRepresentation" << std::endl;
     int ts = spec->GetTimestep();
     avtDatabaseMetaData *md = GetMetaData(ts);
     string meshname = md->MeshForVar(spec->GetVariable());

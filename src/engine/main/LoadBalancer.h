@@ -163,6 +163,13 @@ struct IOInfo
 //
 // ****************************************************************************
 
+struct partitionExtents{
+    int axisIndex;
+
+    int dims[3];
+    double minExtents[3], maxExtents[3];
+};
+
 class ENGINE_MAIN_API LoadBalancer
 {
   public:
@@ -193,6 +200,10 @@ class ENGINE_MAIN_API LoadBalancer
     static void                   SetScheme(LoadBalanceScheme);
     static LoadBalanceScheme      GetScheme();
     static std::string            GetSchemeAsString();
+
+    int                           chopPartition(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]);
+    void                          kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patchMetaData> patches);
+
   protected:
     bool                          CheckAbort(bool);
     void                          UpdateProgress(int, int);

@@ -310,6 +310,7 @@ avtDataObject_p
 IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZBuffer,
                            int annotMode, int windowID, bool leftEye)
 {
+    std::cout << "IceTNetworkManager::Render... " << std::endl;
     int t0 = visitTimer->StartTimer();
     DataNetwork *origWorkingNet = workingNet;
     avtDataObject_p retval;
@@ -446,6 +447,7 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
         debug3 << "IceTNM: Starting readback." << std::endl;
         avtDataObject_p dob;
         {
+            std::cout << "IceTNetworkManager::Render... IceTNM: Starting readback ..." << std::endl;
             avtImage_p img = this->Readback(viswin, needZB);
             CopyTo(dob, img);
         }
@@ -484,6 +486,8 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
 
     workingNet = origWorkingNet;
     visitTimer->StopTimer(t0, "Ice-T Render");
+
+    std::cout << "IceTNetworkManager::Render... End!!!" << std::endl;
     return retval;
 }
 
