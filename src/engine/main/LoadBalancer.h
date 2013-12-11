@@ -53,6 +53,8 @@
 #include <avtIOInformation.h>
 #include <engine_main_exports.h>
 
+#include <avtMeshMetaData.h>
+
 class     avtDatabase;
 
 
