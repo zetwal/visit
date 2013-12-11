@@ -51,6 +51,11 @@
 
 #include <ImproperUseException.h>
 
+#include <stdio.h>      /* printf, scanf, puts, NULL */
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
+
+
 
 //
 // Function Prototypes
@@ -58,7 +63,7 @@
 
 static void RCPixelProgressCallback(void *, int, int);
 
-
+#include <avtImgCommunicator.h>
 // ****************************************************************************
 //  Method: avtRayCompositer constructor
 //
@@ -446,6 +451,7 @@ void
 avtRayCompositer::Execute(void)
 {
     int  i, j;
+    srand (time(NULL));
     avtVolume *volume = GetTypedInput()->GetVolume();
     if (volume == NULL)
     {
@@ -570,21 +576,27 @@ avtRayCompositer::Execute(void)
 
     int minW = volume->GetRestrictedMinWidth();
         int minH = volume->GetRestrictedMinHeight();
+
+    std::cout << rank << " ~ " << "   width: " << width << "   height: " << height << std::endl;
     for (int i = 0 ; i < width ; i++)
+    {
+        for (int j = 0 ; j < height ; j++)
         {
-            for (int j = 0 ; j < height ; j++)
+            int index = j*width + i;
+            int opaqueImageIndex = (j+minH)*fullWidth + (i+minW);
+            if (!( ((data[3*index    ] == 255) && (data[3*index   +1] == 255)) && (data[3*index + 2]==255) ))
             {
-                int index = j*width + i;
-                int opaqueImageIndex = (j+minH)*fullWidth + (i+minW);
-                if (!( ((data[3*index    ] == 255) && (data[3*index   +1] == 255)) && (data[3*index + 2]==255) ))
-                {
-                    data[3*index    ] = _r;//opaqueImageData[n_comp*opaqueImageIndex];
-                    data[3*index + 1] = _g;//opaqueImageData[n_comp*opaqueImageIndex+1];
-                    data[3*index + 2] = _b;//opaqueImageData[n_comp*opaqueImageIndex+2];
-                }
+                data[3*index    ] = _r;//opaqueImageData[n_comp*opaqueImageIndex];
+                data[3*index + 1] = _g;//opaqueImageData[n_comp*opaqueImageIndex+1];
+                data[3*index + 2] = _b;//opaqueImageData[n_comp*opaqueImageIndex+2];
             }
         }
+    }
 
+    int iSecret = rand() % 100 + 1;
+    std::string imgFilenameFinal = "/home/pascal/Desktop/avtRayCompositer_Execute_"+ NumbToString(rank) + "_"+ NumbToString(iSecret) + "_Buffer.ppm";
+    createPpm(data,width,height,imgFilenameFinal); 
+    
     //
     // Tell our output what its new image is.
     //

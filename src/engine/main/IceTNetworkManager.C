@@ -352,6 +352,9 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
         {
             debug2 << "Encountered transparency: falling back to old "
                       "SR / compositing routines." << std::endl;
+
+            std::cout << "Encountered transparency: falling back to old "
+                      "SR / compositing routines." << std::endl;
             CATCH_RETURN2(1, NetworkManager::Render(checkThreshold, networkIds,
                                                     getZBuffer, annotMode,
                                                     windowID, leftEye));
@@ -417,6 +420,10 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
                << " primitives.  Balanced speedup = "
                << RenderBalance(viswin->GetNumPrimitives()) << "x" << endl;
 
+        std::cout << "Rendering " << viswin->GetNumPrimitives()
+               << " primitives.  Balanced speedup = "
+               << RenderBalance(viswin->GetNumPrimitives()) << "x" << endl;
+
         int width, height, width_start, height_start;
         // This basically gets the width and the height.
         // The distinction is for 2D rendering, where we only want the
@@ -443,13 +450,14 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
         else
             ICET(icetStrategy(ICET_STRATEGY_REDUCE));
 
-        //ICET(icetDrawFunc(render));
+        ICET(icetDrawFunc(render));
         ICET(icetDrawFrame());
 
         // Now that we're done rendering, we need to post process the image.
         debug3 << "IceTNM: Starting readback." << std::endl;
         avtDataObject_p dob;
         {
+            debug3 << "IceTNM: Starting readback." << std::endl;
             avtImage_p img = this->Readback(viswin, needZB);
             CopyTo(dob, img);
         }

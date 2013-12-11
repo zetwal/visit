@@ -123,7 +123,7 @@ public:
 };
 
 
-
+void createPpm(unsigned char array[], int dimx, int dimy, std::string filename);
 void createPpm(float array[], int dimx, int dimy, std::string filename);
 void createPpmWithOffset(float array[], int dimx, int dimy, std::string filename, int offset);
 std::string NumbToString (int Number);

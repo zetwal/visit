@@ -1365,15 +1365,27 @@ avtRayTracer::Execute(void)
     avtRayCompositer rc(rayfoo);
     rc.SetBackgroundColor(background);
 
+    rc.setRank((int)PAR_Rank());
+
      if (PAR_Rank() == 0)
         rc.setColor(255,0,0);
     if (PAR_Rank() == 1)
         rc.setColor(0,255,0);
     if (PAR_Rank() == 2)
         rc.setColor(0,0,255);
+
     if (PAR_Rank() == 3)
         rc.setColor(255,255,0);
+    if (PAR_Rank() == 4)
+        rc.setColor(255,0,255);
+    if (PAR_Rank() == 5)
+        rc.setColor(0,255,255);
 
+    if (PAR_Rank() == 6)
+        rc.setColor(150,150,150);
+
+    if (PAR_Rank() == 7)
+        rc.setColor(59,59,59);
     
     rc.SetBackgroundMode(backgroundMode);
     rc.SetGradientBackgroundColors(gradBG1, gradBG2);
@@ -1440,7 +1452,7 @@ avtRayTracer::Execute(void)
     // The tiles are important to make sure that we never need too much
     // memory.
     //
-    int numDivisions = GetNumberOfDivisions(screen[0],screen[1],samplesPerRay);
+    int numDivisions = 1;//GetNumberOfDivisions(screen[0],screen[1],samplesPerRay);
 
     int IStep = screen[0] / numDivisions;
     int JStep = screen[1] / numDivisions;
@@ -1454,6 +1466,7 @@ avtRayTracer::Execute(void)
         img->Delete();
     }
 
+    std::cout << "numDivisions: " << numDivisions << std::endl;
     for (int i = 0 ; i < numDivisions ; i++)
         for (int j = 0 ; j < numDivisions ; j++)
         {
@@ -1471,16 +1484,28 @@ avtRayTracer::Execute(void)
             imagePartition.RestrictToTile(IStart, IEnd, JStart, JEnd);
             sampleCommunicator.SetImagePartition(&imagePartition);
             imageCommunicator.SetImagePartition(&imagePartition);
+
 #endif
             extractor.RestrictToTile(IStart, IEnd, JStart, JEnd);
             image->Update(GetGeneralContract());                    // execution happens here - identified with gdb
 
-            if (PAR_Rank() == 0)    // stage 8 of 9
+            static int cccount = 0;
+            // if (cccount == 3){
+            //     int ww,hh;
+            //     image->GetSize(&ww,&hh);
+            //     std::cout << PAR_Rank() << "     ww: "  << ww << "   hh: " << hh << std::endl;
+            //     std::string imgFilenameFinal = "/home/pascal/Desktop/icet_on_" + NumbToString(PAR_Rank()) + "_Buffer.ppm";
+            //     createPpm(image->GetImage().GetRGBBuffer(),ww,hh,imgFilenameFinal);
+            // }   
+            // std::cout << PAR_Rank() << "      ~     "  << cccount  << std::endl;
+            cccount++;
+       if (PAR_Rank() == 0)    // stage 8 of 9
             {
                 unsigned char *whole_rgb = 
                                         whole_image->GetImage().GetRGBBuffer();
                 unsigned char *tile = image->GetImage().GetRGBBuffer();
-   
+                std::string imgFilenameFinal = "/home/pascal/Desktop/on_0_" + NumbToString(cccount) + "_Buffer.ppm";
+                createPpm(tile,IEnd-IStart,JEnd-JStart,imgFilenameFinal); 
                 for (int jj = JStart ; jj < JEnd ; jj++)
                     for (int ii = IStart ; ii < IEnd ; ii++)
                     {
