@@ -500,10 +500,6 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
     else
         software->SetLighting(false);
 
-
-
-    avtCompositeRF *compositeRF = new avtCompositeRF(lm, &om, &om);
-    
     double *matProp = atts.GetMaterialProperties();
     double materialPropArray[4];
     materialPropArray[0] = matProp[0];
@@ -517,7 +513,6 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
     software->SetTrilinear(false);
 
     software->SetTransferFn(&om);
-    software->SetRayFunction(compositeRF);            // unsure about this one. RayFunction seems important
     software->SetSamplesPerRay(atts.GetSamplesPerRay());
 
     const int *size = window.GetSize();
@@ -614,8 +609,6 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
     //
     delete software;
     avtRay::SetArbitrator(NULL);
-
-    delete compositeRF;
 
     //
     // Copy the output of the volume renderer to our output.
