@@ -1080,8 +1080,9 @@ LoadBalancer::Reduce(avtContract_p input)
         std::vector<int> numPatchesPerProc;
         kdtreeBuilding(nProcs, logicalBounds, minSpatialExtents, maxSpatialExtents, mmd->patches,list,numPatchesPerProc);
 
-        if (theScheme == LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER)
+        if (theScheme == LOAD_BALANCE_KDTREE)
         {
+            std::cout << "||| K-d tree load balancing |||" << std::endl;
             int numPatches = numPatchesPerProc[rank];
 
             int offset = 0;

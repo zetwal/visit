@@ -85,6 +85,7 @@
         -lb-stream           Similar to -lb-block, but have the domains travel
                              down the pipeline one at a time, instead of all
                              together.  Under development.
+        -lb-kdtree           Assigns according to a k-d tree
 
     Database differencing options
     ---------------------------------------------------------------------------

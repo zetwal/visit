@@ -1963,6 +1963,9 @@ Engine::ProcessInput()
 //    Tom Fogal, Wed May 26 09:56:08 MDT 2010
 //    Don't parse x-args here; use an RTS.
 //
+//    Pascal Grosset, Thu Dec 12 12:20 MDT 2013
+//    Add support for -lb-kdtree.
+//
 // ****************************************************************************
 
 void
@@ -2186,6 +2189,10 @@ Engine::ProcessCommandLine(int argc, char **argv)
         else if (strcmp(argv[i], "-lb-absolute") == 0)
         {
             LoadBalancer::SetScheme(LOAD_BALANCE_ABSOLUTE);
+        }
+        else if (strcmp(argv[i], "-lb-kdtree") == 0)
+        {
+            LoadBalancer::SetScheme(LOAD_BALANCE_KDTREE);
         }
         else if (strcmp(argv[i], "-create-ghosts-for-t-intersections") == 0)
         {

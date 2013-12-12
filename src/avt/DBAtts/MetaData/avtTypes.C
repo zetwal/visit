@@ -252,6 +252,8 @@ LoadBalanceSchemeToString(LoadBalanceScheme s)
             return "restricted";
         case LOAD_BALANCE_ABSOLUTE:
             return "absolute";
+        case LOAD_BALANCE_KDTREE:
+            return "k-d tree";
         case LOAD_BALANCE_UNKNOWN:
         default:
             return "unknown";
