@@ -508,7 +508,6 @@ avtRayTracer::Execute(void)
         samples->Update(GetGeneralContract());  
         // Now we do the compositing
 
-
         //
         // Single Processor
         //
