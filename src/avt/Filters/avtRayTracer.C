@@ -504,6 +504,12 @@ avtRayTracer::Execute(void)
     // Ray casting: SLIVR
     //
     if (rayCastingSLIVR == true){
+        // avtSLIVRRayTracer tempSL;
+        // tempSL.SetInput(samples);
+        // avtImage_p tempImg = tempSL.GetTypedOutput();
+
+        // tempImg->Update(GetGeneralContract());
+
         // force an execution of the pipeline to generate the images
         samples->Update(GetGeneralContract());  
         // Now we do the compositing

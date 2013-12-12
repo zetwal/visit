@@ -50,6 +50,7 @@
 #include <avtOpacityMap.h>
 #include <map>
 #include <avtImgCommunicator.h>
+#include <avtSLIVRRayTracer.h>
 
 class   avtRayFunction;
 class   vtkMatrix4x4;

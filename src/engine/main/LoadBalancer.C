@@ -255,11 +255,11 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         myPartitions.push_back(one);
         myPartitions.push_back(two);
 
-        // if (rank == 0){
-        //     std::cout << rank << " ~~ " <<"One: "<<  one.axisIndex << "   - Extents (min-max):  " << one.minExtents[0]<< ", " << one.minExtents[1]<< ", " << one.minExtents[2] << "   -   " << one.maxExtents[0]<< ", " << one.maxExtents[1]<< ", " << one.maxExtents[2] << "  dims: " << one.dims[0]<< ", " << one.dims[1]<< ", " << one.dims[2] << std::endl;
-        //     std::cout << rank << " ~~ " <<"two: "<<  two.axisIndex << "   - Extents (min-max):  " << two.minExtents[0]<< ", " << two.minExtents[1]<< ", " << two.minExtents[2] << "   -   " << two.maxExtents[0]<< ", " << two.maxExtents[1]<< ", " << two.maxExtents[2] << "  dims: " << two.dims[0]<< ", " << two.dims[1]<< ", " << two.dims[2] << std::endl;
-        //     std::cout << std::endl;
-        // }
+        if (rank == 0){
+            std::cout << rank << " ~~ " <<"One: "<<  one.axisIndex << "   - Extents (min-max):  " << one.minExtents[0]<< ", " << one.minExtents[1]<< ", " << one.minExtents[2] << "   -   " << one.maxExtents[0]<< ", " << one.maxExtents[1]<< ", " << one.maxExtents[2] << "  dims: " << one.dims[0]<< ", " << one.dims[1]<< ", " << one.dims[2] << std::endl;
+            std::cout << rank << " ~~ " <<"two: "<<  two.axisIndex << "   - Extents (min-max):  " << two.minExtents[0]<< ", " << two.minExtents[1]<< ", " << two.minExtents[2] << "   -   " << two.maxExtents[0]<< ", " << two.maxExtents[1]<< ", " << two.maxExtents[2] << "  dims: " << two.dims[0]<< ", " << two.dims[1]<< ", " << two.dims[2] << std::endl;
+            std::cout << std::endl;
+        }
     }
 
 
@@ -433,7 +433,7 @@ LoadBalancer::chopPartition(partitionExtents parent, partitionExtents & childOne
         childTwo.dims[0] = parent.dims[0]-childOne.dims[0];
         
         childOne.minExtents[0] = parent.minExtents[0];
-        childOne.maxExtents[0] = parent.minExtents[0] + (parent.minExtents[0]+parent.maxExtents[0])/2.0;
+        childOne.maxExtents[0] = parent.minExtents[0] + (parent.maxExtents[0]-parent.minExtents[0])/2.0;
         
         childTwo.minExtents[0] = childOne.maxExtents[0];
         childTwo.maxExtents[0] = parent.maxExtents[0];
@@ -453,7 +453,7 @@ LoadBalancer::chopPartition(partitionExtents parent, partitionExtents & childOne
             childTwo.dims[1] = parent.dims[1]-childOne.dims[1];
             
             childOne.minExtents[1] = parent.minExtents[1];
-            childOne.maxExtents[1] = parent.minExtents[1] + (parent.minExtents[1]+parent.maxExtents[1])/2.0;
+            childOne.maxExtents[1] = parent.minExtents[1] + (parent.maxExtents[1]-parent.minExtents[1])/2.0;
             
             childTwo.minExtents[1] = childOne.maxExtents[1];
             childTwo.maxExtents[1] = parent.maxExtents[1];
@@ -474,7 +474,7 @@ LoadBalancer::chopPartition(partitionExtents parent, partitionExtents & childOne
                 childTwo.dims[2] = parent.dims[2]-childOne.dims[2];
                 
                 childOne.minExtents[2] = parent.minExtents[2];
-                childOne.maxExtents[2] = parent.minExtents[2] + (parent.minExtents[2]+parent.maxExtents[2])/2.0;
+                childOne.maxExtents[2] = parent.minExtents[2] + (parent.maxExtents[2]-parent.minExtents[2])/2.0;
                 
                 childTwo.minExtents[2] = childOne.maxExtents[2];
                 childTwo.maxExtents[2] = parent.maxExtents[2];
