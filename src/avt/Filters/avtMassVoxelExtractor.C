@@ -2048,61 +2048,61 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = std::min(std::max(dest_rgb[3],0.0),1.0);
 
 
-        // if (proc == 0){  // red
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        // }
+        if (proc == 0){  // red
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        }
 
-        // if (proc == 1){ // green
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        // }
+        if (proc == 1){ // green
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        }
 
-        // if (proc == 2){ // blue
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        // }
+        if (proc == 2){ // blue
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        }
 
-        // if (proc == 3){  //yellow
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        // }
+        if (proc == 3){  //yellow
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        }
 
-        // if (proc == 4){ // cyan (blue-vert)
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        // }
+        if (proc == 4){ // cyan (blue-vert)
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        }
 
-        // if (proc == 5){ // magenta
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        // }
+        if (proc == 5){ // magenta
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        }
 
-        // if (proc == 6){ // grey
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0.5;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0.5;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0.5;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        // }
+        if (proc == 6){ // grey
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0.5;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0.5;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0.5;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        }
 
-        // if (proc == 7){ // black
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
-        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        // }
+        if (proc == 7){ // black
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
+            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        }
     }
     else
         if (inrun)

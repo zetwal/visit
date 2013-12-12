@@ -152,7 +152,7 @@ bool avtGenericDatabase::issuedOriginalConnectivityWarning = false;
 
 avtGenericDatabase::avtGenericDatabase(avtFileFormatInterface *inter)
 {
-    std::cout << "avtGenericDatabase::avtGenericDatabase" << std::endl;
+    //std::cout << "avtGenericDatabase::avtGenericDatabase" << std::endl;
     Interface = inter;
     Interface->SetCache(&cache);
     xformManager = new avtTransformManager(&cache);
@@ -176,7 +176,7 @@ avtGenericDatabase::avtGenericDatabase(avtFileFormatInterface *inter)
 
 avtGenericDatabase::~avtGenericDatabase()
 {
-    std::cout << "avtGenericDatabase::~avtGenericDatabase" << std::endl;
+    //std::cout << "avtGenericDatabase::~avtGenericDatabase" << std::endl;
     if (Interface != NULL)
     {
         delete Interface;
@@ -253,7 +253,7 @@ void
 avtGenericDatabase::SetDatabaseMetaData(avtDatabaseMetaData *md, int timeState,
     bool forceReadAllCyclesTimes)
 {
-    std::cout << "avtGenericDatabase::SetDatabaseMetaData" << std::endl;
+    //std::cout << "avtGenericDatabase::SetDatabaseMetaData" << std::endl;
     int t0 = visitTimer->StartTimer();
     Interface->SetDatabaseMetaData(md, timeState, forceReadAllCyclesTimes);
     visitTimer->StopTimer(t0, "Getting database meta data");
@@ -505,7 +505,7 @@ avtDataTree_p
 avtGenericDatabase::GetOutput(avtDataRequest_p spec,
                               avtSourceFromDatabase *src)
 {
-    std::cout << "avtGenericDatabase::GetOutput" << std::endl;
+    //std::cout << "avtGenericDatabase::GetOutput" << std::endl;
     avtDataValidity &validity = src->GetOutput()->GetInfo().GetValidity();
     bool canDoCollectiveCommunication = !validity.AreWeStreaming();
     Interface->DoingStreaming(validity.AreWeStreaming());
