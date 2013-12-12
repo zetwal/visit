@@ -404,7 +404,7 @@ avtRayTracer::Execute(void)
     int  timingIndex = visitTimer->StartTimer();
     bool parallelOn = (imgComm.GetNumProcs() == 1)?false:true;
 
-    if (rayfoo == NULL)
+    if (rayfoo == NULL && rayCastingSLIVR == false)
     {
         debug1 << "Never set ray function for ray tracer." << endl;
         EXCEPTION0(ImproperUseException);
@@ -439,15 +439,14 @@ avtRayTracer::Execute(void)
     //
     avtSamplePointExtractor extractor(screen[0], screen[1], samplesPerRay);
     bool doKernel = kernelBasedSampling;
-    if (trans.GetOutput()->GetInfo().GetAttributes().GetTopologicalDimension()
-        == 0)
+    if (trans.GetOutput()->GetInfo().GetAttributes().GetTopologicalDimension() == 0)
         doKernel = true;
+    
     extractor.SetKernelBasedSampling(doKernel);
-    extractor.RegisterRayFunction(rayfoo);
     extractor.SetJittering(true);
     extractor.SetInput(trans.GetOutput());
     if (trilinearInterpolation || rayCastingSLIVR){
-      extractor.SetTrilinear(trilinearInterpolation);
+        extractor.SetTrilinear(trilinearInterpolation);
         extractor.SetRayCastingSLIVR(rayCastingSLIVR);
         extractor.SetLighting(lighting);
         extractor.SetLightDirection(lightDirection);
@@ -458,6 +457,9 @@ avtRayTracer::Execute(void)
         extractor.SetViewUp(view_up);
         extractor.SetTransferFn(transferFn1D);
     }
+
+    if (rayCastingSLIVR == false)
+        extractor.RegisterRayFunction(rayfoo);
 
     //
     // For curvilinear and unstructured meshes, it makes sense to convert the
@@ -502,10 +504,10 @@ avtRayTracer::Execute(void)
     // Ray casting: SLIVR
     //
     if (rayCastingSLIVR == true){
-        avtRayCompositer rc(rayfoo);                // only required to force an update - Need to find a way to get rid of that!!!!
-        rc.SetInput(samples);
-        avtImage_p image  = rc.GetTypedOutput();
-        image->Update(GetGeneralContract());
+        // force an execution of the pipeline to generate the images
+        samples->Update(GetGeneralContract());  
+        // Now we do the compositing
+
 
         //
         // Single Processor
@@ -525,12 +527,10 @@ avtRayTracer::Execute(void)
             }
             debug5 << "Number of patches: " << numPatches << std::endl;
 
-
             //
             // Sort with the largest z first
             //
             std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgMetaDataByDepth);
-
 
             //
             // Composite the images
