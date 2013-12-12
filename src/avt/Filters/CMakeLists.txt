@@ -99,6 +99,7 @@ avtSamplePointCommunicator.C
 avtSamplePointExtractor.C
 avtSamplePointToSurfaceFilter.C
 avtShiftCenteringFilter.C
+avtSLIVRRayTracer.C
 avtSimilarityTransformFilter.C
 avtSmoothPolyDataFilter.C
 avtStaggeringFilter.C
