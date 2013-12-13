@@ -237,6 +237,7 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     /////////////////////////////////////////////////////////////////
     // Do the region splitting according to a k-d tree
     std::deque<partitionExtents> myPartitions;
+    myPartitions.clear();
 
     partitionExtents parent, one, two;
     parent.axisIndex = 2;   // set it to the last one so that on the next iteration we get the first one! :)
@@ -269,9 +270,11 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     // insert patches into a multimap (patchesTemp) sorted on id of patch
     std::multimap<int,patchMetaData> patchesTemp;
     int count = 0;
+    if (rank == 0)  // only proc 0 prints
+        std::cout << "patches.size(): " << patches.size() << std::endl;
     for (std::vector<patchMetaData>::iterator it=patches.begin(); it!=patches.end(); it++){
         if (rank == 0)  // only proc 0 prints
-             std::cout << count << " _: " <<  (*it).minSpatialExtents[0] << ", "<<  (*it).minSpatialExtents[1] << ", "<<  (*it).minSpatialExtents[2] << "  to  " <<  (*it).maxSpatialExtents[0] << ", " <<  (*it).maxSpatialExtents[1] << ", " <<  (*it).maxSpatialExtents[2] << std::endl;
+             std::cout << count << " _:_ " <<  (*it).minSpatialExtents[0] << ", "<<  (*it).minSpatialExtents[1] << ", "<<  (*it).minSpatialExtents[2] << "  to  " <<  (*it).maxSpatialExtents[0] << ", " <<  (*it).maxSpatialExtents[1] << ", " <<  (*it).maxSpatialExtents[2] << std::endl;
         patchesTemp.insert(std::pair<int,patchMetaData>(count,*it));
         count++;
     }
@@ -279,13 +282,15 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
 
     std::vector< std::vector<int> >patchesList; //2D list of division: patchx, patchy, patchz, ...
     std::vector< int > toDeleteList;
+    patchesList.clear();
     patchesList.reserve(numDivisions);
     int parti = 0;
     for (std::deque<partitionExtents>::iterator it_par=myPartitions.begin(); it_par!=myPartitions.end(); ++it_par){
         double minX = (*it_par).minExtents[0];  double maxX = (*it_par).maxExtents[0];
         double minY = (*it_par).minExtents[1];  double maxY = (*it_par).maxExtents[1];
         double minZ = (*it_par).minExtents[2];  double maxZ = (*it_par).maxExtents[2];
-        
+        patchesList[parti].clear();
+
         // remove from multimap and put in the partitions 2D list (patchesList)
         // phase 1: only those completely inside
         for (std::multimap<int,patchMetaData>::iterator it=patchesTemp.begin(); it!=patchesTemp.end(); it++){
@@ -1043,12 +1048,10 @@ LoadBalancer::Reduce(avtContract_p input)
         LoadBalanceScheme theScheme = DetermineAppropriateScheme(input);
         std::cout << "theScheme: " << theScheme << std::endl;
 
-
         //     int ts = new_data->GetTimestep();
         //     avtDatabaseMetaData *md = GetMetaData(ts);
         //     string meshname = md->MeshForVar(new_data->GetVariable());
         //     std::cout << "meshname: " << meshname << std::endl;
-
 
         int index = input->GetPipelineIndex();
         const LBInfo &lbinfo = pipelineInfo[index];
@@ -1062,12 +1065,13 @@ LoadBalancer::Reduce(avtContract_p input)
 
 
         const avtMeshMetaData *mmd = md->GetMesh(meshname);
-
-        // for (int p=0; p<mmd->numBlocks; p++){
-        //     std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
-        //     for (int j=0; j<mmd->patch_parent[p].size(); j++)
-        //         std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
-        // }
+        if (rank == 0)
+            std::cout << "mmd->numBlocks: " << mmd->numBlocks << std::endl;
+        for (int p=0; p<mmd->numBlocks; p++){
+            std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
+            for (int j=0; j<mmd->patch_parent[p].size(); j++)
+                std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
+        }
 
         int logicalBounds[3];
         double minSpatialExtents[3], maxSpatialExtents[3];
@@ -1078,6 +1082,14 @@ LoadBalancer::Reduce(avtContract_p input)
         }
         std::vector<int> templist;
         std::vector<int> numPatchesPerProc;
+
+        if (rank ==0){
+            std::cout << "List size: " << list.size() << std::endl;
+            for (int i=0; i<list.size(); i++){
+                std::cout << list[i] << "  ";
+            }
+        }
+
         kdtreeBuilding(nProcs, logicalBounds, minSpatialExtents, maxSpatialExtents, mmd->patches,list,numPatchesPerProc);
 
         if (theScheme == LOAD_BALANCE_KDTREE)
