@@ -168,7 +168,6 @@ struct IOInfo
 
 struct partitionExtents{
     int axisIndex;
-
     int dims[3];
     double minExtents[3], maxExtents[3];
 };
@@ -227,6 +226,12 @@ class ENGINE_MAIN_API LoadBalancer
 
     // Special data member for -lb-stream option.
     std::vector<int>                  domainListForStreaming;
+
+
+    // AMR Stuff
+    bool                            amrLevelsSet;
+    std::vector<int>                amrLevels;       
+    std::vector<patchMetaData>      patchesInfo;         
 };
 
 

@@ -475,6 +475,22 @@ PyavtMeshMetaData_ToString(const avtMeshMetaData *atts, const char *prefix)
     str += tmpStr;
     SNPRINTF(tmpStr, 1000, "%spresentGhostZoneTypes = %d\n", prefix, atts->presentGhostZoneTypes);
     str += tmpStr;
+    {   const intVector &levels = atts->levels;
+        SNPRINTF(tmpStr, 1000, "%slevels = (", prefix);
+        str += tmpStr;
+        for(size_t i = 0; i < levels.size(); ++i)
+        {
+            SNPRINTF(tmpStr, 1000, "%d", levels[i]);
+            str += tmpStr;
+            if(i < levels.size() - 1)
+            {
+                SNPRINTF(tmpStr, 1000, ", ");
+                str += tmpStr;
+            }
+        }
+        SNPRINTF(tmpStr, 1000, ")\n");
+        str += tmpStr;
+    }
     return str;
 }
 
@@ -2027,6 +2043,69 @@ avtMeshMetaData_GetPresentGhostZoneTypes(PyObject *self, PyObject *args)
     return retval;
 }
 
+/*static*/ PyObject *
+avtMeshMetaData_SetLevels(PyObject *self, PyObject *args)
+{
+    avtMeshMetaDataObject *obj = (avtMeshMetaDataObject *)self;
+
+    intVector  &vec = obj->data->levels;
+    PyObject   *tuple;
+    if(!PyArg_ParseTuple(args, "O", &tuple))
+        return NULL;
+
+    if(PyTuple_Check(tuple))
+    {
+        vec.resize(PyTuple_Size(tuple));
+        for(int i = 0; i < PyTuple_Size(tuple); ++i)
+        {
+            PyObject *item = PyTuple_GET_ITEM(tuple, i);
+            if(PyFloat_Check(item))
+                vec[i] = int(PyFloat_AS_DOUBLE(item));
+            else if(PyInt_Check(item))
+                vec[i] = int(PyInt_AS_LONG(item));
+            else if(PyLong_Check(item))
+                vec[i] = int(PyLong_AsLong(item));
+            else
+                vec[i] = 0;
+        }
+    }
+    else if(PyFloat_Check(tuple))
+    {
+        vec.resize(1);
+        vec[0] = int(PyFloat_AS_DOUBLE(tuple));
+    }
+    else if(PyInt_Check(tuple))
+    {
+        vec.resize(1);
+        vec[0] = int(PyInt_AS_LONG(tuple));
+    }
+    else if(PyLong_Check(tuple))
+    {
+        vec.resize(1);
+        vec[0] = int(PyLong_AsLong(tuple));
+    }
+    else
+        return NULL;
+
+    // Mark the levels in the object as modified.
+    obj->data->SelectAll();
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+/*static*/ PyObject *
+avtMeshMetaData_GetLevels(PyObject *self, PyObject *args)
+{
+    avtMeshMetaDataObject *obj = (avtMeshMetaDataObject *)self;
+    // Allocate a tuple the with enough entries to hold the levels.
+    const intVector &levels = obj->data->levels;
+    PyObject *retval = PyTuple_New(levels.size());
+    for(size_t i = 0; i < levels.size(); ++i)
+        PyTuple_SET_ITEM(retval, i, PyInt_FromLong(long(levels[i])));
+    return retval;
+}
+
 
 
 PyMethodDef PyavtMeshMetaData_methods[AVTMESHMETADATA_NMETH] = {
@@ -2133,6 +2212,8 @@ PyMethodDef PyavtMeshMetaData_methods[AVTMESHMETADATA_NMETH] = {
     {"GetLODs", avtMeshMetaData_GetLODs, METH_VARARGS},
     {"SetPresentGhostZoneTypes", avtMeshMetaData_SetPresentGhostZoneTypes, METH_VARARGS},
     {"GetPresentGhostZoneTypes", avtMeshMetaData_GetPresentGhostZoneTypes, METH_VARARGS},
+    {"SetLevels", avtMeshMetaData_SetLevels, METH_VARARGS},
+    {"GetLevels", avtMeshMetaData_GetLevels, METH_VARARGS},
     {NULL, NULL}
 };
 
@@ -2311,6 +2392,8 @@ PyavtMeshMetaData_getattr(PyObject *self, char *name)
         return avtMeshMetaData_GetLODs(self, NULL);
     if(strcmp(name, "presentGhostZoneTypes") == 0)
         return avtMeshMetaData_GetPresentGhostZoneTypes(self, NULL);
+    if(strcmp(name, "levels") == 0)
+        return avtMeshMetaData_GetLevels(self, NULL);
 
     return Py_FindMethod(PyavtMeshMetaData_methods, self, name);
 }
@@ -2427,6 +2510,8 @@ PyavtMeshMetaData_setattr(PyObject *self, char *name, PyObject *args)
         obj = avtMeshMetaData_SetLODs(self, tuple);
     else if(strcmp(name, "presentGhostZoneTypes") == 0)
         obj = avtMeshMetaData_SetPresentGhostZoneTypes(self, tuple);
+    else if(strcmp(name, "levels") == 0)
+        obj = avtMeshMetaData_SetLevels(self, tuple);
 
     if(obj != NULL)
         Py_DECREF(obj);

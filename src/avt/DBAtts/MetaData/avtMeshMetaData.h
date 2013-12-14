@@ -60,12 +60,14 @@
 //   
 // ****************************************************************************
 
+
 // metadata about each patch
 struct patchMetaData{
     int level;      // AMR Level: 1,2,3, ... coarsest to finest
     int dims[3];    // the logical x,y,z dimensions
     double minSpatialExtents[3], maxSpatialExtents[3];  // real dimensions
 };
+
 
 class DBATTS_API avtMeshMetaData : public AttributeSubject
 {
@@ -161,6 +163,7 @@ public:
         ID_hideFromGUI,
         ID_LODs,
         ID_presentGhostZoneTypes,
+        ID_levels,
         ID__LAST
     };
 
@@ -216,9 +219,9 @@ public:
     bool                 hideFromGUI;
     int                  LODs;
     int                  presentGhostZoneTypes;
+    intVector            levels;
 
     // AMR stuff
-    std::vector<int>     levels;
     std::vector< std::vector<int> > patch_parent;
     std::vector<patchMetaData> patches;
 
@@ -227,6 +230,6 @@ private:
     static const char *TypeMapFormatString;
     static const private_tmfs_t TmfsStruct;
 };
-#define AVTMESHMETADATA_TMFS "ssbiiiibIbiissssssbDDiisss*aiisss*i*i*bibbbbibFFbDibbii"
+#define AVTMESHMETADATA_TMFS "ssbiiiibIbiissssssbDDiisss*aiisss*i*i*bibbbbibFFbDibbiii*"
 
 #endif
