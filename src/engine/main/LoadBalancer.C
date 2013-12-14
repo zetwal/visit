@@ -216,8 +216,10 @@ LoadBalancer::GetSchemeAsString()
 //
 // ****************************************************************************
 void          
-LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patchMetaData> patches, std::vector<int> &list, std::vector<int> &numPatchesPerProc){
-    std::cout << rank << " ~~ " << " LoadBalancer::kdtreeBuilding " << std::endl;
+LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], 
+                                               std::vector<patchMetaData> patches, std::vector<int> &list, std::vector<int> &numPatchesPerProc){
+
+    std::cout << rank << " ~~ " << " LoadBalancer::kdtreeBuilding " << numDivisions << std::endl;
     /////////////////////////////////////////////////////////////////
     // Sort to find the order of axes from largest to smallest
     int axisOrder[3];
@@ -270,47 +272,102 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     // insert patches into a multimap (patchesTemp) sorted on id of patch
     std::multimap<int,patchMetaData> patchesTemp;
     int count = 0;
-    if (rank == 0)  // only proc 0 prints
-        std::cout << "patches.size(): " << patches.size() << std::endl;
-    for (std::vector<patchMetaData>::iterator it=patches.begin(); it!=patches.end(); it++){
-        if (rank == 0)  // only proc 0 prints
-             std::cout << count << " _:_ " <<  (*it).minSpatialExtents[0] << ", "<<  (*it).minSpatialExtents[1] << ", "<<  (*it).minSpatialExtents[2] << "  to  " <<  (*it).maxSpatialExtents[0] << ", " <<  (*it).maxSpatialExtents[1] << ", " <<  (*it).maxSpatialExtents[2] << std::endl;
-        patchesTemp.insert(std::pair<int,patchMetaData>(count,*it));
+    if (rank == 0){  // only proc 0 prints
+        std::cout << "total patches.size(): " << patches.size() << std::endl;
+        std::cout << "viewable patches.size(): " << list.size() << std::endl;
+    }
+    // for (std::vector<patchMetaData>::iterator it=patches.begin(); it!=patches.end(); it++){
+    //     if (rank == 0)  // only proc 0 prints
+    //          std::cout << count << " _:_ " <<  (*it).minSpatialExtents[0] << ", "<<  (*it).minSpatialExtents[1] << ", "<<  (*it).minSpatialExtents[2] << "  to  " <<  (*it).maxSpatialExtents[0] << ", " <<  (*it).maxSpatialExtents[1] << ", " <<  (*it).maxSpatialExtents[2] << std::endl;
+    //     patchesTemp.insert(std::pair<int,patchMetaData>(count,*it));
+    //     count++;
+    // }
+
+    for (std::vector<int>::iterator it=list.begin(); it!=list.end(); it++){
+        patchesTemp.insert(std::pair<int,patchMetaData>((int)(*it),patches[(int)(*it)]));
         count++;
     }
 
+    // if (rank == 0){
+    //     for (std::multimap<int,patchMetaData>::iterator it=patchesTemp.begin(); it!=patchesTemp.end(); it++)
+    //         std::cout << (*it).first << ", " << (*it).second.level << " - " << (*it).second.dims[0] << ", " << (*it).second.dims[1] << ", " << (*it).second.dims[2] << std::endl;
+    // }
+
+    // for (std::vector<patchMetaData>::iterator it=patches.begin(); it!=patches.end(); it++){
+    //     if (rank == 0)  // only proc 0 prints
+    //          std::cout << count << " _:_ " <<  (*it).minSpatialExtents[0] << ", "<<  (*it).minSpatialExtents[1] << ", "<<  (*it).minSpatialExtents[2] << "  to  " <<  (*it).maxSpatialExtents[0] << ", " <<  (*it).maxSpatialExtents[1] << ", " <<  (*it).maxSpatialExtents[2] << std::endl;
+    //     patchesTemp.insert(std::pair<int,patchMetaData>(count,*it));
+    //     count++;
+    // }
+    if (rank == 0)  // only proc 0 prints
+        std::cout << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ zero " <<  std::endl;
 
     std::vector< std::vector<int> >patchesList; //2D list of division: patchx, patchy, patchz, ...
     std::vector< int > toDeleteList;
+    toDeleteList.clear();
     patchesList.clear();
     patchesList.reserve(numDivisions);
+   // for (int i=0; i <numDivisions; i++)
+   //     patchesList[i].reserve(10);
+
+    if (rank == 0)
+        std::cout << "patchesList.size() " << patchesList.size() << std::endl;
+
     int parti = 0;
+    if (rank == 0)
+       std::cout << "a " << std::endl;
+   
     for (std::deque<partitionExtents>::iterator it_par=myPartitions.begin(); it_par!=myPartitions.end(); ++it_par){
         double minX = (*it_par).minExtents[0];  double maxX = (*it_par).maxExtents[0];
         double minY = (*it_par).minExtents[1];  double maxY = (*it_par).maxExtents[1];
         double minZ = (*it_par).minExtents[2];  double maxZ = (*it_par).maxExtents[2];
         patchesList[parti].clear();
+       // patchesList[parti].reserve(10);
 
+        if (rank == 0)
+            std::cout << "\n\n | min " << minX << ", " << minY << ", " << minZ << "     max: " << maxX << ", " << maxY << ", " << maxZ << "  | " << std::endl;
         // remove from multimap and put in the partitions 2D list (patchesList)
         // phase 1: only those completely inside
         for (std::multimap<int,patchMetaData>::iterator it=patchesTemp.begin(); it!=patchesTemp.end(); it++){
             int key = (*it).first;
+
+           //  if (rank == 0)
+                std::cout << rank << " ~ " << key 
+                          << "  || minP: " << (*it).second.minSpatialExtents[0] << ", " << (*it).second.minSpatialExtents[1] << ", " << (*it).second.minSpatialExtents[2] 
+                          << "   maxP: " << (*it).second.maxSpatialExtents[0] << ", " << (*it).second.maxSpatialExtents[1] << ", " << (*it).second.maxSpatialExtents[2] << std::endl;
             if ((*it).second.minSpatialExtents[0] >= minX && (*it).second.maxSpatialExtents[0] <= maxX)
                 if ((*it).second.minSpatialExtents[1] >= minY && (*it).second.maxSpatialExtents[1] <= maxY)
                     if ((*it).second.minSpatialExtents[2] >= minZ && (*it).second.maxSpatialExtents[2] <= maxZ){
+                       // if (rank ==0)
+                            std::cout << rank << " aaa    parti: " << parti << "   patchesList[parti].size() " << patchesList[parti].size() << "   key: " << key << std::endl;
+
                         patchesList[parti].push_back(key);
+
+                       // if (rank ==0)
+                            std::cout << rank << " bbb " << std::endl;
+
                         toDeleteList.push_back(key);
+
+                        //if (rank ==0)
+                            std::cout << rank << " key to del: " << key << std::endl;
                     }
         }
-
+/*
+        if (rank == 0)  // only proc 0 prints
+            std::cout << rank << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Go Del  " << toDeleteList.size()<<  std::endl;
         for (int i=0; i<toDeleteList.size(); i++)
             patchesTemp.erase(toDeleteList[i]);
         toDeleteList.clear();
+*/
 
+        
         parti++;
     }
 
-
+   // if (rank == 0)  // only proc 0 prints
+        std::cout << rank << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ one " <<  std::endl;
+/*
+    toDeleteList.clear();
     parti = 0;
     for (std::deque<partitionExtents>::iterator it_par=myPartitions.begin(); it_par!=myPartitions.end(); ++it_par){
         double minX = (*it_par).minExtents[0];  double maxX = (*it_par).maxExtents[0];
@@ -321,6 +378,11 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         // phase 1: only those completely inside
         for (std::multimap<int,patchMetaData>::iterator it=patchesTemp.begin(); it!=patchesTemp.end(); it++){
             int key = (*it).first;
+
+            std::cout << rank << " ~ " << key 
+                          << "  {{ minP: " << (*it).second.minSpatialExtents[0] << ", " << (*it).second.minSpatialExtents[1] << ", " << (*it).second.minSpatialExtents[2] 
+                          << "   maxP: " << (*it).second.maxSpatialExtents[0] << ", " << (*it).second.maxSpatialExtents[1] << ", " << (*it).second.maxSpatialExtents[2] << std::endl;
+
             double centroid[3];
             centroid[0] = ((*it).second.minSpatialExtents[0] + (*it).second.maxSpatialExtents[0])/2.0;
             centroid[1] = ((*it).second.minSpatialExtents[1] + (*it).second.maxSpatialExtents[1])/2.0;
@@ -328,8 +390,11 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
             if (centroid[0] >= minX && centroid[0] < maxX)
                 if (centroid[1] >= minY && centroid[1] < maxY)
                     if (centroid[2] >= minZ && centroid[2] < maxZ){
+                        std::cout << rank << " xxx    parti: " << parti << "   patchesList[parti].size() " << patchesList[parti].size() << std::endl;
                         patchesList[parti].push_back(key);
+                         std::cout << rank << " yyy " << std::endl;
                         toDeleteList.push_back(key);
+                        std::cout << rank << "kkkey to del: " << key << std::endl;
                     }
         }
 
@@ -339,6 +404,9 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
 
         parti++;
     }
+
+    //if (rank == 0)  // only proc 0 prints
+        std::cout << rank << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ two " <<  std::endl;
 
     int par = 0;
     if (rank == 0)
@@ -364,6 +432,9 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     //                           << "center: " << centroid[0] << ",  " << centroid[1] << ", " << centroid[2] << std::endl;
     // }
     
+
+   // if (rank == 0)  // only proc 0 prints
+        std::cout << rank << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ three " <<  std::endl;
     list.clear();
     numPatchesPerProc.clear();
     //std::cout << std::endl;
@@ -380,6 +451,7 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         // std::cout << std::endl;
         // std::cout << std::endl;
     }
+    */
 }
 
 // ****************************************************************************
@@ -599,6 +671,7 @@ LoadBalancer::UpdateProgress(int current, int total)
 
 LoadBalancer::LoadBalancer(int np, int r)
 {
+    std::cout << "LoadBalancer::LoadBalancer" << std::endl;
     //
     // Pipeline index 0 is reserved for meta-data pipelines.
     //
@@ -606,6 +679,9 @@ LoadBalancer::LoadBalancer(int np, int r)
 
     rank   = r;
     nProcs = np;
+
+    amrLevelsSet = false;
+    amrLevels.clear();
 
     //
     // Register callbacks with the avt pipeline.
@@ -1065,12 +1141,18 @@ LoadBalancer::Reduce(avtContract_p input)
 
 
         const avtMeshMetaData *mmd = md->GetMesh(meshname);
-        if (rank == 0)
-            std::cout << "mmd->numBlocks: " << mmd->numBlocks << std::endl;
-        for (int p=0; p<mmd->numBlocks; p++){
-            std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
-            for (int j=0; j<mmd->patch_parent[p].size(); j++)
-                std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
+
+        // for (int p=0; p<mmd->numBlocks; p++){
+        //     std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
+        //     for (int j=0; j<mmd->patch_parent[p].size(); j++)
+        //         std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
+        // }
+
+        if (amrLevelsSet == false){
+            std::cout << "amrLevelsSet == false " << std::endl;
+            amrLevelsSet = true;
+            amrLevels = mmd->levels;
+            patchesInfo = mmd->patches;
         }
 
         int logicalBounds[3];
@@ -1088,9 +1170,14 @@ LoadBalancer::Reduce(avtContract_p input)
             for (int i=0; i<list.size(); i++){
                 std::cout << list[i] << "  ";
             }
+        
+            std::cout << "amrLevels levels: " << amrLevels.size() << std::endl;
+            for (int i=0; i<amrLevels.size(); i++){
+                std::cout << amrLevels[i] << "  ";
+            }
         }
 
-        kdtreeBuilding(nProcs, logicalBounds, minSpatialExtents, maxSpatialExtents, mmd->patches,list,numPatchesPerProc);
+        kdtreeBuilding(nProcs, logicalBounds, minSpatialExtents, maxSpatialExtents, patchesInfo,list,numPatchesPerProc);
 
         if (theScheme == LOAD_BALANCE_KDTREE)
         {

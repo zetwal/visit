@@ -218,6 +218,7 @@ void avtMeshMetaData::Copy(const avtMeshMetaData &obj)
     hideFromGUI = obj.hideFromGUI;
     LODs = obj.LODs;
     presentGhostZoneTypes = obj.presentGhostZoneTypes;
+    levels = obj.levels;
 
     avtMeshMetaData::SelectAll();
 }
@@ -455,7 +456,8 @@ avtMeshMetaData::operator == (const avtMeshMetaData &obj) const
             (containsExteriorBoundaryGhosts == obj.containsExteriorBoundaryGhosts) &&
             (hideFromGUI == obj.hideFromGUI) &&
             (LODs == obj.LODs) &&
-            (presentGhostZoneTypes == obj.presentGhostZoneTypes));
+            (presentGhostZoneTypes == obj.presentGhostZoneTypes) &&
+            (levels == obj.levels));
 }
 
 // ****************************************************************************
@@ -650,6 +652,7 @@ avtMeshMetaData::SelectAll()
     Select(ID_hideFromGUI,                    (void *)&hideFromGUI);
     Select(ID_LODs,                           (void *)&LODs);
     Select(ID_presentGhostZoneTypes,          (void *)&presentGhostZoneTypes);
+    Select(ID_levels,                         (void *)&levels);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1290,7 +1293,7 @@ avtMeshMetaData::Print(ostream &out, int indent) const
     }
 
 
-    if (blockNames.size() == numBlocks)
+    if ((int)blockNames.size() == numBlocks)
     {
         Indent(out, indent);
         out << "Block names: " << std::endl;
@@ -1419,7 +1422,7 @@ avtMeshMetaData::SetAMRInfo(const std::string &levelName,
                             const std::vector<int> &patchesPerLevel)
 {
     int  i;
-    int  nlevels = patchesPerLevel.size();
+    int  nlevels = (int)patchesPerLevel.size();
 
     // Basic setup stuff
     int  numBlocks = 0;
