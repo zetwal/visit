@@ -504,14 +504,18 @@ avtRayTracer::Execute(void)
     // Ray casting: SLIVR
     //
     if (rayCastingSLIVR == true){
-        // avtSLIVRRayTracer tempSL;
-        // tempSL.SetInput(samples);
-        // avtImage_p tempImg = tempSL.GetTypedOutput();
+         avtSLIVRRayTracer tempSL;
+         tempSL.SetInput(samples);
+         
+         avtImage_p tempImg = tempSL.GetTypedOutput();
+         
+         tempImg->Update(GetGeneralContract());
+         tempSL.setPatchSize(extractor.getImgPatchSize());
 
-        // tempImg->Update(GetGeneralContract());
+
 
         // force an execution of the pipeline to generate the images
-        samples->Update(GetGeneralContract());  
+        //samples->Update(GetGeneralContract());  
         // Now we do the compositing
 
         //
@@ -524,6 +528,7 @@ avtRayTracer::Execute(void)
             //
             std::vector<imgMetaData> allImgMetaData;          // contains the metadata to composite the image
             int numPatches = extractor.getImgPatchSize();     // get the number of patches
+            std::cout << " extractor.getImgPatchSize() : " << extractor.getImgPatchSize() << std::endl;
         
             for (int i=0; i<numPatches; i++){
                 imgMetaData temp;
@@ -586,7 +591,7 @@ avtRayTracer::Execute(void)
                 tempImgData.imagePatch = NULL;
             }
             allImgMetaData.clear();
-
+            
 
             // Creates an image structure to hold the image
             avtImage_p whole_image;
@@ -651,7 +656,7 @@ avtRayTracer::Execute(void)
         imgComm.gatherNumPatches(numPatches);
 
         debug5 << PAR_Rank() << "   avtRayTracer::Execute  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << extractor.getTotalAssignedPatches() << endl;
-
+        std::cout << "  NP extractor.getImgPatchSize() : " << extractor.getImgPatchSize() << std::endl;
 
         //
         // Send/Receive the patches iota metadata to proc 0

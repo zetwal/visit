@@ -55,13 +55,22 @@ class AVTFILTERS_API avtSLIVRRayTracer : public avtSamplePointsToImageFilter
 		avtSLIVRRayTracer();
 		~avtSLIVRRayTracer();
 
-		virtual const char   *GetType(void) { return "avtSLIVRRayTracer"; };
-    	virtual const char   *GetDescription(void) 
+		virtual const char  *GetType(void) { return "avtSLIVRRayTracer"; };
+    	virtual const char  *GetDescription(void) 
                                              { return "Assembles subimages into an image"; };
 
-        virtual void          Execute(void);
+        virtual void		Execute(void);
+
+        void 				compositing(void);
+
+
+        void             	setProcIdNumProcs(int _proc, int _numProcs){ proc = _proc; numProcs= _numProcs;}
+        void				setPatchSize(int _numPatches){numPatches = _numPatches;}
 
 	protected:
+		int              	proc;                  	// id of the processor 		
+		int 				numProcs;				// number of processors
+		int numPatches;
 };
 
 #endif
