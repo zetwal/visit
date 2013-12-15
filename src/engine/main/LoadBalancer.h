@@ -204,7 +204,7 @@ class ENGINE_MAIN_API LoadBalancer
     static std::string            GetSchemeAsString();
 
     int                           chopPartition(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]);
-    void                          kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patchMetaData> patches, std::vector<int> &list, std::vector<int> &numPatchesPerProc);
+    int                           kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patchMetaData> patches, std::vector<int> &list);
 
   protected:
     bool                          CheckAbort(bool);
