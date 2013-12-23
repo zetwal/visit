@@ -56,6 +56,8 @@
 
 #include <avtMeshMetaData.h>
 
+#include <filters_exports.h>
+
 class     avtDatabase;
 
 
@@ -166,12 +168,6 @@ struct IOInfo
 //
 // ****************************************************************************
 
-struct partitionExtents{
-    int axisIndex;
-    int dims[3];
-    double minExtents[3], maxExtents[3];
-};
-
 class ENGINE_MAIN_API LoadBalancer
 {
   public:
@@ -205,7 +201,8 @@ class ENGINE_MAIN_API LoadBalancer
 
     int                           chopPartition(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]);
     int                           kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patchMetaData> patches, std::vector<int> &list);
-
+    bool                          patchOverlaps(float patchMinX, float patchMaxX, float patchMinY, float patchMaxY, float patchMinZ, float patchMaxZ,
+                                                float partitionMinX, float partitionMaxX, float partitionMinY, float partitionMaxY, float partitionMinZ, float partitionMaxZ);
   protected:
     bool                          CheckAbort(bool);
     void                          UpdateProgress(int, int);

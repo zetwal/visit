@@ -52,6 +52,8 @@
 #include <avtImgCommunicator.h>
 #include <avtSLIVRRayTracer.h>
 
+#include <avtDatabaseMetaData.h>
+
 class   avtRayFunction;
 class   vtkMatrix4x4;
 
@@ -129,7 +131,6 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     void                  SetKernelBasedSampling(bool v)
                                     { kernelBasedSampling = v; };
 
-
     void                  SetLighting(bool l) {lighting = l; };
     void                  SetLightPosition(double _lightPos[4]) { for (int i=0;i<4;i++) lightPosition[i]=_lightPos[i]; }
     void                  SetLightDirection(double _lightDir[3]) { for (int i=0;i<3;i++) lightDirection[i]=_lightDir[i]; }
@@ -141,6 +142,11 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
 
     void                  SetTrilinear(bool t) {trilinearInterpolation = t; };
     void                  SetRayCastingSLIVR(bool _rayCastingSLIVR){ rayCastingSLIVR = _rayCastingSLIVR; };
+
+    int                   chopPartitionRC(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]);
+    int                   kdtreeBuildingRC(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patchMetaData> patches, std::vector<int> &list);
+    bool                  patchOverlapsRC(float patchMinX, float patchMaxX, float patchMinY, float patchMaxY, float patchMinZ, float patchMaxZ,
+                                        float partitionMinX, float partitionMaxX, float partitionMinY, float partitionMaxY, float partitionMinZ, float partitionMaxZ);
 
   protected:
     avtImgCommunicator    imgComm;
@@ -178,7 +184,6 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
                                                 vtkMatrix4x4 *,
                                                 double &, double &);
 };
-
 
 #endif
 

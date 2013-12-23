@@ -110,7 +110,7 @@ ShaderProgramARB::init_shaders_supported(std::string& error, bool forceIntel)
     {
       supported_ = false;
     }
-    // supported_ = false;
+    supported_ = false;
 
 #ifndef __sgi
     // Supported used to mean just shader programs.  However the

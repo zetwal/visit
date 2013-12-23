@@ -477,6 +477,8 @@ avtRayTracer::Execute(void)
         timingVolToImg = visitTimer->StartTimer();
 
 
+    double meshMin[3], meshMax[3];
+    int logicalBounds[3];
     if (rayCastingSLIVR == true){
         avtDataObject_p samples = extractor.GetInput();
         const avtDataAttributes &datts = samples->GetInfo().GetAttributes();
@@ -486,16 +488,16 @@ avtRayTracer::Execute(void)
         std::string mesh = md->MeshForVar(datts.GetVariableName());
         const avtMeshMetaData *mmd = md->GetMesh(mesh);
         
-        double meshMin[3], meshMax[3];
         for (int i=0; i<3; i++){
             meshMin[i] = mmd->minSpatialExtents[i];
             meshMax[i] = mmd->maxSpatialExtents[i];
+            logicalBounds[i]=mmd->logicalBounds[i];
         }
         
         extractor.SetMeshDims(meshMin,meshMax);
-        // std::cout << PAR_Rank() << " ~ Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
-        //                         "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
-        //                         "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
+        debug5 << PAR_Rank() << " ~ Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
+                                 "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
+                                 "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
     }
 
     avtDataObject_p samples = extractor.GetOutput();
@@ -504,18 +506,17 @@ avtRayTracer::Execute(void)
     // Ray casting: SLIVR
     //
     if (rayCastingSLIVR == true){
-         avtSLIVRRayTracer tempSL;
-         tempSL.SetInput(samples);
+        // avtSLIVRRayTracer tempSL;
+        // tempSL.SetInput(samples);
          
-         avtImage_p tempImg = tempSL.GetTypedOutput();
+        // avtImage_p tempImg = tempSL.GetTypedOutput();
          
-         tempImg->Update(GetGeneralContract());
-         tempSL.setPatchSize(extractor.getImgPatchSize());
-
+        // tempImg->Update(GetGeneralContract());
+        // tempSL.setPatchSize(extractor.getImgPatchSize());
 
 
         // force an execution of the pipeline to generate the images
-        //samples->Update(GetGeneralContract());  
+        samples->Update(GetGeneralContract());  
         // Now we do the compositing
 
         //
@@ -648,7 +649,16 @@ avtRayTracer::Execute(void)
         int  timingComm = visitTimer->StartTimer();
         int  timingCommMeta = visitTimer->StartTimer();
 
-       
+        //
+        // Determine partition extents
+        //
+    //     partitionExtents parent, one, two;
+    // parent.axisIndex = 2;   // set it to the last one so that on the next iteration we get the first one! :)
+    // parent.dims[0] = logicalBounds[0];  parent.dims[1] = logicalBounds[1];  parent.dims[2] = logicalBounds[2];
+    // parent.minExtents[0] = minSpatialExtents[0];    parent.minExtents[1] = minSpatialExtents[1];    parent.minExtents[2] = minSpatialExtents[2];
+    // parent.maxExtents[0] = maxSpatialExtents[0];    parent.maxExtents[1] = maxSpatialExtents[1];    parent.maxExtents[2] = maxSpatialExtents[2];
+
+
         //
         // Getting the patches & send/receive the number of patches that each has to 0
         //
@@ -656,7 +666,8 @@ avtRayTracer::Execute(void)
         imgComm.gatherNumPatches(numPatches);
 
         debug5 << PAR_Rank() << "   avtRayTracer::Execute  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << extractor.getTotalAssignedPatches() << endl;
-        std::cout << "  NP extractor.getImgPatchSize() : " << extractor.getImgPatchSize() << std::endl;
+        std::cout << PAR_Rank() << "   avtRayTracer::Execute  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << extractor.getTotalAssignedPatches() << endl;
+
 
         //
         // Send/Receive the patches iota metadata to proc 0
@@ -753,6 +764,7 @@ avtRayTracer::Execute(void)
 
         std::vector<imgData> compositedDataVec;
         debug5 << PAR_Rank() << " ~  totalPatchesToCompositeLocally: " << totalPatchesToCompositeLocally << endl;
+        std::cout << PAR_Rank() << " ~  totalPatchesToCompositeLocally: " << totalPatchesToCompositeLocally << endl;
 
         while (index <= totalPatchesToCompositeLocally){
             if (patchesToCompositeLocally[index] == -1 || index == totalPatchesToCompositeLocally){

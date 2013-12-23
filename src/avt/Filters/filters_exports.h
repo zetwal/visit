@@ -81,11 +81,12 @@ struct imgMetaData{
 
   int destProcId;   // destination proc where this patch gets composited
 
-  int inUse;   // whether the patch is composed locally or not
+  int inUse;        // whether the patch is composed locally or not
   int dims[2];      // height, width
   int screen_ll[2]; // position in the final image
   int screen_ur[2];
   float avg_z;      // depth of the patch
+  float extents[6]; // original extents: xmin, xmax,  ymin, ymax,  zmin, zmax
 };
 
 
@@ -123,7 +124,7 @@ struct imgData{
 // ****************************************************************************
 struct iotaMeta{
   int procId;  
-  int patchNumber; 
+  int patchNumber;
   
   int dims[2];      // height, width
   int screen_ll[2]; // position in the final image
@@ -132,6 +133,23 @@ struct iotaMeta{
   bool operator==(const iotaMeta &a){
     return (patchNumber == a.patchNumber) && (procId == a.procId);
  }    
+};
+
+
+// ****************************************************************************
+//  Struct:  partitionExtents
+//
+//  Purpose:
+//    Holds the extents of a partition
+//
+//  Programmer:  
+//  Creation:    
+//
+// ****************************************************************************
+struct partitionExtents{
+    int axisIndex;
+    int dims[3];
+    double minExtents[3], maxExtents[3];
 };
 
 #endif
