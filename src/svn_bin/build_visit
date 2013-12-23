@@ -18,12 +18,12 @@
 #   This script has been tested and is known to work with the following OS/
 #   compiler combinations:
 #
-#	OS	Hardware	Compiler	Machine
-#	-----	--------	--------	-------
-#       RHEL3, 	x86,		GCC 3.2.3	hoth.llnl.gov
-#       CHAOS, 	x86_64,		GCC 4.1.2	aztec.llnl.gov
-#       SuSE,   x86_64,		GCC 4.0.2	antares.lbl.gov
-#       SuSE,   x86_64,		GCC 4.1.0	octagon.lbl.gov
+#   OS  Hardware    Compiler    Machine
+#   -----   --------    --------    -------
+#       RHEL3,  x86,        GCC 3.2.3   hoth.llnl.gov
+#       CHAOS,  x86_64,     GCC 4.1.2   aztec.llnl.gov
+#       SuSE,   x86_64,     GCC 4.0.2   antares.lbl.gov
+#       SuSE,   x86_64,     GCC 4.1.0   octagon.lbl.gov
 #       MacOSX  x86_64          GCC 4.2.1       cyclonus.llnl.gov
 #
 #   It is believed that this script will also work with other Linux variations.
@@ -337,4 +337,3 @@ initialize_build_visit
 
 #run all build visit 
 run_build_visit "$@"
-

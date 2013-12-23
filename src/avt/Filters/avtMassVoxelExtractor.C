@@ -585,12 +585,11 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     int h_max = restrictedMaxHeight+1;
 
     imgWidth = imgHeight = 0;
-
+    //std::cout << "w_min: " << w_max << "   w_max: " << w_max << "   h_min: " << h_min << "   h_max: " << h_max << std::endl;
     //
     // Let's find out if this range can even intersect the dataset.
     // If not, just skip it.
     //
-    //if (!FrustumIntersectsGridSLIVR(w_min, w_max, h_min, h_max))
     if (!FrustumIntersectsGrid(w_min, w_max, h_min, h_max))
        return;
     
@@ -599,7 +598,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     //
     xMin = yMin = 1000000;
     xMax = yMax = -1000000;
-
+    
     float coordinates[8][3];
     coordinates[0][0] = X[0];           coordinates[0][1] = Y[0];           coordinates[0][2] = Z[0];
     coordinates[1][0] = X[dims[0]-1];   coordinates[1][1] = Y[0];           coordinates[1][2] = Z[0];
@@ -618,16 +617,20 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     rgrid->GetDimensions(dDims);
     //std::cout << proc << " ~ " << patch << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << "   |  dims_from_ds: " << dDims[0] <<", " << dDims[1] << ", " << dDims[2] << "  |  dims: " << dims[0] << ",  " << dims[1] << ", " << dims[2] << std::endl;
 
+    float offset = 0.0f;
+    float offset_0 = 0.0f;
+    float error_correction = 0.0f;
     double _world[4], _view[4];
     _world[3] = 1.0;
     imgDepth = 0;
 
     for (int i=0; i<8; i++){
         _world[0] = coordinates[i][0];
-        _world[1] = coordinates[i][1];
+        _world[1] = coordinates[i][1]; 
         _world[2] = coordinates[i][2];
 
         world_to_view_transform->MultiplyPoint(_world, _view);
+        //std::cout <<  proc << ", " <<patch << "   world: " << _world[0] << ", " << _world[1] << ", " << _world[2] <<  "    view: " << _view[0] << ", " << _view[1] << ", " << _view[2] << std::endl;
 
         if (_view[3] != 0.){
             _view[0] /= _view[3];
@@ -638,10 +641,10 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         _view[0] = _view[0]*(fullImgWidth/2.) + (fullImgWidth/2.);
         _view[1] = _view[1]*(fullImgHeight/2.) + (fullImgHeight/2.);
 
-        if (xMin > _view[0]+0.5) xMin = _view[0]+0.5;
-        if (xMax < _view[0]+0.5) xMax = _view[0]+0.5;
-        if (yMin > _view[1]+0.5) yMin = _view[1]+0.5;
-        if (yMax < _view[1]+0.5) yMax = _view[1]+0.5;
+        if (xMin > _view[0]+offset_0) xMin = _view[0]+offset_0;
+        if (xMax < _view[0]+offset_0) xMax = _view[0]+offset_0;
+        if (yMin > _view[1]+offset_0) yMin = _view[1]+offset_0;
+        if (yMax < _view[1]+offset_0) yMax = _view[1]+offset_0;
 
         if (i == 0)
             imgDepth = _view[2];
@@ -650,13 +653,12 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                 imgDepth = _view[2];
     }
 
-    float error_correction = 0.0f;
+    
     xMin = xMin - error_correction;
     yMin = yMin - error_correction;
     xMax = xMax + error_correction;
     yMax = yMax + error_correction;
 
-    float offset = 0.0;
     xMin = xMin - offset;
     yMin = yMin - offset;
     xMax = xMax + offset;
@@ -675,14 +677,13 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     xMin = xMin - 1;    xMax = xMax + 1;    imgWidth = xMax - xMin +1;
     yMin = yMin - 1;    yMax = yMax + 1;    imgHeight = yMax - yMin +1;
 
-
-    // imgArray = new float[((imgWidth)*4) * imgHeight];
-    // for (int i=0; i<imgHeight * imgWidth * 4; i++) imgArray[i] = 0.0;
-    imgArray = new float[((imgWidth)*4) * imgHeight]();
+    imgArray = new float[((imgWidth)*4) * imgHeight](); // declare and initialize to 0.0 ()
 
     imgDims[0] = imgWidth;       imgDims[1] = imgHeight;
     imgLowerLeft[0] = xMin;      imgLowerLeft[1] = yMin;
     imgUpperRight[0] = xMax;     imgUpperRight[1] = yMax;
+
+    //std::cout <<  proc << ", " <<patch << "   x range: " << xMin << ", " << xMax << "  width: " << imgWidth << "   y range: " << yMin << ", " << yMax << "  height: " << imgHeight <<std::endl;
 
     for (int i = xMin ; i < xMax ; i++)
         for (int j = yMin ; j < yMax ; j++)
@@ -2048,61 +2049,61 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = std::min(std::max(dest_rgb[3],0.0),1.0);
 
 
-        if (proc == 0){  // red
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        }
+        // if (proc == 0){  // red
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        // }
 
-        if (proc == 1){ // green
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        }
+        // if (proc == 1){ // green
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        // }
 
-        if (proc == 2){ // blue
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        }
+        // if (proc == 2){ // blue
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        // }
 
-        if (proc == 3){  //yellow
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        }
+        // if (proc == 3){  //yellow
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        // }
 
-        if (proc == 4){ // cyan (blue-vert)
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        }
+        // if (proc == 4){ // cyan (blue-vert)
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 1;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        // }
 
-        if (proc == 5){ // magenta
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        }
+        // if (proc == 5){ // magenta
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 1;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 1;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        // }
 
-        if (proc == 6){ // grey
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0.5;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0.5;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0.5;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        }
+        // if (proc == 6){ // grey
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0.5;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0.5;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0.5;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        // }
 
-        if (proc == 7){ // black
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
-            imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
-        }
+        // if (proc == 7){ // black
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = 0;
+        //     imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+        // }
     }
     else
         if (inrun)

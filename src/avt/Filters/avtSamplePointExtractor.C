@@ -1065,8 +1065,16 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
             if (tmpImageMetaPatch.inUse == 1){
+                double bounds[6];
+                ds->GetBounds(bounds);
+                
                 tmpImageMetaPatch.destProcId = tmpImageMetaPatch.procId;
+                for (int i=0; i<6; i++)
+                    tmpImageMetaPatch.extents[i] = bounds[i];
                 imageMetaPatchVector.push_back(tmpImageMetaPatch);
+
+                //std::cout << tmpImageMetaPatch.procId << " ~ " << tmpImageMetaPatch.patchNumber << "  |   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << std::endl;
+
                 
                 imgData tmpImageDataHash;
                 tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;

@@ -55,6 +55,7 @@
 #include <avtViewInfo.h>
 #include <avtCallback.h>
 #include <LightList.h>
+#include <ViewerProxy.h>
 
 #include <DebugStream.h>
 //#define debug5 cerr
@@ -65,6 +66,10 @@
 #include <slivr/CM2Widget.h>
 #include <slivr/Color.h>
 #include <TransferFunctionWidget.h>
+
+
+
+#include <QString>
 
 // Convert the float data into a uchar nrrd until I figure out why float
 // nrrds don't create a picture. They instead create a constant colored 
@@ -380,6 +385,15 @@ avtOpenGLSLIVRVolumeRenderer::Render(
         SLIVR::ShaderProgramARB::init_shaders_supported();
         slivrInit = true;
     }
+
+    if (SLIVR::ShaderProgramARB::shaders_supported() == false){
+        //QString msg;
+        //msg = "Not supported"; 
+        //Message(msg);
+         avtCallback::IssueWarning("SLIVR uses shaders which your graphics card does not support. Please use an Nvidia or AMD graphics card");
+        return;
+    }
+
 
     // Get the sampling rate that the renderer will use.
     float samplingRate = props.atts.GetRendererSamples();

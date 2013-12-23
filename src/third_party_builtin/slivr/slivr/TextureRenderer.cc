@@ -997,7 +997,7 @@ TextureRenderer::bind_colormap1(vector<float> cmap_array,
                GL_RGBA,
                GL_FLOAT,
                &cmap_array[0]);
-  std::cout << " if (defined( GL_TEXTURE_COLOR_TABLE_SGI ) && defined(__sgi)" << std::endl;
+  //std::cout << " if (defined( GL_TEXTURE_COLOR_TABLE_SGI ) && defined(__sgi)" << std::endl;
 #elif defined(GL_ARB_fragment_program) || defined(GL_ATI_fragment_shader)
   if (ShaderProgramARB::shaders_supported() && glActiveTexture)
   {
@@ -1018,17 +1018,16 @@ TextureRenderer::bind_colormap1(vector<float> cmap_array,
 #  if defined(GL_EXT_shared_texture_palette) && !defined(__APPLE__)
   {
 
-    glEnable(GL_SHARED_TEXTURE_PALETTE_EXT);
-    glColorTable(GL_SHARED_TEXTURE_PALETTE_EXT,
-                 GL_RGBA,
-                 256,
-                 GL_RGBA,
-                 GL_FLOAT,
-                 &cmap_array[0]);
-
-    
-    
-    std::cout << "defined(GL_EXT_shared_texture_palette) && !defined(__APPLE__)" << std::endl;
+    // Deprecated and should not be used anymore!
+    // glEnable(GL_SHARED_TEXTURE_PALETTE_EXT);
+    // glColorTable(GL_SHARED_TEXTURE_PALETTE_EXT,
+    //              GL_RGBA,
+    //              256,
+    //              GL_RGBA,
+    //              GL_FLOAT,
+    //              &cmap_array[0]);
+  
+    std::cout << "Removed deprecated call here!" << std::endl;
   }
 #  else
   {
