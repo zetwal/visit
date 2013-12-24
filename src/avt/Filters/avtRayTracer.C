@@ -309,6 +309,104 @@ avtRayTracer::GetNumberOfDivisions(int screenX, int screenY, int screenZ)
 }
 
 
+
+int          
+LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], 
+                                               std::vector<patchMetaData> patches, std::vector<int> &list){
+
+    std::cout << rank << " ~~~ " << " LoadBalancer::kdtreeBuilding " << numDivisions << std::endl;
+
+    /////////////////////////////////////////////////////////////////
+    // Sort to find the order of axes from largest to smallest
+    int axisOrder[3];
+    
+    std::multimap<int,int> myMultimap;
+    for (int i=0; i<3; i++)
+        myMultimap.insert(std::pair<int,int>(logicalBounds[i],i));
+    
+    int order=2;
+    for (std::multimap<int,int>::iterator it=myMultimap.begin(); it!=myMultimap.end(); ++it){
+        axisOrder[order]=(*it).second;
+        order--;
+    }
+    std::cout << rank << " ~~~ " << "axisOrder: " << axisOrder[0] << ", " << axisOrder[1] << ", " << axisOrder[2] << std::endl << std::endl;
+
+
+    /////////////////////////////////////////////////////////////////
+    // Do the region splitting according to a k-d tree
+    std::deque<partitionExtents> myPartitions;
+    myPartitions.clear();
+
+    partitionExtents parent, one, two;
+    parent.axisIndex = 2;   // set it to the last one so that on the next iteration we get the first one! :)
+    parent.dims[0] = logicalBounds[0];  parent.dims[1] = logicalBounds[1];  parent.dims[2] = logicalBounds[2];
+    parent.minExtents[0] = minSpatialExtents[0];    parent.minExtents[1] = minSpatialExtents[1];    parent.minExtents[2] = minSpatialExtents[2];
+    parent.maxExtents[0] = maxSpatialExtents[0];    parent.maxExtents[1] = maxSpatialExtents[1];    parent.maxExtents[2] = maxSpatialExtents[2];
+
+    myPartitions.push_back(parent);
+
+    while (myPartitions.size() != numDivisions){
+        parent = myPartitions.front();   myPartitions.pop_front();
+        //if (rank == 0)
+        //     std::cout << rank << " ~~~ " << "Parent: "<< parent.axisIndex << "   - Extents (min-max):  " << parent.minExtents[0]<< ", " << parent.minExtents[1]<< ", " << parent.minExtents[2] << "   -   " << parent.maxExtents[0]<< ", " << parent.maxExtents[1]<< ", " << parent.maxExtents[2] << "  dims: " << parent.dims[0]<< ", " << parent.dims[1]<< ", " << parent.dims[2] << std::endl;
+        
+        chopPartition(parent,one,two,axisOrder);
+        myPartitions.push_back(one);
+        myPartitions.push_back(two);
+
+        // if (rank == 0){
+        //     std::cout << rank << " ~~ " <<"One: "<<  one.axisIndex << "   - Extents (min-max):  " << one.minExtents[0]<< ", " << one.minExtents[1]<< ", " << one.minExtents[2] << "   -   " << one.maxExtents[0]<< ", " << one.maxExtents[1]<< ", " << one.maxExtents[2] << "  dims: " << one.dims[0]<< ", " << one.dims[1]<< ", " << one.dims[2] << std::endl;
+        //     std::cout << rank << " ~~ " <<"two: "<<  two.axisIndex << "   - Extents (min-max):  " << two.minExtents[0]<< ", " << two.minExtents[1]<< ", " << two.minExtents[2] << "   -   " << two.maxExtents[0]<< ", " << two.maxExtents[1]<< ", " << two.maxExtents[2] << "  dims: " << two.dims[0]<< ", " << two.dims[1]<< ", " << two.dims[2] << std::endl;
+        //     std::cout << std::endl;
+        // }
+    }
+
+
+    /////////////////////////////////////////////////////////////////
+    // Determine which patch is in which region
+
+    // insert patches into a multimap (patchesTemp) sorted on id of patch
+    std::multimap<int,patchMetaData> patchesTemp;
+    for (std::vector<int>::iterator it=list.begin(); it!=list.end(); it++)
+        patchesTemp.insert(std::pair<int,patchMetaData>((int)(*it),patches[(int)(*it)]));
+
+    std::vector<int> patchesInsideList;  //list of patches that belong to that partition
+    std::vector<int> patchesOverlapList; //list of division that overlap that partition
+
+    double minX = myPartitions[rank].minExtents[0];  double maxX = myPartitions[rank].maxExtents[0];
+    double minY = myPartitions[rank].minExtents[1];  double maxY = myPartitions[rank].maxExtents[1];
+    double minZ = myPartitions[rank].minExtents[2];  double maxZ = myPartitions[rank].maxExtents[2];
+    
+    for (std::multimap<int,patchMetaData>::iterator it=patchesTemp.begin(); it!=patchesTemp.end(); it++){
+        int key = (*it).first;
+
+        bool done = false;
+        double centroid[3];
+        centroid[0] = ((*it).second.minSpatialExtents[0] + (*it).second.maxSpatialExtents[0])/2.0;
+        centroid[1] = ((*it).second.minSpatialExtents[1] + (*it).second.maxSpatialExtents[1])/2.0;
+        centroid[2] = ((*it).second.minSpatialExtents[2] + (*it).second.maxSpatialExtents[2])/2.0;
+
+        // Check if that patche belongs to this partition
+        if (centroid[0] >= minX && centroid[0] < maxX)
+            if (centroid[1] >= minY && centroid[1] < maxY)
+                if (centroid[2] >= minZ && centroid[2] < maxZ){
+                    patchesInsideList.push_back(key);
+                    done = true;
+                }
+
+        // else check if that patch overlaps with this partition
+        if (done == false){
+            if (patchOverlaps((*it).second.minSpatialExtents[0],(*it).second.maxSpatialExtents[0],
+                              (*it).second.minSpatialExtents[1],(*it).second.maxSpatialExtents[1],
+                              (*it).second.minSpatialExtents[2],(*it).second.maxSpatialExtents[2],
+                              minX,maxX,minY,maxY,minZ,maxZ) == true)
+                patchesOverlapList.push_back(key);
+        }
+    }
+
+    return list.size();
+}
+
 // ****************************************************************************
 //  Method: avtRayTracer::Execute
 //
@@ -634,9 +732,11 @@ avtRayTracer::Execute(void)
         }
 
 
+
         //
         // Parallel
         //
+        kdtreeBuilding(PAR_Size(), logicalBounds, meshMin, meshMax);
 
         //
         // -- -- -- Timing -- 
