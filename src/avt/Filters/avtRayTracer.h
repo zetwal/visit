@@ -143,11 +143,9 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     void                  SetTrilinear(bool t) {trilinearInterpolation = t; };
     void                  SetRayCastingSLIVR(bool _rayCastingSLIVR){ rayCastingSLIVR = _rayCastingSLIVR; };
 
-    int                   chopPartitionRC(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]);
-    int                   kdtreeBuildingRC(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], std::vector<patchMetaData> patches, std::vector<int> &list);
-    bool                  patchOverlapsRC(float patchMinX, float patchMaxX, float patchMinY, float patchMaxY, float patchMinZ, float patchMaxZ,
-                                        float partitionMinX, float partitionMaxX, float partitionMinY, float partitionMaxY, float partitionMinZ, float partitionMaxZ);
-
+    int                   chopPartitionRT(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]);
+    void                  getPartitionExtents(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], double extents[6]);
+  
   protected:
     avtImgCommunicator    imgComm;
     avtViewInfo           view;
