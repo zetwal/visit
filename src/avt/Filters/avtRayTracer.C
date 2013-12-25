@@ -77,6 +77,7 @@
 #include <DebugStream.h>
 #include <ImproperUseException.h>
 #include <TimingsManager.h>
+#include <deque>
 
 
 using     std::vector;
@@ -310,12 +311,130 @@ avtRayTracer::GetNumberOfDivisions(int screenX, int screenY, int screenZ)
 
 
 
-int          
-LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], 
-                                               std::vector<patchMetaData> patches, std::vector<int> &list){
+// ****************************************************************************
+//  Method: LoadBalancer::chopPartitionRT
+//
+//  Purpose:
+//      Break a partition into 2 k-d tree style
+//
+//  Arguments:
+//      parent      The parent partition.
+//      childOne    The first child
+//      childTwo    The second child
+//      axisOrder   Order of the axes to cycle through
+//
+//  Programmer: Pascal Grosset  
+//  Creation:   December 23, 2013
+//
+// ****************************************************************************
+int
+avtRayTracer::chopPartitionRT(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]){
+    int axisIndex = (parent.axisIndex+1)%3;
+    int axis = axisOrder[axisIndex];
+    int count = 0;
+    
+    while (true){
+        if (parent.dims[axis] >= 1)
+            break;
+        else{
+            axisIndex = (axisIndex+1)%3;
+            axis = axisOrder[axisIndex];
+        }
+        
+        count++;
+        if (count == 3)
+            break;
+    }
+    if (count == 3)
+        return -1;  // We are going to be cycling forever here! So stop!
+        
+    childOne.axisIndex = childTwo.axisIndex = axisIndex;
+        
+    if (axis == 0){             // x-axis
+        childOne.dims[1] = childTwo.dims[1] = parent.dims[1];
+        childOne.dims[2] = childTwo.dims[2] = parent.dims[2];
+        
+        childOne.minExtents[1] = childTwo.minExtents[1] = parent.minExtents[1];
+        childOne.maxExtents[1] = childTwo.maxExtents[1] = parent.maxExtents[1];
+        
+        childOne.minExtents[2] = childTwo.minExtents[2] = parent.minExtents[2];
+        childOne.maxExtents[2] = childTwo.maxExtents[2] = parent.maxExtents[2];
+        
+        
+        childOne.dims[0] = parent.dims[0]/2;
+        childTwo.dims[0] = parent.dims[0]-childOne.dims[0];
+        
+        childOne.minExtents[0] = parent.minExtents[0];
+        childOne.maxExtents[0] = parent.minExtents[0] + (parent.maxExtents[0]-parent.minExtents[0])/2.0;
+        
+        childTwo.minExtents[0] = childOne.maxExtents[0];
+        childTwo.maxExtents[0] = parent.maxExtents[0];
+    }
+    else
+        if (axis == 1){         // y-axis
+            childOne.dims[0] = childTwo.dims[0] = parent.dims[0];
+            childOne.dims[2] = childTwo.dims[2] = parent.dims[2];
+            
+            childOne.minExtents[0] = childTwo.minExtents[0] = parent.minExtents[0];
+            childOne.maxExtents[0] = childTwo.maxExtents[0] = parent.maxExtents[0];
+            
+            childOne.minExtents[2] = childTwo.minExtents[2] = parent.minExtents[2];
+            childOne.maxExtents[2] = childTwo.maxExtents[2] = parent.maxExtents[2];
+            
+            childOne.dims[1] = parent.dims[1]/2;
+            childTwo.dims[1] = parent.dims[1]-childOne.dims[1];
+            
+            childOne.minExtents[1] = parent.minExtents[1];
+            childOne.maxExtents[1] = parent.minExtents[1] + (parent.maxExtents[1]-parent.minExtents[1])/2.0;
+            
+            childTwo.minExtents[1] = childOne.maxExtents[1];
+            childTwo.maxExtents[1] = parent.maxExtents[1];
+        }
+        else
+            if (axis == 2){     // z-axis
+                childOne.dims[0] = childTwo.dims[0] = parent.dims[0];
+                childOne.dims[1] = childTwo.dims[1] = parent.dims[1];
+                
+                childOne.minExtents[0] = childTwo.minExtents[0] = parent.minExtents[0];
+                childOne.maxExtents[0] = childTwo.maxExtents[0] = parent.maxExtents[0];
+                
+                childOne.minExtents[1] = childTwo.minExtents[1] = parent.minExtents[1];
+                childOne.maxExtents[1] = childTwo.maxExtents[1] = parent.maxExtents[1];
+                
+                
+                childOne.dims[2] = parent.dims[2]/2;
+                childTwo.dims[2] = parent.dims[2]-childOne.dims[2];
+                
+                childOne.minExtents[2] = parent.minExtents[2];
+                childOne.maxExtents[2] = parent.minExtents[2] + (parent.maxExtents[2]-parent.minExtents[2])/2.0;
+                
+                childTwo.minExtents[2] = childOne.maxExtents[2];
+                childTwo.maxExtents[2] = parent.maxExtents[2];
+            }
+    
+    return 0;
+}
 
-    std::cout << rank << " ~~~ " << " LoadBalancer::kdtreeBuilding " << numDivisions << std::endl;
 
+// ****************************************************************************
+//  Method: LoadBalancer::getPartitionExtents
+//
+//  Purpose:
+//      Do a k-d tree partitioning
+//
+//  Arguments:
+//      numDivisions      
+//      logicalBounds    
+//      minSpatialExtents    
+//      maxSpatialExtents
+//      extents
+//
+//  Programmer: Pascal Grosset  
+//  Creation:   December 9, 2013
+//
+// ****************************************************************************
+void          
+avtRayTracer::getPartitionExtents(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], double extents[6]){
     /////////////////////////////////////////////////////////////////
     // Sort to find the order of axes from largest to smallest
     int axisOrder[3];
@@ -329,8 +448,6 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         axisOrder[order]=(*it).second;
         order--;
     }
-    std::cout << rank << " ~~~ " << "axisOrder: " << axisOrder[0] << ", " << axisOrder[1] << ", " << axisOrder[2] << std::endl << std::endl;
-
 
     /////////////////////////////////////////////////////////////////
     // Do the region splitting according to a k-d tree
@@ -347,64 +464,17 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
 
     while (myPartitions.size() != numDivisions){
         parent = myPartitions.front();   myPartitions.pop_front();
-        //if (rank == 0)
-        //     std::cout << rank << " ~~~ " << "Parent: "<< parent.axisIndex << "   - Extents (min-max):  " << parent.minExtents[0]<< ", " << parent.minExtents[1]<< ", " << parent.minExtents[2] << "   -   " << parent.maxExtents[0]<< ", " << parent.maxExtents[1]<< ", " << parent.maxExtents[2] << "  dims: " << parent.dims[0]<< ", " << parent.dims[1]<< ", " << parent.dims[2] << std::endl;
-        
-        chopPartition(parent,one,two,axisOrder);
+
+        chopPartitionRT(parent,one,two,axisOrder);
         myPartitions.push_back(one);
         myPartitions.push_back(two);
-
-        // if (rank == 0){
-        //     std::cout << rank << " ~~ " <<"One: "<<  one.axisIndex << "   - Extents (min-max):  " << one.minExtents[0]<< ", " << one.minExtents[1]<< ", " << one.minExtents[2] << "   -   " << one.maxExtents[0]<< ", " << one.maxExtents[1]<< ", " << one.maxExtents[2] << "  dims: " << one.dims[0]<< ", " << one.dims[1]<< ", " << one.dims[2] << std::endl;
-        //     std::cout << rank << " ~~ " <<"two: "<<  two.axisIndex << "   - Extents (min-max):  " << two.minExtents[0]<< ", " << two.minExtents[1]<< ", " << two.minExtents[2] << "   -   " << two.maxExtents[0]<< ", " << two.maxExtents[1]<< ", " << two.maxExtents[2] << "  dims: " << two.dims[0]<< ", " << two.dims[1]<< ", " << two.dims[2] << std::endl;
-        //     std::cout << std::endl;
-        // }
     }
-
 
     /////////////////////////////////////////////////////////////////
     // Determine which patch is in which region
-
-    // insert patches into a multimap (patchesTemp) sorted on id of patch
-    std::multimap<int,patchMetaData> patchesTemp;
-    for (std::vector<int>::iterator it=list.begin(); it!=list.end(); it++)
-        patchesTemp.insert(std::pair<int,patchMetaData>((int)(*it),patches[(int)(*it)]));
-
-    std::vector<int> patchesInsideList;  //list of patches that belong to that partition
-    std::vector<int> patchesOverlapList; //list of division that overlap that partition
-
-    double minX = myPartitions[rank].minExtents[0];  double maxX = myPartitions[rank].maxExtents[0];
-    double minY = myPartitions[rank].minExtents[1];  double maxY = myPartitions[rank].maxExtents[1];
-    double minZ = myPartitions[rank].minExtents[2];  double maxZ = myPartitions[rank].maxExtents[2];
-    
-    for (std::multimap<int,patchMetaData>::iterator it=patchesTemp.begin(); it!=patchesTemp.end(); it++){
-        int key = (*it).first;
-
-        bool done = false;
-        double centroid[3];
-        centroid[0] = ((*it).second.minSpatialExtents[0] + (*it).second.maxSpatialExtents[0])/2.0;
-        centroid[1] = ((*it).second.minSpatialExtents[1] + (*it).second.maxSpatialExtents[1])/2.0;
-        centroid[2] = ((*it).second.minSpatialExtents[2] + (*it).second.maxSpatialExtents[2])/2.0;
-
-        // Check if that patche belongs to this partition
-        if (centroid[0] >= minX && centroid[0] < maxX)
-            if (centroid[1] >= minY && centroid[1] < maxY)
-                if (centroid[2] >= minZ && centroid[2] < maxZ){
-                    patchesInsideList.push_back(key);
-                    done = true;
-                }
-
-        // else check if that patch overlaps with this partition
-        if (done == false){
-            if (patchOverlaps((*it).second.minSpatialExtents[0],(*it).second.maxSpatialExtents[0],
-                              (*it).second.minSpatialExtents[1],(*it).second.maxSpatialExtents[1],
-                              (*it).second.minSpatialExtents[2],(*it).second.maxSpatialExtents[2],
-                              minX,maxX,minY,maxY,minZ,maxZ) == true)
-                patchesOverlapList.push_back(key);
-        }
-    }
-
-    return list.size();
+    extents[0] = myPartitions[PAR_Rank()].minExtents[0];  extents[3] = myPartitions[PAR_Rank()].maxExtents[0];
+    extents[1] = myPartitions[PAR_Rank()].minExtents[1];  extents[4] = myPartitions[PAR_Rank()].maxExtents[1];
+    extents[2] = myPartitions[PAR_Rank()].minExtents[2];  extents[5] = myPartitions[PAR_Rank()].maxExtents[2];
 }
 
 // ****************************************************************************
@@ -734,9 +804,13 @@ avtRayTracer::Execute(void)
 
 
         //
-        // Parallel
+        // Determine partition extents
         //
-        kdtreeBuilding(PAR_Size(), logicalBounds, meshMin, meshMax);
+        double currentPartitionExtents[6];
+        getPartitionExtents(PAR_Size(), logicalBounds, meshMin, meshMax, currentPartitionExtents);
+        std::cout << PAR_Rank() << "   Partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << ", "
+                                                            << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl; 
+
 
         //
         // -- -- -- Timing -- 
@@ -752,11 +826,6 @@ avtRayTracer::Execute(void)
         //
         // Determine partition extents
         //
-    //     partitionExtents parent, one, two;
-    // parent.axisIndex = 2;   // set it to the last one so that on the next iteration we get the first one! :)
-    // parent.dims[0] = logicalBounds[0];  parent.dims[1] = logicalBounds[1];  parent.dims[2] = logicalBounds[2];
-    // parent.minExtents[0] = minSpatialExtents[0];    parent.minExtents[1] = minSpatialExtents[1];    parent.minExtents[2] = minSpatialExtents[2];
-    // parent.maxExtents[0] = maxSpatialExtents[0];    parent.maxExtents[1] = maxSpatialExtents[1];    parent.maxExtents[2] = maxSpatialExtents[2];
 
 
         //
