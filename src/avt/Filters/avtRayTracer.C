@@ -670,6 +670,8 @@ avtRayTracer::Execute(void)
 
     avtDataObject_p samples = extractor.GetOutput();
 
+
+
     //
     // Ray casting: SLIVR
     //
@@ -1547,8 +1549,11 @@ avtRayTracer::Execute(void)
             }
         }
     }
-    rc.SetInput(samples);
-    avtImage_p image = rc.GetTypedOutput();
+    //rc.SetInput(samples);
+    //avtImage_p image = rc.GetTypedOutput();
+
+    //avtImage_p img = extractor.GetOutput();
+    //img->Update(GetGeneralContract()); 
 
 #ifdef PARALLEL
     //

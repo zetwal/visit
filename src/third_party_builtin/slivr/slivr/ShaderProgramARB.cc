@@ -107,9 +107,8 @@ ShaderProgramARB::init_shaders_supported(std::string& error)
     const GLubyte* glRendererString = glGetString(GL_RENDERER);
     if (strncmp((const char *)glRendererString, "Intel", 5) == 0)
     {
-      supported_ = false;
+      supported_ = true;    // false -  that should work now!
     }
-    supported_ = false;
 
 #ifndef __sgi
     // Supported used to mean just shader programs.  However the

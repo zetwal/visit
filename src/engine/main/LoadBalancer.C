@@ -465,7 +465,6 @@ LoadBalancer::patchOverlaps(float patchMinX, float patchMaxX, float patchMinY, f
     if (patchMaxZ < partitionMinZ) return false;
     if (patchMinZ > partitionMaxZ) return false;
         return true;
-
 }
 
 

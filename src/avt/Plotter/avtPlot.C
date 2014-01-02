@@ -570,8 +570,7 @@ avtPlot::Execute(avtDataObject_p input, avtContract_p contract,
 //    Explicitly state which variables should have 
 // ****************************************************************************
 
-avtDataObjectWriter_p
-avtPlot::Execute(avtDataObject_p input, avtContract_p contract,
+avtDataObjectWriter_p avtPlot::Execute(avtDataObject_p input, avtContract_p contract,
                  const WindowAttributes *atts, const bool combinedExecute)
 {
     std::string varName = contract->GetDataRequest()->GetVariable();

@@ -386,15 +386,9 @@ avtOpenGLSLIVRVolumeRenderer::Render(
         slivrInit = true;
     }
 
-    if (SLIVR::ShaderProgramARB::shaders_supported() == false){
-        //QString msg;
-        //msg = "Not supported"; 
-        //Message(msg);
-         avtCallback::IssueWarning("SLIVR uses shaders which your graphics card does not support. Please use an Nvidia or AMD graphics card");
-        return;
-    }
-
-
+    if (SLIVR::ShaderProgramARB::shaders_supported() == false)
+        avtCallback::IssueWarning("SLIVR uses shaders which your graphics card does not support.");
+    
     // Get the sampling rate that the renderer will use.
     float samplingRate = props.atts.GetRendererSamples();
     if(samplingRate < 1.f)
