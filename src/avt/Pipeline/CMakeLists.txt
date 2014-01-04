@@ -55,6 +55,7 @@
 
 SET(DATA_SOURCES
 Data/avtAverageValueRF.C
+Data/avtAMRInfo.C
 Data/avtCallback.C
 Data/avtCellList.C
 Data/avtColorTables.C

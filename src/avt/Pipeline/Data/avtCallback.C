@@ -67,6 +67,7 @@ bool                          avtCallback::nowinMode = false;
 bool                          avtCallback::swRendering = false;
 bool                          avtCallback::useManta = false;
 bool                          avtCallback::safeMode = false;
+bool                          avtCallback::useKdTreeLoadBalancer = false;
 
 UpdatePlotAttributesCallback  avtCallback::updatePlotAttributesCallback = NULL;
 void                         *avtCallback::updatePlotAttributesCallbackArgs 

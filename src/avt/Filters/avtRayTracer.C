@@ -65,6 +65,7 @@
 #include <avtWorldSpaceToImageSpaceTransform.h>
 
 #include <avtCallback.h>
+#include <avtAMRInfo.h>
 #include <avtDatabase.h>
 #include <avtDatabaseMetaData.h>
 #include <avtMeshMetaData.h>
@@ -688,6 +689,16 @@ avtRayTracer::Execute(void)
         // force an execution of the pipeline to generate the images
         samples->Update(GetGeneralContract());  
         // Now we do the compositing
+
+        if (avtCallback::UseKdTreeLoadBalancer() == true)
+            std::cout << "Used kd tree load balancer" << std::endl;
+        else
+            std::cout << "NOT used kd tree load balancer" << std::endl;
+
+        // if (avtAMRInfo::getAMR() == true)
+        //     std::cout << "AMR" << std::endl;
+        // else
+        //     std::cout << "NOT AMR" << std::endl;
 
         //
         // Single Processor
