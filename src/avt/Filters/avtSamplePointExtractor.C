@@ -711,6 +711,8 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
 
     //initialize rayCastingSLIVR sampling state
     totalAssignedPatches = dt->GetNChildren();
+    std::cout << "totalAssignedPatches: " << totalAssignedPatches << std::endl;
+
     patchCount = 0;
     imageMetaPatchVector.clear();
     imgDataHashMap.clear();
@@ -1057,9 +1059,6 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 for (int i=0; i<6; i++)
                     tmpImageMetaPatch.extents[i] = bounds[i];
                 imageMetaPatchVector.push_back(tmpImageMetaPatch);
-
-                //std::cout << tmpImageMetaPatch.procId << " ~ " << tmpImageMetaPatch.patchNumber << "  |   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << std::endl;
-
                 
                 imgData tmpImageDataHash;
                 tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;

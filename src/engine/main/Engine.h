@@ -92,6 +92,7 @@ class Xfer;
 #include <BufferConnection.h>
 #include <SaveWindowAttributes.h>
 #include <engine_main_exports.h>
+#include <avtAMRInfo.h>
 
 // ****************************************************************************
 //  Class:  Engine

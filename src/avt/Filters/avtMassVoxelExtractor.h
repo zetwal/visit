@@ -199,7 +199,6 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     int              proc;                  // id of the processor
     int              patch;                 // id of the patch
 
-    
     int              fullImgWidth, fullImgHeight;
     int              xMin, xMax, yMin, yMax;
     void             ExtractImageSpaceGrid(vtkRectilinearGrid *,

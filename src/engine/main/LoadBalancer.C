@@ -296,10 +296,11 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         centroid[1] = ((*it).second.minSpatialExtents[1] + (*it).second.maxSpatialExtents[1])/2.0;
         centroid[2] = ((*it).second.minSpatialExtents[2] + (*it).second.maxSpatialExtents[2])/2.0;
 
+        double offset = 0.0000001;
         // Check if that patche belongs to this partition
-        if (centroid[0] >= minX && centroid[0] < maxX)
-            if (centroid[1] >= minY && centroid[1] < maxY)
-                if (centroid[2] >= minZ && centroid[2] < maxZ){
+        if (centroid[0]+offset >= minX   &&   centroid[0]+offset < maxX)
+            if (centroid[1]+offset >= minY   &&   centroid[1]+offset < maxY)
+                if (centroid[2]+offset >= minZ   &&   centroid[2]+offset < maxZ){
                     patchesInsideList.push_back(key);
                     done = true;
                 }
@@ -313,7 +314,6 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
                 patchesOverlapList.push_back(key);
         }
     }
-
 
     /////////////////////////////////////////////////////////////////
     // Assign the patches to the list
@@ -1076,8 +1076,6 @@ LoadBalancer::Reduce(avtContract_p input)
         // std::cout << rank << " ~ loadBalancer.C: Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
         //                          "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
         //                          "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
-
-        
 
         if (theScheme == LOAD_BALANCE_KDTREE)
         {

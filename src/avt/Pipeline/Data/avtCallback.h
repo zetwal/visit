@@ -146,6 +146,13 @@ class PIPELINE_API avtCallback
     static bool                  UseManta(void)
                                      { return useManta; }
 
+
+    static void                  SetKdTreeLoadBalancer(bool b)
+                                     { useKdTreeLoadBalancer = b; }
+    static bool                  UseKdTreeLoadBalancer(void)
+                                     { return useKdTreeLoadBalancer; }
+
+
     static void                  RegisterGetDatabaseCallback(
                                                   GetDatabaseCallback, void *);
     static ref_ptr<avtDatabase>  GetDatabase(const std::string &, int,
@@ -202,6 +209,8 @@ class PIPELINE_API avtCallback
 
     static ResetTimeoutCallback  resetTimeoutCallback;
     static void                 *resetTimeoutCallbackArgs;
+
+    static bool                  useKdTreeLoadBalancer;
 };
 
 
