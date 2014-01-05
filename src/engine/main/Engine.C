@@ -2194,7 +2194,7 @@ Engine::ProcessCommandLine(int argc, char **argv)
         {
             LoadBalancer::SetScheme(LOAD_BALANCE_KDTREE);
             avtCallback::SetKdTreeLoadBalancer(true);
-            avtAMRInfo::setAMR(true);
+            //avtAMRInfo::setAMR(true);
         }
         else if (strcmp(argv[i], "-create-ghosts-for-t-intersections") == 0)
         {
