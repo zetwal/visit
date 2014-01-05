@@ -1035,7 +1035,7 @@ return x;
 // ****************************************************************************
 void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, int sizeSending, float *images, int numDivisions){
 #ifdef PARALLEL
-    bool front_to_back = true;
+    bool front_to_back = false;
     float *tempRecvBuffer = NULL;
     int *recvSizePerProc = NULL;
     int *offsetBuffer = NULL;
@@ -1080,11 +1080,13 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
         imgBuffer = new float[sizex * sizey * 4];
       
         // Back-to-Front
-        // for (int i=0; i<(sizex * sizey * 4); i+=4){
-        //     imgBuffer[i+0] = background[0]/255.0; 
-        //     imgBuffer[i+1] = background[1]/255.0; 
-        //     imgBuffer[i+2] = background[2]/255.0; 
-        //     imgBuffer[i+3] = 1.0;
+        if (!front_to_back)
+          for (int i=0; i<(sizex * sizey * 4); i+=4){
+              imgBuffer[i+0] = background[0]/255.0; 
+              imgBuffer[i+1] = background[1]/255.0; 
+              imgBuffer[i+2] = background[2]/255.0; 
+              imgBuffer[i+3] = 1.0;
+          }
     }
 
     int count = 0;
@@ -1095,7 +1097,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
         std::map< float,int >::iterator it;
         std::map< float,int >::iterator endCondition;
 
-        if (front_to_back){
+        if (!front_to_back){
             it=depthPartitions.end();   // Back-to-Front compositing
             endCondition=depthPartitions.begin();
         }
