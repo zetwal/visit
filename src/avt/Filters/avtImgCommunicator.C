@@ -85,6 +85,10 @@ else
 }
 
 
+
+
+
+
 // ****************************************************************************
 //  Method: avtImgCommunicator::
 //
@@ -1035,7 +1039,7 @@ return x;
 // ****************************************************************************
 void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, int sizeSending, float *images, int numDivisions){
 #ifdef PARALLEL
-    bool front_to_back = false;
+    bool front_to_back = true;
     float *tempRecvBuffer = NULL;
     int *recvSizePerProc = NULL;
     int *offsetBuffer = NULL;
@@ -1068,7 +1072,6 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
             else
                 offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
         }
-
         tempRecvBuffer = new float[ totalSize ];
     }
 
@@ -1077,7 +1080,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
 
     if (my_id == 0){
         // Create a buffer to store the composited image
-        imgBuffer = new float[sizex * sizey * 4];
+        imgBuffer = new float[sizex * sizey * 4]();
       
         // Back-to-Front
         if (!front_to_back)
@@ -1105,6 +1108,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
             it=depthPartitions.begin(); // Front-to-Back compositing
             endCondition=depthPartitions.end();
         }
+        
         do{
             //Back-to-Front compositing
             if (!front_to_back)

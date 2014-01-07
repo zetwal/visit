@@ -270,7 +270,7 @@ AssignEight(int vartype, double *vals, int *index, int s, int m, void *array)
     }
 }
 
-// ****************************************************************************
+// ****************************************************************************e
 //  Function:  ConvertToDouble
 //
 //  Purpose:
@@ -615,7 +615,9 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     rgrid->GetScalarRange(scRange);
     rgrid->GetBounds(bounds);
     rgrid->GetDimensions(dDims);
-    //std::cout << proc << " ~ " << patch << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << "   |  dims_from_ds: " << dDims[0] <<", " << dDims[1] << ", " << dDims[2] << "  |  dims: " << dims[0] << ",  " << dims[1] << ", " << dims[2] << std::endl;
+
+    // if (proc ==2 && patch ==3)
+    //     std::cout << proc << " ~ " << patch << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << "   |  dims_from_ds: " << dDims[0] <<", " << dDims[1] << ", " << dDims[2] << "  |  dims: " << dims[0] << ",  " << dims[1] << ", " << dims[2] << std::endl;
 
     float offset = 0.0f;
     float offset_0 = 0.0f;
@@ -684,6 +686,8 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     imgUpperRight[0] = xMax;     imgUpperRight[1] = yMax;
 
     //std::cout <<  proc << ", " <<patch << "   x range: " << xMin << ", " << xMax << "  width: " << imgWidth << "   y range: " << yMin << ", " << yMax << "  height: " << imgHeight <<std::endl;
+    // if (proc ==2 && patch ==3)
+    //     std::cout <<  proc << " *#* " <<patch  << std::endl;
 
     for (int i = xMin ; i < xMax ; i++)
         for (int j = yMin ; j < yMax ; j++)
@@ -809,7 +813,7 @@ avtMassVoxelExtractor::RegisterGrid(vtkRectilinearGrid *rgrid,
 
     vtkDataArray *arr = rgrid->GetCellData()->GetArray("avtGhostZones");
     if (arr != NULL)
-        ghosts = (unsigned char *) arr->GetVoidPointer(0);
+        ghosts = (unsigned char *) arr->GetVoidPointer(0);  // here
     else
         ghosts = NULL;
 
@@ -1492,17 +1496,26 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
         int index = 0;
         if (calc_cell_index)
-            index = ind[2]*((dims[0]-1)*(dims[1]-1)) + ind[1]*(dims[0]-1) +
-                    ind[0];
+            index = ind[2]*((dims[0]-1)*(dims[1]-1)) + ind[1]*(dims[0]-1) + ind[0];
 
-        if (ghosts != NULL)
-        {
-            if (ghosts[index] != 0)
-               valid_sample[i] = false;
+        if (ghosts != NULL){
+            if (ghosts[index] != 0){
+                valid_sample[i] = false;
+                //if (proc == 2 && patch == 3)
+                //    std::cout << proc << " , " << patch << "   Invalid !!! " << w << ", " << h << " index: " << ind[0] << ", " << ind[1] << ", " << ind[2] << std::endl;
+           }
         }
 
-        if (!valid_sample[i] && inrun)
-        {
+        // if (proc ==2 && patch ==3)
+        //     std::cout << "valid sample: " << valid_sample[i] << "   true: " << true << std::endl;
+
+        if (!valid_sample[i])
+            continue;
+
+        //if (proc ==2 && patch ==3)
+        //     std::cout << "valid sample: " << valid_sample[i] << "   true: " << true << "  w,h: " << w << ", " << h << " index: " << ind[0] << ", " << ind[1] << ", " << ind[2] << std::endl;
+
+        if (!valid_sample[i] && inrun){
             if (rayCastingSLIVR == false){
                 ray->SetSamples(i-count, i-1, tmpSampleList);
                 inrun = false;
@@ -1554,7 +1567,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 valid_sample[i] = false;
         }
 
-
         int offsetLow[3], offsetHigh[3];
         offsetLow[0] = offsetLow[1] = offsetLow[2] = 1;
         offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 2;
@@ -1570,9 +1582,19 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 valid_sample[i] = false;
         }
 
-        if (!valid_sample[i]){
+        // if (proc ==2 && patch ==3)
+        //     std::cout <<  proc << " *#* " <<patch  << "  indices: " << indices[0] << ", " << indices[1] << ", "<< indices[2] << ", "<< indices[3] << ", "<< indices[4] << ", "<< indices[5] << " |  ind: " << ind[0] << ", " << ind[1] << ", " << ind[2] << " |  dims: " << dims[0] << ", " << dims[1] << ", " << dims[2] << std::endl; 
+
+        if (!valid_sample[i])
             continue;
-        }
+
+        //if (proc ==2 && patch ==4){
+        //         std::cout <<  proc << " *#* " <<patch  << "  indices: " << indices[0] << ", " << indices[1] << ", "<< indices[2] << ", "<< indices[3] << ", "<< indices[4] << ", "<< indices[5] << " |  ind: " << ind[0] << ", " << ind[1] << ", " << ind[2] << " |  dims: " << dims[0] << ", " << dims[1] << ", " << dims[2] << std::endl; 
+        //}
+        
+
+        // if (proc ==2 && patch ==3)
+        //     std::cout <<  proc << " *#* " <<patch  << "  continue  " << std::endl;
 
         if (trilinearInterpolation || rayCastingSLIVR){
             //
@@ -1666,9 +1688,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
                                     vals[0] = trilinearInterpolate(gradVals, distFromLeft, dist_from_bottom, dist_from_front);
 
-                                   // std::cout << proc << " ~ " << patch << "  |   Values: " << gradVals[0] << ", " << gradVals[1] << ",  " << gradVals[2] << ", " << values[3] << ", " << gradVals[4] << ", " << gradVals[5] ", " << gradVals[6] << ", " << gradVals[7] << "   _ _  "
-                                   // << "  |   dists: " << distFromLeft << ", " << dist_from_bottom << ", " << dist_from_front << "  |  scalar value: " << scalarValue << std::endl;
-
+                                    // std::cout << proc << " ~ " << patch << "  |   Values: " << gradVals[0] << ", " << gradVals[1] << ",  " << gradVals[2] << ", " << values[3] << ", " << gradVals[4] << ", " << gradVals[5] ", " << gradVals[6] << ", " << gradVals[7] << "   _ _  "
+                                    // << "  |   dists: " << distFromLeft << ", " << dist_from_bottom << ", " << dist_from_front << "  |  scalar value: " << scalarValue << std::endl;
 
                                     //
                                     // find x+h
@@ -1784,6 +1805,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                 //
                                 // Compute the color
                                 //
+                                // if (proc ==2 && patch ==3)
+                                //     std::cout <<  proc << " *#* " << patch  << "computePixelColor " << std::endl;
                                 computePixelColor(source_rgb, dest_rgb);
                             }
                         }
@@ -1991,21 +2014,14 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
             if (npt_arrays > 0)
             {
                 int index[8];
-                index[0] = (ind[2])*dims[0]*dims[1] +(ind[1])*dims[0] + (ind[0]);
-                index[1] = (ind[2])*dims[0]*dims[1] + 
-                                                     (ind[1])*dims[0] + (ind[0]+1);
-                index[2] = (ind[2])*dims[0]*dims[1] + 
-                                                     (ind[1]+1)*dims[0] + (ind[0]);
-                index[3] = (ind[2])*dims[0]*dims[1] + 
-                                                    (ind[1]+1)*dims[0]+ (ind[0]+1);
-                index[4] = (ind[2]+1)*dims[0]*dims[1] + 
-                                                       (ind[1])*dims[0] + (ind[0]);
-                index[5] = (ind[2]+1)*dims[0]*dims[1] + 
-                                                      (ind[1])*dims[0]+ (ind[0]+1);
-                index[6] = (ind[2]+1)*dims[0]*dims[1] + 
-                                                      (ind[1]+1)*dims[0]+ (ind[0]);
-                index[7] = (ind[2]+1)*dims[0]*dims[1] +
-                                                   (ind[1]+1)*dims[0] + (ind[0]+1);
+                index[0] = (ind[2])*dims[0]*dims[1] + (ind[1])*dims[0] + (ind[0]);
+                index[1] = (ind[2])*dims[0]*dims[1] + (ind[1])*dims[0] + (ind[0]+1);
+                index[2] = (ind[2])*dims[0]*dims[1] + (ind[1]+1)*dims[0] + (ind[0]);
+                index[3] = (ind[2])*dims[0]*dims[1] + (ind[1]+1)*dims[0] + (ind[0]+1);
+                index[4] = (ind[2]+1)*dims[0]*dims[1] + (ind[1])*dims[0] + (ind[0]);
+                index[5] = (ind[2]+1)*dims[0]*dims[1] + (ind[1])*dims[0] + (ind[0]+1);
+                index[6] = (ind[2]+1)*dims[0]*dims[1] + (ind[1]+1)*dims[0] + (ind[0]);
+                index[7] = (ind[2]+1)*dims[0]*dims[1] + (ind[1]+1)*dims[0] + (ind[0]+1);
                 double x_right = prop[0];
                 double x_left = 1. - prop[0];
                 double y_top = prop[1];
@@ -2021,14 +2037,14 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         double vals[8];
                         AssignEight(pt_vartypes[l], vals, index, s, m, pt_array);
                         double val = 
-                          x_left*y_bottom*z_front*vals[0] +
-                          x_right*y_bottom*z_front*vals[1] +
-                          x_left*y_top*z_front*vals[2] +
-                          x_right*y_top*z_front*vals[3] +
-                          x_left*y_bottom*z_back*vals[4] +
-                          x_right*y_bottom*z_back*vals[5] +
-                          x_left*y_top*z_back*vals[6] +
-                          x_right*y_top*z_back*vals[7];
+                            x_left*y_bottom*z_front*vals[0] +
+                            x_right*y_bottom*z_front*vals[1] +
+                            x_left*y_top*z_front*vals[2] +
+                            x_right*y_top*z_front*vals[3] +
+                            x_left*y_bottom*z_back*vals[4] +
+                            x_right*y_bottom*z_back*vals[5] +
+                            x_left*y_top*z_back*vals[6] +
+                            x_right*y_top*z_back*vals[7];
                         tmpSampleList[count][pt_index[l]+m] = val;
                     }
                 }    
@@ -2258,6 +2274,7 @@ avtMassVoxelExtractor::SampleAlongSegment(const double *origin,
                                                      first, last);
     if (!hasIntersections)
         return;
+    //std::cout <<  proc << " *# hasIntersection #* " <<patch  << std::endl;
 
     bool foundHit = false;
     int curX = -1;
@@ -2418,8 +2435,13 @@ avtMassVoxelExtractor::SampleAlongSegment(const double *origin,
         curZ = ind[2];
     }
 
-    if (hasSamples)
+    if (hasSamples){
+        // if (proc ==2 && patch ==3)
+        //     std::cout <<  proc << " *#* " <<patch  << "  SampleVariable(first, last, w, h) " << w << " , " << h <<  std::endl;
+        
+
         SampleVariable(first, last, w, h);
+    }
 }
 
 
@@ -2561,8 +2583,7 @@ avtMassVoxelExtractor::ExtractImageSpaceGrid(vtkRectilinearGrid *rgrid,
     int last_y_hit = 0;
     int last_z_hit = 0;
 
-    vtkUnsignedCharArray *ghosts = (vtkUnsignedCharArray *)rgrid->GetCellData()
-                                                   ->GetArray("avtGhostZones");
+    vtkUnsignedCharArray *ghosts = (vtkUnsignedCharArray *)rgrid->GetCellData()->GetArray("avtGhostZones");  //here
     std::vector<void *>  cell_arrays;
     std::vector<int>     cell_vartypes;
     std::vector<int>     cell_size;
