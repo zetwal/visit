@@ -177,6 +177,30 @@ avtSamplePointExtractor::avtSamplePointExtractor(int w, int h, int d)
     materialProperties[0] = 0.4; materialProperties[1] = 0.75; materialProperties[3] = 0.0; materialProperties[3] = 15.0;
 }
 
+std::string NumbToString (int Number)
+{
+     std::ostringstream ss;
+     ss << Number;
+     return ss.str();
+}
+
+void createPpm(float array[], int dimx, int dimy, std::string filename){
+    int i, j;
+    std::cout << "createPpm2  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    for (j = 0; j < dimy; ++j){
+        for (i = 0; i < dimx; ++i){
+            static unsigned char color[3];
+            color[0] = array[j*(dimx*4) + i*4 + 0] * 255;  // red
+            color[1] = array[j*(dimx*4) + i*4 + 1] * 255;  // green
+            color[2] = array[j*(dimx*4) + i*4 + 2] * 255;  // blue 
+            (void) fwrite(color, 1, 3, fp);
+        }
+    }
+    (void) fclose(fp);
+    std::cout << "End createPpm: " << std::endl;
+}
 
 // ****************************************************************************
 //  Method: avtSamplePointExtractor destructor
@@ -1066,6 +1090,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
             if (tmpImageMetaPatch.inUse == 1){
+                //std::cout << PAR_Rank() << "  Rendered!!! YAY!!! " << num << std::endl;
                 double bounds[6];
                 ds->GetBounds(bounds);
                 
@@ -1081,7 +1106,12 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 massVoxelExtractor->getComputedImage(tmpImageDataHash.imagePatch);
                 imgDataHashMap.insert( std::pair<int, imgData> (tmpImageDataHash.patchNumber , tmpImageDataHash) );
 
+                std::string imgFilename_Final = "/home/pascal/Desktop/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
+                createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
+
                 patchCount++;
+            }else{
+                //std::cout << PAR_Rank() << "  Not rendered: " << num << std::endl;
             }
         }
         return;

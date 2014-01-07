@@ -170,5 +170,6 @@ public:
 #endif
 };
 
+//void createPpm(float array[], int dimx, int dimy, std::string filename);
 
 #endif

@@ -327,8 +327,9 @@ ShaderProgramARB::bind ()
       cerr << "Program Log: " << endl << program_log << endl;
     }
 
+    //glUseProgramObjectARB(id_);
     glUseProgram(id_);
-    std::cout << "id: " << id_ << std::endl;
+    //std::cout << "id: " << id_ << std::endl;
 
     /* get the variable and texture locations */
     const char *tex_strings[] = {"tex0", "tex1", "tex2", "tex3",
@@ -337,9 +338,12 @@ ShaderProgramARB::bind ()
                                  "tex12", "tex13", "tex14", "tex15"};
     for (int i = 0; i < MAX_SHADER_UNIFORMS; i++) {
       int location = glGetUniformLocation(id_, tex_strings[i]);
+      //std::cout << i << "   location: " << location << std::endl;
       if (location != -1) { // able to get that link
-  glUniform1i(location, i);
+         glUniform1i(location, i);
+       //   glProgramUniform1i(id_,location,i);
       }
+      
     }
   }
   CHECK_OPENGL_ERROR();
