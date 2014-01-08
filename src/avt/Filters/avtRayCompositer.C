@@ -574,24 +574,24 @@ avtRayCompositer::Execute(void)
     //
     volume->GetPixels(rayfoo, data, zbuffer);
 
-    int minW = volume->GetRestrictedMinWidth();
-        int minH = volume->GetRestrictedMinHeight();
+    // int minW = volume->GetRestrictedMinWidth();
+    //     int minH = volume->GetRestrictedMinHeight();
 
-    std::cout << rank << " ~ " << "   width: " << width << "   height: " << height << std::endl;
-    for (int i = 0 ; i < width ; i++)
-    {
-        for (int j = 0 ; j < height ; j++)
-        {
-            int index = j*width + i;
-            int opaqueImageIndex = (j+minH)*fullWidth + (i+minW);
-            if (!( ((data[3*index    ] == 255) && (data[3*index   +1] == 255)) && (data[3*index + 2]==255) ))
-            {
-                data[3*index    ] = _r;//opaqueImageData[n_comp*opaqueImageIndex];
-                data[3*index + 1] = _g;//opaqueImageData[n_comp*opaqueImageIndex+1];
-                data[3*index + 2] = _b;//opaqueImageData[n_comp*opaqueImageIndex+2];
-            }
-        }
-    }
+    // std::cout << rank << " ~ " << "   width: " << width << "   height: " << height << std::endl;
+    // for (int i = 0 ; i < width ; i++)
+    // {
+    //     for (int j = 0 ; j < height ; j++)
+    //     {
+    //         int index = j*width + i;
+    //         int opaqueImageIndex = (j+minH)*fullWidth + (i+minW);
+    //         if (!( ((data[3*index    ] == 255) && (data[3*index   +1] == 255)) && (data[3*index + 2]==255) ))
+    //         {
+    //             data[3*index    ] = _r;//opaqueImageData[n_comp*opaqueImageIndex];
+    //             data[3*index + 1] = _g;//opaqueImageData[n_comp*opaqueImageIndex+1];
+    //             data[3*index + 2] = _b;//opaqueImageData[n_comp*opaqueImageIndex+2];
+    //         }
+    //     }
+    // }
 
     int iSecret = rand() % 100 + 1;
     std::string imgFilenameFinal = "/home/pascal/Desktop/avtRayCompositer_Execute_"+ NumbToString(rank) + "_"+ NumbToString(iSecret) + "_Buffer.ppm";

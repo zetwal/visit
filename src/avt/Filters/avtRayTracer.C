@@ -515,11 +515,13 @@ avtRayTracer::Execute(void)
     if (rayCastingSLIVR == true){
         
         // only required to force an update - Need to find a way to get rid of that!!!!
-        avtRayCompositer rc(rayfoo);
+        //avtRayCompositer rc(rayfoo);
 
-        rc.SetInput(samples);
-        avtImage_p image  = rc.GetTypedOutput();
-        image->Update(GetGeneralContract());
+        //rc.SetInput(samples);
+        //avtImage_p image  = rc.GetTypedOutput();
+        //image->Update(GetGeneralContract());
+
+        samples->Update(GetGeneralContract());  
 
 
         
@@ -1331,11 +1333,147 @@ avtRayTracer::Execute(void)
         //if (imgTest != NULL)
         //   delete []imgTest;
 
+        extractor.delImgPatches();
 
 
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         
 
-        extractor.delImgPatches();
+
+        int imgBufferWidthSmall = screen[0] / 4;
+
+        char* image_icet = new char[imgBufferWidth/4 * imgBufferHeight * 3];
+
+        //divide the images
+
+        int r,g, b;
+        if (PAR_Rank() == 0){ r = 1; g = 0; b = 0;}
+        if (PAR_Rank() == 1){ r = 0; g = 1; b = 0;}
+        if (PAR_Rank() == 2){ r = 0; g = 0; b = 1;}
+        if (PAR_Rank() == 3){ r = 1; g = 1; b = 0;}
+
+        for (int k = 0; k < 4; ++k)
+        {
+            for (int i=0; i < imgBufferHeight; i++)
+                for (int j = 0; j < imgBufferWidthSmall; j++){
+
+                    image_icet[j*imgBufferWidthSmall + i] = r;
+                    image_icet[j*imgBufferWidthSmall + i] = g;
+                    image_icet[j*imgBufferWidthSmall + i] = b;
+                }
+        }
+
+
+        //
+        // Communicate the screen to the root processor.
+        //
+        #ifdef PARALLEL
+
+            // avtImage_p img_icet_p;
+
+            // avtImageRepresentation *img_iceT = new avtImageRepresentation(image_icet, imgBufferWidth/4 * imgBufferHeight * 3);
+            // img_icet_p.SetImage(img_iceT);
+
+            avtImage_p retval = new avtImage(0);
+            retval->GetImage() = avtImageRepresentation(image_icet, imgBufferWidth/4 * imgBufferHeight * 3);
+            //image_icet->Delete();
+
+            //
+            // Communicate the screen to the root processor.
+            //
+            avtImageCommunicator imageCommunicator;
+            avtDataObject_p dob;
+            CopyTo(dob, retval);
+            imageCommunicator.SetInput(dob);
+            image = imageCommunicator.GetTypedOutput();
+        #endif
+
+        std::cout << PAR_Rank() << "------created image object\n";
+
+
+        #ifdef PARALLEL
+            //
+            // Create an image partition that will be passed around between
+            // parallel modules in an effort to minimize communication.
+            //
+            avtImagePartition imagePartition(screen[0], screen[1]);
+            imagePartition.RestrictToTile(0, screen[0], 0, screen[1]); //probably iceT
+            //sampleCommunicator.SetImagePartition(&imagePartition);
+            imageCommunicator.SetImagePartition(&imagePartition);
+
+        #endif
+
+
+        std::cout << PAR_Rank() << "------before image update\n";
+
+
+        //extractor.RestrictToTile(IStart, IEnd, JStart, JEnd);
+        image->Update(GetGeneralContract());                    // execution happens here - identified with gdb
+
+        std::cout << PAR_Rank() << "------After image update\n";
+
+        // #ifdef PARALLEL
+
+
+        //     retval = new avtImage(0);
+        //     retval->GetImage() = avtImageRepresentation(image_icet, imgBufferWidth/4 * imgBufferHeight * 3);
+        //     //image_icet->Delete();
+
+        //     //
+        //     // Communicate the screen to the root processor.
+        //     //
+        //     // avtImageCommunicator imageCommunicator;
+        //     dob;
+        //     CopyTo(dob, retval);
+        //     imageCommunicator.SetInput(dob);
+        //     image = imageCommunicator.GetTypedOutput();
+        // #endif
+
+        int IEnd, IStart, JEnd, JStart;
+        IEnd = screen[0];
+        IStart = 0;
+        JEnd = screen[1];
+        JStart = 0;
+
+
+        whole_image = new avtImage(this);
+
+        // creates input for the
+        vtkImageData *img = avtImageRepresentation::NewImage(screen[0], screen[1]);
+        whole_image->GetImage() = img;
+
+        if (PAR_Rank() == 0)    // stage 8 of 9
+        {
+                unsigned char *whole_rgb = 
+                                        whole_image->GetImage().GetRGBBuffer();
+                unsigned char *tile = image->GetImage().GetRGBBuffer();
+                std::string imgFilenameFinal = "/home/pascal/Desktop/on_0_" + NumbToString(PAR_Rank()) + "_Buffer.ppm";
+                createPpm(tile,IEnd-IStart,JEnd-JStart,imgFilenameFinal); 
+                for (int jj = JStart ; jj < JEnd ; jj++)
+                    for (int ii = IStart ; ii < IEnd ; ii++)
+                    {
+                        int index = screen[0]*jj + ii;
+                        int index2 = screen[0]*jj + ii;
+                        whole_rgb[3*index+0] = tile[3*index2+0];
+                        whole_rgb[3*index+1] = tile[3*index2+1];
+                        whole_rgb[3*index+2] = tile[3*index2+2];
+                    }
+        }
+
+        if (PAR_Rank() == 0)
+            image->Copy(*whole_image);
+
+        //
+        // Make our output image look the same as the ray compositer's.
+        //
+        SetOutput(image);
+
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
         //std::cout << PAR_Rank() << "....................................... avtRayTracer::Execute     done RayCasting SLIVR !!!!!!" << std::endl;
 
@@ -1354,7 +1492,7 @@ avtRayTracer::Execute(void)
     //
     avtSamplePointCommunicator sampleCommunicator;
     sampleCommunicator.SetInput(extractor.GetOutput());
-    sampleCommunicator.SetJittering(true);
+   // sampleCommunicator.SetJittering(true);
 
     samples = sampleCommunicator.GetOutput();
 #endif
@@ -1366,27 +1504,27 @@ avtRayTracer::Execute(void)
     rc.SetBackgroundColor(background);
 
     rc.setRank((int)PAR_Rank());
+    {
+        if (PAR_Rank() == 0)
+            rc.setColor(255,0,0);
+        if (PAR_Rank() == 1)
+            rc.setColor(0,255,0);
+        if (PAR_Rank() == 2)
+            rc.setColor(0,0,255);
 
-     if (PAR_Rank() == 0)
-        rc.setColor(255,0,0);
-    if (PAR_Rank() == 1)
-        rc.setColor(0,255,0);
-    if (PAR_Rank() == 2)
-        rc.setColor(0,0,255);
+        if (PAR_Rank() == 3)
+            rc.setColor(255,255,0);
+        if (PAR_Rank() == 4)
+            rc.setColor(255,0,255);
+        if (PAR_Rank() == 5)
+            rc.setColor(0,255,255);
 
-    if (PAR_Rank() == 3)
-        rc.setColor(255,255,0);
-    if (PAR_Rank() == 4)
-        rc.setColor(255,0,255);
-    if (PAR_Rank() == 5)
-        rc.setColor(0,255,255);
+        if (PAR_Rank() == 6)
+            rc.setColor(150,150,150);
 
-    if (PAR_Rank() == 6)
-        rc.setColor(150,150,150);
-
-    if (PAR_Rank() == 7)
-        rc.setColor(59,59,59);
-    
+        if (PAR_Rank() == 7)
+            rc.setColor(59,59,59);
+    }
     rc.SetBackgroundMode(backgroundMode);
     rc.SetGradientBackgroundColors(gradBG1, gradBG2);
     if (*opaqueImage != NULL)
@@ -1433,6 +1571,8 @@ avtRayTracer::Execute(void)
             }
         }
     }
+
+
     rc.SetInput(samples);
     avtImage_p image = rc.GetTypedOutput();
  
@@ -1481,7 +1621,7 @@ avtRayTracer::Execute(void)
             // parallel modules in an effort to minimize communication.
             //
             avtImagePartition imagePartition(screen[0], screen[1]);
-            imagePartition.RestrictToTile(IStart, IEnd, JStart, JEnd);
+            imagePartition.RestrictToTile(IStart, IEnd, JStart, JEnd); //probably iceT
             sampleCommunicator.SetImagePartition(&imagePartition);
             imageCommunicator.SetImagePartition(&imagePartition);
 

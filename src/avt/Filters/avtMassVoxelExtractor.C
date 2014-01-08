@@ -2243,6 +2243,21 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = std::min(std::max(dest_rgb[1],0.0),1.0);
         imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = std::min(std::max(dest_rgb[2],0.0),1.0);
         imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = std::min(std::max(dest_rgb[3],0.0),1.0);
+
+
+        int r,g, b;
+        if (proc == 0){ r = 1; g = 0; b = 0;}
+        if (proc == 1){ r = 0; g = 1; b = 0;}
+        if (proc == 2){ r = 0; g = 0; b = 1;}
+        if (proc == 3){ r = 1; g = 1; b = 0;}
+
+
+
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 0] = r;
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 1] = g;
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 2] = b;
+        imgArray[(h-yMin)*(imgWidth*4) + (w-xMin)*4 + 3] = 1;
+
     }
     else
         if (inrun)
