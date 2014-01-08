@@ -153,6 +153,12 @@ class PIPELINE_API avtCallback
                                      { return useKdTreeLoadBalancer; }
 
 
+    static void                  SetAMR(bool b)
+                                     { amr = b; }
+    static bool                  UseAMR(void)
+                                     { return amr; }
+
+
     static void                  RegisterGetDatabaseCallback(
                                                   GetDatabaseCallback, void *);
     static ref_ptr<avtDatabase>  GetDatabase(const std::string &, int,
@@ -211,6 +217,7 @@ class PIPELINE_API avtCallback
     static void                 *resetTimeoutCallbackArgs;
 
     static bool                  useKdTreeLoadBalancer;
+    static bool                  amr;
 };
 
 

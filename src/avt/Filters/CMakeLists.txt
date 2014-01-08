@@ -94,6 +94,7 @@ avtNamedSelectionFilter.C
 avtPointToGlyphFilter.C
 avtRayCompositer.C
 avtRayTracer.C
+avtRayExtractor.C
 avtResampleFilter.C
 avtSamplePointCommunicator.C
 avtSamplePointExtractor.C

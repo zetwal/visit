@@ -331,10 +331,11 @@ ShaderProgramARB::bind ()
     // check to linking of the program
     GLint program_status[1];
     glGetProgramiv(id_, GL_LINK_STATUS, program_status);
-    if (program_status[0] == GL_TRUE) {
+    if (program_status[0] == GL_FALSE) {
       char program_log[1000];
       glGetInfoLogARB(id_, 1000, NULL, program_log);
       cerr << "Program Log: " << endl << program_log << endl;
+      //std::cout << "Program Log: " << endl << program_log << endl;
     }
 
     //glUseProgramObjectARB(id_);

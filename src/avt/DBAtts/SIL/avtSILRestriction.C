@@ -1117,7 +1117,7 @@ avtSILRestriction::FastIntersect(avtSILRestriction_p silr)
     // determine most values. We then call EnsureRestrictionCorrectness to
     // figure out the cases that we're not sure about.
     //
-    SetState states[] = {NoneUsed, NoneUsed, NoneUsed, NoneUsed, NoneUsed,
+    SetState states[] = {NoneUsed, NoneUsed, NoneUsed, NoneUsed,          NoneUsed,
                          NoneUsed, SomeUsed, SomeUsed, SomeUsedOtherProc, AllUsedOtherProc,
                          NoneUsed, SomeUsed, AllUsed, SomeUsedOtherProc, AllUsedOtherProc,
                          NoneUsed, SomeUsedOtherProc, SomeUsedOtherProc, SomeUsedOtherProc,

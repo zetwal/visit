@@ -1104,8 +1104,12 @@ BoundaryHelperFunctions<T>::SetNewBoundaryData(int       d1,
 
         int mi = n1->match;
         T *data = bnddata[d2][mi];
-        if (!data)
-            EXCEPTION1(VisItException,"Null array");
+        if (!data){
+            std::cout << PAR_Rank() << " ~ domain error: " << d1 << std::endl;
+            continue; //    
+            //EXCEPTION1(VisItException,"Null array");
+
+        }
 
         int bndindex = 0;
         int *n1extents = (isPointData ? n1->nextents : n1->zextents);
