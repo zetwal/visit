@@ -109,6 +109,7 @@ avtMultiresFilter::~avtMultiresFilter()
 void
 avtMultiresFilter::Execute(void)
 {
+    std::cout << "avtMultiresFilter::Execute !!! !!! !!! " << std::endl;
     avtDataAttributes &dataAtts = GetTypedOutput()->GetInfo().GetAttributes();
 
     //
@@ -144,6 +145,7 @@ avtMultiresFilter::Execute(void)
 
 avtContract_p avtMultiresFilter::ModifyContract(avtContract_p contract)
 {
+    std::cout << "avtMultiresFilter::ModifyContract !!! !!! !!! " << std::endl;
     //
     // Get the spatial extents for the mesh.
     //

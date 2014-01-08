@@ -308,6 +308,7 @@ avtGhostZoneAndFacelistFilter::SetMustCreatePolyData(bool val)
 void
 avtGhostZoneAndFacelistFilter::Execute(void)
 {
+    std::cout << "avtGhostZoneAndFacelistFilter::Execute" << std::endl;
     int  timingIndex = visitTimer->StartTimer();
 
     avtDataObject_p dObj = GetInput();

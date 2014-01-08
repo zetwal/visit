@@ -809,8 +809,9 @@ avtGenericDatabase::GetOutput(avtDataRequest_p spec,
     if (!alreadyDidNesting)
     {
         int t0 = visitTimer->StartTimer();
-        ApplyGhostForDomainNesting(datasetCollection, domains, allDomains, spec,
-                                   canDoCollectiveCommunication);
+
+        //ApplyGhostForDomainNesting(datasetCollection, domains, allDomains, spec,
+        //                            canDoCollectiveCommunication);
         visitTimer->StopTimer(t0, "Doing ghost nesting");
     }
 
@@ -3228,20 +3229,17 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
             vr = cache.GetVoidRef(var, type, ts, domains[i]);
         if (*vr == NULL)
         {
-            //std::cout << " ----- 0 ------"  << std::endl;
             vr = cache.GetVoidRef(var, type, -1, domains[i]);
         }
 
         if (*vr == NULL)
         {
-            //std::cout << " ----- 1 ------"  << std::endl;
             if ((strcmp(type, AUXILIARY_DATA_DOMAIN_NESTING_INFORMATION) == 0) ||
                 (strcmp(type, AUXILIARY_DATA_DOMAIN_BOUNDARY_INFORMATION) == 0))
                 vr = cache.GetVoidRef("any_mesh", type, ts, domains[i]);
         }
         if (*vr == NULL)
         {
-            //std::cout << " ----- 2 ------"  << std::endl;
             if ((strcmp(type, AUXILIARY_DATA_DOMAIN_NESTING_INFORMATION) == 0) ||
                 (strcmp(type, AUXILIARY_DATA_DOMAIN_BOUNDARY_INFORMATION) == 0))
                 vr = cache.GetVoidRef("any_mesh", type, -1, domains[i]);
@@ -3249,7 +3247,6 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
 
         if (*vr != NULL)
         {
-            std::cout << " ----- 3 ------"  << std::endl;
             //
             // We have it, so share a reference and you're done.
             //
@@ -3257,7 +3254,6 @@ avtGenericDatabase::GetAuxiliaryData(avtDataRequest_p spec,
         }
         else
         {
-            //std::cout << " ----- 4 ------"  << std::endl;
             //
             // We did not have it, so calculate it and then store it.
             //

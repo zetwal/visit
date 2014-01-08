@@ -550,7 +550,7 @@ avtMetaData::GetDomainNesting(void)
     VoidRefList list;
     avtContract_p spec = GetContract();
     source->GetMeshAuxiliaryData(AUXILIARY_DATA_DOMAIN_NESTING_INFORMATION,
-                                 (void*) "any_mesh", spec, list);
+                                (void*) "any_mesh", spec, list);
 
     if (list.nList == 0)
     {

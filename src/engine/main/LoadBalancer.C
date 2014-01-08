@@ -41,6 +41,7 @@
 // ************************************************************************* //
 
 #include <LoadBalancer.h>
+#include <avtCallback.h>
 
 #include <stdlib.h>
 
@@ -325,7 +326,7 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         list.push_back(patchesInsideList[j]);
 
     // Adding those that are not specifically in but only overlap!
-    //for (int j=0; j<patchesOverlapList.size(); j++)
+   // for (int j=0; j<patchesOverlapList.size(); j++)
     //    list.push_back(patchesOverlapList[j]);
     
     std::cout << rank << " ~ " << "  patchesInsideList.size(): " << patchesInsideList.size() << 
@@ -1076,6 +1077,9 @@ LoadBalancer::Reduce(avtContract_p input)
             }
         }
 
+        if (amrLevels.size() > 1)
+            avtCallback::SetAMR(true);
+
         // std::cout << rank << " ~ loadBalancer.C: Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
         //                          "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
         //                          "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
@@ -1087,7 +1091,8 @@ LoadBalancer::Reduce(avtContract_p input)
             std::cout << rank << "  numPatches: " << numPatches << std::endl;
             mylist.clear();
             mylist.reserve(numPatches);
-            mylist = templist;
+            for (int j=0; j<numPatches; j++)
+                mylist.push_back(templist[j]);
         }
         else if (theScheme == LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER)
         {
@@ -1175,19 +1180,15 @@ LoadBalancer::Reduce(avtContract_p input)
             mylist = list;
         }
 
-        // for (int z=0; z<mylist.size(); z++){
-        //     std::cout << PAR_Rank() << " ~ " << mylist[z] << std::endl;
-        // }
-
-        silr->RestrictDomainsForLoadBalance(mylist);
-        pipelineInfo[input->GetPipelineIndex()].complete = true;
-
-
+        //Display the list:
         std::stringstream ss;
         ss << rank << " ~ size: " << mylist.size() << "  patches: ";
         for (int i=0; i<mylist.size(); i++)
             ss << mylist[i] << ", ";
         std::cout << ss.str() << std::endl;
+
+        silr->RestrictDomainsForLoadBalance(mylist);
+        pipelineInfo[input->GetPipelineIndex()].complete = true;
     }
     else
     {
