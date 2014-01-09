@@ -974,8 +974,8 @@ avtRayExtractor::ExecuteRayTracer(bool parallelOn, int screen0, int screen1,
         //
         // Get the metadata
         //
-        std::vector<imgMetaData> allImgMetaData;          // contains the metadata to composite the image
-        int numPatches = getImgPatchSize();     // get the number of patches
+        std::vector<imgMetaData> allImgMetaData;    // contains the metadata to composite the image
+        int numPatches = getImgPatchSize();         // get the number of patches
     
         for (int i=0; i<numPatches; i++){
             imgMetaData temp;
@@ -1079,12 +1079,7 @@ avtRayExtractor::ExecuteRayTracer(bool parallelOn, int screen0, int screen1,
 
         //SetOutput(whole_image);
         return whole_image;
-
-        //return;
-
-        //return imgTest;
     }
-
 
     //
     // Parallel
