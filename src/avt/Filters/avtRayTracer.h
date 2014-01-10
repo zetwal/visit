@@ -143,9 +143,6 @@ class AVTFILTERS_API avtRayTracer : public avtDatasetToImageFilter
     void                  SetTrilinear(bool t) {trilinearInterpolation = t; };
     void                  SetRayCastingSLIVR(bool _rayCastingSLIVR){ rayCastingSLIVR = _rayCastingSLIVR; };
 
-    int                   chopPartitionRT(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]);
-    void                  getPartitionExtents(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], double extents[6]);
-  
   protected:
     avtImgCommunicator    imgComm;
     avtViewInfo           view;

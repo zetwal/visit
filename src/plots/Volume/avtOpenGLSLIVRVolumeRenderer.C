@@ -382,12 +382,20 @@ avtOpenGLSLIVRVolumeRenderer::Render(
     if(!slivrInit)
     {
         debug5 << mName << "Initializing SLIVR" << endl;
-        SLIVR::ShaderProgramARB::init_shaders_supported();
+        SLIVR::ShaderProgramARB::init_shaders_supported(true);
         slivrInit = true;
     }
 
-    if (SLIVR::ShaderProgramARB::shaders_supported() == false)
-        avtCallback::IssueWarning("SLIVR uses shaders which your graphics card does not support.");
+    // Check for unsupported graphics card
+    if (SLIVR::ShaderProgramARB::shaders_supported() == false){
+        if (SLIVR::ShaderProgramARB::isGFXIntel() == true)
+            avtCallback::IssueWarning("Intel graphics card are currently not supported.");
+        else
+            avtCallback::IssueWarning("SLIVR uses shaders which your graphics card does not support.");
+
+        return;
+    }
+
     
     // Get the sampling rate that the renderer will use.
     float samplingRate = props.atts.GetRendererSamples();
