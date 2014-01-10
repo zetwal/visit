@@ -326,8 +326,8 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         list.push_back(patchesInsideList[j]);
 
     // Adding those that are not specifically in but only overlap!
-   // for (int j=0; j<patchesOverlapList.size(); j++)
-    //    list.push_back(patchesOverlapList[j]);
+    for (int j=0; j<patchesOverlapList.size(); j++)
+        list.push_back(patchesOverlapList[j]);
     
     std::cout << rank << " ~ " << "  patchesInsideList.size(): " << patchesInsideList.size() << 
                                   "  patchesOverlapList.size(): " << patchesOverlapList.size() << 
@@ -1086,7 +1086,7 @@ LoadBalancer::Reduce(avtContract_p input)
 
         if (theScheme == LOAD_BALANCE_KDTREE)
         {
-            std::cout << "||| K-d tree load balancing |||" << std::endl;
+            std::cout << "||| K-d tree load balancing ||| " << patchesInfo.size() << std::endl;
             int numPatches = kdtreeBuilding(nProcs, logicalBounds, minSpatialExtents, maxSpatialExtents, patchesInfo,templist);
             std::cout << rank << "  numPatches: " << numPatches << std::endl;
             mylist.clear();

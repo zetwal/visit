@@ -152,11 +152,15 @@ class PIPELINE_API avtCallback
     static bool                  UseKdTreeLoadBalancer(void)
                                      { return useKdTreeLoadBalancer; }
 
-
     static void                  SetAMR(bool b)
                                      { amr = b; }
     static bool                  UseAMR(void)
                                      { return amr; }
+
+    static void                  SetForceIntel(bool b)
+                                     { forceIntel = b; }
+    static bool                  UseForceIntel(void)
+                                     { return forceIntel; }                    
 
 
     static void                  RegisterGetDatabaseCallback(
@@ -218,6 +222,7 @@ class PIPELINE_API avtCallback
 
     static bool                  useKdTreeLoadBalancer;
     static bool                  amr;
+    static bool                  forceIntel;
 };
 
 

@@ -385,7 +385,7 @@ avtOpenGLSLIVRVolumeRenderer::Render(
     if(!slivrInit)
     {
         debug5 << mName << "Initializing SLIVR" << endl;
-        SLIVR::ShaderProgramARB::init_shaders_supported();
+        SLIVR::ShaderProgramARB::init_shaders_supported(true);
         slivrInit = true;
     }
 

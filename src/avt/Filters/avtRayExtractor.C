@@ -147,9 +147,7 @@ avtRayExtractor::avtRayExtractor(int w, int h, int d)
     currentNode = 0;
     totalNodes  = 0;
 
-   
     massVoxelExtractor  = NULL;
-
 
 #ifdef PARALLEL
     sendCells        = true;
@@ -157,16 +155,12 @@ avtRayExtractor::avtRayExtractor(int w, int h, int d)
     sendCells        = false;
 #endif
     jitter           = false;
-    rayfoo           = NULL;
 
     rectilinearGridsAreInWorldSpace = false;
     aspect = 1.;
 
     shouldDoTiling = false;
-
-
-
-    SetTrilinear(false);
+    modeIs3D = true;
 
     shouldSetUpArbitrator    = false;
     arbitratorPrefersMinimum = false;
@@ -176,6 +170,7 @@ avtRayExtractor::avtRayExtractor(int w, int h, int d)
     totalAssignedPatches = 0;
 
     rayCastingSLIVR = false;
+    trilinearInterpolation = false;
     lighting = false;
     lightPosition[0] = lightPosition[1] = lightPosition[2] = 0.0;   lightPosition[3] = 1.0;
     materialProperties[0] = 0.4; materialProperties[1] = 0.75; materialProperties[3] = 0.0; materialProperties[3] = 15.0;
@@ -326,6 +321,13 @@ avtRayExtractor::Execute(void)
         massVoxelExtractor->SetMeshDims(meshMin,meshMax);
     }
 
+    //
+    // Determine partition extents
+    //
+    getPartitionExtents(PAR_Size(), logicalBounds, meshMin, meshMax, currentPartitionExtents);
+    std::cout << PAR_Rank() << "   Partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << ", "
+                                                        << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl; 
+
     avtDataTree_p tree = GetInputDataTree();
     totalNodes = tree->GetNumberOfLeaves();
     currentNode = 0;
@@ -371,7 +373,9 @@ avtRayExtractor::Execute(void)
 void
 avtRayExtractor::SetUpExtractors(void)
 {
-    avtSamplePoints_p output = GetTypedOutput();
+    //avtSamplePoints_p output = GetTypedOutput();
+    avtImage_p output = GetTypedOutput();
+
     // if (kernelBasedSampling)
     //     output->SetUseWeightingScheme(true);
 
@@ -379,16 +383,17 @@ avtRayExtractor::SetUpExtractors(void)
     // This will always be NULL the first time through.  For subsequent tiles
     // (provided we are doing tiling) will not have this issue.
     //
-    if (output->GetVolume() == NULL)
-        output->SetVolume(width, height, depth);
-    else
-        output->GetVolume()->ResetSamples();
-    output->ResetCellList();
-    avtVolume *volume = output->GetVolume();
-    if (shouldDoTiling)
-        volume->Restrict(width_min, width_max-1, height_min, height_max-1);
+    //if (output->GetVolume() == NULL)
+    //    output->SetVolume(width, height, depth);
+    //else
+    //    output->GetVolume()->ResetSamples();
+    //output->ResetCellList();
+    //avtVolume *volume = output->GetVolume();
+    //if (shouldDoTiling)
+    //    volume->Restrict(width_min, width_max-1, height_min, height_max-1);
 
-
+	avtVolume *volume;
+	
     if (massVoxelExtractor != NULL)
     {
         delete massVoxelExtractor;
@@ -398,7 +403,8 @@ avtRayExtractor::SetUpExtractors(void)
     //
     // Set up the extractors and tell them which cell list to use.
     //
-    avtCellList *cl = output->GetCellList();
+    //avtCellList *cl = output->GetCellList();
+    avtCellList *cl;
    
     massVoxelExtractor = new avtMassVoxelExtractor(width, height, depth, volume,cl);
     massVoxelExtractor->SetTrilinear(trilinearInterpolation);
@@ -458,40 +464,41 @@ avtRayExtractor::SetUpArbitrator(std::string &name, bool pm)
 void
 avtRayExtractor::PreExecute(void)
 {
-    avtDatasetToSamplePointsFilter::PreExecute();
+    //avtDatasetToSamplePointsFilter::PreExecute();
+    avtDatasetToImgFilter::PreExecute();
 
-    if (shouldSetUpArbitrator)
-    {
-        avtSamplePoints_p samples = GetTypedOutput();
+    //if (shouldSetUpArbitrator)
+    //{
+        //avtSamplePoints_p samples = GetTypedOutput();
+        //avtImage_p imgg = GetTypedOutput();
 
-        std::cout << "avtRayExtractor::GetTypedOutput : " << samples->GetNumberOfRealVariables() << std::endl;
+        //std::cout << "avtRayExtractor::GetTypedOutput : " << samples->GetNumberOfRealVariables() << std::endl;
 
+        //int nvars = samples->GetNumberOfRealVariables();
+        //int theMatch = -1;
+        //int tmpIndex = 0;
+        //for (int i = 0 ; i < nvars ; i++)
+        //{
+        //    bool foundMatch = false;
+        //    if (samples->GetVariableName(i) == arbitratorVarName)
+        //        foundMatch = true;
+        //
+        //    if (foundMatch)
+        //    {
+        //        theMatch = tmpIndex;
+        //        break;
+        //    }
+        //    else
+        //        tmpIndex += samples->GetVariableSize(i);
+        //}
 
-        int nvars = samples->GetNumberOfRealVariables();
-        int theMatch = -1;
-        int tmpIndex = 0;
-        for (int i = 0 ; i < nvars ; i++)
-        {
-            bool foundMatch = false;
-            if (samples->GetVariableName(i) == arbitratorVarName)
-                foundMatch = true;
-
-            if (foundMatch)
-            {
-                theMatch = tmpIndex;
-                break;
-            }
-            else
-                tmpIndex += samples->GetVariableSize(i);
-        }
-
-        if (theMatch != -1)
-        {
-            arbitrator = new avtRelativeValueSamplePointArbitrator(
-                                      arbitratorPrefersMinimum, tmpIndex);
-            avtRay::SetArbitrator(arbitrator);
-        }
-    }
+        //if (theMatch != -1)
+        //{
+        //    arbitrator = new avtRelativeValueSamplePointArbitrator(
+        //                              arbitratorPrefersMinimum, tmpIndex);
+        //    avtRay::SetArbitrator(arbitrator);
+        //}
+    //}
 
     if (GetInput()->GetInfo().GetAttributes().GetTopologicalDimension() == 0)
     {
@@ -534,7 +541,8 @@ avtRayExtractor::PreExecute(void)
 void
 avtRayExtractor::PostExecute(void)
 {
-    avtDatasetToSamplePointsFilter::PostExecute();
+    //avtDatasetToSamplePointsFilter::PostExecute();
+    avtDatasetToImgFilter::PostExecute();
 
     if (shouldSetUpArbitrator)
     {
@@ -819,24 +827,27 @@ avtRayExtractor::initMetaPatch(int id){
 void
 avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 {
-    // if (modeIs3D && ds->GetDataObjectType() == VTK_RECTILINEAR_GRID)
-    // {
+    if (modeIs3D && ds->GetDataObjectType() == VTK_RECTILINEAR_GRID)
+    {
+        double patchExtents[6];
+        ds->GetBounds(patchExtents);
+        std::cout << PAR_Rank() << " ~ " << num << "   Patch extents: " << patchExtents[0] << ", " << patchExtents[1] << "   " << patchExtents[2] << ", " << patchExtents[3] << "   " << patchExtents[4] << ", " << patchExtents[5] << std::endl; 
+
         avtDataAttributes &atts = GetInput()->GetInfo().GetAttributes();
         const double *xform = NULL;
         if (atts.GetRectilinearGridHasTransform())
             xform = atts.GetRectilinearGridTransform();
         massVoxelExtractor->SetGridsAreInWorldSpace(
            rectilinearGridsAreInWorldSpace, viewInfo, aspect, xform);
-        avtSamplePoints_p samples = GetTypedOutput();
-        int numVars = samples->GetNumberOfRealVariables(); 
+        //avtSamplePoints_p samples = GetTypedOutput();
+        //int numVars = samples->GetNumberOfRealVariables(); 
         std::vector<std::string> varnames;
         std::vector<int>         varsizes;
-        for (int i = 0 ; i < numVars ; i++)
-        {
-            varnames.push_back(samples->GetVariableName(i));
-            varsizes.push_back(samples->GetVariableSize(i));
-        }
-
+        //for (int i = 0 ; i < numVars ; i++)
+        //{
+        //    varnames.push_back(samples->GetVariableName(i));
+        //    varsizes.push_back(samples->GetVariableSize(i));
+        //}
 
         if (rayCastingSLIVR == true){
             double scRange[2];
@@ -855,8 +866,8 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         }
 
         massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
-        massVoxelExtractor->Extract((vtkRectilinearGrid *) ds,
-                                    varnames, varsizes);
+        massVoxelExtractor->Extract((vtkRectilinearGrid *) ds, varnames, varsizes);
+
         if (rayCastingSLIVR == true){
             imgMetaData tmpImageMetaPatch;
             tmpImageMetaPatch = initMetaPatch(patchCount);
@@ -871,9 +882,6 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                     tmpImageMetaPatch.extents[i] = bounds[i];
                 imageMetaPatchVector.push_back(tmpImageMetaPatch);
 
-                //std::cout << tmpImageMetaPatch.procId << " ~ " << tmpImageMetaPatch.patchNumber << "  |   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << std::endl;
-
-                
                 imgData tmpImageDataHash;
                 tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;
                 tmpImageDataHash.imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
@@ -882,37 +890,14 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 imgDataHashMap.insert( std::pair<int, imgData> (tmpImageDataHash.patchNumber , tmpImageDataHash) );
 
                 patchCount++;
+
+                std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
+                createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
             }
         }
-
-        // if (rayCastingSLIVR == true){
-        //     imgMetaData tmpImageMetaPatch;
-        //     tmpImageMetaPatch = initMetaPatch(patchCount);
-
-        //     massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
-        //     if (tmpImageMetaPatch.inUse == 1){
-        //         tmpImageMetaPatch.destProcId = tmpImageMetaPatch.procId;
-        //         imageMetaPatchVector.push_back(tmpImageMetaPatch);
-                
-        //         imgData tmpImageDataHash;
-        //         tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;
-        //         tmpImageDataHash.imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
-
-        //         massVoxelExtractor->getComputedImage(tmpImageDataHash.imagePatch);
-        //         imgDataHashMap.insert( std::pair<int, imgData> (tmpImageDataHash.patchNumber , tmpImageDataHash) );
-
-        //         patchCount++;
-        //     }
-        // }
-
-        //debug5 << PAR_Rank() << " ~ avtRayExtractor::RasterBasedSample  .. .  " << "  patchCount:" << patchCount << endl;
-
-        return;
-    //}
+    }
+    return;
 }
-
-
-
 
 
 // ****************************************************************************
@@ -927,20 +912,10 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 //  Modifications:
 //
 // ****************************************************************************
-
-void
-avtRayExtractor::ExecuteRayTracer(bool parallelOn, int screen0, int screen1, unsigned char bg0, unsigned char bg1, unsigned char bg2){
-
-}
-
-//when you wake up, run with everything commented out, and check if it works
-// if not, then try removing arguments, one by one
-
 avtImage_p
 avtRayExtractor::ExecuteRayTracer(bool parallelOn, int screen0, int screen1, 
                                   unsigned char bg0, unsigned char bg1, unsigned char bg2,
                                   int timingVolToImg, int timingIndex){
-
     int screen[2];
     screen[0] = screen0;
     screen[1] = screen1;
@@ -1761,3 +1736,170 @@ avtRayExtractor::ExecuteRayTracer(bool parallelOn, int screen0, int screen1,
 
 }
 
+
+
+// ****************************************************************************
+//  Method: LoadBalancer::chopPartitionRT
+//
+//  Purpose:
+//      Break a partition into 2 k-d tree style
+//
+//  Arguments:
+//      parent      The parent partition.
+//      childOne    The first child
+//      childTwo    The second child
+//      axisOrder   Order of the axes to cycle through
+//
+//  Programmer: Pascal Grosset  
+//  Creation:   December 23, 2013
+//
+// ****************************************************************************
+int
+avtRayExtractor::chopPartitionRT(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]){
+    int axisIndex = (parent.axisIndex+1)%3;
+    int axis = axisOrder[axisIndex];
+    int count = 0;
+    
+    while (true){
+        if (parent.dims[axis] >= 1)
+            break;
+        else{
+            axisIndex = (axisIndex+1)%3;
+            axis = axisOrder[axisIndex];
+        }
+        
+        count++;
+        if (count == 3)
+            break;
+    }
+    if (count == 3)
+        return -1;  // We are going to be cycling forever here! So stop!
+        
+    childOne.axisIndex = childTwo.axisIndex = axisIndex;
+        
+    if (axis == 0){             // x-axis
+        childOne.dims[1] = childTwo.dims[1] = parent.dims[1];
+        childOne.dims[2] = childTwo.dims[2] = parent.dims[2];
+        
+        childOne.minExtents[1] = childTwo.minExtents[1] = parent.minExtents[1];
+        childOne.maxExtents[1] = childTwo.maxExtents[1] = parent.maxExtents[1];
+        
+        childOne.minExtents[2] = childTwo.minExtents[2] = parent.minExtents[2];
+        childOne.maxExtents[2] = childTwo.maxExtents[2] = parent.maxExtents[2];
+        
+        
+        childOne.dims[0] = parent.dims[0]/2;
+        childTwo.dims[0] = parent.dims[0]-childOne.dims[0];
+        
+        childOne.minExtents[0] = parent.minExtents[0];
+        childOne.maxExtents[0] = parent.minExtents[0] + (parent.maxExtents[0]-parent.minExtents[0])/2.0;
+        
+        childTwo.minExtents[0] = childOne.maxExtents[0];
+        childTwo.maxExtents[0] = parent.maxExtents[0];
+    }
+    else
+        if (axis == 1){         // y-axis
+            childOne.dims[0] = childTwo.dims[0] = parent.dims[0];
+            childOne.dims[2] = childTwo.dims[2] = parent.dims[2];
+            
+            childOne.minExtents[0] = childTwo.minExtents[0] = parent.minExtents[0];
+            childOne.maxExtents[0] = childTwo.maxExtents[0] = parent.maxExtents[0];
+            
+            childOne.minExtents[2] = childTwo.minExtents[2] = parent.minExtents[2];
+            childOne.maxExtents[2] = childTwo.maxExtents[2] = parent.maxExtents[2];
+            
+            childOne.dims[1] = parent.dims[1]/2;
+            childTwo.dims[1] = parent.dims[1]-childOne.dims[1];
+            
+            childOne.minExtents[1] = parent.minExtents[1];
+            childOne.maxExtents[1] = parent.minExtents[1] + (parent.maxExtents[1]-parent.minExtents[1])/2.0;
+            
+            childTwo.minExtents[1] = childOne.maxExtents[1];
+            childTwo.maxExtents[1] = parent.maxExtents[1];
+        }
+        else
+            if (axis == 2){     // z-axis
+                childOne.dims[0] = childTwo.dims[0] = parent.dims[0];
+                childOne.dims[1] = childTwo.dims[1] = parent.dims[1];
+                
+                childOne.minExtents[0] = childTwo.minExtents[0] = parent.minExtents[0];
+                childOne.maxExtents[0] = childTwo.maxExtents[0] = parent.maxExtents[0];
+                
+                childOne.minExtents[1] = childTwo.minExtents[1] = parent.minExtents[1];
+                childOne.maxExtents[1] = childTwo.maxExtents[1] = parent.maxExtents[1];
+                
+                
+                childOne.dims[2] = parent.dims[2]/2;
+                childTwo.dims[2] = parent.dims[2]-childOne.dims[2];
+                
+                childOne.minExtents[2] = parent.minExtents[2];
+                childOne.maxExtents[2] = parent.minExtents[2] + (parent.maxExtents[2]-parent.minExtents[2])/2.0;
+                
+                childTwo.minExtents[2] = childOne.maxExtents[2];
+                childTwo.maxExtents[2] = parent.maxExtents[2];
+            }
+    
+    return 0;
+}
+
+
+// ****************************************************************************
+//  Method: LoadBalancer::getPartitionExtents
+//
+//  Purpose:
+//      Do a k-d tree partitioning
+//
+//  Arguments:
+//      numDivisions      
+//      logicalBounds    
+//      minSpatialExtents    
+//      maxSpatialExtents
+//      extents
+//
+//  Programmer: Pascal Grosset  
+//  Creation:   December 9, 2013
+//
+// ****************************************************************************
+void          
+avtRayExtractor::getPartitionExtents(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], double extents[6]){
+    /////////////////////////////////////////////////////////////////
+    // Sort to find the order of axes from largest to smallest
+    int axisOrder[3];
+    
+    std::multimap<int,int> myMultimap;
+    for (int i=0; i<3; i++)
+        myMultimap.insert(std::pair<int,int>(logicalBounds[i],i));
+    
+    int order=2;
+    for (std::multimap<int,int>::iterator it=myMultimap.begin(); it!=myMultimap.end(); ++it){
+        axisOrder[order]=(*it).second;
+        order--;
+    }
+
+    /////////////////////////////////////////////////////////////////
+    // Do the region splitting according to a k-d tree
+    std::deque<partitionExtents> myPartitions;
+    myPartitions.clear();
+
+    partitionExtents parent, one, two;
+    parent.axisIndex = 2;   // set it to the last one so that on the next iteration we get the first one! :)
+    parent.dims[0] = logicalBounds[0];  parent.dims[1] = logicalBounds[1];  parent.dims[2] = logicalBounds[2];
+    parent.minExtents[0] = minSpatialExtents[0];    parent.minExtents[1] = minSpatialExtents[1];    parent.minExtents[2] = minSpatialExtents[2];
+    parent.maxExtents[0] = maxSpatialExtents[0];    parent.maxExtents[1] = maxSpatialExtents[1];    parent.maxExtents[2] = maxSpatialExtents[2];
+
+    myPartitions.push_back(parent);
+
+    while (myPartitions.size() != numDivisions){
+        parent = myPartitions.front();   myPartitions.pop_front();
+
+        chopPartitionRT(parent,one,two,axisOrder);
+        myPartitions.push_back(one);
+        myPartitions.push_back(two);
+    }
+
+    /////////////////////////////////////////////////////////////////
+    // Determine which patch is in which region
+    extents[0] = myPartitions[PAR_Rank()].minExtents[0];  extents[3] = myPartitions[PAR_Rank()].maxExtents[0];
+    extents[1] = myPartitions[PAR_Rank()].minExtents[1];  extents[4] = myPartitions[PAR_Rank()].maxExtents[1];
+    extents[2] = myPartitions[PAR_Rank()].minExtents[2];  extents[5] = myPartitions[PAR_Rank()].maxExtents[2];
+}

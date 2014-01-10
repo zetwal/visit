@@ -158,6 +158,7 @@ AbstractFilters/avtDataTreeIterator.C
 AbstractFilters/avtDatasetToDataObjectFilter.C
 AbstractFilters/avtDatasetToDatasetFilter.C
 AbstractFilters/avtDatasetToImageFilter.C
+AbstractFilters/avtDatasetToImgFilter.C
 AbstractFilters/avtDatasetToSamplePointsFilter.C
 AbstractFilters/avtFacadeFilter.C
 AbstractFilters/avtFilter.C

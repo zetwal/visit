@@ -105,10 +105,12 @@ ShaderProgramARB::init_shaders_supported(std::string& error, bool forceIntel)
     // support shaders but crash when you try to use them.  This
     // covers the Intel integrated chipsets in most laptops.
     const GLubyte* glRendererString = glGetString(GL_RENDERER);
-    if (strncmp((const char *)glRendererString, "Intel", 5) == 0 &&
-        !forceIntel)
+    if (strncmp((const char *)glRendererString, "Intel", 5) == 0)
     {
-      supported_ = true;    // false -  that should work now!
+      if (forceIntel && (supported_ == true))
+        supported_ = true;
+      else
+        supported_ = false;
     }
 
 #ifndef __sgi
@@ -183,7 +185,7 @@ ShaderProgramARB::init_shaders_supported(std::string& error, bool forceIntel)
   }
   return (true);
 }
- 
+
 bool
 ShaderProgramARB::isGFXIntel()
 {

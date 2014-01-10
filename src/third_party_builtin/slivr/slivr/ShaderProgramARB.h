@@ -58,6 +58,7 @@ class SLIVRSHARE ShaderProgramARB
     static bool init_shaders_supported(std::string& error, bool forceIntel = false);
     static bool isGFXIntel();
 
+    static bool isGFXIntel();
     static bool shaders_supported();
     static bool initialized();
     static int max_texture_size_1();
@@ -66,13 +67,13 @@ class SLIVRSHARE ShaderProgramARB
     static const int MAX_SHADER_UNIFORMS = 4;
     
     // OBSOLETE CALLS WITH BAD ERROR CHECKING
-    static bool init_shaders_supported() 
+    static bool init_shaders_supported(bool forceIntel=false) 
     { 
       std::string error; 
-      bool ret = init_shaders_supported(error); 
+      bool ret = init_shaders_supported(error,forceIntel); 
       if (!ret) std::cerr << error;
       return (ret);
-    }    
+    }        
     
     bool create()
     {

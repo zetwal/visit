@@ -46,6 +46,7 @@
 #include <filters_exports.h>
 
 #include <avtDatasetToSamplePointsFilter.h>
+#include <avtDatasetToImgFilter.h>
 #include <avtVolume.h>
 
 #include <avtViewInfo.h>
@@ -59,6 +60,8 @@
 
 #include <avtImgCommunicator.h>
 #include <avtImageSource.h>
+
+#include <deque>
 
 class  vtkDataArray;
 class  vtkDataSet;
@@ -143,7 +146,7 @@ class  avtRayFunction;
 // ****************************************************************************
 
 class AVTFILTERS_API avtRayExtractor 
-    : public avtDatasetToSamplePointsFilter
+    : public avtDatasetToImgFilter//avtDatasetToSamplePointsFilter
 {
   public:
                               avtRayExtractor(int, int, int);
@@ -154,8 +157,6 @@ class AVTFILTERS_API avtRayExtractor
     virtual const char       *GetDescription(void)
                                          { return "Extracting sample points";};
 
-    void                      RegisterRayFunction(avtRayFunction *rf)
-                                         { rayfoo = rf; };
     void                      SendCellsMode(bool);
     void                      SetRectilinearGridsAreInWorldSpace(bool, 
                                                    const avtViewInfo &,double);
@@ -178,6 +179,8 @@ class AVTFILTERS_API avtRayExtractor
     void                      SetModelViewMatrix(double _modelViewMatrix[16]) { for (int i=0;i<16;i++) modelViewMatrix[i]=_modelViewMatrix[i]; }
     void                      SetViewDirection(double *vd){ for (int i=0; i<3; i++) view_direction[i] = vd[i]; }
     void                      SetViewUp(double *vu){ for (int i=0; i<3; i++) view_up[i] = vu[i]; }
+    void                      SetMeshDims(double _meshMin[3], double _meshMax[3]){ for (int i=0; i<3; i++) { meshMin[i] = _meshMin[i]; meshMax[i] = _meshMax[i];}}
+    void                      SetLogicalBounds(int _l, int _w, int _h){ logicalBounds[0] = _l; logicalBounds[1] = _w; logicalBounds[2] = _h; }
 
     // Getting image information
     int                       getTotalAssignedPatches() { return totalAssignedPatches; }              // gets the max number of patches it could have
@@ -185,10 +188,11 @@ class AVTFILTERS_API avtRayExtractor
     imgMetaData               getImgMetaPatch(int patchId){ return imageMetaPatchVector.at(patchId);} // gets the metadata
     void                      getnDelImgData(int patchId, imgData &tempImgData);                      // gets the image & erase its existence
     void                      delImgPatches();   
-    avtImage_p           ExecuteRayTracer(bool parallelOn, int screen0, int screen1, unsigned char bg0, unsigned char bg1, unsigned char bg2, int timingVolToImg, int timingIndex); // executes ray tracer
+    avtImage_p                ExecuteRayTracer(bool parallelOn, int screen0, int screen1, unsigned char bg0, unsigned char bg1, unsigned char bg2, int timingVolToImg, int timingIndex); // executes ray tracer
 
-    void                      ExecuteRayTracer(bool parallelOn, int screen0, int screen1, unsigned char bg0, unsigned char bg1, unsigned char bg2);    // test                                                 
-    //bool                      sortImgMetaDataByDepthCopy(imgMetaData const& before, imgMetaData const& after){ return before.avg_z > after.avg_z; }
+    int                       chopPartitionRT(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]);
+    void                      getPartitionExtents(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], double extents[6]);
+
 
   protected:
     avtImgCommunicator        imgComm;
@@ -217,7 +221,6 @@ class AVTFILTERS_API avtRayExtractor
 
     bool                      sendCells;
     bool                      jitter;
-    avtRayFunction           *rayfoo;
 
     bool                      rectilinearGridsAreInWorldSpace;
     avtViewInfo               viewInfo;
@@ -246,7 +249,7 @@ class AVTFILTERS_API avtRayExtractor
     double                    materialProperties[4];
     avtOpacityMap             *transferFn1D;
     virtual void              Execute(void);
-    virtual void              PreExecute(void);
+    void              PreExecute(void);
     virtual void              PostExecute(void);
     virtual void              ExecuteTree(avtDataTree_p);
     void                      SetUpExtractors(void);
@@ -254,6 +257,8 @@ class AVTFILTERS_API avtRayExtractor
 
     double                    meshMin[3];
     double                    meshMax[3];
+    int                       logicalBounds[3];
+    double                    currentPartitionExtents[6];
 
     typedef struct 
     {
