@@ -181,6 +181,11 @@ class AVTFILTERS_API avtRayExtractor
     void                      SetViewUp(double *vu){ for (int i=0; i<3; i++) view_up[i] = vu[i]; }
     void                      SetMeshDims(double _meshMin[3], double _meshMax[3]){ for (int i=0; i<3; i++) { meshMin[i] = _meshMin[i]; meshMax[i] = _meshMax[i];}}
     void                      SetLogicalBounds(int _l, int _w, int _h){ logicalBounds[0] = _l; logicalBounds[1] = _w; logicalBounds[2] = _h; }
+    void                      SetVarName(std::string _varName){ varName = _varName;}
+    void                      SetParallelOn(bool _parallelOn){parallelOn = _parallelOn;}
+    void                      SetScreen(int _screen[2]){ for (int i=0;i<2;i++) screen[i]=_screen[i]; }
+    void                      SetBackground(unsigned char _background[3]){ for (int i=0;i<3;i++) background[i]=_background[i]; }
+
 
     // Getting image information
     int                       getTotalAssignedPatches() { return totalAssignedPatches; }              // gets the max number of patches it could have
@@ -188,14 +193,19 @@ class AVTFILTERS_API avtRayExtractor
     imgMetaData               getImgMetaPatch(int patchId){ return imageMetaPatchVector.at(patchId);} // gets the metadata
     void                      getnDelImgData(int patchId, imgData &tempImgData);                      // gets the image & erase its existence
     void                      delImgPatches();   
-    avtImage_p                ExecuteRayTracer(bool parallelOn, int screen0, int screen1, unsigned char bg0, unsigned char bg1, unsigned char bg2, int timingVolToImg, int timingIndex); // executes ray tracer
+    avtImage_p                ExecuteRayTracer();
 
     int                       chopPartitionRT(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]);
     void                      getPartitionExtents(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], double extents[6]);
 
 
+
   protected:
     avtImgCommunicator        imgComm;
+    bool                      parallelOn;
+    int                       screen[2];
+    unsigned char             background[3];
+
     int                       width, height, depth;
     int                       currentNode, totalNodes;
 
@@ -211,13 +221,7 @@ class AVTFILTERS_API avtRayExtractor
     bool                      arbitratorPrefersMinimum;
     avtSamplePointArbitrator *arbitrator;
 
-    avtHexahedronExtractor   *hexExtractor;
-    avtHexahedron20Extractor *hex20Extractor;
     avtMassVoxelExtractor    *massVoxelExtractor;
-    avtPointExtractor        *pointExtractor;
-    avtPyramidExtractor      *pyramidExtractor;
-    avtTetrahedronExtractor  *tetExtractor;
-    avtWedgeExtractor        *wedgeExtractor;
 
     bool                      sendCells;
     bool                      jitter;
@@ -260,6 +264,8 @@ class AVTFILTERS_API avtRayExtractor
     int                       logicalBounds[3];
     double                    currentPartitionExtents[6];
 
+    std::string               varName;
+
     typedef struct 
     {
       std::vector<int>                  cellDataIndex;
@@ -271,32 +277,8 @@ class AVTFILTERS_API avtRayExtractor
       int                               nVars;
     } LoadingInfo;
 
-    // inline void               ExtractHex(vtkHexahedron*,vtkDataSet*, int,
-    //                                        LoadingInfo &);
-    // inline void               ExtractHex20(vtkQuadraticHexahedron*,vtkDataSet*, int,
-    //                                        LoadingInfo &);
-    // inline void               ExtractVoxel(vtkVoxel *, vtkDataSet *, int,
-    //                                        LoadingInfo &);
-    // inline void               ExtractTet(vtkTetra *, vtkDataSet *, int,
-    //                                        LoadingInfo &);
-    // inline void               ExtractPyramid(vtkPyramid *, vtkDataSet *, int,
-    //                                        LoadingInfo &);
-    // inline void               ExtractWedge(vtkWedge *, vtkDataSet *, int,
-    //                                        LoadingInfo &);
-    // inline void               ExtractTriangle(vtkTriangle *, vtkDataSet *, int,
-    //                                        LoadingInfo &);
-    // inline void               ExtractQuad(vtkQuad *, vtkDataSet *, int,
-    //                                        LoadingInfo &);
-    // inline void               ExtractPixel(vtkPixel *, vtkDataSet *, int, 
-    //                                        LoadingInfo &);
-
-    // void                      KernelBasedSample(vtkDataSet *);
     void                      RasterBasedSample(vtkDataSet *, int num = 0);
 
-    // virtual bool              FilterUnderstandsTransformedRectMesh();
-
-    // void                      GetLoadingInfoForArrays(vtkDataSet *,
-    //                                                   LoadingInfo &);
 };
 
 

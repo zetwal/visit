@@ -446,8 +446,6 @@ avtRayTracer::Execute(void)
     avtSamplePointExtractor extractor(screen[0], screen[1], samplesPerRay);     //old one
     avtRayExtractor extractorRay(screen[0], screen[1], samplesPerRay);          // new one
 
-
-
     bool doKernel = kernelBasedSampling;
     if (trans.GetOutput()->GetInfo().GetAttributes().GetTopologicalDimension() == 0)
         doKernel = true;
@@ -480,8 +478,12 @@ avtRayTracer::Execute(void)
         extractorRay.SetViewDirection(view_direction);
         extractorRay.SetViewUp(view_up);
         extractorRay.SetTransferFn(transferFn1D);
-    }
+        extractorRay.SetParallelOn(parallelOn);
+        extractorRay.SetScreen(screen);
+        extractorRay.SetBackground(background);
 
+    }
+    else
     if (rayCastingSLIVR == false)
         extractor.RegisterRayFunction(rayfoo);
 
@@ -491,23 +493,25 @@ avtRayTracer::Execute(void)
     // most efficient strategy.  So set some flags here that allow the 
     // extractor to do the extraction in world space.
     //
-    if (!kernelBasedSampling)
-    {
+    if (!kernelBasedSampling){
         trans.SetPassThruRectilinearGrids(true);
         extractor.SetRectilinearGridsAreInWorldSpace(true, view, aspect);
         extractorRay.SetRectilinearGridsAreInWorldSpace(true, view, aspect);
     }
+
     int  timingVolToImg;
     if (rayCastingSLIVR == true && parallelOn)
         timingVolToImg = visitTimer->StartTimer();
 
-
-    double meshMin[3], meshMax[3];
-    int logicalBounds[3];
+    
     if (rayCastingSLIVR == true){
-        avtDataObject_p samples = extractor.GetInput();
-        const avtDataAttributes &datts = samples->GetInfo().GetAttributes();
-        std::string db = samples->GetInfo().GetAttributes().GetFullDBName();
+        double meshMin[3], meshMax[3];
+        int logicalBounds[3];
+
+        avtDataObject_p temp = extractorRay.GetInput();
+        const avtDataAttributes &datts = temp->GetInfo().GetAttributes();
+        std::string varName = datts.GetVariableName();
+        std::string db = temp->GetInfo().GetAttributes().GetFullDBName();
         ref_ptr<avtDatabase> dbp = avtCallback::GetDatabase(db, datts.GetTimeIndex(), NULL);
         avtDatabaseMetaData *md = dbp->GetMetaData(datts.GetTimeIndex(), 1);
         std::string mesh = md->MeshForVar(datts.GetVariableName());
@@ -519,15 +523,17 @@ avtRayTracer::Execute(void)
             logicalBounds[i]=mmd->logicalBounds[i];
         }
         
+        extractorRay.SetVarName(varName);
         extractorRay.SetMeshDims(meshMin,meshMax);
         extractorRay.SetLogicalBounds(logicalBounds[0],logicalBounds[1],logicalBounds[2]);
-        debug5 << PAR_Rank() << " ~ Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
+
+        debug5 << PAR_Rank() << " ~ varName: " << varName << 
+                  "  Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
                                  "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
                                  "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
     }
 
-    avtDataObject_p samples = extractor.GetOutput();
-
+    
     //
     // Ray casting: SLIVR
     //
@@ -535,13 +541,13 @@ avtRayTracer::Execute(void)
         avtDataObject_p samplesRay = extractorRay.GetOutput();
         samplesRay->Update(GetGeneralContract());
 
-        debug5 << PAR_Rank() <<  "           ~    extractorRay: " << extractorRay.getImgPatchSize() << std::endl; 
+        debug5 << PAR_Rank() <<  "  ~    extractorRay: " << extractorRay.getImgPatchSize() << std::endl; 
 
-        avtImage_p finImage = extractorRay.ExecuteRayTracer(parallelOn, screen[0], screen[1], 
-                                      background[0], background[1], background[2], 
-                                      timingVolToImg, timingIndex);
-    
+        avtImage_p finImage = extractorRay.ExecuteRayTracer();
         SetOutput(finImage);
+
+        visitTimer->StopTimer(timingIndex, "Ray Tracing");
+        visitTimer->DumpTimings();
 
         extractorRay.delImgPatches();
 
@@ -549,6 +555,8 @@ avtRayTracer::Execute(void)
         std::cout << "******************** avtRayTracer " << std::endl;
         return;
     }
+
+    avtDataObject_p samples = extractor.GetOutput();
 
 #ifdef PARALLEL
     //

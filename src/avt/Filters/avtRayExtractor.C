@@ -616,12 +616,11 @@ avtRayExtractor::PostExecute(void)
 void
 avtRayExtractor::ExecuteTree(avtDataTree_p dt)
 {
-    if (*dt == NULL)
-    {
+    if (*dt == NULL){
         return;
     }
-    if (dt->GetNChildren() <= 0 && (!(dt->HasData())))
-    {
+
+    if (dt->GetNChildren() <= 0 && (!(dt->HasData()))){
         return;
     }
 
@@ -637,29 +636,17 @@ avtRayExtractor::ExecuteTree(avtDataTree_p dt)
     imageMetaPatchVector.clear();
     imgDataHashMap.clear();
     
-    if (rayCastingSLIVR == true)
-        if ((totalAssignedPatches != 0) && (dt->ChildIsPresent(0) && !( *(dt->GetChild(0)) == NULL))){
-        }else
-            totalAssignedPatches = 0;
+    if ((totalAssignedPatches != 0) && (dt->ChildIsPresent(0) && !( *(dt->GetChild(0)) == NULL))){
+    }else
+        totalAssignedPatches = 0;
 
     for (int i = 0; i < totalAssignedPatches; i++) {
         if (dt->ChildIsPresent(i) && !( *(dt->GetChild(i)) == NULL))
         {
             avtDataTree_p child = dt->GetChild(i);
 
-            //
-            // Get the dataset for this leaf in the tree.
-            //
             vtkDataSet *ds = child->GetDataRepresentation().GetDataVTK();
-
-            //
-            // Iterate over all cells in the mesh and call the appropriate 
-            // extractor for each cell to get the sample points.
-            //
-            // if (kernelBasedSampling)
-            //     KernelBasedSample(ds);
-            // else
-                RasterBasedSample(ds, i);
+            RasterBasedSample(ds, i);
 
             UpdateProgress(10*currentNode+9, 10*totalNodes);
             currentNode++;
@@ -827,11 +814,10 @@ avtRayExtractor::initMetaPatch(int id){
 void
 avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 {
-    if (modeIs3D && ds->GetDataObjectType() == VTK_RECTILINEAR_GRID)
-    {
+    if (ds->GetDataObjectType() == VTK_RECTILINEAR_GRID){
         double patchExtents[6];
         ds->GetBounds(patchExtents);
-        std::cout << PAR_Rank() << " ~ " << num << "   Patch extents: " << patchExtents[0] << ", " << patchExtents[1] << "   " << patchExtents[2] << ", " << patchExtents[3] << "   " << patchExtents[4] << ", " << patchExtents[5] << std::endl; 
+        //std::cout << PAR_Rank() << " ~ " << num << "   Patch extents: " << patchExtents[0] << ", " << patchExtents[1] << "   " << patchExtents[2] << ", " << patchExtents[3] << "   " << patchExtents[4] << ", " << patchExtents[5] << std::endl; 
 
         avtDataAttributes &atts = GetInput()->GetInfo().GetAttributes();
         const double *xform = NULL;
@@ -839,62 +825,55 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             xform = atts.GetRectilinearGridTransform();
         massVoxelExtractor->SetGridsAreInWorldSpace(
            rectilinearGridsAreInWorldSpace, viewInfo, aspect, xform);
-        //avtSamplePoints_p samples = GetTypedOutput();
-        //int numVars = samples->GetNumberOfRealVariables(); 
+
         std::vector<std::string> varnames;
         std::vector<int>         varsizes;
-        //for (int i = 0 ; i < numVars ; i++)
-        //{
-        //    varnames.push_back(samples->GetVariableName(i));
-        //    varsizes.push_back(samples->GetVariableSize(i));
-        //}
+        varnames.push_back(varName);
+        varsizes.push_back(1);
 
-        if (rayCastingSLIVR == true){
-            double scRange[2];
-            ds->GetScalarRange(scRange);
+        double scRange[2];
+        ds->GetScalarRange(scRange);
 
-            double minUsedScalar = transferFn1D->GetMinUsedScalar();
-            double maxUsedScalar = transferFn1D->GetMaxUsedScalar();
+        double minUsedScalar = transferFn1D->GetMinUsedScalar();
+        double maxUsedScalar = transferFn1D->GetMaxUsedScalar();
 
-            debug5 << PAR_Rank() << " ~ " << num << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   used scalar: " << minUsedScalar << ", " << maxUsedScalar << " || Tests: " << (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar) << " , " << (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar) << endl;
+        debug5 << PAR_Rank() << " ~ " << num << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   used scalar: " << minUsedScalar << ", " << maxUsedScalar << " || Tests: " << (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar) << " , " << (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar) << endl;
+    
+        if (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar)
+            return;
+
+        if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
+            return;
         
-            if (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar)
-                return;
-
-            if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
-                return;
-        }
-
         massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds, varnames, varsizes);
 
-        if (rayCastingSLIVR == true){
-            imgMetaData tmpImageMetaPatch;
-            tmpImageMetaPatch = initMetaPatch(patchCount);
+        imgMetaData tmpImageMetaPatch;
+        tmpImageMetaPatch = initMetaPatch(patchCount);
 
-            massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
-            if (tmpImageMetaPatch.inUse == 1){
-                double bounds[6];
-                ds->GetBounds(bounds);
-                
-                tmpImageMetaPatch.destProcId = tmpImageMetaPatch.procId;
-                for (int i=0; i<6; i++)
-                    tmpImageMetaPatch.extents[i] = bounds[i];
-                imageMetaPatchVector.push_back(tmpImageMetaPatch);
+        massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
+        if (tmpImageMetaPatch.inUse == 1){
+            double bounds[6];
+            ds->GetBounds(bounds);
+            
+            tmpImageMetaPatch.destProcId = tmpImageMetaPatch.procId;
+            for (int i=0; i<6; i++)
+                tmpImageMetaPatch.extents[i] = bounds[i];
+            imageMetaPatchVector.push_back(tmpImageMetaPatch);
 
-                imgData tmpImageDataHash;
-                tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;
-                tmpImageDataHash.imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
+            imgData tmpImageDataHash;
+            tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;
+            tmpImageDataHash.imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
 
-                massVoxelExtractor->getComputedImage(tmpImageDataHash.imagePatch);
-                imgDataHashMap.insert( std::pair<int, imgData> (tmpImageDataHash.patchNumber , tmpImageDataHash) );
+            massVoxelExtractor->getComputedImage(tmpImageDataHash.imagePatch);
+            imgDataHashMap.insert( std::pair<int, imgData> (tmpImageDataHash.patchNumber , tmpImageDataHash) );
 
-                patchCount++;
+            patchCount++;
 
-                std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
-                createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
-            }
+            std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
+            createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
         }
+        
     }
     return;
 }
@@ -913,17 +892,20 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 //
 // ****************************************************************************
 avtImage_p
-avtRayExtractor::ExecuteRayTracer(bool parallelOn, int screen0, int screen1, 
-                                  unsigned char bg0, unsigned char bg1, unsigned char bg2,
-                                  int timingVolToImg, int timingIndex){
-    int screen[2];
-    screen[0] = screen0;
-    screen[1] = screen1;
+avtRayExtractor::ExecuteRayTracer(){
+    int  timingVolToImg;
 
-    unsigned char background[3];
-    background[0] = bg0;
-    background[1] = bg1;
-    background[2] = bg2;
+    if (parallelOn)
+        timingVolToImg = visitTimer->StartTimer();
+
+    //int screen[2];
+    // screen[0] = screen0;
+    // screen[1] = screen1;
+
+    // unsigned char background[3];
+    // background[0] = bg0;
+    // background[1] = bg1;
+    // background[2] = bg2;
 
     debug5 << "parallelOn: " << parallelOn << std::endl;
     // std::cout << "screen: " << screen[0] << " " << screen[1] << std::endl;
@@ -1721,8 +1703,7 @@ avtRayExtractor::ExecuteRayTracer(bool parallelOn, int screen0, int screen1,
     visitTimer->StopTimer(timingCompositinig, "Compositing");
     visitTimer->DumpTimings();
 
-    visitTimer->StopTimer(timingIndex, "Ray Tracing");
-    visitTimer->DumpTimings();
+    
 
     // if (imgTest != NULL)
     //   delete []imgTest;
