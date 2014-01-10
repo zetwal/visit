@@ -226,7 +226,7 @@ class ENGINE_MAIN_API LoadBalancer
 
 
     // AMR Stuff
-    bool                            amrLevelsSet;
+    bool                            amrOn;
     std::vector<int>                amrLevels;       
     std::vector<patchMetaData>      patchesInfo;         
 };
