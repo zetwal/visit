@@ -593,7 +593,7 @@ LoadBalancer::LoadBalancer(int np, int r)
     rank   = r;
     nProcs = np;
 
-    amrLevelsSet = false;
+    amrOn = false;
     amrLevels.clear();
 
     //
@@ -1050,21 +1050,17 @@ LoadBalancer::Reduce(avtContract_p input)
         const avtMeshMetaData *mmd = md->GetMesh(meshname);
         patchesInfo = mmd->patches;
 
-        //if (amrLevelsSet == false){
         if (mmd->levels.size() > 1){
-            std::cout << "amrLevelsSet == true " << mmd->levels.size() << std::endl;
-            amrLevelsSet = true;
+            amrOn = true;
             amrLevels = mmd->levels;
             
             avtCallback::SetAMR(true);
         }else{
-            std::cout << "amrLevelsSet == false " << mmd->levels.size() << std::endl;
-            amrLevelsSet = false;
+            amrOn = false;
             amrLevels.clear();
 
             avtCallback::SetAMR(false);
         }
-        //}
 
         int logicalBounds[3];
         double minSpatialExtents[3], maxSpatialExtents[3];
@@ -1089,8 +1085,6 @@ LoadBalancer::Reduce(avtContract_p input)
             }
         }
 
-    
-
         // std::cout << rank << " ~ loadBalancer.C: Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
         //                          "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
         //                          "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
@@ -1099,12 +1093,9 @@ LoadBalancer::Reduce(avtContract_p input)
         {
             std::cout << "||| K-d tree load balancing ||| " << patchesInfo.size() << std::endl;
 
-            if (amrLevelsSet == true)
-                std::cout << "amr true@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
-            else
-                std::cout << "amr false@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
-            int numPatches = kdtreeBuilding(nProcs, logicalBounds, minSpatialExtents, maxSpatialExtents, patchesInfo,templist,amrLevelsSet);
+            int numPatches = kdtreeBuilding(nProcs, logicalBounds, minSpatialExtents, maxSpatialExtents, patchesInfo,templist,amrOn);
             std::cout << rank << "  numPatches: " << numPatches << std::endl;
+            
             mylist.clear();
             mylist.reserve(numPatches);
             for (int j=0; j<numPatches; j++)
