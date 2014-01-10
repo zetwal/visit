@@ -1023,8 +1023,13 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         int numVars = samples->GetNumberOfRealVariables(); 
         std::vector<std::string> varnames;
         std::vector<int>         varsizes;
+
+        std::cout << "numVars: " << numVars << std::endl;
+
         for (int i = 0 ; i < numVars ; i++)
         {
+            std::cout << "samples->GetVariableName(i): " << samples->GetVariableName(i) << std::endl;
+            std::cout << "samples->GetVariableSize(i): " << samples->GetVariableSize(i) << std::endl;
             varnames.push_back(samples->GetVariableName(i));
             varsizes.push_back(samples->GetVariableSize(i));
         }

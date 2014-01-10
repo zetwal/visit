@@ -223,7 +223,7 @@ LoadBalancer::GetSchemeAsString()
 // ****************************************************************************
 int          
 LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], 
-                                               std::vector<patchMetaData> patches, std::vector<int> &list){
+                                               std::vector<patchMetaData> patches, std::vector<int> &list, bool amr){
 
     std::cout << rank << " ~~~ " << " LoadBalancer::kdtreeBuilding " << numDivisions << std::endl;
 
@@ -325,9 +325,11 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     for (int j=0; j<patchesInsideList.size(); j++)
         list.push_back(patchesInsideList[j]);
 
+
     // Adding those that are not specifically in but only overlap!
-    for (int j=0; j<patchesOverlapList.size(); j++)
-        list.push_back(patchesOverlapList[j]);
+    if (amr)
+        for (int j=0; j<patchesOverlapList.size(); j++)
+            list.push_back(patchesOverlapList[j]);
     
     std::cout << rank << " ~ " << "  patchesInsideList.size(): " << patchesInsideList.size() << 
                                   "  patchesOverlapList.size(): " << patchesOverlapList.size() << 
@@ -1045,15 +1047,24 @@ LoadBalancer::Reduce(avtContract_p input)
         string meshname = md->MeshForVar(new_data->GetVariable());
         std::cout << "!!!! !!!! meshname: " << meshname << std::endl;
 
-
         const avtMeshMetaData *mmd = md->GetMesh(meshname);
+        patchesInfo = mmd->patches;
 
-        if (amrLevelsSet == false){
-            std::cout << "amrLevelsSet == false " << std::endl;
+        //if (amrLevelsSet == false){
+        if (mmd->levels.size() > 1){
+            std::cout << "amrLevelsSet == true " << mmd->levels.size() << std::endl;
             amrLevelsSet = true;
             amrLevels = mmd->levels;
-            patchesInfo = mmd->patches;
+            
+            avtCallback::SetAMR(true);
+        }else{
+            std::cout << "amrLevelsSet == false " << mmd->levels.size() << std::endl;
+            amrLevelsSet = false;
+            amrLevels.clear();
+
+            avtCallback::SetAMR(false);
         }
+        //}
 
         int logicalBounds[3];
         double minSpatialExtents[3], maxSpatialExtents[3];
@@ -1065,6 +1076,7 @@ LoadBalancer::Reduce(avtContract_p input)
         std::vector<int> templist;
         std::vector<int> numPatchesPerProc;
         templist = list;
+
         if (rank ==0){
             std::cout << "List size: " << templist.size() << std::endl;
             for (int i=0; i<templist.size(); i++){
@@ -1077,8 +1089,7 @@ LoadBalancer::Reduce(avtContract_p input)
             }
         }
 
-        if (amrLevels.size() > 1)
-            avtCallback::SetAMR(true);
+    
 
         // std::cout << rank << " ~ loadBalancer.C: Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
         //                          "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
@@ -1087,7 +1098,12 @@ LoadBalancer::Reduce(avtContract_p input)
         if (theScheme == LOAD_BALANCE_KDTREE)
         {
             std::cout << "||| K-d tree load balancing ||| " << patchesInfo.size() << std::endl;
-            int numPatches = kdtreeBuilding(nProcs, logicalBounds, minSpatialExtents, maxSpatialExtents, patchesInfo,templist);
+
+            if (amrLevelsSet == true)
+                std::cout << "amr true@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
+            else
+                std::cout << "amr false@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
+            int numPatches = kdtreeBuilding(nProcs, logicalBounds, minSpatialExtents, maxSpatialExtents, patchesInfo,templist,amrLevelsSet);
             std::cout << rank << "  numPatches: " << numPatches << std::endl;
             mylist.clear();
             mylist.reserve(numPatches);
