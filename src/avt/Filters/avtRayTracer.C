@@ -533,7 +533,6 @@ avtRayTracer::Execute(void)
                                  "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
     }
 
-    
     //
     // Ray casting: SLIVR
     //
@@ -544,6 +543,7 @@ avtRayTracer::Execute(void)
         debug5 << PAR_Rank() <<  "  ~    extractorRay: " << extractorRay.getImgPatchSize() << std::endl; 
 
         avtImage_p finImage = extractorRay.ExecuteRayTracer();
+        //avtImage_p finImage = extractorRay.GetTypedOutput();
         SetOutput(finImage);
 
         visitTimer->StopTimer(timingIndex, "Ray Tracing");

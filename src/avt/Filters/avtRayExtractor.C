@@ -149,11 +149,6 @@ avtRayExtractor::avtRayExtractor(int w, int h, int d)
 
     massVoxelExtractor  = NULL;
 
-#ifdef PARALLEL
-    sendCells        = true;
-#else
-    sendCells        = false;
-#endif
     jitter           = false;
 
     rectilinearGridsAreInWorldSpace = false;
@@ -334,6 +329,9 @@ avtRayExtractor::Execute(void)
     ExecuteTree(tree);
 
     visitTimer->StopTimer(timingsIndex, "Ray point extraction");
+
+    // avtImage_p image = ExecuteRayTracer();
+    // SetOutputImage(image);
 }
 
 
@@ -373,51 +371,23 @@ avtRayExtractor::Execute(void)
 void
 avtRayExtractor::SetUpExtractors(void)
 {
-    //avtSamplePoints_p output = GetTypedOutput();
     avtImage_p output = GetTypedOutput();
-
-    // if (kernelBasedSampling)
-    //     output->SetUseWeightingScheme(true);
-
-    //
-    // This will always be NULL the first time through.  For subsequent tiles
-    // (provided we are doing tiling) will not have this issue.
-    //
-    //if (output->GetVolume() == NULL)
-    //    output->SetVolume(width, height, depth);
-    //else
-    //    output->GetVolume()->ResetSamples();
-    //output->ResetCellList();
-    //avtVolume *volume = output->GetVolume();
-    //if (shouldDoTiling)
-    //    volume->Restrict(width_min, width_max-1, height_min, height_max-1);
-
-	avtVolume *volume;
 	
     if (massVoxelExtractor != NULL)
-    {
         delete massVoxelExtractor;
-    }
-
 
     //
     // Set up the extractors and tell them which cell list to use.
     //
-    //avtCellList *cl = output->GetCellList();
-    avtCellList *cl;
-   
+    avtCellList *cl;    // not needed but avtMassVoxelExtractor requires it
+    avtVolume *volume;  // not needed but avtMassVoxelExtractor requires it
     massVoxelExtractor = new avtMassVoxelExtractor(width, height, depth, volume,cl);
     massVoxelExtractor->SetTrilinear(trilinearInterpolation);
     massVoxelExtractor->SetRayCastingSLIVR(rayCastingSLIVR);
     massVoxelExtractor->SetJittering(jitter);
 
-
     if (shouldDoTiling)
-    {
-       
-        massVoxelExtractor->Restrict(width_min, width_max-1,
-                                     height_min, height_max-1);
-    }
+        massVoxelExtractor->Restrict(width_min, width_max-1, height_min, height_max-1);
 }
 
 
@@ -464,41 +434,7 @@ avtRayExtractor::SetUpArbitrator(std::string &name, bool pm)
 void
 avtRayExtractor::PreExecute(void)
 {
-    //avtDatasetToSamplePointsFilter::PreExecute();
     avtDatasetToImgFilter::PreExecute();
-
-    //if (shouldSetUpArbitrator)
-    //{
-        //avtSamplePoints_p samples = GetTypedOutput();
-        //avtImage_p imgg = GetTypedOutput();
-
-        //std::cout << "avtRayExtractor::GetTypedOutput : " << samples->GetNumberOfRealVariables() << std::endl;
-
-        //int nvars = samples->GetNumberOfRealVariables();
-        //int theMatch = -1;
-        //int tmpIndex = 0;
-        //for (int i = 0 ; i < nvars ; i++)
-        //{
-        //    bool foundMatch = false;
-        //    if (samples->GetVariableName(i) == arbitratorVarName)
-        //        foundMatch = true;
-        //
-        //    if (foundMatch)
-        //    {
-        //        theMatch = tmpIndex;
-        //        break;
-        //    }
-        //    else
-        //        tmpIndex += samples->GetVariableSize(i);
-        //}
-
-        //if (theMatch != -1)
-        //{
-        //    arbitrator = new avtRelativeValueSamplePointArbitrator(
-        //                              arbitratorPrefersMinimum, tmpIndex);
-        //    avtRay::SetArbitrator(arbitrator);
-        //}
-    //}
 
     if (GetInput()->GetInfo().GetAttributes().GetTopologicalDimension() == 0)
     {
@@ -541,7 +477,6 @@ avtRayExtractor::PreExecute(void)
 void
 avtRayExtractor::PostExecute(void)
 {
-    //avtDatasetToSamplePointsFilter::PostExecute();
     avtDatasetToImgFilter::PostExecute();
 
     if (shouldSetUpArbitrator)
@@ -815,8 +750,29 @@ void
 avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 {
     if (ds->GetDataObjectType() == VTK_RECTILINEAR_GRID){
-        double patchExtents[6];
+
+        bool completelyInside = true;
+
+        //
+        // Check if that patch is completely inside or not
+        double patchExtents[6], centroid[3];
         ds->GetBounds(patchExtents);
+        centroid[0] = (patchExtents[0] + patchExtents[1])/2.0;
+        centroid[1] = (patchExtents[2] + patchExtents[3])/2.0;
+        centroid[2] = (patchExtents[4] + patchExtents[5])/2.0;
+
+        if (centroid[0] >= currentPartitionExtents[0] && centroid[0]<currentPartitionExtents[1])
+            if (centroid[1] >= currentPartitionExtents[2] && centroid[0]<currentPartitionExtents[3])
+                if (centroid[2] >= currentPartitionExtents[4] && centroid[0]<currentPartitionExtents[5])
+                    completelyInside = false;
+
+        //
+        // if AMR Check which level patch it is (does it have parents) 
+
+
+        
+
+
         //std::cout << PAR_Rank() << " ~ " << num << "   Patch extents: " << patchExtents[0] << ", " << patchExtents[1] << "   " << patchExtents[2] << ", " << patchExtents[3] << "   " << patchExtents[4] << ", " << patchExtents[5] << std::endl; 
 
         avtDataAttributes &atts = GetInput()->GetInfo().GetAttributes();
@@ -1690,31 +1646,11 @@ avtRayExtractor::ExecuteRayTracer(){
 
     if (PAR_Rank() == 0)
         tempImage->Copy(*whole_image);
-    //SetOutput(tempImage);
-    
-
-
-    //**************************************
-
-
-
-
 
     visitTimer->StopTimer(timingCompositinig, "Compositing");
     visitTimer->DumpTimings();
 
-    
-
-    // if (imgTest != NULL)
-    //   delete []imgTest;
-
-    //delImgPatches();
-
     return tempImage;
-
-    //return imgTest;
-    //return;
-
 }
 
 
