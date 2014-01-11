@@ -157,7 +157,6 @@ class AVTFILTERS_API avtRayExtractor
     virtual const char       *GetDescription(void)
                                          { return "Extracting sample points";};
 
-    void                      SendCellsMode(bool);
     void                      SetRectilinearGridsAreInWorldSpace(bool, 
                                                    const avtViewInfo &,double);
     void                      RestrictToTile(int, int, int, int);
@@ -223,7 +222,6 @@ class AVTFILTERS_API avtRayExtractor
 
     avtMassVoxelExtractor    *massVoxelExtractor;
 
-    bool                      sendCells;
     bool                      jitter;
 
     bool                      rectilinearGridsAreInWorldSpace;
