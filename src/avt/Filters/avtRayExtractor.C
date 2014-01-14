@@ -770,7 +770,7 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         // if AMR Check which level patch it is (does it have parents) 
 
 
-        
+        //std::cout << PAR_Rank() << " ~ " << avtCallback::UseTestVal() << std::endl;
 
 
         //std::cout << PAR_Rank() << " ~ " << num << "   Patch extents: " << patchExtents[0] << ", " << patchExtents[1] << "   " << patchExtents[2] << ", " << patchExtents[3] << "   " << patchExtents[4] << ", " << patchExtents[5] << std::endl; 
@@ -826,8 +826,8 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             patchCount++;
 
-            std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
-            createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
+            //std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
+            //createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
         }
         
     }
@@ -1819,4 +1819,17 @@ avtRayExtractor::getPartitionExtents(int numDivisions, int logicalBounds[3], dou
     extents[0] = myPartitions[PAR_Rank()].minExtents[0];  extents[3] = myPartitions[PAR_Rank()].maxExtents[0];
     extents[1] = myPartitions[PAR_Rank()].minExtents[1];  extents[4] = myPartitions[PAR_Rank()].maxExtents[1];
     extents[2] = myPartitions[PAR_Rank()].minExtents[2];  extents[5] = myPartitions[PAR_Rank()].maxExtents[2];
+}
+
+bool 
+avtRayExtractor::patchOverlap(float patchMinX, float patchMaxX, float patchMinY, float patchMaxY, float patchMinZ, float patchMaxZ,
+                            float partitionMinX, float partitionMaxX, float partitionMinY, float partitionMaxY, float partitionMinZ, float partitionMaxZ){
+    // Check if not outside; if it is not outside it has to be somewhere inside 
+    if (patchMaxX < partitionMinX) return false;
+    if (patchMinX > partitionMaxX) return false;
+    if (patchMaxY < partitionMinY) return false;
+    if (patchMinY > partitionMaxY) return false;
+    if (patchMaxZ < partitionMinZ) return false;
+    if (patchMinZ > partitionMaxZ) return false;
+        return true;
 }

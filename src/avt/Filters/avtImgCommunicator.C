@@ -692,6 +692,8 @@ for (int procId = 0; procId < num_procs; procId++)  patchesToRecvMap[procId].cle
   debug5 <<  "------division: " << i << " procToSend:" << procToSend[i] << endl;
 }
 
+//std::cout << "patchesToSendVec.size(): " << patchesToSendVec.size() << std::endl;
+//std::cout << "patchesToRecvMap.size(): " << patchesToRecvMap.size() << std::endl;
 
 recvDisplacementForProcs  = new int[num_procs]();
 sendDisplacementForProcs  = new int[num_procs]();

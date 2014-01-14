@@ -79,11 +79,11 @@ void avtMeshMetaData::Init()
     maxSpatialExtents[0] = 0;
     maxSpatialExtents[1] = 0;
     maxSpatialExtents[2] = 0;
-    numBlocks = 1;
+    numBlocks = 0;
     blockOrigin = 0;
     blockPieceName = "domain";
     blockTitle = "domains";
-    numGroups = 0;
+    numGroups = 1;
     groupOrigin = 0;
     groupPieceName = "group";
     groupTitle = "groups";
@@ -129,6 +129,8 @@ void avtMeshMetaData::Init()
     hideFromGUI = false;
     LODs = 1;
     presentGhostZoneTypes = 0;
+
+    patch_parent.clear();
 
     avtMeshMetaData::SelectAll();
 }
@@ -219,6 +221,16 @@ void avtMeshMetaData::Copy(const avtMeshMetaData &obj)
     LODs = obj.LODs;
     presentGhostZoneTypes = obj.presentGhostZoneTypes;
     levels = obj.levels;
+
+    // std::cout << "About to copy: ";
+    // patch_parent.resize(numBlocks);
+    // std::cout << "  in 1 ";
+    // for (int p=0; p<numBlocks ; p++) {
+    //   patch_parent[p].reserve(obj.patch_parent[p].size());
+    //   for (int c=0; c<patch_parent[p].size(); c++)
+    //     patch_parent[p].push_back(obj.patch_parent[p][c]);
+    // }
+    // std::cout << "Finished copying!!!" << std::endl;
 
     avtMeshMetaData::SelectAll();
 }
