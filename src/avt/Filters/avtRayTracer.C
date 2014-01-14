@@ -43,6 +43,7 @@
 #include <avtRayTracer.h>
 
 #include <vector>
+#include <algorithm>
 
 #include <visit-config.h>
 
@@ -500,31 +501,36 @@ avtRayTracer::Execute(void)
     }
 
     int  timingVolToImg;
-    if (rayCastingSLIVR == true && parallelOn)
-        timingVolToImg = visitTimer->StartTimer();
-
-    
     if (rayCastingSLIVR == true){
+        if (parallelOn)
+            timingVolToImg = visitTimer->StartTimer();
+
         double meshMin[3], meshMax[3];
+        double currentPartitionExtents[6]; //minX,minY,minZ, maxX,maxY,maxZ
         int logicalBounds[3];
 
         avtDataObject_p temp = extractorRay.GetInput();
+
         const avtDataAttributes &datts = temp->GetInfo().GetAttributes();
-        std::string varName = datts.GetVariableName();
+        
         std::string db = temp->GetInfo().GetAttributes().GetFullDBName();
-        std::cout << "| db:  " << db << std::endl;
         ref_ptr<avtDatabase> dbp = avtCallback::GetDatabase(db, datts.GetTimeIndex(), NULL);
         avtDatabaseMetaData *md = dbp->GetMetaData(datts.GetTimeIndex(), 1);
+
         std::string mesh = md->MeshForVar(datts.GetVariableName());
-        std::cout << "| mesh:  " << mesh << std::endl;
         const avtMeshMetaData *mmd = md->GetMesh(mesh);
 
+        
+        std::string varName = datts.GetVariableName();
+        
         for (int i=0; i<3; i++){
             meshMin[i] = mmd->minSpatialExtents[i];
             meshMax[i] = mmd->maxSpatialExtents[i];
             logicalBounds[i]=mmd->logicalBounds[i];
         }
-        double currentPartitionExtents[6];
+
+        std::cout << "| db : " << db << "  mesh:  " << mesh << "   varname: " << varName << std::endl;
+
         extractorRay.SetVarName(varName);
         extractorRay.SetMeshDims(meshMin,meshMax);
         extractorRay.SetLogicalBounds(logicalBounds[0],logicalBounds[1],logicalBounds[2]);
@@ -533,7 +539,7 @@ avtRayTracer::Execute(void)
         extractorRay.getPartitionExtents(PAR_Size(), logicalBounds, meshMin, meshMax, currentPartitionExtents);
 
         // Determine the partitions in this partition
-        std::vector< int > patchesIn;
+        std::vector<int> patchesIn;
         std::vector<int> patchesInsideList;  //list of patches that belong to that partition
         std::vector<int> patchesOverlapList; //list of division that overlap that partition
 
@@ -541,18 +547,13 @@ avtRayTracer::Execute(void)
         double minY = currentPartitionExtents[1];  double maxY = currentPartitionExtents[4];
         double minZ = currentPartitionExtents[2];  double maxZ = currentPartitionExtents[5];
 
-
-        if (PAR_Rank() == 0){
-            
-       
-            for (int p=0; p<mmd->patch_parent.size(); p++){
-                std::stringstream ssss;
-                std::cout << p << " <> ";
-                for (int c=0; c<mmd->patch_parent[p].size(); c++)
-                    ssss << mmd->patch_parent[p][c] << ", ";
-                std::cout << ssss.str() << std::endl;
-            }
-        }
+        // for (int p=0; p<mmd->patch_parent.size(); p++){
+        //     std::stringstream ssss;
+        //     ssss << p << " <> ";
+        //     for (int c=0; c<mmd->patch_parent[p].size(); c++)
+        //         ssss << mmd->patch_parent[p][c] << ", ";
+        //     std::cout << PAR_Rank() << " ~ " << ssss.str() << std::endl;
+        // }
 
         for (int p=0; p<mmd->patch_parent.size(); p++){
             patchMetaData temp = mmd->patches[p];
@@ -564,7 +565,7 @@ avtRayTracer::Execute(void)
             centroid[2] = (temp.minSpatialExtents[2] + temp.maxSpatialExtents[2])/2.0;
 
             double offset = 0.0000001;
-            // Check if that patche belongs to this partition
+            // Check if that patch belongs to this partition
             if (centroid[0]+offset >= minX   &&   centroid[0]+offset < maxX)
                 if (centroid[1]+offset >= minY   &&   centroid[1]+offset < maxY)
                     if (centroid[2]+offset >= minZ   &&   centroid[2]+offset < maxZ){
@@ -591,21 +592,69 @@ avtRayTracer::Execute(void)
         for (int j=0; j<patchesOverlapList.size(); j++)
             patchesIn.push_back(patchesOverlapList[j]);
 
-        std::stringstream ss;
-        for (int i=0; i<patchesIn.size(); i++)
-            ss << patchesIn[i] << " ,  ";
-        std::cout << PAR_Rank() << " :::::::::::::: " << ss.str() << std::endl;
+        // std::stringstream ss;
+        // for (int i=0; i<patchesIn.size(); i++)
+        //     ss << patchesIn[i] << ", ";
+        // std::cout << PAR_Rank() << " :::::::::::::: " << ss.str() << std::endl << std::endl << std::endl; 
 
+        std::vector<int>parentChild;
+        std::vector<int>numChildren;
+        std::vector<int>numInEachLevel; 
+        std::vector<int>patchLevel;
+
+        numInEachLevel.reserve(mmd->numGroups);
+        for (int i=0; i<numInEachLevel.size(); i++)
+            numInEachLevel[i] = 0;
+        parentChild.reserve(patchesIn.size());
+
+        for (int p=0; p<patchesIn.size(); p++){
+            int childrenCount = 0;
+            int id = patchesIn[p]; 
+            patchLevel.push_back(mmd->patches[id].level);   // storing the AMR level for each patch
+            numInEachLevel[mmd->patches[id].level] = numInEachLevel[mmd->patches[id].level]+1;
+
+
+            for (int c=0; c<mmd->patch_parent[id].size(); c++){    
+                std::vector<int>::iterator it;                                                    
+                it = std::find(patchesIn.begin(), patchesIn.end(), mmd->patch_parent[id][c]);
+
+                if (it == patchesIn.end()){
+                    // ignore, the children are in another partition
+                }else{
+                    int x=it-patchesIn.begin();
+                    parentChild.push_back(x);
+                    childrenCount++;
+                }
+            }
+            numChildren.push_back(childrenCount);            
+        }
+    
+        std::stringstream ssssss;
+        int index = 0;
+        for (int xx=0; xx<patchesIn.size(); xx++){
+            ssssss << PAR_Rank() << " ~ Parent: " << xx << " - num children = " << numChildren[xx] << " : ";
+            for (int yy=0; yy<numChildren[xx]; yy++){
+                ssssss << parentChild[index] << ", ";
+                index++;
+            }
+            ssssss << std::endl;
+        }
+        std::cout << ssssss.str() << std::endl;
+            
+    
         debug5 << PAR_Rank() << " ~ varName: " << varName << 
                   "  Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
                                  "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
                                  "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
-    }
+        
+        extractorRay.SetParentChild(parentChild);
+        extractorRay.SetNumChildren(numChildren);
+        extractorRay.SetNumInEachLevel(numInEachLevel);
+        extractorRay.SetPatchLevel(patchLevel);
 
     //
     // Ray casting: SLIVR
     //
-    if (rayCastingSLIVR == true){
         avtDataObject_p samplesRay = extractorRay.GetOutput();
         samplesRay->Update(GetGeneralContract());
 

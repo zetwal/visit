@@ -319,7 +319,6 @@ avtRayExtractor::Execute(void)
     //
     // Determine partition extents
     //
-    getPartitionExtents(PAR_Size(), logicalBounds, meshMin, meshMax, currentPartitionExtents);
     std::cout << PAR_Rank() << "   Partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << ", "
                                                         << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl; 
 
