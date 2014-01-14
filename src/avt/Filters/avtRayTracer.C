@@ -512,20 +512,89 @@ avtRayTracer::Execute(void)
         const avtDataAttributes &datts = temp->GetInfo().GetAttributes();
         std::string varName = datts.GetVariableName();
         std::string db = temp->GetInfo().GetAttributes().GetFullDBName();
+        std::cout << "| db:  " << db << std::endl;
         ref_ptr<avtDatabase> dbp = avtCallback::GetDatabase(db, datts.GetTimeIndex(), NULL);
         avtDatabaseMetaData *md = dbp->GetMetaData(datts.GetTimeIndex(), 1);
         std::string mesh = md->MeshForVar(datts.GetVariableName());
+        std::cout << "| mesh:  " << mesh << std::endl;
         const avtMeshMetaData *mmd = md->GetMesh(mesh);
-        
+
         for (int i=0; i<3; i++){
             meshMin[i] = mmd->minSpatialExtents[i];
             meshMax[i] = mmd->maxSpatialExtents[i];
             logicalBounds[i]=mmd->logicalBounds[i];
         }
-        
+        double currentPartitionExtents[6];
         extractorRay.SetVarName(varName);
         extractorRay.SetMeshDims(meshMin,meshMax);
         extractorRay.SetLogicalBounds(logicalBounds[0],logicalBounds[1],logicalBounds[2]);
+
+        // get partitions Extents
+        extractorRay.getPartitionExtents(PAR_Size(), logicalBounds, meshMin, meshMax, currentPartitionExtents);
+
+        // Determine the partitions in this partition
+        std::vector< int > patchesIn;
+        std::vector<int> patchesInsideList;  //list of patches that belong to that partition
+        std::vector<int> patchesOverlapList; //list of division that overlap that partition
+
+        double minX = currentPartitionExtents[0];  double maxX = currentPartitionExtents[3];
+        double minY = currentPartitionExtents[1];  double maxY = currentPartitionExtents[4];
+        double minZ = currentPartitionExtents[2];  double maxZ = currentPartitionExtents[5];
+
+
+        if (PAR_Rank() == 0){
+            
+       
+            for (int p=0; p<mmd->patch_parent.size(); p++){
+                std::stringstream ssss;
+                std::cout << p << " <> ";
+                for (int c=0; c<mmd->patch_parent[p].size(); c++)
+                    ssss << mmd->patch_parent[p][c] << ", ";
+                std::cout << ssss.str() << std::endl;
+            }
+        }
+
+        for (int p=0; p<mmd->patch_parent.size(); p++){
+            patchMetaData temp = mmd->patches[p];
+
+            bool done = false;
+            double centroid[3];
+            centroid[0] = (temp.minSpatialExtents[0] + temp.maxSpatialExtents[0])/2.0;
+            centroid[1] = (temp.minSpatialExtents[1] + temp.maxSpatialExtents[1])/2.0;
+            centroid[2] = (temp.minSpatialExtents[2] + temp.maxSpatialExtents[2])/2.0;
+
+            double offset = 0.0000001;
+            // Check if that patche belongs to this partition
+            if (centroid[0]+offset >= minX   &&   centroid[0]+offset < maxX)
+                if (centroid[1]+offset >= minY   &&   centroid[1]+offset < maxY)
+                    if (centroid[2]+offset >= minZ   &&   centroid[2]+offset < maxZ){
+                        patchesInsideList.push_back(p);
+                        done = true;
+                    }
+
+            // else check if that patch overlaps with this partition
+            if (done == false){
+                if (extractorRay.patchOverlap(temp.minSpatialExtents[0],temp.maxSpatialExtents[0],
+                                              temp.minSpatialExtents[1],temp.maxSpatialExtents[1],
+                                              temp.minSpatialExtents[2],temp.maxSpatialExtents[2],
+                                              minX,maxX,minY,maxY,minZ,maxZ) == true)
+                    patchesOverlapList.push_back(p);
+            }
+        }
+
+        std::sort(patchesInsideList.begin(),patchesInsideList.end()); // not specifically required
+        // Adding those that belong
+        for (int j=0; j<patchesInsideList.size(); j++)
+            patchesIn.push_back(patchesInsideList[j]);
+
+        // Adding those that are not specifically in but only overlap!
+        for (int j=0; j<patchesOverlapList.size(); j++)
+            patchesIn.push_back(patchesOverlapList[j]);
+
+        std::stringstream ss;
+        for (int i=0; i<patchesIn.size(); i++)
+            ss << patchesIn[i] << " ,  ";
+        std::cout << PAR_Rank() << " :::::::::::::: " << ss.str() << std::endl;
 
         debug5 << PAR_Rank() << " ~ varName: " << varName << 
                   "  Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 

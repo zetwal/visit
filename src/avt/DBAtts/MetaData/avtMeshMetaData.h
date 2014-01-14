@@ -99,7 +99,7 @@ public:
     virtual void SelectAll();
 
     // User-defined methods
-    avtMeshMetaData(const int *, const double *, std::string, int, int, int, int, int, int, avtMeshType);
+    avtMeshMetaData (const int *, const double *, std::string, int, int, int, int, int, int, avtMeshType);
     avtMeshMetaData(std::string, int, int, int, int, int, int, avtMeshType);
     void SetExtents(const double *);
     void UnsetExtents();

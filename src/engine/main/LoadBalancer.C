@@ -764,11 +764,12 @@ LoadBalancer::DetermineAppropriateScheme(avtContract_p input)
 
     const avtMeshMetaData *mmd = md->GetMesh(meshName);
 
-    // for (int p=0; p<mmd->numBlocks; p++){
-    //     std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
-    //     for (int j=0; j<mmd->patch_parent[p].size(); j++)
-    //         std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
-    // }
+    // if (rank == 0)
+    //     for (int p=0; p<mmd->numBlocks; p++){
+    //         std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
+    //         for (int j=0; j<mmd->patch_parent[p].size(); j++)
+    //             std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
+    //     }
 
     if (mmd && mmd->loadBalanceScheme != LOAD_BALANCE_UNKNOWN)
     {
@@ -1073,17 +1074,17 @@ LoadBalancer::Reduce(avtContract_p input)
         std::vector<int> numPatchesPerProc;
         templist = list;
 
-        if (rank ==0){
-            std::cout << "List size: " << templist.size() << std::endl;
-            for (int i=0; i<templist.size(); i++){
-                std::cout << templist[i] << "  ";
-            }
+        // if (rank ==0){
+        //     std::cout << "List size: " << templist.size() << std::endl;
+        //     for (int i=0; i<templist.size(); i++){
+        //         std::cout << templist[i] << "  ";
+        //     }
         
-            std::cout << "amrLevels levels: " << amrLevels.size() << std::endl;
-            for (int i=0; i<amrLevels.size(); i++){
-                std::cout << amrLevels[i] << "  ";
-            }
-        }
+        //     std::cout << "amrLevels levels: " << amrLevels.size() << std::endl;
+        //     for (int i=0; i<amrLevels.size(); i++){
+        //         std::cout << amrLevels[i] << "  ";
+        //     }
+        // }
 
         // std::cout << rank << " ~ loadBalancer.C: Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
         //                          "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
@@ -1100,6 +1101,8 @@ LoadBalancer::Reduce(avtContract_p input)
             mylist.reserve(numPatches);
             for (int j=0; j<numPatches; j++)
                 mylist.push_back(templist[j]);
+
+            //avtCallback::SetTestVal(rank);
         }
         else if (theScheme == LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER)
         {
@@ -1193,6 +1196,8 @@ LoadBalancer::Reduce(avtContract_p input)
         for (int i=0; i<mylist.size(); i++)
             ss << mylist[i] << ", ";
         std::cout << ss.str() << std::endl;
+
+         // avtCallback::SetPatchesList(mylist);
 
         silr->RestrictDomainsForLoadBalance(mylist);
         pipelineInfo[input->GetPipelineIndex()].complete = true;

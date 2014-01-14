@@ -2781,7 +2781,7 @@ avtMassVoxelExtractor::ExtractImageSpaceGrid(vtkRectilinearGrid *rgrid,
     }
 }
 
-std::string NumbToString (int Number)
+std::string NumbToString(int Number)
 {
      std::ostringstream ss;
      ss << Number;

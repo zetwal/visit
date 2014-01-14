@@ -44,7 +44,7 @@
 #define AVT_CALLBACK_H
 #include <pipeline_exports.h>
 
-
+#include <vector>
 #include <string>
 
 #include <avtDataObject.h>
@@ -160,7 +160,17 @@ class PIPELINE_API avtCallback
     static void                  SetForceIntel(bool b)
                                      { forceIntel = b; }
     static bool                  UseForceIntel(void)
-                                     { return forceIntel; }                    
+                                     { return forceIntel; }  
+
+
+    // static void                  SetPatchesList(std::vector<int> v)
+    //                                 { for (int i=0; i<v.size(); i++)patchesList[i] = v[i];}
+    // static void                  GetPatchesList(std::vector<int> &v)
+    //                                 { for (int i=0; i<patchesList.size(); i++)v[i]=patchesList[i];}
+    // static void                  SetTestVal(int i)
+    //                                  { testVal = i; }
+    // static int                  UseTestVal(void)
+    //                                  { return testVal; }                  
 
 
     static void                  RegisterGetDatabaseCallback(
@@ -223,6 +233,9 @@ class PIPELINE_API avtCallback
     static bool                  useKdTreeLoadBalancer;
     static bool                  amr;
     static bool                  forceIntel;
+
+    //static int                    testVal;
+    //static std::vector<int>      patchesList;
 };
 
 
