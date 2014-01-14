@@ -180,11 +180,15 @@ class AVTFILTERS_API avtRayExtractor
     void                      SetViewUp(double *vu){ for (int i=0; i<3; i++) view_up[i] = vu[i]; }
     void                      SetMeshDims(double _meshMin[3], double _meshMax[3]){ for (int i=0; i<3; i++) { meshMin[i] = _meshMin[i]; meshMax[i] = _meshMax[i];}}
     void                      SetLogicalBounds(int _l, int _w, int _h){ logicalBounds[0] = _l; logicalBounds[1] = _w; logicalBounds[2] = _h; }
+    void                      SetPartitionExtents(double _currentPartitionExtents[6]){for (int i=0; i<6; i++) currentPartitionExtents[i]=_currentPartitionExtents[i]; }
     void                      SetVarName(std::string _varName){ varName = _varName;}
     void                      SetParallelOn(bool _parallelOn){parallelOn = _parallelOn;}
     void                      SetScreen(int _screen[2]){ for (int i=0;i<2;i++) screen[i]=_screen[i]; }
     void                      SetBackground(unsigned char _background[3]){ for (int i=0;i<3;i++) background[i]=_background[i]; }
-
+    void                      SetParentChild(std::vector<int> v){parentChild = v;}
+    void                      SetNumChildren(std::vector<int> v){numChildren = v;}
+    void                      SetNumInEachLevel(std::vector<int> v){numInEachLevel = v;}
+    void                      SetPatchLevel(std::vector<int> v){patchLevel = v;}
 
     // Getting image information
     int                       getTotalAssignedPatches() { return totalAssignedPatches; }              // gets the max number of patches it could have
@@ -198,6 +202,9 @@ class AVTFILTERS_API avtRayExtractor
     void                      getPartitionExtents(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], double extents[6]);
     bool                      patchOverlap(float patchMinX, float patchMaxX, float patchMinY, float patchMaxY, float patchMinZ, float patchMaxZ,
     float partitionMinX, float partitionMaxX, float partitionMinY, float partitionMaxY, float partitionMinZ, float partitionMaxZ);
+
+    std::vector<int>         getAllChildrenOfPatch(int patchId);
+    std::vector<int>         getDirectChildrenOfPatch(int patchId);
     // Check if not outside; if it is not outside it has to be somewhere inside 
 
   protected:
@@ -263,7 +270,14 @@ class AVTFILTERS_API avtRayExtractor
     int                       logicalBounds[3];
     double                    currentPartitionExtents[6];
 
+    std::vector<int>          parentChild;      // parent child relationship
+    std::vector<int>          numChildren;      // number of children for each patch
+    std::vector<int>          numInEachLevel;   // number of patches for each level
+    std::vector<int>          patchLevel;       // level of each patch
+    
+
     std::string               varName;
+    int                       amrLevels;
 
     typedef struct 
     {
