@@ -809,13 +809,14 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
         massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
         if (tmpImageMetaPatch.inUse == 1){
-            double bounds[6];
-            ds->GetBounds(bounds);
-            
+
             tmpImageMetaPatch.destProcId = tmpImageMetaPatch.procId;
             for (int i=0; i<6; i++)
-                tmpImageMetaPatch.extents[i] = bounds[i];
+                tmpImageMetaPatch.extents[i] = patchExtents[i];
             imageMetaPatchVector.push_back(tmpImageMetaPatch);
+
+            std::cout << tmpImageMetaPatch.procId << ", " << tmpImageMetaPatch.patchNumber << "  patchExtents: " << patchExtents[0] << ", " << patchExtents[1] << "   " << patchExtents[2] << ", " << patchExtents[3] << "   " << patchExtents[4] << ", " << patchExtents[5] <<  
+                                "   image: " <<  tmpImageMetaPatch.screen_ll[0] << ", " << tmpImageMetaPatch.screen_ll[1] << "   size: " << tmpImageMetaPatch.dims[0] << ", " << tmpImageMetaPatch.dims[1] << std::endl;
 
             imgData tmpImageDataHash;
             tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;

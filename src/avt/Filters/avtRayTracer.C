@@ -485,8 +485,8 @@ avtRayTracer::Execute(void)
 
     }
     else
-    if (rayCastingSLIVR == false)
-        extractor.RegisterRayFunction(rayfoo);
+        if (rayCastingSLIVR == false)
+            extractor.RegisterRayFunction(rayfoo);
 
     //
     // For curvilinear and unstructured meshes, it makes sense to convert the
@@ -614,7 +614,6 @@ avtRayTracer::Execute(void)
             int id = patchesIn[p]; 
             patchLevel.push_back(mmd->patches[id].level);   // storing the AMR level for each patch
             numInEachLevel[mmd->patches[id].level] = numInEachLevel[mmd->patches[id].level]+1;
-
 
             for (int c=0; c<mmd->patch_parent[id].size(); c++){    
                 std::vector<int>::iterator it;                                                    

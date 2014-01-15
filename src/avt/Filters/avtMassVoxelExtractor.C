@@ -154,7 +154,6 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     imgUpperRight[0] = imgUpperRight[1] = 0;    //
     imgDepth = -1;                              // from the depth buffer
     imgArray = NULL;                            // the image data
-    countt = 0;
 }
 
 
@@ -552,6 +551,44 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     }
 }
 
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::world_to_screen
+//
+//  Purpose:
+//          http://www.songho.ca/opengl/gl_transform.html
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+
+void 
+avtMassVoxelExtractor::world_to_screen(double _world[4], int imgWidth, int imgHeight, int screenPos[2], float &depth)
+{
+    double _view[4] = {0,0,0,0};
+
+    // from world to view
+    world_to_view_transform->MultiplyPoint(_world, _view);
+
+    // perspective divide -> normalized screen space: -1,-1,-1 to 1,1,1
+    if (_view[3] != 0.){
+        _view[0] /= _view[3];
+        _view[1] /= _view[3];
+        _view[2] /= _view[3];
+    }
+
+    // viewport transform: screen coordinates
+    screenPos[0] = int(_view[0]*(imgWidth/2.)  + (imgWidth /2.) + 0.5);     // 0.5 added so that proper rounding is done
+    screenPos[1] = int(_view[1]*(imgHeight/2.) + (imgHeight/2.) + 0.5);
+
+    depth = _view[2];
+}
+
+
+
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor::simpleExtractWorldSpaceGrid
 //
@@ -563,6 +600,7 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 //  Modifications:
 //
 // ****************************************************************************
+
 void
 avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                  std::vector<std::string> &varnames, std::vector<int> &varsize)
@@ -631,31 +669,22 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         _world[1] = coordinates[i][1]; 
         _world[2] = coordinates[i][2];
 
-        world_to_view_transform->MultiplyPoint(_world, _view);
-        //std::cout <<  proc << ", " <<patch << "   world: " << _world[0] << ", " << _world[1] << ", " << _world[2] <<  "    view: " << _view[0] << ", " << _view[1] << ", " << _view[2] << std::endl;
+        int screenPos[2]; 
+        float tempImgDepth;
+        world_to_screen(_world, fullImgWidth, fullImgHeight, screenPos, tempImgDepth);
 
-        if (_view[3] != 0.){
-            _view[0] /= _view[3];
-            _view[1] /= _view[3];
-            _view[2] /= _view[3];
-        }
-
-        _view[0] = _view[0]*(fullImgWidth/2.) + (fullImgWidth/2.);
-        _view[1] = _view[1]*(fullImgHeight/2.) + (fullImgHeight/2.);
-
-        if (xMin > _view[0]+offset_0) xMin = _view[0]+offset_0;
-        if (xMax < _view[0]+offset_0) xMax = _view[0]+offset_0;
-        if (yMin > _view[1]+offset_0) yMin = _view[1]+offset_0;
-        if (yMax < _view[1]+offset_0) yMax = _view[1]+offset_0;
+        if (xMin > screenPos[0]) xMin = screenPos[0];
+        if (xMax < screenPos[0]) xMax = screenPos[0];
+        if (yMin > screenPos[1]) yMin = screenPos[1];
+        if (yMax < screenPos[1]) yMax = screenPos[1];
 
         if (i == 0)
-            imgDepth = _view[2];
+            imgDepth = tempImgDepth;
         else
-            if (imgDepth > _view[2])
-                imgDepth = _view[2];
+            if (imgDepth > tempImgDepth)
+                imgDepth = tempImgDepth;
     }
 
-    
     xMin = xMin - error_correction;
     yMin = yMin - error_correction;
     xMax = xMax + error_correction;
@@ -676,8 +705,9 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     if (xMax >= w_max) xMax = w_max-1;
     if (yMax >= h_max) yMax = h_max-1;
 
-    xMin = xMin - 1;    xMax = xMax + 1;    imgWidth = xMax - xMin +1;
-    yMin = yMin - 1;    yMax = yMax + 1;    imgHeight = yMax - yMin +1;
+    int intOffset = 0;
+    xMin = xMin - intOffset;    xMax = xMax + intOffset;    imgWidth = xMax - xMin +intOffset;
+    yMin = yMin - intOffset;    yMax = yMax + intOffset;    imgHeight = yMax - yMin +intOffset;
 
     imgArray = new float[((imgWidth)*4) * imgHeight](); // declare and initialize to 0.0 ()
 
@@ -689,6 +719,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     // if (proc ==2 && patch ==3)
     //     std::cout <<  proc << " *#* " <<patch  << std::endl;
 
+    std::cout << proc << ", " << patch << "  range: " << X[0] << ", " << X[dims[0]-1] << "  " << Y[0] << ", " << Y[dims[0]-1] << "  " << Y[0] << ", " << Y[dims[0]-1] << "  IMAGE POS: " << imgUpperRight[0] << ", " << imgUpperRight[1] << " - " << imgLowerLeft[0] << ", " << imgLowerLeft[1] << "   dims: " << imgDims[0] << ", " << imgDims[1] << std::endl;
     for (int i = xMin ; i < xMax ; i++)
         for (int j = yMin ; j < yMax ; j++)
         {
