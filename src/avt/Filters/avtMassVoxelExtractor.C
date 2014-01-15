@@ -1436,14 +1436,30 @@ avtMassVoxelExtractor::computeIndicesVert(int dims[3], int indices[6], int retur
 
 double 
 avtMassVoxelExtractor::trilinearInterpolate(double vals[8], float distRight, float distTop, float distBack){
-    float dist_from_right = 1.0 - distRight;
-    float dist_from_left = distRight;
+    float dist_from_right, dist_from_left;
+    float dist_from_top,dist_from_bottom;
+    float dist_from_back,dist_from_front;
 
-    float dist_from_top = 1.0 - distTop;
-    float dist_from_bottom = distTop;
+    //if (logicalBounds[0] > 1){
+        dist_from_right = 1.0 - distRight;
+        dist_from_left = distRight;
+    // }else{
+    //     dist_from_right = dist_from_left = distRight;
+    // }
 
-    float dist_from_back = 1.0 - distBack;
-    float dist_from_front = distBack;
+    //if (logicalBounds[1] > 1){
+        dist_from_top = 1.0 - distTop;
+        dist_from_bottom = distTop;
+    // }else{
+    //     dist_from_top = dist_from_bottom = distTop;
+    // }
+
+    //if (logicalBounds[2] > 1){
+        dist_from_back = 1.0 - distBack;
+        dist_from_front = distBack;
+    // }else{
+    //     dist_from_back = dist_from_front = 1.0-distBack;
+    // }
     
     
     double val =   dist_from_right     * dist_from_top         * dist_from_back * vals[0] + 
@@ -1545,26 +1561,49 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         indices[2] = index_bottom;      indices[3] = index_top;
         indices[0] = index_left;        indices[1] = index_right;
 
+
+        if (logicalBounds[0] == 1){
+            indices[0] = indices[1] = 0;
+          //  dist_from_left = dist_from_right = prop[0];
+        }
+
+        if (logicalBounds[1] == 1){
+            indices[2] = indices[3] = 0;
+           // dist_from_bottom = dist_from_top = prop[1];
+        }
+
+        if (logicalBounds[2] == 1){
+            indices[4] = indices[5] = 0;
+          //  dist_from_front = dist_from_back = prop[2];
+        }
+
+
         if (trilinearInterpolation){
-            if (indices[0] < 0 || indices[0]>dims[0]-2)
-                valid_sample[i] = false;
+            if (logicalBounds[0] > 1)
+                if (indices[0] < 0 || indices[0]>dims[0]-2)
+                    valid_sample[i] = false;
 
-            if (indices[1] < 0 || indices[1]>dims[0]-2)
-                valid_sample[i] = false;
-
-
-            if (indices[2] < 0 || indices[2]>dims[1]-2)
-                valid_sample[i] = false;
-
-            if (indices[3] < 0 || indices[3]>dims[1]-2)
-                valid_sample[i] = false;
+            if (logicalBounds[0] > 1)
+                if (indices[1] < 0 || indices[1]>dims[0]-2)
+                    valid_sample[i] = false;
 
 
-            if (indices[4] < 0 || indices[4]>dims[2]-2)
-                valid_sample[i] = false;
+            if (logicalBounds[1] > 1)
+                if (indices[2] < 0 || indices[2]>dims[1]-2)
+                    valid_sample[i] = false;
 
-            if (indices[5] < 0 || indices[5]>dims[2]-2)
-                valid_sample[i] = false;
+            if (logicalBounds[1] > 1)
+                if (indices[3] < 0 || indices[3]>dims[1]-2)
+                    valid_sample[i] = false;
+
+
+            if (logicalBounds[2] > 1)
+                if (indices[4] < 0 || indices[4]>dims[2]-2)
+                    valid_sample[i] = false;
+
+            if (logicalBounds[2] > 1)
+                if (indices[5] < 0 || indices[5]>dims[2]-2)
+                    valid_sample[i] = false;
         }
 
         int offsetLow[3], offsetHigh[3];
@@ -1572,14 +1611,17 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 2;
 
         if (rayCastingSLIVR){
-            if (!(ind[0] >= offsetLow[0] && ind[0] <= (dims[0]-1) - offsetHigh[0]))
-                valid_sample[i] = false;
+            if (logicalBounds[0] > 1)
+                if (!(ind[0] >= offsetLow[0] && ind[0] <= (dims[0]-1) - offsetHigh[0]))
+                    valid_sample[i] = false;
 
-            if (!(ind[1] >= offsetLow[1] && ind[1] <= (dims[1]-1) - offsetHigh[1]))
-                valid_sample[i] = false;
+            if (logicalBounds[1] > 1)
+                if (!(ind[1] >= offsetLow[1] && ind[1] <= (dims[1]-1) - offsetHigh[1]))
+                    valid_sample[i] = false;
 
-            if (!(ind[2] >= offsetLow[2] && ind[2] <= (dims[2]-1) - offsetHigh[2]))
-                valid_sample[i] = false;
+            if (logicalBounds[2] > 1)
+                if (!(ind[2] >= offsetLow[2] && ind[2] <= (dims[2]-1) - offsetHigh[2]))
+                    valid_sample[i] = false;
         }
 
         // if (proc ==2 && patch ==3)
@@ -1592,7 +1634,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         //         std::cout <<  proc << " *#* " <<patch  << "  indices: " << indices[0] << ", " << indices[1] << ", "<< indices[2] << ", "<< indices[3] << ", "<< indices[4] << ", "<< indices[5] << " |  ind: " << ind[0] << ", " << ind[1] << ", " << ind[2] << " |  dims: " << dims[0] << ", " << dims[1] << ", " << dims[2] << std::endl; 
         //}
         
-
+       // std::cout << "(trilinearInterpolation || rayCastingSLIVR)   xxx " << std::endl;
         // if (proc ==2 && patch ==3)
         //     std::cout <<  proc << " *#* " <<patch  << "  continue  " << std::endl;
 
@@ -1607,7 +1649,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 
                 for (int l = 0 ; l < ncell_arrays ; l++)            // ncell_arrays: usually 1
                 {
-
                     void  *cell_array = cell_arrays[l];
                     double values[8];
                     bool enableDebug = true;
@@ -1621,13 +1662,14 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         // }
 
                         // if (enableDebug == true){ // checking for nsn
+                        // if (proc == 0)
                         //     std::cout << proc << " ~ " << patch << "  |   Values: " << values[0] << ", " << values[1] << ",  " << values[2] << ", " << values[3] << ", " << values[4] << ", " << values[5] << ", " << values[6] << ", " << values[7] << "   _ _  "
                         //                                         << "  |   dists: " << dist_from_left << ", " << dist_from_bottom << ", " << dist_from_front << "  |  scalar value: " << scalarValue
                         //                                         << "  |   pos: " << x_right << ", " << y_top << ", " << z_back << "  |  w, h: " << w << ", " << h 
                         //                                         << "  |   dims: " << dims[0] << ", " << dims[1] << ", " << dims[2]<< "  |   ind: " << ind[0] << ", " << ind[1] << ", " << ind[2]
                         //                                         << "  |   indices: " << indices[0] << ", " << indices[1] << ", " << indices[2] << ", " << indices[3] << ", " << indices[4] << ", " << indices[5]
-                        //                                         << "  |   indexT: " << indexT[0] << ", " << indexT[1] << ", " << indexT[2] << ", " << indexT[3] << ", " << indexT[4] << ", " << indexT[5] << ", " << indexT[6] << ", " << indexT[7] << std::endl;
-                        // }
+                        //                                         << "  |   indexT: " << indexT[0] << ", " << indexT[1] << ", " << indexT[2] << ", " << indexT[3] << ", " << indexT[4] << ", " << indexT[5] << ", " << indexT[6] << ", " << indexT[7] << std::endl << std::endl << std::endl;
+                        // // }
                         
 
                         if (rayCastingSLIVR){

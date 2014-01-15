@@ -327,9 +327,9 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
 
 
     // Adding those that are not specifically in but only overlap!
-    if (amr)
-        for (int j=0; j<patchesOverlapList.size(); j++)
-            list.push_back(patchesOverlapList[j]);
+   // if (amr)
+    //    for (int j=0; j<patchesOverlapList.size(); j++)
+     //       list.push_back(patchesOverlapList[j]);
     
     std::cout << rank << " ~ " << "  patchesInsideList.size(): " << patchesInsideList.size() << 
                                   "  patchesOverlapList.size(): " << patchesOverlapList.size() << 
