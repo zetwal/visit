@@ -535,6 +535,8 @@ avtRayTracer::Execute(void)
         extractorRay.SetMeshDims(meshMin,meshMax);
         extractorRay.SetLogicalBounds(logicalBounds[0],logicalBounds[1],logicalBounds[2]);
 
+        std::cout << "| logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
+
         // get partitions Extents
         extractorRay.getPartitionExtents(PAR_Size(), logicalBounds, meshMin, meshMax, currentPartitionExtents);
 
@@ -589,8 +591,8 @@ avtRayTracer::Execute(void)
             patchesIn.push_back(patchesInsideList[j]);
 
         // Adding those that are not specifically in but only overlap!
-        for (int j=0; j<patchesOverlapList.size(); j++)
-            patchesIn.push_back(patchesOverlapList[j]);
+        //for (int j=0; j<patchesOverlapList.size(); j++)
+        //    patchesIn.push_back(patchesOverlapList[j]);
 
         // std::stringstream ss;
         // for (int i=0; i<patchesIn.size(); i++)

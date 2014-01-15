@@ -1041,7 +1041,7 @@ return x;
 // ****************************************************************************
 void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, int sizeSending, float *images, int numDivisions){
 #ifdef PARALLEL
-    bool front_to_back = true;
+    bool front_to_back = false;
     float *tempRecvBuffer = NULL;
     int *recvSizePerProc = NULL;
     int *offsetBuffer = NULL;

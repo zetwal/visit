@@ -810,8 +810,8 @@ avtGenericDatabase::GetOutput(avtDataRequest_p spec,
     {
         int t0 = visitTimer->StartTimer();
 
-        //ApplyGhostForDomainNesting(datasetCollection, domains, allDomains, spec,
-        //                            canDoCollectiveCommunication);
+        ApplyGhostForDomainNesting(datasetCollection, domains, allDomains, spec,
+                                    canDoCollectiveCommunication);
         visitTimer->StopTimer(t0, "Doing ghost nesting");
     }
 

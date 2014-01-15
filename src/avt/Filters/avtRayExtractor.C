@@ -800,6 +800,7 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
             return;
         
+        massVoxelExtractor->SetLogicalBounds(logicalBounds[0],logicalBounds[1],logicalBounds[2]);
         massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds, varnames, varsizes);
 
@@ -1016,6 +1017,7 @@ avtRayExtractor::ExecuteRayTracer(){
     imgComm.gatherNumPatches(numPatches);
 
     debug5 << PAR_Rank() << "   avtRayTracer::Execute  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
+    std::cout << PAR_Rank() << "   avtRayTracer::Execute  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
 
 
     //
