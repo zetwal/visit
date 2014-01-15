@@ -183,9 +183,6 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           meshMax[3];
     int              logicalBounds[3];
 
-    int debugOn;
-    int countt;
-
 
     // Patch details for one image
     int              patchDrawn;            // whether the patch is drawn or not
@@ -231,6 +228,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             computeIndices(int dims[3], int indices[6], int returnIndices[8]);
     void             computeIndicesVert(int dims[3], int indices[6], int returnIndices[8]);
     void             getIndexandDistFromCenter(float dist, int index,    int &index_before, int &index_after,    float &dist_before, float &dist_after);
+    void             world_to_screen(double _world[4], int imgWidth, int imgHeight, int screenPos[2], float &depth);
 
 };
 
