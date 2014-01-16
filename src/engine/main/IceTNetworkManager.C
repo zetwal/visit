@@ -715,6 +715,13 @@ IceTNetworkManager::Readback(VisWindow * const viswin,
         dynamic = true;
     }
     SendImageToRenderNodes(width, height, readZ, pixels, depth);
+    //debug5 << "icet width, height: " << width << ", " << height << std::endl;
+    // for (int j=0; j<height; j++)
+    //     for (int i=0; i<width; i++){
+    //         int index = j*width + i;
+    //         debug5 << depth[index] << ", ";
+    //     }
+    debug5 << std::endl;
 
     vtkImageData *image = avtImageRepresentation::NewImage(width, height);
     // NewImage assumes we want a 3-component ("GL_RGB") image, but IceT gives
@@ -731,7 +738,7 @@ IceTNetworkManager::Readback(VisWindow * const viswin,
             *img_pix++ = *pixels++;
             *img_pix++ = *pixels++;
             *img_pix++ = *pixels++;
-            pixels++; // Alpha
+             pixels++; // Alpha
         }
     }
     float *visit_depth_buffer = NULL;

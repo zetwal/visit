@@ -1353,8 +1353,6 @@ LoadBalancer::Reduce(avtContract_p input)
             lbInfo.complete = true;
             new_data->GetRestriction()->TurnOffAll();
             MPI_Barrier(VISIT_MPI_COMM);
-
-
         }
         else
         {

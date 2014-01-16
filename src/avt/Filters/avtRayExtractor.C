@@ -299,7 +299,7 @@ avtRayExtractor::RestrictToTile(int wmin, int wmax, int hmin, int hmax)
 void
 avtRayExtractor::Execute(void)
 {
-    std::cout << "          In Execute" << std::endl;
+    //std::cout << "          In Execute" << std::endl;
 
     int timingsIndex = visitTimer->StartTimer();
 
@@ -319,12 +319,13 @@ avtRayExtractor::Execute(void)
     //
     // Determine partition extents
     //
-    std::cout << PAR_Rank() << "   Partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << ", "
-                                                        << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl; 
+    //std::cout << PAR_Rank() << "   Partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << ", "
+    //                                                    << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl; 
 
     avtDataTree_p tree = GetInputDataTree();
     totalNodes = tree->GetNumberOfLeaves();
     currentNode = 0;
+    partitionExtentsComputationDone = false;
     ExecuteTree(tree);
 
     visitTimer->StopTimer(timingsIndex, "Ray point extraction");
@@ -800,12 +801,42 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
             return;
         
+         if (partitionExtentsComputationDone == false){
+            /*
+            double                    currentPartitionExtents[6];  // minX, minY, minZ,    maxX, maxY,maxZ
+    int                       screenPartitionExtents[2];
+    float                     screenPartitionDepth;
+            */
+            int minPos[2], maxPos[2];
+            float minDepth, maxDepth;
+            double minExtents[4], maxExtents[4];
+            minExtents[0]=currentPartitionExtents[0];
+            minExtents[1]=currentPartitionExtents[1];
+            minExtents[2]=currentPartitionExtents[2];
+            minExtents[3]=1.0;
+
+            maxExtents[0]=currentPartitionExtents[3];
+            maxExtents[1]=currentPartitionExtents[4];
+            maxExtents[2]=currentPartitionExtents[5];
+            maxExtents[3]=1.0;
+
+            massVoxelExtractor->world_to_screen(minExtents, width,height, minPos,minDepth);
+            massVoxelExtractor->world_to_screen(maxExtents, width,height, maxPos,maxDepth);
+
+            std::cout << PAR_Rank() << " ~ " << minExtents[0] << ", " << minExtents[1] << ", " << minExtents[2] << "  -  " << maxExtents[0] << ", " << maxExtents[1] << ", " << maxExtents[2] << "     screen width, height: " << width << ", " << height  << "   Partitions  min: " << minPos[0] << ", " << minPos[1] << ", " << minDepth << "     max: " << maxPos[0] << ", " << maxPos[1] << ", " << maxDepth << std::endl;
+            partitionExtentsComputationDone = true;
+        }
+        //world_to_screen(double _world[4], int imgWidth, int imgHeight, int screenPos[2], float &depth);
+
         massVoxelExtractor->SetLogicalBounds(logicalBounds[0],logicalBounds[1],logicalBounds[2]);
         massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds, varnames, varsizes);
 
         imgMetaData tmpImageMetaPatch;
         tmpImageMetaPatch = initMetaPatch(patchCount);
+
+
+
 
         massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
         if (tmpImageMetaPatch.inUse == 1){
@@ -815,8 +846,8 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 tmpImageMetaPatch.extents[i] = patchExtents[i];
             imageMetaPatchVector.push_back(tmpImageMetaPatch);
 
-            std::cout << tmpImageMetaPatch.procId << ", " << tmpImageMetaPatch.patchNumber << "  patchExtents: " << patchExtents[0] << ", " << patchExtents[1] << "   " << patchExtents[2] << ", " << patchExtents[3] << "   " << patchExtents[4] << ", " << patchExtents[5] <<  
-                                "   image: " <<  tmpImageMetaPatch.screen_ll[0] << ", " << tmpImageMetaPatch.screen_ll[1] << "   size: " << tmpImageMetaPatch.dims[0] << ", " << tmpImageMetaPatch.dims[1] << std::endl;
+            //std::cout << tmpImageMetaPatch.procId << ", " << tmpImageMetaPatch.patchNumber << "  patchExtents: " << patchExtents[0] << ", " << patchExtents[1] << "   " << patchExtents[2] << ", " << patchExtents[3] << "   " << patchExtents[4] << ", " << patchExtents[5] <<  
+            //                    "   image: " <<  tmpImageMetaPatch.screen_ll[0] << ", " << tmpImageMetaPatch.screen_ll[1] << "   size: " << tmpImageMetaPatch.dims[0] << ", " << tmpImageMetaPatch.dims[1] << std::endl;
 
             imgData tmpImageDataHash;
             tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;

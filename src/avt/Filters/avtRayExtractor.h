@@ -259,7 +259,7 @@ class AVTFILTERS_API avtRayExtractor
     double                    materialProperties[4];
     avtOpacityMap             *transferFn1D;
     virtual void              Execute(void);
-    void              PreExecute(void);
+    void                      PreExecute(void);
     virtual void              PostExecute(void);
     virtual void              ExecuteTree(avtDataTree_p);
     void                      SetUpExtractors(void);
@@ -268,12 +268,17 @@ class AVTFILTERS_API avtRayExtractor
     double                    meshMin[3];
     double                    meshMax[3];
     int                       logicalBounds[3];
-    double                    currentPartitionExtents[6];
+    double                    currentPartitionExtents[6];  // minX, minY, minZ,    maxX, maxY,maxZ
+    int                       screenPartitionExtents[2];
+    float                     screenPartitionDepth;
+    bool                      partitionExtentsComputationDone;
 
     std::vector<int>          parentChild;      // parent child relationship
     std::vector<int>          numChildren;      // number of children for each patch
     std::vector<int>          numInEachLevel;   // number of patches for each level
     std::vector<int>          patchLevel;       // level of each patch
+
+
     
 
     std::string               varName;

@@ -130,6 +130,9 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             getComputedImage(float *image);
     void             setProcIdPatchID(int _proc, int _patch){ proc = _proc; patch = _patch; }
 
+    void             world_to_screen(double _world[4], int imgWidth, int imgHeight, int screenPos[2], float &depth);
+
+
   protected:
     bool             gridsAreInWorldSpace;
     bool             pretendGridsAreInWorldSpace;
@@ -228,8 +231,6 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             computeIndices(int dims[3], int indices[6], int returnIndices[8]);
     void             computeIndicesVert(int dims[3], int indices[6], int returnIndices[8]);
     void             getIndexandDistFromCenter(float dist, int index,    int &index_before, int &index_after,    float &dist_before, float &dist_after);
-    void             world_to_screen(double _world[4], int imgWidth, int imgHeight, int screenPos[2], float &depth);
-
 };
 
 std::string NumbToString (int Number);

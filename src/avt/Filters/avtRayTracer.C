@@ -652,6 +652,7 @@ avtRayTracer::Execute(void)
         extractorRay.SetNumChildren(numChildren);
         extractorRay.SetNumInEachLevel(numInEachLevel);
         extractorRay.SetPatchLevel(patchLevel);
+        extractorRay.SetPartitionExtents(currentPartitionExtents);
 
     //
     // Ray casting: SLIVR
@@ -772,6 +773,8 @@ avtRayTracer::Execute(void)
     int IStep = screen[0] / numDivisions;
     int JStep = screen[1] / numDivisions;
     avtImage_p whole_image;
+
+    std::cout << "numDivisions " << std::endl;
     if (PAR_Rank() == 0)
     {
         whole_image = new avtImage(this);
@@ -802,8 +805,7 @@ avtRayTracer::Execute(void)
             image->Update(GetGeneralContract());
             if (PAR_Rank() == 0)
             {
-                unsigned char *whole_rgb = 
-                                        whole_image->GetImage().GetRGBBuffer();
+                unsigned char *whole_rgb = whole_image->GetImage().GetRGBBuffer();
                 unsigned char *tile = image->GetImage().GetRGBBuffer();
    
                 for (int jj = JStart ; jj < JEnd ; jj++)
