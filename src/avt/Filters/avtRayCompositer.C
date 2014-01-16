@@ -550,6 +550,8 @@ avtRayCompositer::Execute(void)
                 int index = j*width + i;
                 int opaqueImageIndex = (j+minH)*fullWidth + (i+minW);
                 zbuffer[index] = opaqueImageZB[opaqueImageIndex];
+                //std::cout << " ~ " << i << ", " << j << "  zbuffer: " << zbuffer[index] << std::endl;
+                //zbuffer[index] = 2.0;
                 if (zbuffer[index] != 1.)
                 {
                     data[3*index    ] = opaqueImageData[n_comp*opaqueImageIndex];

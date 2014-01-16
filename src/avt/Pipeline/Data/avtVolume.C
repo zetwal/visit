@@ -291,6 +291,8 @@ avtVolume::GetPixels(avtRayFunction *rayfoo,unsigned char *data,double *zbuffer)
                     data[3*index    ] = rgb[0];
                     data[3*index + 1] = rgb[1];
                     data[3*index + 2] = rgb[2];
+
+                    zbuffer[index] = 5.0;
                 }
                 if (progressCallback != NULL)
                 {
