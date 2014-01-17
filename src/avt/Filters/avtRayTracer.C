@@ -661,7 +661,7 @@ avtRayTracer::Execute(void)
         samplesRay->Update(GetGeneralContract());
 
         debug5 << PAR_Rank() <<  "  ~    extractorRay: " << extractorRay.getImgPatchSize() << std::endl; 
-         avtImage_p finImage;
+        avtImage_p finImage;
          if (avtCallback::UseKdTreeLoadBalancer() == true){
             std::cout << "Used kd tree load balancer" << std::endl;
             finImage = extractorRay.ExecuteRayTracerLB();
@@ -669,7 +669,6 @@ avtRayTracer::Execute(void)
             std::cout << "NOT used kd tree load balancer" << std::endl;
             finImage = extractorRay.ExecuteRayTracer();
         }
-        //avtImage_p finImage = extractorRay.GetTypedOutput();
         SetOutput(finImage);
 
         visitTimer->StopTimer(timingIndex, "Ray Tracing");
