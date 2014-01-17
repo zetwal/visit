@@ -147,7 +147,10 @@ public:
   void recvPointToPointImgData(imgMetaData recvMetaData, imgData &recvImgData, int tag);
 
   void gatherEncodingSizes(int *sizeEncoding, int numDivisions);
+  void gatherEncodingSizesLB(int *sizeEncoding, int numDivisions);
+
   void gatherAndAssembleEncodedImages(int sizex, int sizey, int sizeSending, float *image, int numDivisions);   // do the compositing of the subpatches
+  void gatherAndAssembleEncodedImagesLB(int fullsizex, int fullsizey, int *dataToSend, int sizeSending, float *images, int numDivisions, float avg_z);   // do the compositing of the subpatches
 
   void getcompositedImage(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage);  // get the final composited image
 

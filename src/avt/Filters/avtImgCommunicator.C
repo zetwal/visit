@@ -1474,3 +1474,304 @@ MPI_Datatype avtImgCommunicator::createMetaDataType(){
   return _imgMeta_mpi;
 }
 #endif
+
+
+void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int fullsizey, int *dataToSend,
+                                                          int sizeSending, float *images, int numDivisions, float avg_z){
+#ifdef PARALLEL
+    bool front_to_back = true;
+    float *tempRecvBuffer = NULL;
+    int *recvSizePerProc = NULL;
+    int *offsetBuffer = NULL;
+    int totalDivisions = 0;
+    std::multimap <float,int> depthPartitions;  //float: z-value, int: division index
+
+
+    int numData = 4;
+    int *dataToReceive = new int[numData * num_procs]; // 0: sizex, 1: size_y, 2: startingX, 3: startingY
+
+    float avg_z_send[1];
+    avg_z_send[0] = avg_z;
+    float *all_avgZ_proc0 = new float[num_procs];
+    MPI_Gather( avg_z_send, 1, MPI_FLOAT, all_avgZ_proc0, 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
+    MPI_Gather( dataToSend, numData, MPI_INT, dataToReceive, numData, MPI_INT, 0, MPI_COMM_WORLD); 
+
+    // //for(int i =0; i < num_procs * numData; i+= numData){
+    //   std::cout << "To Send proc: " << my_id << std::endl;
+    //   std::cout << "    sizex: " << dataToSend[0] << std::endl;
+    //   std::cout << "    sizey: " << dataToSend[1] << std::endl;
+    //   std::cout << "    startingX: " << dataToSend[2] << std::endl;
+    //   std::cout << "    startingY: " << dataToSend[3] << std::endl;
+    // //}
+
+    // if(my_id == 0)
+
+    // for(int i =0; i < num_procs * numData; i+= numData){
+    //   std::cout << "proc: " << i << std::endl;
+    //   std::cout << "    sizex: " << dataToReceive[i] << std::endl;
+    //   std::cout << "    sizey: " << dataToReceive[i + 1] << std::endl;
+    //   std::cout << "    startingX: " << dataToReceive[i + 2] << std::endl;
+    //   std::cout << "    startingY: " << dataToReceive[i + 3] << std::endl;
+    // }
+
+    // Only proc 0 receives data
+    if (my_id == 0){
+        //int divIndex = 0;
+        int totalSize = 0;
+        recvSizePerProc = new int[num_procs]; 
+        offsetBuffer = new int[num_procs];  
+
+        int divCount = 0;
+        for (int i=0; i<num_procs; i++){
+            int numBoundsPerBlock = 1; // boundsPerBlockVec[i].size()/2;
+            totalDivisions += numBoundsPerBlock;
+        
+            int sizeEncoded = 0;
+            //for (int j=0; j < numBoundsPerBlock; j+=2){
+            depthPartitions.insert( std::pair< float,int > ( (all_avgZ_proc0[i]), i ) );   
+            sizeEncoded += compressedSizePerDiv[i]*5;
+            //divIndex++;
+            //}
+            totalSize += sizeEncoded;
+            recvSizePerProc[i] = sizeEncoded;
+
+            if (i == 0)
+                offsetBuffer[i] = 0;
+            else
+                offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
+        }
+        tempRecvBuffer = new float[ totalSize ];
+        //std::cout << "depthPartitions size   " <<  depthPartitions.size() << std::endl;
+    }
+
+
+    // std::map< float,int >::iterator it;
+    // it=depthPartitions.begin(); 
+    // for(it=depthPartitions.begin(); it!=depthPartitions.end(); it++){
+    //     std::cout << "  ~~ depthPartitions: " << it->second << " " << it->first << std::endl;
+    // }
+
+    // if (my_id == 0)
+    //   for(int i=0; i< num_procs; i++){
+    //     std::cout << "avg_z   " <<  i << " => " << all_avgZ_proc0[i] << std::endl;
+    //   }
+
+    //  send   recv  others
+    MPI_Gatherv(images, sizeSending, MPI_FLOAT,    tempRecvBuffer, recvSizePerProc, offsetBuffer,MPI_FLOAT,        0, MPI_COMM_WORLD);    // all send to proc 0
+
+    if (my_id == 0){
+        // Create a buffer to store the composited image
+        imgBuffer = new float[fullsizex * fullsizey * 4]();
+      
+        // Back-to-Front
+        if (!front_to_back)
+          for (int i=0; i<(fullsizex * fullsizey * 4); i+=4){
+              imgBuffer[i+0] = background[0]/255.0; 
+              imgBuffer[i+1] = background[1]/255.0; 
+              imgBuffer[i+2] = background[2]/255.0; 
+              imgBuffer[i+3] = 1.0;
+          }
+    }
+
+    int count = 0;
+    int offset = 0;
+    int index = 0;
+
+
+    
+
+    if (depthPartitions.size() > 0){
+
+        std::map< float,int >::iterator it;
+        std::map< float,int >::iterator endCondition;
+
+        if (!front_to_back){
+            it=depthPartitions.end();   // Back-to-Front compositing
+            endCondition=depthPartitions.begin();
+        }
+        else{
+            it=depthPartitions.begin(); // Front-to-Back compositing
+            endCondition=depthPartitions.end();
+        }
+        
+        do{
+            //Back-to-Front compositing
+            if (!front_to_back)
+                --it;
+
+            debug5 << it->first << " => " << it->second << "    compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << std::endl;
+            // std::cout << it->first << " => " << it->second << "    compressedSizePerDiv[count]: " << compressedSizePerDiv[count] << std::endl;
+
+            
+
+            imageBuffer temp;
+            index = it->second;
+            
+
+            int sizex = dataToReceive[index*numData + 0]; // this seems to be the issue!!
+            int sizey = dataToReceive[index*numData + 1];
+
+
+            //std::cout << "sizex: " << sizex << " sizey: " << sizey;
+
+            temp.image = new float[sizex*sizey*4];
+
+            if (index == 0)
+                offset = 0;
+            else{
+                offset = 0;
+                for (int k=0; k<index; k++)
+                    offset += compressedSizePerDiv[k];
+            }
+
+            rleDecode(compressedSizePerDiv[index], tempRecvBuffer, offset*5, temp.image);
+
+            // std::ostringstream ss;
+            // ss << index;
+
+            // std::string imgFilename_Final = "/users/pbmanasa/Desktop/__f_"+ ss.str() + ".ppm";
+            // createPpmCopy(temp.image, sizex, sizey, imgFilename_Final);
+
+            // int startingX = startingX_r[index] - startX ;
+            // int startingY = startingY_r[index] - startY ;
+
+            int startingX = dataToReceive[index * numData + 2];
+            int startingY = dataToReceive[index * numData + 3];
+
+            //std::cout << "startingX: " << startingX << " startingX: " << startingX;
+
+            for (int j=0; j< sizey; j++){
+                for (int k=0; k<sizex; k++){
+                    int imgIndex = sizex*4*j + k*4;                   // index in the image 
+
+                    if ((startingX + k) > fullsizex)
+                    continue;
+
+                    if ((startingY + j) > fullsizey)
+                    continue;
+
+                    int bufferIndex = (startingY*fullsizex*4 + j*fullsizex*4) + (startingX*4 + k*4);    // index in the big buffer
+                    //bufferIndex = (k*4) + (j*fullsizex*4);
+                    //imgIndex = sizex*4*j + k*4;
+
+                    if(bufferIndex > fullsizex * fullsizey * 4) continue;
+                    if(imgIndex > sizex * sizey * 4) continue;
+
+
+                    //std::cout <<  index << " IN compositing" << std::endl;
+
+
+                    if (front_to_back){                    
+                        // Front-to-Back compositing
+                        imgBuffer[bufferIndex+0] = clamp((1.0 - imgBuffer[bufferIndex+3])*temp.image[imgIndex+0])  + imgBuffer[bufferIndex+0];
+                        imgBuffer[bufferIndex+1] = clamp((1.0 - imgBuffer[bufferIndex+3])*temp.image[imgIndex+1])  + imgBuffer[bufferIndex+1];
+                        imgBuffer[bufferIndex+2] = clamp((1.0 - imgBuffer[bufferIndex+3])*temp.image[imgIndex+2])  + imgBuffer[bufferIndex+2];
+                        imgBuffer[bufferIndex+3] = clamp((1.0 - imgBuffer[bufferIndex+3])*temp.image[imgIndex+3])  + imgBuffer[bufferIndex+3];
+                    }else{
+                        // Back-to-Front compositing
+                        imgBuffer[bufferIndex+0] = clamp((imgBuffer[bufferIndex+0] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+0]);
+                        imgBuffer[bufferIndex+1] = clamp((imgBuffer[bufferIndex+1] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+1]);
+                        imgBuffer[bufferIndex+2] = clamp((imgBuffer[bufferIndex+2] * (1.0 - temp.image[imgIndex+3])) + temp.image[imgIndex+2]);
+                    }
+                }
+            }
+
+
+
+            //std::cout <<  index << " AFTER compositing" << std::endl;
+
+            delete []temp.image;
+            temp.image = NULL;
+
+            count++;
+
+            //Front-to-Back compositing
+            if (front_to_back)
+                it++;
+        }while( it!=endCondition );
+
+
+        if (front_to_back)
+            for (int j=0; j<fullsizey; j++){
+                for (int k=0; k<fullsizex; k++){
+                    int imgIndex = fullsizex*4*j + k*4;                   // index in the image 
+
+                    // Front-to-Back compositing
+                    imgBuffer[imgIndex+0] = clamp((1.0 - imgBuffer[imgIndex+3])*background[0]/255.0)  + imgBuffer[imgIndex+0];
+                    imgBuffer[imgIndex+1] = clamp((1.0 - imgBuffer[imgIndex+3])*background[1]/255.0)  + imgBuffer[imgIndex+1];
+                    imgBuffer[imgIndex+2] = clamp((1.0 - imgBuffer[imgIndex+3])*background[2]/255.0)  + imgBuffer[imgIndex+2];
+                    //imgBuffer[imgIndex+3] = clamp((1.0 - imgBuffer[imgIndex+3])*1.0)  + imgBuffer[imgIndex+3];
+                }
+            }
+    }
+
+
+    //std::cout << my_id <<  "  done with compositing" << std::endl;
+
+
+    if (tempRecvBuffer != NULL)
+        delete []tempRecvBuffer;
+    tempRecvBuffer = NULL;
+
+    if (offsetBuffer != NULL)
+        delete []offsetBuffer;
+    offsetBuffer = NULL;
+
+    if (recvSizePerProc != NULL)
+        delete []recvSizePerProc;
+    recvSizePerProc = NULL;
+
+    syncAllProcs();
+
+#endif
+}
+
+
+    void avtImgCommunicator::gatherEncodingSizesLB(int *sizeEncoding, int numDivisions){
+      int *offsetBuffer = NULL;
+      int *recvSizePerProc = NULL;
+      int totalDivisions = 0;
+
+  #ifdef PARALLEL
+
+    // Only proc 0 receives data
+      if (my_id == 0){
+
+          recvSizePerProc = new int[num_procs];
+          offsetBuffer = new int[num_procs];
+
+          for (int i=0; i<num_procs; i++){
+            int numBoundsPerBlock = 1; //boundsPerBlockVec[i].size()/2;
+            totalDivisions += numBoundsPerBlock;
+            recvSizePerProc[i] = numBoundsPerBlock;
+
+            if (i == 0)
+              offsetBuffer[i] = 0;
+          else
+              offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
+
+      }
+      compressedSizePerDiv = new int[totalDivisions];
+
+      debug5 << "avtImgCommunicator::gatherEncodingSizesLB      totalDivisions: " <<  totalDivisions << std::endl;
+  }
+
+        //  send   recv  others
+    MPI_Gatherv(sizeEncoding, numDivisions, MPI_INT,    compressedSizePerDiv, recvSizePerProc, offsetBuffer,MPI_INT,      0, MPI_COMM_WORLD); // all send to proc 0
+
+
+
+    if (my_id == 0){
+      for (int i=0; i<totalDivisions; i++)
+        debug5 <<  "  0 div: " << i << " : " << compressedSizePerDiv[i] << endl;
+
+    if (offsetBuffer != NULL) 
+        delete []offsetBuffer;
+    offsetBuffer = NULL;
+
+    if (recvSizePerProc != NULL)  
+        delete []recvSizePerProc;
+    recvSizePerProc = NULL;
+  }
+  #endif
+}

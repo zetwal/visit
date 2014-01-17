@@ -124,6 +124,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetViewUp(double *vu){ for (int i=0; i<3; i++) view_up[i] = vu[i]; }
     void             SetMeshDims(double _meshMin[3], double _meshMax[3]){ for (int i=0; i<3; i++) { meshMin[i] = _meshMin[i]; meshMax[i] = _meshMax[i];}}
     void             SetLogicalBounds(int _l, int _w, int _h){ logicalBounds[0] = _l; logicalBounds[1] = _w; logicalBounds[2] = _h; }
+    void             SetPartitionExtents(double _currentPartitionExtents[6]){for (int i=0; i<6; i++) currentPartitionExtents[i]=_currentPartitionExtents[i]; }
 
     // Getting the image
     void             getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
@@ -185,6 +186,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           meshMin[3];
     double           meshMax[3];
     int              logicalBounds[3];
+    double           currentPartitionExtents[6];  // minX, minY, minZ,    maxX, maxY,maxZ
 
 
     // Patch details for one image
