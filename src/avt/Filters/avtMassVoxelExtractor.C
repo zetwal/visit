@@ -624,6 +624,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
     imgWidth = imgHeight = 0;
     //std::cout << "w_min: " << w_max << "   w_max: " << w_max << "   h_min: " << h_min << "   h_max: " << h_max << std::endl;
+
     //
     // Let's find out if this range can even intersect the dataset.
     // If not, just skip it.
@@ -665,6 +666,30 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     imgDepth = 0;
 
     for (int i=0; i<8; i++){
+        // if (coordinates[i][0] < currentPartitionExtents[0])
+        //     _world[0] = currentPartitionExtents[0];
+        // else
+        //     if (coordinates[i][0] > currentPartitionExtents[3])
+        //         _world[0] = currentPartitionExtents[3];
+        //     else
+        //         _world[0] = coordinates[i][0];
+
+        // if (coordinates[i][1] < currentPartitionExtents[1])
+        //     _world[1] = currentPartitionExtents[1];
+        // else
+        //     if (coordinates[i][1] > currentPartitionExtents[4])
+        //         _world[1] = currentPartitionExtents[4];
+        //     else
+        //         _world[1] = coordinates[i][1];
+
+        // if (coordinates[i][2] < currentPartitionExtents[2])
+        //     _world[2] = currentPartitionExtents[2];
+        // else
+        //     if (coordinates[i][2] > currentPartitionExtents[5])
+        //         _world[2] = currentPartitionExtents[5];
+        //     else
+        //         _world[2] = coordinates[i][2];
+
         _world[0] = coordinates[i][0];
         _world[1] = coordinates[i][1]; 
         _world[2] = coordinates[i][2];
@@ -706,8 +731,8 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     if (yMax >= h_max) yMax = h_max-1;
 
     int intOffset = 0;
-    xMin = xMin - intOffset;    xMax = xMax + intOffset;    imgWidth = xMax - xMin +intOffset;
-    yMin = yMin - intOffset;    yMax = yMax + intOffset;    imgHeight = yMax - yMin +intOffset;
+    xMin = xMin - intOffset;    xMax = xMax + intOffset;    imgWidth = xMax - xMin + intOffset;
+    yMin = yMin - intOffset;    yMax = yMax + intOffset;    imgHeight = yMax - yMin + intOffset;
 
     imgArray = new float[((imgWidth)*4) * imgHeight](); // declare and initialize to 0.0 ()
 
@@ -716,15 +741,13 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     imgUpperRight[0] = xMax;     imgUpperRight[1] = yMax;
 
     //std::cout <<  proc << ", " <<patch << "   x range: " << xMin << ", " << xMax << "  width: " << imgWidth << "   y range: " << yMin << ", " << yMax << "  height: " << imgHeight <<std::endl;
-    // if (proc ==2 && patch ==3)
-    //     std::cout <<  proc << " *#* " <<patch  << std::endl;
 
-    std::cout << proc << ", " << patch << "  range: " << X[0] << ", " << X[dims[0]-1] << "  " << Y[0] << ", " << Y[dims[0]-1] << "  " << Y[0] << ", " << Y[dims[0]-1] << "  IMAGE POS: " << imgUpperRight[0] << ", " << imgUpperRight[1] << " - " << imgLowerLeft[0] << ", " << imgLowerLeft[1] << "   dims: " << imgDims[0] << ", " << imgDims[1] << std::endl;
+    std::cout << proc << ", " << patch << "  range: " << X[0] << ", " << X[dims[0]-1] << "  " << Y[0] << ", " << Y[dims[1]-1] << "  " << Z[0] << ", " << Z[dims[2]-1] << "  IMAGE POS: " << imgUpperRight[0] << ", " << imgUpperRight[1] << " - " << imgLowerLeft[0] << ", " << imgLowerLeft[1] << "   dims: " << imgDims[0] << ", " << imgDims[1] << std::endl;
     for (int i = xMin ; i < xMax ; i++)
         for (int j = yMin ; j < yMax ; j++)
         {
-            double origin[4];       // starting point where we start sampling
-            double terminus[4];     // ending point where we stop sampling
+            double origin[4];                               // starting point where we start sampling
+            double terminus[4];                             // ending point where we stop sampling
             GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
             SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
         }

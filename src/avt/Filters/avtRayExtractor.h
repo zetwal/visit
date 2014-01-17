@@ -197,6 +197,7 @@ class AVTFILTERS_API avtRayExtractor
     void                      getnDelImgData(int patchId, imgData &tempImgData);                      // gets the image & erase its existence
     void                      delImgPatches();   
     avtImage_p                ExecuteRayTracer();
+    avtImage_p                ExecuteRayTracerLB();
 
     int                       chopPartitionRT(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]);
     void                      getPartitionExtents(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], double extents[6]);
@@ -277,9 +278,6 @@ class AVTFILTERS_API avtRayExtractor
     std::vector<int>          numChildren;      // number of children for each patch
     std::vector<int>          numInEachLevel;   // number of patches for each level
     std::vector<int>          patchLevel;       // level of each patch
-
-
-    
 
     std::string               varName;
     int                       amrLevels;
