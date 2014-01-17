@@ -2026,9 +2026,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
     float *encoding = NULL;
     int *sizeEncoding = NULL;
-
+    debug5 << PAR_Rank() << "   ~ rleEncodeAll : imgBufferWidth,imgBufferHeight: " << imgBufferWidth << ", " <<  imgBufferHeight << "  numZDivisions: " << numZDivisions << endl;
     int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, numZDivisions,buffer,  encoding,sizeEncoding);
-
+    debug5 << PAR_Rank() << "   ~ rleEncodeAll done: " << endl;
     if (buffer != NULL)
         delete []buffer;
     buffer = NULL;

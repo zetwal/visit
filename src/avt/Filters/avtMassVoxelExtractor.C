@@ -666,33 +666,33 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     imgDepth = 0;
 
     for (int i=0; i<8; i++){
-        // if (coordinates[i][0] < currentPartitionExtents[0])
-        //     _world[0] = currentPartitionExtents[0];
-        // else
-        //     if (coordinates[i][0] > currentPartitionExtents[3])
-        //         _world[0] = currentPartitionExtents[3];
-        //     else
-        //         _world[0] = coordinates[i][0];
+        if (coordinates[i][0] < currentPartitionExtents[0])
+            _world[0] = currentPartitionExtents[0];
+        else
+            if (coordinates[i][0] > currentPartitionExtents[3])
+                _world[0] = currentPartitionExtents[3];
+            else
+                _world[0] = coordinates[i][0];
 
-        // if (coordinates[i][1] < currentPartitionExtents[1])
-        //     _world[1] = currentPartitionExtents[1];
-        // else
-        //     if (coordinates[i][1] > currentPartitionExtents[4])
-        //         _world[1] = currentPartitionExtents[4];
-        //     else
-        //         _world[1] = coordinates[i][1];
+        if (coordinates[i][1] < currentPartitionExtents[1])
+            _world[1] = currentPartitionExtents[1];
+        else
+            if (coordinates[i][1] > currentPartitionExtents[4])
+                _world[1] = currentPartitionExtents[4];
+            else
+                _world[1] = coordinates[i][1];
 
-        // if (coordinates[i][2] < currentPartitionExtents[2])
-        //     _world[2] = currentPartitionExtents[2];
-        // else
-        //     if (coordinates[i][2] > currentPartitionExtents[5])
-        //         _world[2] = currentPartitionExtents[5];
-        //     else
-        //         _world[2] = coordinates[i][2];
+        if (coordinates[i][2] < currentPartitionExtents[2])
+            _world[2] = currentPartitionExtents[2];
+        else
+            if (coordinates[i][2] > currentPartitionExtents[5])
+                _world[2] = currentPartitionExtents[5];
+            else
+                _world[2] = coordinates[i][2];
 
-        _world[0] = coordinates[i][0];
-        _world[1] = coordinates[i][1]; 
-        _world[2] = coordinates[i][2];
+        // _world[0] = coordinates[i][0];
+        // _world[1] = coordinates[i][1]; 
+        // _world[2] = coordinates[i][2];
 
         int screenPos[2]; 
         float tempImgDepth;

@@ -1369,46 +1369,54 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *i
   sizeOfEncoding = new int[numDivs];
   int prev = 0;
 
+  debug5 <<  my_id << "  ~  before Compress the data " << std::endl;
   // Compress the data
   for (int j=0; j<numDivs; j++){
     int offset = dimsX*dimsY*4  *  j; // to get the next image in the array of images
 
     int i=0;
     tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],  imgArray[offset + (i*4+3)]);
+    debug5 <<  my_id << "  ~  before for (i=1; i<dimsX*dimsY; i++) " << std::endl;
     for (i=1; i<dimsX*dimsY; i++){
+      debug5 <<  my_id << "  ~  in for (i=1; i<dimsX*dimsY; i++) i:" << i << std::endl;
       if ( compareColor(tempCode, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],imgArray[offset + (i*4+3)]) )
         tempCode = incrCode(tempCode);
-    else{
+      else{
         encodingVec.push_back(tempCode);
         tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],imgArray[offset + (i*4+3)]);
+      }
+
     }
-}
-encodingVec.push_back(tempCode);
+    debug5 <<  my_id << "  ~  before encodingVec.push_back " << std::endl;
 
-if (j == 0)
-  prev = sizeOfEncoding[j] = encodingVec.size();
-else{
-  sizeOfEncoding[j] = encodingVec.size() - prev;
-  prev = encodingVec.size();
-}
+    encodingVec.push_back(tempCode);
 
-debug5 <<  my_id << "  ~  encoding.size(): " << sizeOfEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << "   size: " << encodingVec.size() << std::endl;
-}
+    debug5 <<  my_id << "  ~  after encodingVec.push_back " << std::endl;
+
+    if (j == 0)
+      prev = sizeOfEncoding[j] = encodingVec.size();
+    else{
+      sizeOfEncoding[j] = encodingVec.size() - prev;
+      prev = encodingVec.size();
+    }
+
+    debug5 <<  my_id << "  ~  encoding.size(): " << sizeOfEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << "   size: " << encodingVec.size() << std::endl;
+  }
 
 
   // Transfer the data to the encoding array
-int encSize = encodingVec.size();
-encoding = new float[encSize*5];
+  int encSize = encodingVec.size();
+  encoding = new float[encSize*5];
 
-int index = 0;
-for (int j=0; j<encSize; j++){
+  int index = 0;
+  for (int j=0; j<encSize; j++){
     encoding[index] = encodingVec[j].count; index++;
     encoding[index] = encodingVec[j].color[0];  index++;
     encoding[index] = encodingVec[j].color[1];  index++;
     encoding[index] = encodingVec[j].color[2];  index++;
     encoding[index] = encodingVec[j].color[3];  index++;  
-}
-encodingVec.clear();
+  }
+  encodingVec.clear();
 
   return encSize;   // size of the array
 }
