@@ -1151,7 +1151,8 @@ void avtImgCommunicator::gatherAndAssembleEncodedImages(int sizex, int sizey, in
                 }
             }
 
-            delete []temp.image;
+            if (temp.image != NULL)
+              delete []temp.image;
             temp.image = NULL;
 
             count++;
@@ -1369,7 +1370,7 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *i
   sizeOfEncoding = new int[numDivs];
   int prev = 0;
 
-  debug5 <<  my_id << "  ~  before Compress the data " << std::endl;
+  debug5 <<  my_id << "  ~  before Compress the data dimX: " << dimsX << "   dimsY: " << dimsY << "   numDivs: " << numDivs << std::endl;
   // Compress the data
   for (int j=0; j<numDivs; j++){
     int offset = dimsX*dimsY*4  *  j; // to get the next image in the array of images
@@ -1377,17 +1378,33 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *i
     int i=0;
     tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],  imgArray[offset + (i*4+3)]);
     debug5 <<  my_id << "  ~  before for (i=1; i<dimsX*dimsY; i++) " << std::endl;
+
+
+
     for (i=1; i<dimsX*dimsY; i++){
+      if ((i==73765) && (my_id == 3)){
+        std::cout << "about to break" << std::endl;
+      }
       debug5 <<  my_id << "  ~  in for (i=1; i<dimsX*dimsY; i++) i:" << i << std::endl;
-      if ( compareColor(tempCode, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],imgArray[offset + (i*4+3)]) )
+
+      if ( compareColor(tempCode, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],imgArray[offset + (i*4+3)]) ){
+        debug5 <<  my_id << "  ~ incrCode(tempCode) " << i << std::endl;
         tempCode = incrCode(tempCode);
-      else{
+      }
+      else
+      {
+        debug5 <<  my_id << "  ~ encodingVec.push_back: " << i << "   tempCode.count:" << tempCode.count << "  tempCode.color: " << tempCode.color[0] << ", " << tempCode.color[1] << ", " << tempCode.color[2] << ", " << tempCode.color[3] << std::endl << std::endl;
         encodingVec.push_back(tempCode);
+        debug5 <<  my_id << "  ~ create new i : " << i << std::endl;
         tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],imgArray[offset + (i*4+3)]);
       }
 
+      debug5 <<  my_id << "  ~ encodingVec.size: " << encodingVec.size() << "     tempCode.count:" << tempCode.count << "  tempCode.color: " << tempCode.color[0] << ", " << tempCode.color[1] << ", " << tempCode.color[2] << ", " << tempCode.color[3] << std::endl << std::endl;
     }
-    debug5 <<  my_id << "  ~  before encodingVec.push_back " << std::endl;
+
+    debug5 <<  std::endl << std::endl << std::endl;
+
+    debug5 <<  my_id << "  ~  before encodingVec.push_back" << std::endl;
 
     encodingVec.push_back(tempCode);
 
@@ -1587,7 +1604,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
 
 
     
-
+   // if (my_id == 0){
     if (depthPartitions.size() > 0){
 
         std::map< float,int >::iterator it;
@@ -1602,6 +1619,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
             endCondition=depthPartitions.end();
         }
         
+        int counting = 0;
         do{
             //Back-to-Front compositing
             if (!front_to_back)
@@ -1614,13 +1632,8 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
 
             imageBuffer temp;
             index = it->second;
-            
-
             int sizex = dataToReceive[index*numData + 0]; // this seems to be the issue!!
             int sizey = dataToReceive[index*numData + 1];
-
-
-            //std::cout << "sizex: " << sizex << " sizey: " << sizey;
 
             temp.image = new float[sizex*sizey*4];
 
@@ -1652,18 +1665,21 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
                 for (int k=0; k<sizex; k++){
                     int imgIndex = sizex*4*j + k*4;                   // index in the image 
 
-                    if ((startingX + k) > fullsizex)
-                    continue;
+                    if ((startingX + k) > fullsizex) continue;
+                    if ((startingY + j) > fullsizey) continue;
 
-                    if ((startingY + j) > fullsizey)
-                    continue;
 
                     int bufferIndex = (startingY*fullsizex*4 + j*fullsizex*4) + (startingX*4 + k*4);    // index in the big buffer
-                    //bufferIndex = (k*4) + (j*fullsizex*4);
-                    //imgIndex = sizex*4*j + k*4;
 
-                    if(bufferIndex > fullsizex * fullsizey * 4) continue;
-                    if(imgIndex > sizex * sizey * 4) continue;
+                    if (bufferIndex > fullsizex * fullsizey * 4) continue;
+                    if (imgIndex > sizex * sizey * 4) continue;
+
+                    if (imgBuffer[bufferIndex+3] > 1.0) continue;
+                    if (temp.image[imgIndex+3] <= 0.0) continue;
+
+                    
+                    
+
 
 
                     //std::cout <<  index << " IN compositing" << std::endl;
@@ -1685,13 +1701,19 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
             }
 
 
+           std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_ " + NumbToString(counting) + "_.ppm";
+           createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_comp);
+
+
+
 
             //std::cout <<  index << " AFTER compositing" << std::endl;
 
-            delete []temp.image;
+            if (temp.image != NULL)
+              delete []temp.image;
             temp.image = NULL;
 
-            count++;
+            counting++;
 
             //Front-to-Back compositing
             if (front_to_back)
@@ -1708,13 +1730,16 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
                     imgBuffer[imgIndex+0] = clamp((1.0 - imgBuffer[imgIndex+3])*background[0]/255.0)  + imgBuffer[imgIndex+0];
                     imgBuffer[imgIndex+1] = clamp((1.0 - imgBuffer[imgIndex+3])*background[1]/255.0)  + imgBuffer[imgIndex+1];
                     imgBuffer[imgIndex+2] = clamp((1.0 - imgBuffer[imgIndex+3])*background[2]/255.0)  + imgBuffer[imgIndex+2];
-                    //imgBuffer[imgIndex+3] = clamp((1.0 - imgBuffer[imgIndex+3])*1.0)  + imgBuffer[imgIndex+3];
+                    imgBuffer[imgIndex+3] = clamp((1.0 - imgBuffer[imgIndex+3])*1.0)  + imgBuffer[imgIndex+3];
                 }
             }
     }
-
-
-    //std::cout << my_id <<  "  done with compositing" << std::endl;
+ // }
+    if (my_id == 0){
+      std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_finalimage_.ppm";
+      createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_Final);
+      //std::cout << my_id <<  "  done with compositing" << std::endl;
+    }
 
 
     if (tempRecvBuffer != NULL)
@@ -1782,4 +1807,30 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
     recvSizePerProc = NULL;
   }
   #endif
+}
+
+
+std::string NumbToString(int Number)
+{
+     std::ostringstream ss;
+     ss << Number;
+     return ss.str();
+}
+
+void createPpm(float array[], int dimx, int dimy, std::string filename){
+    int i, j;
+    //std::cout << "createPpm2  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    for (j = 0; j < dimy; ++j){
+        for (i = 0; i < dimx; ++i){
+            static unsigned char color[3];
+            color[0] = array[j*(dimx*4) + i*4 + 0] * 255;  // red
+            color[1] = array[j*(dimx*4) + i*4 + 1] * 255;  // green
+            color[2] = array[j*(dimx*4) + i*4 + 2] * 255;  // blue 
+            (void) fwrite(color, 1, 3, fp);
+        }
+    }
+    (void) fclose(fp);
+    //std::cout << "End createPpm: " << std::endl;
 }

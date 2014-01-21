@@ -173,6 +173,7 @@ public:
 #endif
 };
 
-//void createPpm(float array[], int dimx, int dimy, std::string filename);
+std::string NumbToString (int Number);
+void createPpm(float array[], int dimx, int dimy, std::string filename);
 
 #endif
