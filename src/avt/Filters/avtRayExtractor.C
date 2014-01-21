@@ -699,7 +699,8 @@ avtRayExtractor::getnDelImgData(int patchId, imgData &tempImgData){
     tempImgData.patchNumber = it->second.patchNumber;
     memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1] * sizeof(float));
 
-    delete [](*it).second.imagePatch;
+    if (it->second.imagePatch != NULL)
+        delete [](*it).second.imagePatch;
     it->second.imagePatch = NULL;
 }
 
@@ -1082,7 +1083,8 @@ avtRayExtractor::ExecuteRayTracer(){
 
     imgComm.gatherIotaMetaData(numPatches*7, tempSendBuffer); 
 
-    delete []tempSendBuffer;
+    if (tempSendBuffer != NULL)
+        delete []tempSendBuffer;    
     tempSendBuffer = NULL;
 
 
@@ -1507,10 +1509,10 @@ avtRayExtractor::ExecuteRayTracer(){
     int divIndex = 0;
     int totalSize = allImgMetaData.size();
 
-    debug5 << PAR_Rank() << "   ~   totalSize to compose: " << totalSize << "    numZDivisions: " << numZDivisions << endl;
+    debug5 << PAR_Rank() << "  ~  totalSize to compose: " << totalSize << "    numZDivisions: " << numZDivisions << endl;
 
     for (int k=0; k<numZDivisions; k++){
-        debug5 << PAR_Rank() << "   ~   division boundaries: " << divisionsArray[k*2 + 0] << " to " << divisionsArray[k*2 + 1] << endl;
+        debug5 << PAR_Rank() << "  ~  division boundaries: " << divisionsArray[k*2 + 0] << " to " << divisionsArray[k*2 + 1] << endl;
     }
 
     for (int patchIndex=0; patchIndex<totalSize; patchIndex++){
@@ -1528,7 +1530,7 @@ avtRayExtractor::ExecuteRayTracer(){
         int startingX = allImgMetaData[patchIndex].screen_ll[0];
         int startingY = allImgMetaData[patchIndex].screen_ll[1]; 
 
-        debug5 << PAR_Rank() << "   ~   divIndex: " << divIndex << "    composing patch #: " << allImgMetaData[patchIndex].procId << " ,  " << allImgMetaData[patchIndex].patchNumber << "   size: " << allImgMetaData[patchIndex].dims[0] << " x  " << allImgMetaData[patchIndex].dims[1] << "   avg_z: " << allImgMetaData[patchIndex].avg_z << endl;
+        debug5 << PAR_Rank() << "  ~  divIndex: " << divIndex << "    composing patch #: " << allImgMetaData[patchIndex].procId << " ,  " << allImgMetaData[patchIndex].patchNumber << "   size: " << allImgMetaData[patchIndex].dims[0] << " x  " << allImgMetaData[patchIndex].dims[1] << "   avg_z: " << allImgMetaData[patchIndex].avg_z << endl;
 
 
         itImgData = imgDataToCompose.find( std::pair<int,int>(allImgMetaData[patchIndex].procId, allImgMetaData[patchIndex].patchNumber) );
@@ -1565,7 +1567,7 @@ avtRayExtractor::ExecuteRayTracer(){
     allImgMetaData.clear();
     imgDataToCompose.clear();
 
-    debug5 << PAR_Rank() << "   ~ composing patch done: " << endl;
+    debug5 << PAR_Rank() << "  ~ composing patch done: " << endl;
 
 
     //
@@ -1874,34 +1876,19 @@ avtRayExtractor::patchOverlap(float patchMinX, float patchMaxX, float patchMinY,
 
 avtImage_p
 avtRayExtractor::ExecuteRayTracerLB(){
-    std::cout << PAR_Rank() <<  "           avtRayExtractor::ExecuteRayTracer  LB" << std::endl;
-    int  timingVolToImg;
-
-    if (parallelOn)
-        timingVolToImg = visitTimer->StartTimer();
-
-
-    debug5 << "parallelOn: " << parallelOn << std::endl;
-
-    //
-    // Parallel
-    //
+    std::cout << PAR_Rank() <<  " ~ avtRayExtractor::ExecuteRayTracerLB" << std::endl;
+    
+    int timingVolToImg;
+    // if (parallelOn){
+    //     timingVolToImg = visitTimer->StartTimer();
+    //     debug5 << "parallelOn: " << parallelOn << std::endl;
+    // }
 
     //
     // -- -- -- Timing -- 
-
-    // imgComm.syncAllProcs();     // only required for time testing purposes
-
-    visitTimer->StopTimer(timingVolToImg, "VolToImg");
-    visitTimer->DumpTimings();
+    // visitTimer->StopTimer(timingVolToImg, "VolToImg");
+    // visitTimer->DumpTimings();
     
-
-
-    /////////////////////////////////////////////////////////
-
-
-    int numZDivisions = 1;
-
 
     //
     // Get the metadata
@@ -1914,14 +1901,15 @@ avtRayExtractor::ExecuteRayTracerLB(){
         temp = getImgMetaPatch(i);
         allImgMetaData.push_back(temp);
     }
-    debug5 << "Number of patches: " << numPatches << std::endl;
-    //std::cout << "Number of patches: " << numPatches << std::endl;
+    //debug5 << PAR_Rank() << "   avtRayTracer::ExecuteRayTracerLB  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
+    std::cout << PAR_Rank() << "   avtRayTracer::ExecuteRayTracerLB  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
+
 
     float avg_z = allImgMetaData[0].avg_z;
     float startX = allImgMetaData[0].screen_ll[0];
     float startY = allImgMetaData[0].screen_ll[1];
-    float endX;
-    float endY;
+    float endX, endY;
+
 
     std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesX);
     startX = allImgMetaData[0].screen_ll[0];
@@ -1932,20 +1920,22 @@ avtRayExtractor::ExecuteRayTracerLB(){
     startY = allImgMetaData[0].screen_ll[1];
     endY = allImgMetaData[numPatches - 1].screen_ll[1] + allImgMetaData[numPatches - 1].dims[1];
     debug5 << PAR_Rank() <<  "  ~~~~  screen extents Y: " << startY << ", " << endY << std::endl;
-
+    
 
     //
     // Sort with the largest z first
-    //
     std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgMetaDataByDepthCopy);
 
     debug5 << PAR_Rank() << "   ~ after sort: " << endl;
+    std::cout << PAR_Rank() << "   ~ after sort: " << endl;
+
+
+
     //
     // Composite the images
     //
     
     // Creates a buffer to store the composited image
-
     int imgBufferWidth = endX - startX;
     int imgBufferHeight = endY - startY;
     float *buffer = new float[imgBufferWidth * imgBufferHeight * 4];
@@ -1959,24 +1949,18 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
     debug5 << PAR_Rank() << "   ~ before loop: " << endl;
     for (int i=0; i<numPatches; i++){
-        debug5 << PAR_Rank() << "   ~  " << i << " start ...  " << std::endl;
         imgMetaData currentPatch = allImgMetaData[i];
-        debug5 << PAR_Rank() << "   ~  " << i << " i ...  " << std::endl;
         imgData tempImgData;
-        debug5 << PAR_Rank() << "   ~  " << i << " ii  currentPatch.dims[1]: " << currentPatch.dims[1] << ",  currentPatch.dims[0]: " << currentPatch.dims[0] << endl;
         tempImgData.imagePatch = new float[currentPatch.dims[0] * currentPatch.dims[1] * 4];
-        debug5 << PAR_Rank() << "   ~  " << i << " iii ...  " << std::endl;
         getnDelImgData(currentPatch.patchNumber, tempImgData);
-        debug5 << PAR_Rank() << "   ~  " << i << " iiii ...  " << std::endl;
 
         int startingX = currentPatch.screen_ll[0] - startX;
-        debug5 << PAR_Rank() << "   ~  " << i << " iiiii ...  " << std::endl;
         int startingY = currentPatch.screen_ll[1] - startY; 
 
-        debug5 << PAR_Rank() << "   ~  " << i << "iiiiii   currentPatch.dims[1]: " << currentPatch.dims[1] << ",  currentPatch.dims[0]: " << currentPatch.dims[0] << endl;
+
         for (int j=0; j<currentPatch.dims[1]; j++){
             for (int k=0; k<currentPatch.dims[0]; k++){
-               // debug5 << PAR_Rank() << "   ~ j: " << j << ",  k: " << k << endl;
+                
 
                 if ((startingX + k) > imgBufferWidth)
                     continue;
@@ -1984,8 +1968,14 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 if ((startingY + j) > imgBufferHeight)
                     continue;
                 
-                int subImgIndex = currentPatch.dims[0]*j*4 + k*4;                                   // index in the subimage 
-                int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);    // index in the big buffer
+                int subImgIndex = currentPatch.dims[0]*j*4 + k*4;                                           // index in the subimage 
+                int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);  // index in the big buffer
+
+                if (buffer[bufferIndex+3] > 1.0)
+                    continue;
+
+                if (tempImgData.imagePatch[subImgIndex+3] <= 0.0)
+                    continue;
 
                 // back to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
                 buffer[bufferIndex+0] = imgComm.clamp((buffer[bufferIndex+0] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+0]);
@@ -1998,47 +1988,39 @@ avtRayExtractor::ExecuteRayTracerLB(){
         if (tempImgData.imagePatch != NULL)
             delete []tempImgData.imagePatch;
         tempImgData.imagePatch = NULL;
-
-        debug5 << PAR_Rank() << "   ~  " << i << " end!!! " << std::endl;
     }
     allImgMetaData.clear();
+    imageMetaPatchVector.clear();
+    imgDataHashMap.clear();
 
     imgComm.syncAllProcs();
 
-    //std::string imgFilename_Final = "/users/pbmanasa/Desktop/_"+ NumbToString(PAR_Rank()) + ".ppm";
-    //createPpm(buffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
+    std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_composed_"+ NumbToString(PAR_Rank()) + "_.ppm";
+    createPpm(buffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
 
-    // /////////////////////////////////////////////////////////
-
-    debug5 << PAR_Rank() << "   ~ composing patch done: " << endl;
-    //std::cout << PAR_Rank() << "   ~ composing patch done: " << endl;
+    debug5 << PAR_Rank() << "  ~ composing patch done: " << endl;
+    std::cout << PAR_Rank() << "  ~ composing patch done: " << endl;
 
 
-    // //
-    // // --- Timing -- 
-    
-    // int  timingRLE = visitTimer->StartTimer();
-
-
-    // //
-    // // RLE Encoding
-    // //
+    //
+    // RLE Encoding
+    //
 
     float *encoding = NULL;
     int *sizeEncoding = NULL;
-    debug5 << PAR_Rank() << "   ~ rleEncodeAll : imgBufferWidth,imgBufferHeight: " << imgBufferWidth << ", " <<  imgBufferHeight << "  numZDivisions: " << numZDivisions << endl;
-    int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, numZDivisions,buffer,  encoding,sizeEncoding);
-    debug5 << PAR_Rank() << "   ~ rleEncodeAll done: " << endl;
+    std::cout << PAR_Rank() << "   ~ rleEncodeAll : imgBufferWidth,imgBufferHeight: " << imgBufferWidth << ", " <<  imgBufferHeight << "  numZDivisions: " << 1 << endl;
+    int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, 1,buffer,  encoding,sizeEncoding);
+
+
     if (buffer != NULL)
         delete []buffer;
     buffer = NULL;
     
-    debug5 << PAR_Rank() << "   ~ encoding done!  "<< endl;
-    //std::cout << PAR_Rank() << "   ~ encoding done!  "<< endl;
+    debug5 << PAR_Rank() << "  ~ encoding done!  "<< endl;
+    std::cout << PAR_Rank() << "  ~ encoding done!  "<< endl;
 
     //
     // --- Timing -- 
-    
     int  finalSend = visitTimer->StartTimer();
     
 
@@ -2049,7 +2031,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
         imgComm.setBackground(background);
 
     // Gather all the images
-    imgComm.gatherEncodingSizesLB(sizeEncoding, numZDivisions);   
+    imgComm.gatherEncodingSizesLB(sizeEncoding, 1);   
 
     int dataToSend[4];                                                    // size of images
     dataToSend[0] = imgBufferWidth;
@@ -2057,10 +2039,10 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
     dataToSend[2] = startX;
     dataToSend[3] = startY;
-    imgComm.gatherAndAssembleEncodedImagesLB(screen[0], screen[1], dataToSend, totalEncodingSize*5, encoding, numZDivisions, avg_z);     // data from each processor
+    imgComm.gatherAndAssembleEncodedImagesLB(screen[0], screen[1], dataToSend, totalEncodingSize*5, encoding, 1, avg_z);     // data from each processor
 
-    debug5 << PAR_Rank() << "   ~ gatherEncodingSizes " << endl;
-    //std::cout << PAR_Rank() << "   ~ gatherEncodingSizes " << endl;
+    debug5 << PAR_Rank() << "  ~ gatherEncodingSizes " << endl;
+    std::cout << PAR_Rank() << "  ~ gatherEncodingSizes " << endl;
 
 
     if (encoding != NULL)
@@ -2114,7 +2096,11 @@ avtRayExtractor::ExecuteRayTracerLB(){
         
         // Get the composited image
         imgComm.getcompositedImage(screen[0], screen[1], imgTest); 
-        img->Delete();
+        if (img != NULL)
+            img->Delete();
+        img = NULL;
+
+       
 
         debug5 << PAR_Rank() << "   ~ final: " << endl;
         std::cout << PAR_Rank() << "   ~ final: " << std::endl;
@@ -2129,10 +2115,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
     visitTimer->StopTimer(timingCompositinig, "Compositing");
     visitTimer->DumpTimings();
-
-    // // std::cout << PAR_Rank() << "    ~~~~ before vtkimage" << std::endl;
-    // // toVTKImage();
-    // // std::cout << PAR_Rank() << "    ~~~~ after vtkimage" << std:: endl;
 
     return tempImage;
 }

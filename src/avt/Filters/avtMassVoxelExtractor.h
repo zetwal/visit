@@ -149,6 +149,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           *Z;
     unsigned char   *ghosts;
     int              dims[3];
+    int              minIndex[3], maxIndex[3];
     int              ncell_arrays;
     void            *cell_arrays[AVT_VARIABLE_LIMIT];
     int              cell_size[AVT_VARIABLE_LIMIT];
@@ -235,7 +236,6 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             getIndexandDistFromCenter(float dist, int index,    int &index_before, int &index_after,    float &dist_before, float &dist_after);
 };
 
-std::string NumbToString (int Number);
-void createPpm(float array[], int dimx, int dimy, std::string filename);
+
 
 #endif
