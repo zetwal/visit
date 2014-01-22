@@ -130,6 +130,8 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     pretendGridsAreInWorldSpace = false;
     trilinearInterpolation = false;
     rayCastingSLIVR = false;
+    isAMR = false;
+
     aspect = 1;
     view_to_world_transform = vtkMatrix4x4::New();
     world_to_view_transform = vtkMatrix4x4::New();
@@ -656,9 +658,6 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     rgrid->GetBounds(bounds);
     rgrid->GetDimensions(dDims);
 
-    // if (proc ==2 && patch ==3)
-    //     std::cout << proc << " ~ " << patch << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   bounds: " << bounds[0] << ", " << bounds[1] << "   ;   " << bounds[2] << ", " << bounds[3] << "   ;   " << bounds[4] << ", " << bounds[5] << "   |  dims_from_ds: " << dDims[0] <<", " << dDims[1] << ", " << dDims[2] << "  |  dims: " << dims[0] << ",  " << dims[1] << ", " << dims[2] << std::endl;
-
     //minIndex[0]
     bool minFound, maxFound;
     minFound = maxFound = false;
@@ -667,122 +666,122 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     minIndex[1] = dims[1]-1;
     minIndex[2] = dims[2]-1;
 
-
-    if (X[0] >= currentPartitionExtents[0] && X[0] < currentPartitionExtents[3]){ // fully in
-        minIndex[0] = 0;
-        minFound = true;
-    }
-
-    if (X[dims[0]-1] >= currentPartitionExtents[0] && X[dims[0]-1] < currentPartitionExtents[3]){ // fully in
-        maxIndex[0] = dims[0]-1;
-        maxFound = true;
-    }
-
-    if (minFound == false)
-        minIndex[0] = 0;
-        for (int i=0; i<dims[0]-1; i++){
-            if (X[i] >= currentPartitionExtents[0]){
-                minFound = true;
-                minIndex[0] = i;
-                break;
-            }else{
-                minIndex[0] = i;
-            }
+    if (isAMR == true){
+        if (X[0] >= currentPartitionExtents[0] && X[0] < currentPartitionExtents[3]){ // fully in
+            minIndex[0] = 0;
+            minFound = true;
         }
 
-    if (maxFound == false)
-        maxIndex[0] = dims[0]-1;
-        for (int i=dims[0]-1; i>=0; i--){
-            if (X[i] < currentPartitionExtents[3]){
-                maxFound = true;
-                //maxIndex[0] = i;
-                break;
-            }else{
-                maxIndex[0] = i;
-            }
+        if (X[dims[0]-1] >= currentPartitionExtents[0] && X[dims[0]-1] < currentPartitionExtents[3]){ // fully in
+            maxIndex[0] = dims[0]-1;
+            maxFound = true;
         }
 
-
-
-    minFound = maxFound = false;
-    if (Y[0] >= currentPartitionExtents[1] && Y[0] < currentPartitionExtents[4]){ // fully in
-        minIndex[1] = 0;
-        minFound = true;
-    }
-
-    if (Y[dims[1]-1] >= currentPartitionExtents[1] && Y[dims[1]-1] < currentPartitionExtents[4]){ // fully in
-        maxIndex[1] = dims[1]-1;
-        maxFound = true;
-    }
-
-    if (minFound == false)
-        minIndex[1] = 0;
-        for (int i=0; i<dims[1]-1; i++){
-            if (Y[i] >= currentPartitionExtents[1]){
-                minFound = true;
-                minIndex[1] = i;
-                break;
-            }else{
-                minIndex[1] = i;
+        if (minFound == false)
+            minIndex[0] = 0;
+            for (int i=0; i<dims[0]-1; i++){
+                if (X[i] >= currentPartitionExtents[0]){
+                    minFound = true;
+                    minIndex[0] = i;
+                    break;
+                }else{
+                    minIndex[0] = i;
+                }
             }
+
+        if (maxFound == false)
+            maxIndex[0] = dims[0]-1;
+            for (int i=dims[0]-1; i>=0; i--){
+                if (X[i] < currentPartitionExtents[3]){
+                    maxFound = true;
+                    //maxIndex[0] = i;
+                    break;
+                }else{
+                    maxIndex[0] = i;
+                }
+            }
+
+
+
+        minFound = maxFound = false;
+        if (Y[0] >= currentPartitionExtents[1] && Y[0] < currentPartitionExtents[4]){ // fully in
+            minIndex[1] = 0;
+            minFound = true;
         }
 
-    if (maxFound == false)
-        maxIndex[1] = dims[1]-1;
-        for (int i=dims[1]-1; i>=0; i--){
-            if (Y[i] < currentPartitionExtents[4]){
-                maxFound = true;
-                //maxIndex[1] = i;
-                break;
-            }else{
-                maxIndex[1] = i;
-            }
+        if (Y[dims[1]-1] >= currentPartitionExtents[1] && Y[dims[1]-1] < currentPartitionExtents[4]){ // fully in
+            maxIndex[1] = dims[1]-1;
+            maxFound = true;
         }
 
-
-    minFound = maxFound = false;
-    if (Z[0] >= currentPartitionExtents[2] && Z[0] < currentPartitionExtents[5]){ // fully in
-        minIndex[2] = 0;
-        minFound = true;
-    }
-
-    if (Z[dims[2]-1] >= currentPartitionExtents[2] && Z[dims[2]-1] < currentPartitionExtents[5]){ // fully in
-        maxIndex[2] = dims[2]-1;
-        maxFound = true;
-    }
-
-    if (minFound == false)
-        minIndex[2] = 0;
-        for (int i=0; i<dims[2]-1; i++){
-            if (Z[i] >= currentPartitionExtents[2]){
-                minFound = true;
-                minIndex[2] = i;
-                break;
-            }else{
-                minIndex[2] = i;
+        if (minFound == false)
+            minIndex[1] = 0;
+            for (int i=0; i<dims[1]-1; i++){
+                if (Y[i] >= currentPartitionExtents[1]){
+                    minFound = true;
+                    minIndex[1] = i;
+                    break;
+                }else{
+                    minIndex[1] = i;
+                }
             }
+
+        if (maxFound == false)
+            maxIndex[1] = dims[1]-1;
+            for (int i=dims[1]-1; i>=0; i--){
+                if (Y[i] < currentPartitionExtents[4]){
+                    maxFound = true;
+                    //maxIndex[1] = i;
+                    break;
+                }else{
+                    maxIndex[1] = i;
+                }
+            }
+
+
+        minFound = maxFound = false;
+        if (Z[0] >= currentPartitionExtents[2] && Z[0] < currentPartitionExtents[5]){ // fully in
+            minIndex[2] = 0;
+            minFound = true;
         }
 
-    if (maxFound == false)
-        maxIndex[2] = dims[2]-1;
-        for (int i=dims[2]-1; i>=0; i--){
-            if (Z[i] < currentPartitionExtents[5]){
-                maxFound = true;
-                //maxIndex[2] = i;
-                break;
-            }else{
-                maxIndex[2] = i;
-            }
+        if (Z[dims[2]-1] >= currentPartitionExtents[2] && Z[dims[2]-1] < currentPartitionExtents[5]){ // fully in
+            maxIndex[2] = dims[2]-1;
+            maxFound = true;
         }
 
-    
-    std::cout << proc << " ~ " << patch << 
-        "  orig ind: 0 , 0, 0  to " << dims[0]-1 << ", " << dims[1]-1 << ", " << dims[2]-1 << 
-        "  new ind: " << minIndex[0] << ", " << minIndex[1] << ", " << minIndex[2] << "  to " << maxIndex[0] << ", " << maxIndex[1] << ", " << maxIndex[2] <<
-        "  patch extents: " << X[0] << ", " << Y[0] << ", " << Z[0] << "  to  " << X[dims[0]-1] << ", " << Y[dims[1]-1] << ", " << Z[dims[2]-1] <<
-        "  new patch extents: " << X[minIndex[0]] << ", " << Y[minIndex[1]] << ", " << Z[minIndex[2]] << "  to  " << X[maxIndex[0]] << ", " << Y[maxIndex[1]] << ", " << Z[maxIndex[2]] <<
-        "  partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << "  to  " << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl;
+        if (minFound == false)
+            minIndex[2] = 0;
+            for (int i=0; i<dims[2]-1; i++){
+                if (Z[i] >= currentPartitionExtents[2]){
+                    minFound = true;
+                    minIndex[2] = i;
+                    break;
+                }else{
+                    minIndex[2] = i;
+                }
+            }
+
+        if (maxFound == false)
+            maxIndex[2] = dims[2]-1;
+            for (int i=dims[2]-1; i>=0; i--){
+                if (Z[i] < currentPartitionExtents[5]){
+                    maxFound = true;
+                    //maxIndex[2] = i;
+                    break;
+                }else{
+                    maxIndex[2] = i;
+                }
+            }
+
         
+        // std::cout << proc << " ~ " << patch << 
+        //     "  orig ind: 0 , 0, 0  to " << dims[0]-1 << ", " << dims[1]-1 << ", " << dims[2]-1 << 
+        //     "  new ind: " << minIndex[0] << ", " << minIndex[1] << ", " << minIndex[2] << "  to " << maxIndex[0] << ", " << maxIndex[1] << ", " << maxIndex[2] <<
+        //     "  patch extents: " << X[0] << ", " << Y[0] << ", " << Z[0] << "  to  " << X[dims[0]-1] << ", " << Y[dims[1]-1] << ", " << Z[dims[2]-1] <<
+        //     "  new patch extents: " << X[minIndex[0]] << ", " << Y[minIndex[1]] << ", " << Z[minIndex[2]] << "  to  " << X[maxIndex[0]] << ", " << Y[maxIndex[1]] << ", " << Z[maxIndex[2]] <<
+        //     "  partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << "  to  " << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl;
+         }
 
 
     float offset = 0.0f;
@@ -793,40 +792,9 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     imgDepth = 0;
 
     for (int i=0; i<8; i++){
-        // if (coordinates[i][0] < currentPartitionExtents[0])
-        //     _world[0] = currentPartitionExtents[0];
-        // else
-        //     if (coordinates[i][0] > currentPartitionExtents[3])
-        //         _world[0] = currentPartitionExtents[3];
-        //     else
-        //         _world[0] = coordinates[i][0];
-
-        // if (coordinates[i][1] < currentPartitionExtents[1])
-        //     _world[1] = currentPartitionExtents[1];
-        // else
-        //     if (coordinates[i][1] > currentPartitionExtents[4])
-        //         _world[1] = currentPartitionExtents[4];
-        //     else
-        //         _world[1] = coordinates[i][1];
-
-        // if (coordinates[i][2] < currentPartitionExtents[2])
-        //     _world[2] = currentPartitionExtents[2];
-        // else
-        //     if (coordinates[i][2] > currentPartitionExtents[5])
-        //         _world[2] = currentPartitionExtents[5];
-        //     else
-        //         _world[2] = coordinates[i][2];
-
         _world[0] = coordinates[i][0]; 
         _world[1] = coordinates[i][1]; 
         _world[2] = coordinates[i][2];
-
-
-        // std::cout << proc << " ~ " << patch << " : " << i << 
-        // "  orig: " << coordinates[i][0] << ", " << coordinates[i][1] << ", " << coordinates[i][2] << 
-        // "  world: " << _world[0] << ", " << _world[1] << ", " << _world[2] << 
-        // "  extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[3] << "    " << currentPartitionExtents[1] << ", " << currentPartitionExtents[4] << "    " << currentPartitionExtents[3] << ", " << currentPartitionExtents[5] << std::endl;
-        
         
         int screenPos[2]; 
         float tempImgDepth;
@@ -1702,43 +1670,38 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         if (calc_cell_index)
             index = ind[2]*((dims[0]-1)*(dims[1]-1)) + ind[1]*(dims[0]-1) + ind[0];
 
-        if (ind[0] < minIndex[0] || ind[0] > maxIndex[0])
-            valid_sample[i] = false;
-
-        if (ind[1] < minIndex[1] || ind[1] > maxIndex[1])
-            valid_sample[i] = false;
-
-        if (ind[2] < minIndex[2] || ind[2] > maxIndex[2])
-            valid_sample[i] = false;
-
-
-        if (ghosts != NULL){
-            if (ghosts[index] != 0){
+        if (rayCastingSLIVR && isAMR){
+            if (ind[0] < minIndex[0] || ind[0] > maxIndex[0])
                 valid_sample[i] = false;
-                //if (proc == 2 && patch == 3)
-                //    std::cout << proc << " , " << patch << "   Invalid !!! " << w << ", " << h << " index: " << ind[0] << ", " << ind[1] << ", " << ind[2] << std::endl;
-           }
+
+            if (ind[1] < minIndex[1] || ind[1] > maxIndex[1])
+                valid_sample[i] = false;
+
+            if (ind[2] < minIndex[2] || ind[2] > maxIndex[2])
+                valid_sample[i] = false;
         }
 
-        // if (proc ==2 && patch ==3)
-        //     std::cout << "valid sample: " << valid_sample[i] << "   true: " << true << std::endl;
-
+        if (ghosts != NULL)
+            if (ghosts[index] != 0)
+                valid_sample[i] = false;
+           
         if (!valid_sample[i])
             continue;
 
-        //if (proc ==2 && patch ==3)
-        //     std::cout << "valid sample: " << valid_sample[i] << "   true: " << true << "  w,h: " << w << ", " << h << " index: " << ind[0] << ", " << ind[1] << ", " << ind[2] << std::endl;
 
-        if (!valid_sample[i] && inrun){
+        if (!valid_sample[i] && inrun)
             if (rayCastingSLIVR == false){
                 ray->SetSamples(i-count, i-1, tmpSampleList);
                 inrun = false;
                 count = 0;
             }
-        }
 
         int index_left, index_right,            index_top, index_bottom,         index_front, index_back;
         float dist_from_left, dist_from_right,  dist_from_top,dist_from_bottom,  dist_from_front, dist_from_back;
+        
+        int offsetLow[3], offsetHigh[3];
+        offsetLow[0] = offsetLow[1] = offsetLow[2] = 1;
+        offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 2;
 
         int newInd[3];
         newInd[0] = ind[0];
@@ -1762,17 +1725,14 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
         if (logicalBounds[0] == 1){
             indices[0] = indices[1] = 0;
-          //  dist_from_left = dist_from_right = prop[0];
         }
 
         if (logicalBounds[1] == 1){
             indices[2] = indices[3] = 0;
-           // dist_from_bottom = dist_from_top = prop[1];
         }
 
         if (logicalBounds[2] == 1){
             indices[4] = indices[5] = 0;
-          //  dist_from_front = dist_from_back = prop[2];
         }
 
 
@@ -1804,10 +1764,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                     valid_sample[i] = false;
         }
 
-        int offsetLow[3], offsetHigh[3];
-        offsetLow[0] = offsetLow[1] = offsetLow[2] = 1;
-        offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 2;
-
         if (rayCastingSLIVR){
             if (logicalBounds[0] > 1)
                 if (!(ind[0] >= offsetLow[0] && ind[0] <= (dims[0]-1) - offsetHigh[0]))
@@ -1822,85 +1778,30 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                     valid_sample[i] = false;
         }
 
-        // second check
-        // if (indices[0] < minIndex[0] || indices[0] > maxIndex[0])
-        //     valid_sample[i] = false;
+        if (rayCastingSLIVR && isAMR){
+            if (indices[0] < minIndex[0] || indices[0] > maxIndex[0])
+                valid_sample[i] = false;
 
-        // if (indices[1] < minIndex[0] || indices[1] > maxIndex[0])
-        //     valid_sample[i] = false;
-
-
-
-        // if (indices[2] < minIndex[1] || indices[2] > maxIndex[1])
-        //     valid_sample[i] = false;
-
-        // if (indices[3] < minIndex[1] || indices[3] > maxIndex[1])
-        //     valid_sample[i] = false;
+            if (indices[1] < minIndex[0] || indices[1] > maxIndex[0])
+                valid_sample[i] = false;
 
 
-        // if (indices[4] < minIndex[2] || indices[4] > maxIndex[2])
-        //     valid_sample[i] = false;
+            if (indices[2] < minIndex[1] || indices[2] > maxIndex[1])
+                valid_sample[i] = false;
 
-        // if (indices[5] < minIndex[2] || indices[5] > maxIndex[2])
-        //     valid_sample[i] = false;
-
-
+            if (indices[3] < minIndex[1] || indices[3] > maxIndex[1])
+                valid_sample[i] = false;
 
 
+            if (indices[4] < minIndex[2] || indices[4] > maxIndex[2])
+                valid_sample[i] = false;
 
-        // if (indices[0] == maxIndex[0]-1)
-        //    valid_sample[i] = false;
-        
-        // kind of works
-        // if (indices[0] == minIndex[0] && dist_from_left<=0.5)
-        //     valid_sample[i] = false;
-        // if (indices[1] == maxIndex[0] && dist_from_left>0.5)
-        //   valid_sample[i] = false;
-
-       // if (indices[0] == maxIndex[0] && dist_from_left<=0.5)
-       //      valid_sample[i] = false;
-       // if (indices[0] > maxIndex[0]-1 )
-       //   valid_sample[i] = false;
-
-        // if (indices[1] == maxIndex[0] && dist_from_left>0.5)
-        //     valid_sample[i] = false;
-
-        if (indices[0] < minIndex[0] || indices[0] > maxIndex[0])
-            valid_sample[i] = false;
-
-        if (indices[1] < minIndex[0] || indices[1] > maxIndex[0])
-            valid_sample[i] = false;
-
-
-        if (indices[2] < minIndex[1] || indices[2] > maxIndex[1])
-            valid_sample[i] = false;
-
-        if (indices[3] < minIndex[1] || indices[3] > maxIndex[1])
-            valid_sample[i] = false;
-
-
-        if (indices[4] < minIndex[2] || indices[4] > maxIndex[2])
-            valid_sample[i] = false;
-
-        if (indices[5] < minIndex[2] || indices[5] > maxIndex[2])
-            valid_sample[i] = false;
-
-
-
-
-        // if (proc ==2 && patch ==3)
-        //     std::cout <<  proc << " *#* " <<patch  << "  indices: " << indices[0] << ", " << indices[1] << ", "<< indices[2] << ", "<< indices[3] << ", "<< indices[4] << ", "<< indices[5] << " |  ind: " << ind[0] << ", " << ind[1] << ", " << ind[2] << " |  dims: " << dims[0] << ", " << dims[1] << ", " << dims[2] << std::endl; 
+            if (indices[5] < minIndex[2] || indices[5] > maxIndex[2])
+                valid_sample[i] = false;
+        }
 
         if (!valid_sample[i])
             continue;
-
-        //if (proc ==2 && patch ==4){
-        //         std::cout <<  proc << " *#* " <<patch  << "  indices: " << indices[0] << ", " << indices[1] << ", "<< indices[2] << ", "<< indices[3] << ", "<< indices[4] << ", "<< indices[5] << " |  ind: " << ind[0] << ", " << ind[1] << ", " << ind[2] << " |  dims: " << dims[0] << ", " << dims[1] << ", " << dims[2] << std::endl; 
-        //}
-        
-       // std::cout << "(trilinearInterpolation || rayCastingSLIVR)   xxx " << std::endl;
-        // if (proc ==2 && patch ==3)
-        //     std::cout <<  proc << " *#* " <<patch  << "  continue  " << std::endl;
 
         if (trilinearInterpolation || rayCastingSLIVR){
             //
@@ -1909,7 +1810,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
             if (ncell_arrays > 0){
                 int indexT[8];
                 computeIndices(dims, indices, indexT);
-                
                 
                 for (int l = 0 ; l < ncell_arrays ; l++)            // ncell_arrays: usually 1
                 {
@@ -1945,12 +1845,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                 enableDebug = false;
                             }
                             else{
-                                //if (enableDebug == true){
-                                //    std::cout << proc << " ~ " << patch << "  |   Values: " << values[0] << ", " << values[1] << ",  " << values[2] << ", " << values[3] << ", " << values[4] << ", " << values[5] ", " << values[6] << ", " << values[7] << "   _ _  "
-                                //    << "  |   dists: " << dist_from_left << ", " << dist_from_bottom << ", " << dist_from_front << "  |  scalar value: " << scalarValue << std::endl;
-                                //}
-
-                                
                                 //
                                 // Compute Lighting (if needed)
                                 //
@@ -1993,9 +1887,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     computeIndices(dims, gradIndices, indexGrad);
                                     AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
                                     vals[0] = trilinearInterpolate(gradVals, distFromLeft, dist_from_bottom, dist_from_front);
-
-                                    // std::cout << proc << " ~ " << patch << "  |   Values: " << gradVals[0] << ", " << gradVals[1] << ",  " << gradVals[2] << ", " << values[3] << ", " << gradVals[4] << ", " << gradVals[5] ", " << gradVals[6] << ", " << gradVals[7] << "   _ _  "
-                                    // << "  |   dists: " << distFromLeft << ", " << dist_from_bottom << ", " << dist_from_front << "  |  scalar value: " << scalarValue << std::endl;
 
                                     //
                                     // find x+h
@@ -2108,11 +1999,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     normalize(gradient);
                                 }
 
-                                //
-                                // Compute the color
-                                //
-                                // if (proc ==2 && patch ==3)
-                                //     std::cout <<  proc << " *#* " << patch  << "computePixelColor " << std::endl;
                                 computePixelColor(source_rgb, dest_rgb);
                             }
                         }

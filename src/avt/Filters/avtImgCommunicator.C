@@ -51,6 +51,7 @@
 #include <avtImgCommunicator.h>
 #include <fstream>
 #include <DebugStream.h>
+#include <float.h>
 
 
 #ifdef PARALLEL
@@ -1296,10 +1297,14 @@ iotaMeta avtImgCommunicator::setIota(int _procId, int _patchNumber, int dim_x, i
 // ****************************************************************************
 
 bool compareColor(code x, float r, float g, float b, float a){
-  if ((x.color[0] == r && x.color[1]==g) &&  (x.color[2] == b && x.color[3]==a))
-    return true;
-else
-    return false;
+    float epsilon = 0.00001;
+
+    if  (  ((fabs(x.color[0] - r) < epsilon) && (fabs(x.color[1] - g) < epsilon)) && ((fabs(x.color[0] - r) < epsilon) && (fabs(x.color[1] - g) < epsilon)) ){
+        return true;
+    }
+    else{
+        return false;
+    }
 }
 
 
@@ -1364,78 +1369,80 @@ code incrCode(code x){
 //
 // ****************************************************************************
 int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *imgArray,  float *& encoding, int *& sizeOfEncoding){
-  std::vector<code> encodingVec;
-  encodingVec.clear();
-  code tempCode;
-  sizeOfEncoding = new int[numDivs];
-  int prev = 0;
+    std::vector<code> encodingVec;
+    encodingVec.clear();
+    code tempCode;
+    sizeOfEncoding = new int[numDivs];
+    int prev = 0;
 
-  debug5 <<  my_id << "  ~  before Compress the data dimX: " << dimsX << "   dimsY: " << dimsY << "   numDivs: " << numDivs << std::endl;
-  // Compress the data
-  for (int j=0; j<numDivs; j++){
-    int offset = dimsX*dimsY*4  *  j; // to get the next image in the array of images
+    debug5 <<  my_id << "  ~  before Compress the data dimX: " << dimsX << "   dimsY: " << dimsY << "   numDivs: " << numDivs << std::endl;
+    std::cout <<  my_id << "  ~  before Compress the data dimX: " << dimsX << "   dimsY: " << dimsY << "   numDivs: " << numDivs << std::endl;
+    // Compress the data
+    for (int j=0; j<numDivs; j++){
+        int offset = dimsX*dimsY*4  *  j; // to get the next image in the array of images
 
-    int i=0;
-    tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],  imgArray[offset + (i*4+3)]);
-    debug5 <<  my_id << "  ~  before for (i=1; i<dimsX*dimsY; i++) " << std::endl;
+        int i=0;
+        tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],  imgArray[offset + (i*4+3)]);
+        //debug5 <<  my_id << "  ~  before for (i=1; i<dimsX*dimsY; i++) " << std::endl;
 
 
+        for (i=1; i<dimsX*dimsY; i++){
+            //debug5 <<  my_id << "  ~  in for (i=1; i<dimsX*dimsY; i++) i:" << i << std::endl;
 
-    for (i=1; i<dimsX*dimsY; i++){
-      if ((i==73765) && (my_id == 3)){
-        std::cout << "about to break" << std::endl;
-      }
-      debug5 <<  my_id << "  ~  in for (i=1; i<dimsX*dimsY; i++) i:" << i << std::endl;
+            if ( compareColor(tempCode, imgArray[offset + (i*4+0)], imgArray[offset + (i*4+1)], imgArray[offset + (i*4+2)], imgArray[offset + (i*4+3)]) ){
+                //debug5 <<  my_id << "  ~ incrCode(tempCode) " << i << 
+                //"   tempCode.count:" << tempCode.count << "  tempCode.color: " << tempCode.color[0] << ", " << tempCode.color[1] << ", " << tempCode.color[2] << ", " << tempCode.color[3] <<
+                //"   array: " << imgArray[offset + (i*4+0)] << ", " <<  imgArray[offset + (i*4+1)] << ",  " <<  imgArray[offset + (i*4+2)] << ", " <<  imgArray[offset + (i*4+3)] << std::endl;
+                tempCode = incrCode(tempCode);
+            }
+            else
+            {
+                //debug5 <<  my_id << "  ~ encodingVec.push_back: " << i << "   tempCode.count:" << tempCode.count << "  tempCode.color: " << tempCode.color[0] << ", " << tempCode.color[1] << ", " << tempCode.color[2] << ", " << tempCode.color[3] << std::endl << std::endl;
+                encodingVec.push_back(tempCode);
+                //debug5 <<  my_id << "  ~ create new i : " << i << std::endl;
+                tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],imgArray[offset + (i*4+3)]);
+            }
 
-      if ( compareColor(tempCode, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],imgArray[offset + (i*4+3)]) ){
-        debug5 <<  my_id << "  ~ incrCode(tempCode) " << i << std::endl;
-        tempCode = incrCode(tempCode);
-      }
-      else
-      {
-        debug5 <<  my_id << "  ~ encodingVec.push_back: " << i << "   tempCode.count:" << tempCode.count << "  tempCode.color: " << tempCode.color[0] << ", " << tempCode.color[1] << ", " << tempCode.color[2] << ", " << tempCode.color[3] << std::endl << std::endl;
+            //debug5 <<  my_id << "  ~ encodingVec.size: " << encodingVec.size() << "     tempCode.count:" << tempCode.count << "  tempCode.color: " << tempCode.color[0] << ", " << tempCode.color[1] << ", " << tempCode.color[2] << ", " << tempCode.color[3] << std::endl << std::endl;
+        }
+
+        debug5 <<  std::endl << std::endl << std::endl;
+        debug5 <<  my_id << "  ~  before encodingVec.push_back" << std::endl;
+
         encodingVec.push_back(tempCode);
-        debug5 <<  my_id << "  ~ create new i : " << i << std::endl;
-        tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],imgArray[offset + (i*4+3)]);
-      }
 
-      debug5 <<  my_id << "  ~ encodingVec.size: " << encodingVec.size() << "     tempCode.count:" << tempCode.count << "  tempCode.color: " << tempCode.color[0] << ", " << tempCode.color[1] << ", " << tempCode.color[2] << ", " << tempCode.color[3] << std::endl << std::endl;
+        debug5 <<  my_id << "  ~  after encodingVec.push_back " << std::endl;
+
+        if (j == 0)
+            prev = sizeOfEncoding[j] = encodingVec.size();
+        else{
+            sizeOfEncoding[j] = encodingVec.size() - prev;
+            prev = encodingVec.size();
+        }
+
+        debug5 <<  my_id << "  ~  encoding.size(): " << sizeOfEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << "   size: " << encodingVec.size() << std::endl;
     }
 
-    debug5 <<  std::endl << std::endl << std::endl;
 
-    debug5 <<  my_id << "  ~  before encodingVec.push_back" << std::endl;
+    std::cout <<  my_id << "  ~  Transfer the data to the encoding array -  encodingVec.size(): " << encodingVec.size() << std::endl;
 
-    encodingVec.push_back(tempCode);
+    // Transfer the data to the encoding array
+    int encSize = encodingVec.size();
+    encoding = new float[encSize*5];
 
-    debug5 <<  my_id << "  ~  after encodingVec.push_back " << std::endl;
-
-    if (j == 0)
-      prev = sizeOfEncoding[j] = encodingVec.size();
-    else{
-      sizeOfEncoding[j] = encodingVec.size() - prev;
-      prev = encodingVec.size();
+    int index = 0;
+    for (int j=0; j<encSize; j++){
+        encoding[index] = encodingVec[j].count; index++;
+        encoding[index] = encodingVec[j].color[0];  index++;
+        encoding[index] = encodingVec[j].color[1];  index++;
+        encoding[index] = encodingVec[j].color[2];  index++;
+        encoding[index] = encodingVec[j].color[3];  index++;  
     }
+    encodingVec.clear();
 
-    debug5 <<  my_id << "  ~  encoding.size(): " << sizeOfEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << "   size: " << encodingVec.size() << std::endl;
-  }
+    std::cout <<  my_id << "  ~  Transfer the data to the encoding array -  done - encSize: " << encSize << std::endl;
 
-
-  // Transfer the data to the encoding array
-  int encSize = encodingVec.size();
-  encoding = new float[encSize*5];
-
-  int index = 0;
-  for (int j=0; j<encSize; j++){
-    encoding[index] = encodingVec[j].count; index++;
-    encoding[index] = encodingVec[j].color[0];  index++;
-    encoding[index] = encodingVec[j].color[1];  index++;
-    encoding[index] = encodingVec[j].color[2];  index++;
-    encoding[index] = encodingVec[j].color[3];  index++;  
-  }
-  encodingVec.clear();
-
-  return encSize;   // size of the array
+    return encSize;   // size of the array
 }
 
 
@@ -1736,9 +1743,9 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
     }
  // }
     if (my_id == 0){
-      std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_finalimage_.ppm";
-      createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_Final);
-      //std::cout << my_id <<  "  done with compositing" << std::endl;
+        std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_finalimage_.ppm";
+        createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_Final);
+        //std::cout << my_id <<  "  done with compositing" << std::endl;
     }
 
 
@@ -1760,53 +1767,53 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
 }
 
 
-    void avtImgCommunicator::gatherEncodingSizesLB(int *sizeEncoding, int numDivisions){
-      int *offsetBuffer = NULL;
-      int *recvSizePerProc = NULL;
-      int totalDivisions = 0;
+void avtImgCommunicator::gatherEncodingSizesLB(int *sizeEncoding, int numDivisions){
+    int *offsetBuffer = NULL;
+    int *recvSizePerProc = NULL;
+    int totalDivisions = 0;
 
-  #ifdef PARALLEL
+    #ifdef PARALLEL
 
     // Only proc 0 receives data
-      if (my_id == 0){
+        if (my_id == 0){
 
-          recvSizePerProc = new int[num_procs];
-          offsetBuffer = new int[num_procs];
+            recvSizePerProc = new int[num_procs];
+            offsetBuffer = new int[num_procs];
 
-          for (int i=0; i<num_procs; i++){
-            int numBoundsPerBlock = 1; //boundsPerBlockVec[i].size()/2;
-            totalDivisions += numBoundsPerBlock;
-            recvSizePerProc[i] = numBoundsPerBlock;
+            for (int i=0; i<num_procs; i++){
+                int numBoundsPerBlock = 1; //boundsPerBlockVec[i].size()/2;
+                totalDivisions += numBoundsPerBlock;
+                recvSizePerProc[i] = numBoundsPerBlock;
 
-            if (i == 0)
-              offsetBuffer[i] = 0;
-          else
-              offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
+                if (i == 0)
+                    offsetBuffer[i] = 0;
+                else
+                    offsetBuffer[i] = offsetBuffer[i-1] + recvSizePerProc[i-1];
 
-      }
-      compressedSizePerDiv = new int[totalDivisions];
+            }
+            compressedSizePerDiv = new int[totalDivisions];
 
-      debug5 << "avtImgCommunicator::gatherEncodingSizesLB      totalDivisions: " <<  totalDivisions << std::endl;
-  }
+            debug5 << "avtImgCommunicator::gatherEncodingSizesLB      totalDivisions: " <<  totalDivisions << std::endl;
+        }
 
         //  send   recv  others
-    MPI_Gatherv(sizeEncoding, numDivisions, MPI_INT,    compressedSizePerDiv, recvSizePerProc, offsetBuffer,MPI_INT,      0, MPI_COMM_WORLD); // all send to proc 0
+        MPI_Gatherv(sizeEncoding, numDivisions, MPI_INT,    compressedSizePerDiv, recvSizePerProc, offsetBuffer,MPI_INT,      0, MPI_COMM_WORLD); // all send to proc 0
 
 
 
-    if (my_id == 0){
-      for (int i=0; i<totalDivisions; i++)
-        debug5 <<  "  0 div: " << i << " : " << compressedSizePerDiv[i] << endl;
+        if (my_id == 0){
+            for (int i=0; i<totalDivisions; i++)
+                debug5 <<  "  0 div: " << i << " : " << compressedSizePerDiv[i] << endl;
 
-    if (offsetBuffer != NULL) 
-        delete []offsetBuffer;
-    offsetBuffer = NULL;
+            if (offsetBuffer != NULL) 
+                delete []offsetBuffer;
+            offsetBuffer = NULL;
 
-    if (recvSizePerProc != NULL)  
-        delete []recvSizePerProc;
-    recvSizePerProc = NULL;
-  }
-  #endif
+            if (recvSizePerProc != NULL)  
+                delete []recvSizePerProc;
+            recvSizePerProc = NULL;
+        }
+    #endif
 }
 
 

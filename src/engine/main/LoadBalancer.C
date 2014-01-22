@@ -258,18 +258,10 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
 
     while (myPartitions.size() != numDivisions){
         parent = myPartitions.front();   myPartitions.pop_front();
-        //if (rank == 0)
-        //     std::cout << rank << " ~~~ " << "Parent: "<< parent.axisIndex << "   - Extents (min-max):  " << parent.minExtents[0]<< ", " << parent.minExtents[1]<< ", " << parent.minExtents[2] << "   -   " << parent.maxExtents[0]<< ", " << parent.maxExtents[1]<< ", " << parent.maxExtents[2] << "  dims: " << parent.dims[0]<< ", " << parent.dims[1]<< ", " << parent.dims[2] << std::endl;
-        
+
         chopPartition(parent,one,two,axisOrder);
         myPartitions.push_back(one);
         myPartitions.push_back(two);
-
-        // if (rank == 0){
-        //     std::cout << rank << " ~~ " <<"One: "<<  one.axisIndex << "   - Extents (min-max):  " << one.minExtents[0]<< ", " << one.minExtents[1]<< ", " << one.minExtents[2] << "   -   " << one.maxExtents[0]<< ", " << one.maxExtents[1]<< ", " << one.maxExtents[2] << "  dims: " << one.dims[0]<< ", " << one.dims[1]<< ", " << one.dims[2] << std::endl;
-        //     std::cout << rank << " ~~ " <<"two: "<<  two.axisIndex << "   - Extents (min-max):  " << two.minExtents[0]<< ", " << two.minExtents[1]<< ", " << two.minExtents[2] << "   -   " << two.maxExtents[0]<< ", " << two.maxExtents[1]<< ", " << two.maxExtents[2] << "  dims: " << two.dims[0]<< ", " << two.dims[1]<< ", " << two.dims[2] << std::endl;
-        //     std::cout << std::endl;
-        // }
     }
 
 
@@ -324,7 +316,6 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     // Adding those that belong
     for (int j=0; j<patchesInsideList.size(); j++)
         list.push_back(patchesInsideList[j]);
-
 
     // Adding those that are not specifically in but only overlap!
     if (amr)
