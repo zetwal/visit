@@ -195,6 +195,9 @@ class AVTFILTERS_API avtRayExtractor
     int                       getImgPatchSize(){ return patchCount;};                                 // gets the number of patches
     imgMetaData               getImgMetaPatch(int patchId){ return imageMetaPatchVector.at(patchId);} // gets the metadata
     void                      getnDelImgData(int patchId, imgData &tempImgData);                      // gets the image & erase its existence
+    void                      getImgData(int patchId, imgData &tempImgData);
+    void                      delImgData(int patchId);
+    
     void                      delImgPatches();   
     avtImage_p                ExecuteRayTracer();
     avtImage_p                ExecuteRayTracerLB();

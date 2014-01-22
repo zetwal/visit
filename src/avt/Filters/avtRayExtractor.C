@@ -94,9 +94,19 @@ bool sortImgByCoordinatesX(imgMetaData const& before, imgMetaData const& after){
     return (before.screen_ll[0] < after.screen_ll[0]);
 }
 
+bool sortImgByCoordinatesLastX(imgMetaData const& before, imgMetaData const& after){
+  //if(before.screen_ll[0] != after.screen_ll[0]) 
+    return (before.screen_ur[0] > after.screen_ur[0]);
+}
+
 bool sortImgByCoordinatesY(imgMetaData const& before, imgMetaData const& after){
   //if(before.screen_ll[0] != after.screen_ll[0]) 
     return (before.screen_ll[1] < after.screen_ll[1]);
+}
+
+bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& after){
+  //if(before.screen_ll[0] != after.screen_ll[0]) 
+    return (before.screen_ur[1] > after.screen_ur[1]);
 }
 
 // ****************************************************************************
@@ -694,6 +704,8 @@ avtRayExtractor::delImgPatches(){
 void 
 avtRayExtractor::getnDelImgData(int patchId, imgData &tempImgData){
     iter_t it = imgDataHashMap.find(patchId);
+    if (it == imgDataHashMap.end())
+        std::cout << "########################### ERROR!!!! ################################################" << std::endl;
 
     tempImgData.procId = it->second.procId;
     tempImgData.patchNumber = it->second.patchNumber;
@@ -704,6 +716,30 @@ avtRayExtractor::getnDelImgData(int patchId, imgData &tempImgData){
     it->second.imagePatch = NULL;
 }
 
+
+void 
+avtRayExtractor::getImgData(int patchId, imgData &tempImgData){
+    iter_t it = imgDataHashMap.find(patchId);
+
+     if (it == imgDataHashMap.end())
+        std::cout << "########################### ERROR!!!! ################################################" << std::endl;
+
+    tempImgData.procId = it->second.procId;
+    tempImgData.patchNumber = it->second.patchNumber;
+    memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1] * sizeof(float));
+}
+
+void 
+avtRayExtractor::delImgData(int patchId){
+    iter_t it = imgDataHashMap.find(patchId);
+
+     if (it == imgDataHashMap.end())
+        std::cout << "########################### ERROR!!!! ################################################" << std::endl;
+
+    if (it->second.imagePatch != NULL)
+        delete [](*it).second.imagePatch;
+    it->second.imagePatch = NULL;
+}
 
 // ****************************************************************************
 //  Method: avtRayExtractor::
@@ -780,7 +816,6 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         //
         // if AMR Check which level patch it is (does it have parents) 
 
-
         //std::cout << PAR_Rank() << " ~ " << avtCallback::UseTestVal() << std::endl;
         //std::cout << PAR_Rank() << " ~ " << num << "   Patch extents: " << patchExtents[0] << ", " << patchExtents[1] << "   " << patchExtents[2] << ", " << patchExtents[3] << "   " << patchExtents[4] << ", " << patchExtents[5] << std::endl; 
 
@@ -830,15 +865,14 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             std::cout << PAR_Rank() << " ~ " << minExtents[0] << ", " << minExtents[1] << ", " << minExtents[2] << "  -  " << maxExtents[0] << ", " << maxExtents[1] << ", " << maxExtents[2] << "     screen width, height: " << width << ", " << height  << "   Partitions  min: " << minPos[0] << ", " << minPos[1] << ", " << minDepth << "     max: " << maxPos[0] << ", " << maxPos[1] << ", " << maxDepth << std::endl;
             partitionExtentsComputationDone = true;
         }
-        //world_to_screen(double _world[4], int imgWidth, int imgHeight, int screenPos[2], float &depth);
         massVoxelExtractor->SetPartitionExtents(currentPartitionExtents);  // minX, minY, minZ,    maxX, maxY,maxZ
         massVoxelExtractor->SetLogicalBounds(logicalBounds[0],logicalBounds[1],logicalBounds[2]);
         massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
+        massVoxelExtractor->SetAMR(avtCallback::UseAMR());
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds, varnames, varsizes);
 
         imgMetaData tmpImageMetaPatch;
         tmpImageMetaPatch = initMetaPatch(patchCount);
-
 
 
 
@@ -850,9 +884,6 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
                 tmpImageMetaPatch.extents[i] = patchExtents[i];
             imageMetaPatchVector.push_back(tmpImageMetaPatch);
 
-            //std::cout << tmpImageMetaPatch.procId << ", " << tmpImageMetaPatch.patchNumber << "  patchExtents: " << patchExtents[0] << ", " << patchExtents[1] << "   " << patchExtents[2] << ", " << patchExtents[3] << "   " << patchExtents[4] << ", " << patchExtents[5] <<  
-            //                    "   image: " <<  tmpImageMetaPatch.screen_ll[0] << ", " << tmpImageMetaPatch.screen_ll[1] << "   size: " << tmpImageMetaPatch.dims[0] << ", " << tmpImageMetaPatch.dims[1] << std::endl;
-
             imgData tmpImageDataHash;
             tmpImageDataHash.procId = tmpImageMetaPatch.procId;           tmpImageDataHash.patchNumber = tmpImageMetaPatch.patchNumber;         tmpImageDataHash.imagePatch = NULL;
             tmpImageDataHash.imagePatch = new float[(tmpImageMetaPatch.dims[0]*4)*tmpImageMetaPatch.dims[1]];
@@ -862,8 +893,8 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             patchCount++;
 
-            std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
-            createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
+           // std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
+           // createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
         }
         
     }
@@ -1500,7 +1531,8 @@ avtRayExtractor::ExecuteRayTracer(){
     //
     int imgBufferWidth = screen[0];
     int imgBufferHeight = screen[1];
-    float *buffer = new float[((imgBufferWidth * imgBufferHeight * 4)) * numZDivisions]();  //size: imgBufferWidth * imgBufferHeight * 4, initialized to 0
+    float *buffer = NULL;
+    buffer = new float[((imgBufferWidth * imgBufferHeight * 4)) * numZDivisions]();  //size: imgBufferWidth * imgBufferHeight * 4, initialized to 0
 
     std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgMetaDataByDepthCopy);
 
@@ -1913,12 +1945,40 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
     std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesX);
     startX = allImgMetaData[0].screen_ll[0];
-    endX = allImgMetaData[numPatches - 1].screen_ll[0] + allImgMetaData[numPatches - 1].dims[0];
+
+    std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesLastX);
+    endX = allImgMetaData[0].screen_ur[0];
+
     debug5 << PAR_Rank() <<  "  ~~~~  screen extents X: " << startX << ", " << endX << std::endl;
+
+
+
+
+/*
+bool sortImgByCoordinatesLastX(imgMetaData const& before, imgMetaData const& after){
+  //if(before.screen_ll[0] != after.screen_ll[0]) 
+    return (before.screen_ur[0] > after.screen_ur[0]);
+}
+
+bool sortImgByCoordinatesY(imgMetaData const& before, imgMetaData const& after){
+  //if(before.screen_ll[0] != after.screen_ll[0]) 
+    return (before.screen_ll[1] < after.screen_ll[1]);
+}
+
+bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& after){
+*/
+
+
+
+
+
 
     std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesY);
     startY = allImgMetaData[0].screen_ll[1];
-    endY = allImgMetaData[numPatches - 1].screen_ll[1] + allImgMetaData[numPatches - 1].dims[1];
+
+    std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesLastY);
+    endY = allImgMetaData[0].screen_ur[1];
+
     debug5 << PAR_Rank() <<  "  ~~~~  screen extents Y: " << startY << ", " << endY << std::endl;
     
 
@@ -1930,32 +1990,33 @@ avtRayExtractor::ExecuteRayTracerLB(){
     std::cout << PAR_Rank() << "   ~ after sort: " << endl;
 
 
+    //std::cout << PAR_Rank() << " ~  startX: " << startX << "   endX: " << endX << "    startY" << startY << "   endY: "<< endY << "    width" << endX - startX << "  height: " << endY - startY << std::endl;
+
 
     //
     // Composite the images
     //
     
     // Creates a buffer to store the composited image
-    int imgBufferWidth = endX - startX;
-    int imgBufferHeight = endY - startY;
-    float *buffer = new float[imgBufferWidth * imgBufferHeight * 4];
-
-    for (int i=0; i<(imgBufferWidth * imgBufferHeight * 4); i+=4){
-        buffer[i+0] = 0;  
-        buffer[i+1] = 0;
-        buffer[i+2] = 0;
-        buffer[i+3] = 0.0;
-    }
+    int imgBufferWidth = endX - startX +1;
+    int imgBufferHeight = endY - startY +1;
+    float *localBuffer = NULL;
+    localBuffer = new float[imgBufferWidth * imgBufferHeight * 4]();
 
     debug5 << PAR_Rank() << "   ~ before loop: " << endl;
+
     for (int i=0; i<numPatches; i++){
         imgMetaData currentPatch = allImgMetaData[i];
         imgData tempImgData;
-        tempImgData.imagePatch = new float[currentPatch.dims[0] * currentPatch.dims[1] * 4];
-        getnDelImgData(currentPatch.patchNumber, tempImgData);
+        tempImgData.imagePatch = NULL;
+        tempImgData.imagePatch = new float[currentPatch.dims[0] * currentPatch.dims[1] * 4]();
+        //getnDelImgData(currentPatch.patchNumber, tempImgData);
+        getImgData(currentPatch.patchNumber, tempImgData);
 
         int startingX = currentPatch.screen_ll[0] - startX;
         int startingY = currentPatch.screen_ll[1] - startY; 
+
+        //std::cout << PAR_Rank() << " ~ " << i << "  patch: " << currentPatch.patchNumber << ": ll: " << currentPatch.screen_ll[0] << ", " << currentPatch.screen_ll[1] << "   ur: "<< currentPatch.screen_ur[0] << ", " << currentPatch.screen_ur[1] << "  dims: " << currentPatch.dims[0] << ", " << currentPatch.dims[1] << std::endl;
 
 
         for (int j=0; j<currentPatch.dims[1]; j++){
@@ -1971,32 +2032,37 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 int subImgIndex = currentPatch.dims[0]*j*4 + k*4;                                           // index in the subimage 
                 int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);  // index in the big buffer
 
-                if (buffer[bufferIndex+3] > 1.0)
+                if (localBuffer[bufferIndex+3] > 1.0)
                     continue;
 
                 if (tempImgData.imagePatch[subImgIndex+3] <= 0.0)
                     continue;
 
                 // back to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
-                buffer[bufferIndex+0] = imgComm.clamp((buffer[bufferIndex+0] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+0]);
-                buffer[bufferIndex+1] = imgComm.clamp((buffer[bufferIndex+1] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+1]);
-                buffer[bufferIndex+2] = imgComm.clamp((buffer[bufferIndex+2] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+2]);
-                buffer[bufferIndex+3] = imgComm.clamp((buffer[bufferIndex+3] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+3]);
+                localBuffer[bufferIndex+0] = imgComm.clamp((localBuffer[bufferIndex+0] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+0]);
+                localBuffer[bufferIndex+1] = imgComm.clamp((localBuffer[bufferIndex+1] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+1]);
+                localBuffer[bufferIndex+2] = imgComm.clamp((localBuffer[bufferIndex+2] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+2]);
+                localBuffer[bufferIndex+3] = imgComm.clamp((localBuffer[bufferIndex+3] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+3]);
             }
         }
+
+       // std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_composed_ " + NumbToString(PAR_Rank()) + "_"+ NumbToString(i) +"_"+ NumbToString(currentPatch.patchNumber) + "_.ppm";
+       // createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_comp);
 
         if (tempImgData.imagePatch != NULL)
             delete []tempImgData.imagePatch;
         tempImgData.imagePatch = NULL;
+
+        delImgData(currentPatch.patchNumber);
     }
+
+    delImgPatches();
     allImgMetaData.clear();
     imageMetaPatchVector.clear();
     imgDataHashMap.clear();
 
-    imgComm.syncAllProcs();
-
-    std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_composed_"+ NumbToString(PAR_Rank()) + "_.ppm";
-    createPpm(buffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
+  //  std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_composed_"+ NumbToString(PAR_Rank()) + "_.ppm";
+  //  createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
 
     debug5 << PAR_Rank() << "  ~ composing patch done: " << endl;
     std::cout << PAR_Rank() << "  ~ composing patch done: " << endl;
@@ -2009,15 +2075,15 @@ avtRayExtractor::ExecuteRayTracerLB(){
     float *encoding = NULL;
     int *sizeEncoding = NULL;
     std::cout << PAR_Rank() << "   ~ rleEncodeAll : imgBufferWidth,imgBufferHeight: " << imgBufferWidth << ", " <<  imgBufferHeight << "  numZDivisions: " << 1 << endl;
-    int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, 1,buffer,  encoding,sizeEncoding);
+    int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, 1,localBuffer,  encoding,sizeEncoding);
 
-
-    if (buffer != NULL)
-        delete []buffer;
-    buffer = NULL;
-    
     debug5 << PAR_Rank() << "  ~ encoding done!  "<< endl;
     std::cout << PAR_Rank() << "  ~ encoding done!  "<< endl;
+
+    imgComm.syncAllProcs();
+
+    std::cout << PAR_Rank() << "  ~ after imgComm.syncAllProcs()!  "<< endl;
+
 
     //
     // --- Timing -- 
@@ -2044,6 +2110,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
     debug5 << PAR_Rank() << "  ~ gatherEncodingSizes " << endl;
     std::cout << PAR_Rank() << "  ~ gatherEncodingSizes " << endl;
 
+    imgComm.syncAllProcs();
+
+    std::cout << PAR_Rank() << "  ~ after imgComm.syncAllProcs()2!  "<< endl;
 
     if (encoding != NULL)
         delete []encoding;
@@ -2052,6 +2121,12 @@ avtRayExtractor::ExecuteRayTracerLB(){
     if (sizeEncoding != NULL)
         delete []sizeEncoding;
     sizeEncoding = NULL;
+
+    if (localBuffer != NULL)
+        delete []localBuffer;
+    localBuffer = NULL;
+
+    std::cout << PAR_Rank() << "  ~ delete []buffer!  "<< endl;
    
 
     //
@@ -2079,11 +2154,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
         float *zbuffer = new float[screen[0] * screen[1]];
         
-
         // creates input for the
         vtkImageData *img = avtImageRepresentation ::NewImage(screen[0], screen[1]);
         whole_image->GetImage() = img;
-
 
         imgTest = new unsigned char[screen[0] * screen[1] * 3];
         imgTest = whole_image->GetImage().GetRGBBuffer();
@@ -2101,7 +2174,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
         img = NULL;
 
        
-
         debug5 << PAR_Rank() << "   ~ final: " << endl;
         std::cout << PAR_Rank() << "   ~ final: " << std::endl;
 
