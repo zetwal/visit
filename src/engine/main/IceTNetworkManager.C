@@ -444,10 +444,8 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
         ICET(icetDrawFrame());
 
         // Now that we're done rendering, we need to post process the image.
-        debug3 << "IceTNM: Starting readback." << std::endl;
         avtDataObject_p dob;
         {
-            std::cout << "IceTNetworkManager::Render... IceTNM: Starting readback ..." << std::endl;
             avtImage_p img = this->Readback(viswin, needZB);
             CopyTo(dob, img);
         }

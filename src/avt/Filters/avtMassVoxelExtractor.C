@@ -635,48 +635,40 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     if (!FrustumIntersectsGrid(w_min, w_max, h_min, h_max))
        return;
     
-    //
-    // Determine the screen size of the patch being processed
-    //
-    xMin = yMin = 1000000;
-    xMax = yMax = -1000000;
-    
-    float coordinates[8][3];
-    coordinates[0][0] = X[0];           coordinates[0][1] = Y[0];           coordinates[0][2] = Z[0];
-    coordinates[1][0] = X[dims[0]-1];   coordinates[1][1] = Y[0];           coordinates[1][2] = Z[0];
-    coordinates[2][0] = X[dims[0]-1];   coordinates[2][1] = Y[dims[1]-1];   coordinates[2][2] = Z[0];
-    coordinates[3][0] = X[0];           coordinates[3][1] = Y[dims[1]-1];   coordinates[3][2] = Z[0];
-
-    coordinates[4][0] = X[0];           coordinates[4][1] = Y[0];           coordinates[4][2] = Z[dims[2]-1];
-    coordinates[5][0] = X[dims[0]-1];   coordinates[5][1] = Y[0];           coordinates[5][2] = Z[dims[2]-1];
-    coordinates[6][0] = X[dims[0]-1];   coordinates[6][1] = Y[dims[1]-1];   coordinates[6][2] = Z[dims[2]-1];
-    coordinates[7][0] = X[0];           coordinates[7][1] = Y[dims[1]-1];   coordinates[7][2] = Z[dims[2]-1];
-
     double scRange[2], bounds[6];
     int dDims[3];
     rgrid->GetScalarRange(scRange);
     rgrid->GetBounds(bounds);
     rgrid->GetDimensions(dDims);
 
-    //minIndex[0]
+
+    //
+    // AMR: set where to clip off in world space
+    //
     bool minFound, maxFound;
-    minFound = maxFound = false;
+   
     minIndex[0] = minIndex[1] = minIndex[2] = 0;
     minIndex[0] = dims[0]-1;
     minIndex[1] = dims[1]-1;
     minIndex[2] = dims[2]-1;
 
     if (isAMR == true){
-        if (X[0] >= currentPartitionExtents[0] && X[0] < currentPartitionExtents[3]){ // fully in
+        // 
+        // x
+        minFound = maxFound = false;
+
+        // fully in
+        if (X[0] >= currentPartitionExtents[0] && X[0] < currentPartitionExtents[3]){ 
             minIndex[0] = 0;
             minFound = true;
         }
 
-        if (X[dims[0]-1] >= currentPartitionExtents[0] && X[dims[0]-1] < currentPartitionExtents[3]){ // fully in
+        if (X[dims[0]-1] >= currentPartitionExtents[0] && X[dims[0]-1] < currentPartitionExtents[3]){ 
             maxIndex[0] = dims[0]-1;
             maxFound = true;
         }
 
+        // other cases
         if (minFound == false)
             minIndex[0] = 0;
             for (int i=0; i<dims[0]-1; i++){
@@ -694,7 +686,6 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             for (int i=dims[0]-1; i>=0; i--){
                 if (X[i] < currentPartitionExtents[3]){
                     maxFound = true;
-                    //maxIndex[0] = i;
                     break;
                 }else{
                     maxIndex[0] = i;
@@ -703,17 +694,22 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
 
 
+        //
+        // y
         minFound = maxFound = false;
-        if (Y[0] >= currentPartitionExtents[1] && Y[0] < currentPartitionExtents[4]){ // fully in
+
+        // fully in on one side
+        if (Y[0] >= currentPartitionExtents[1] && Y[0] < currentPartitionExtents[4]){ 
             minIndex[1] = 0;
             minFound = true;
         }
 
-        if (Y[dims[1]-1] >= currentPartitionExtents[1] && Y[dims[1]-1] < currentPartitionExtents[4]){ // fully in
+        if (Y[dims[1]-1] >= currentPartitionExtents[1] && Y[dims[1]-1] < currentPartitionExtents[4]){ 
             maxIndex[1] = dims[1]-1;
             maxFound = true;
         }
 
+        // other cases
         if (minFound == false)
             minIndex[1] = 0;
             for (int i=0; i<dims[1]-1; i++){
@@ -731,7 +727,6 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             for (int i=dims[1]-1; i>=0; i--){
                 if (Y[i] < currentPartitionExtents[4]){
                     maxFound = true;
-                    //maxIndex[1] = i;
                     break;
                 }else{
                     maxIndex[1] = i;
@@ -739,17 +734,22 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             }
 
 
+        //
+        // z
         minFound = maxFound = false;
-        if (Z[0] >= currentPartitionExtents[2] && Z[0] < currentPartitionExtents[5]){ // fully in
+
+        // fully in on one side
+        if (Z[0] >= currentPartitionExtents[2] && Z[0] < currentPartitionExtents[5]){ // fully in on one side
             minIndex[2] = 0;
             minFound = true;
         }
 
-        if (Z[dims[2]-1] >= currentPartitionExtents[2] && Z[dims[2]-1] < currentPartitionExtents[5]){ // fully in
+        if (Z[dims[2]-1] >= currentPartitionExtents[2] && Z[dims[2]-1] < currentPartitionExtents[5]){ // fully in on the other side
             maxIndex[2] = dims[2]-1;
             maxFound = true;
         }
 
+        // other cases
         if (minFound == false)
             minIndex[2] = 0;
             for (int i=0; i<dims[2]-1; i++){
@@ -767,27 +767,42 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             for (int i=dims[2]-1; i>=0; i--){
                 if (Z[i] < currentPartitionExtents[5]){
                     maxFound = true;
-                    //maxIndex[2] = i;
                     break;
                 }else{
                     maxIndex[2] = i;
                 }
             }
 
-        
         // std::cout << proc << " ~ " << patch << 
         //     "  orig ind: 0 , 0, 0  to " << dims[0]-1 << ", " << dims[1]-1 << ", " << dims[2]-1 << 
         //     "  new ind: " << minIndex[0] << ", " << minIndex[1] << ", " << minIndex[2] << "  to " << maxIndex[0] << ", " << maxIndex[1] << ", " << maxIndex[2] <<
         //     "  patch extents: " << X[0] << ", " << Y[0] << ", " << Z[0] << "  to  " << X[dims[0]-1] << ", " << Y[dims[1]-1] << ", " << Z[dims[2]-1] <<
         //     "  new patch extents: " << X[minIndex[0]] << ", " << Y[minIndex[1]] << ", " << Z[minIndex[2]] << "  to  " << X[maxIndex[0]] << ", " << Y[maxIndex[1]] << ", " << Z[maxIndex[2]] <<
         //     "  partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << "  to  " << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl;
-         }
+    }
 
 
-    float offset = 0.0f;
-    float offset_0 = 0.0f;
-    float error_correction = 0.0f;
+    //
+    // Determine the screen size of the patch being processed
+    //
+    xMin = yMin = 1000000;
+    xMax = yMax = -1000000;
+    
+    float coordinates[8][3];
+    coordinates[0][0] = X[0];           coordinates[0][1] = Y[0];           coordinates[0][2] = Z[0];
+    coordinates[1][0] = X[dims[0]-1];   coordinates[1][1] = Y[0];           coordinates[1][2] = Z[0];
+    coordinates[2][0] = X[dims[0]-1];   coordinates[2][1] = Y[dims[1]-1];   coordinates[2][2] = Z[0];
+    coordinates[3][0] = X[0];           coordinates[3][1] = Y[dims[1]-1];   coordinates[3][2] = Z[0];
+
+    coordinates[4][0] = X[0];           coordinates[4][1] = Y[0];           coordinates[4][2] = Z[dims[2]-1];
+    coordinates[5][0] = X[dims[0]-1];   coordinates[5][1] = Y[0];           coordinates[5][2] = Z[dims[2]-1];
+    coordinates[6][0] = X[dims[0]-1];   coordinates[6][1] = Y[dims[1]-1];   coordinates[6][2] = Z[dims[2]-1];
+    coordinates[7][0] = X[0];           coordinates[7][1] = Y[dims[1]-1];   coordinates[7][2] = Z[dims[2]-1];
+
+    std::cout << proc << " ~ " << patch << "  X[0]: " << X[0] << "   X[dims[0]-1]: " << X[dims[0]-1] << "   meshMin: " << meshMin[0] << "   meshMax: " << meshMax[0] << std::endl;
     double _world[4], _view[4];
+    float offset, offset_0, error_correction;
+    offset = offset_0 = error_correction = 0.0f;
     _world[3] = 1.0;
     imgDepth = 0;
 
@@ -833,7 +848,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     if (yMax >= h_max) yMax = h_max-1;
 
     int intOffset = 0;
-    xMin = xMin - intOffset;    xMax = xMax + intOffset;    imgWidth = xMax - xMin + 1;
+    xMin = xMin - intOffset;    xMax = xMax + intOffset;    imgWidth =  xMax - xMin + 1;
     yMin = yMin - intOffset;    yMax = yMax + intOffset;    imgHeight = yMax - yMin + 1;
 
     imgArray = new float[((imgWidth)*4) * imgHeight](); // declare and initialize to 0.0 ()
@@ -842,9 +857,6 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     imgLowerLeft[0] = xMin;      imgLowerLeft[1] = yMin;
     imgUpperRight[0] = xMax;     imgUpperRight[1] = yMax;
 
-    //std::cout <<  proc << ", " <<patch << "   x range: " << xMin << ", " << xMax << "  width: " << imgWidth << "   y range: " << yMin << ", " << yMax << "  height: " << imgHeight <<std::endl;
-
-   // std::cout << proc << ", " << patch << "  range: " << X[0] << ", " << X[dims[0]-1] << "  " << Y[0] << ", " << Y[dims[1]-1] << "  " << Z[0] << ", " << Z[dims[2]-1] << "  IMAGE POS: " << imgUpperRight[0] << ", " << imgUpperRight[1] << " - " << imgLowerLeft[0] << ", " << imgLowerLeft[1] << "   dims: " << imgDims[0] << ", " << imgDims[1] << std::endl;
     for (int i = xMin ; i < xMax ; i++)
         for (int j = yMin ; j < yMax ; j++)
         {
@@ -1596,27 +1608,15 @@ avtMassVoxelExtractor::trilinearInterpolate(double vals[8], float distRight, flo
     float dist_from_top,dist_from_bottom;
     float dist_from_back,dist_from_front;
 
-    //if (logicalBounds[0] > 1){
-        dist_from_right = 1.0 - distRight;
-        dist_from_left = distRight;
-    // }else{
-    //     dist_from_right = dist_from_left = distRight;
-    // }
+    dist_from_right = 1.0 - distRight;
+    dist_from_left = distRight;
 
-    //if (logicalBounds[1] > 1){
-        dist_from_top = 1.0 - distTop;
-        dist_from_bottom = distTop;
-    // }else{
-    //     dist_from_top = dist_from_bottom = distTop;
-    // }
+    dist_from_top = 1.0 - distTop;
+    dist_from_bottom = distTop;
 
-    //if (logicalBounds[2] > 1){
-        dist_from_back = 1.0 - distBack;
-        dist_from_front = distBack;
-    // }else{
-    //     dist_from_back = dist_from_front = 1.0-distBack;
-    // }
-    
+    dist_from_back = 1.0 - distBack;
+    dist_from_front = distBack;
+
     
     double val =   dist_from_right     * dist_from_top         * dist_from_back * vals[0] + 
                     dist_from_left      * dist_from_top         * dist_from_back * vals[1] +
@@ -1688,7 +1688,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         if (!valid_sample[i])
             continue;
 
-
         if (!valid_sample[i] && inrun)
             if (rayCastingSLIVR == false){
                 ray->SetSamples(i-count, i-1, tmpSampleList);
@@ -1700,8 +1699,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         float dist_from_left, dist_from_right,  dist_from_top,dist_from_bottom,  dist_from_front, dist_from_back;
         
         int offsetLow[3], offsetHigh[3];
-        offsetLow[0] = offsetLow[1] = offsetLow[2] = 1;
-        offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 2;
+        offsetLow[0] = offsetLow[1] = offsetLow[2] = 0;
+        offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 0;
 
         int newInd[3];
         newInd[0] = ind[0];
@@ -1723,18 +1722,15 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         indices[0] = index_left;        indices[1] = index_right;
 
 
-        if (logicalBounds[0] == 1){
+        if (logicalBounds[0] == 1)
             indices[0] = indices[1] = 0;
-        }
-
-        if (logicalBounds[1] == 1){
+        
+        if (logicalBounds[1] == 1)
             indices[2] = indices[3] = 0;
-        }
-
-        if (logicalBounds[2] == 1){
+        
+        if (logicalBounds[2] == 1)
             indices[4] = indices[5] = 0;
-        }
-
+        
 
         if (trilinearInterpolation){
             if (logicalBounds[0] > 1)
@@ -1777,6 +1773,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 if (!(ind[2] >= offsetLow[2] && ind[2] <= (dims[2]-1) - offsetHigh[2]))
                     valid_sample[i] = false;
         }
+
+
 
         if (rayCastingSLIVR && isAMR){
             if (indices[0] < minIndex[0] || indices[0] > maxIndex[0])
@@ -1835,7 +1833,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                         //                                         << "  |   indexT: " << indexT[0] << ", " << indexT[1] << ", " << indexT[2] << ", " << indexT[3] << ", " << indexT[4] << ", " << indexT[5] << ", " << indexT[6] << ", " << indexT[7] << std::endl << std::endl << std::endl;
                         // // }
                         
-
                         if (rayCastingSLIVR){
                             double source_rgb[4];
                             int retVal = transferFn1D->QueryTF(scalarValue,source_rgb);

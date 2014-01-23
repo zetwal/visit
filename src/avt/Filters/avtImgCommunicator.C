@@ -1297,7 +1297,7 @@ iotaMeta avtImgCommunicator::setIota(int _procId, int _patchNumber, int dim_x, i
 // ****************************************************************************
 
 bool compareColor(code x, float r, float g, float b, float a){
-    float epsilon = 0.00001;
+    float epsilon = FLT_MIN;
 
     if  (  ((fabs(x.color[0] - r) < epsilon) && (fabs(x.color[1] - g) < epsilon)) && ((fabs(x.color[0] - r) < epsilon) && (fabs(x.color[1] - g) < epsilon)) ){
         return true;
@@ -1376,42 +1376,24 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *i
     int prev = 0;
 
     debug5 <<  my_id << "  ~  before Compress the data dimX: " << dimsX << "   dimsY: " << dimsY << "   numDivs: " << numDivs << std::endl;
-    std::cout <<  my_id << "  ~  before Compress the data dimX: " << dimsX << "   dimsY: " << dimsY << "   numDivs: " << numDivs << std::endl;
+    
     // Compress the data
     for (int j=0; j<numDivs; j++){
         int offset = dimsX*dimsY*4  *  j; // to get the next image in the array of images
 
         int i=0;
         tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],  imgArray[offset + (i*4+3)]);
-        //debug5 <<  my_id << "  ~  before for (i=1; i<dimsX*dimsY; i++) " << std::endl;
-
 
         for (i=1; i<dimsX*dimsY; i++){
-            //debug5 <<  my_id << "  ~  in for (i=1; i<dimsX*dimsY; i++) i:" << i << std::endl;
-
-            if ( compareColor(tempCode, imgArray[offset + (i*4+0)], imgArray[offset + (i*4+1)], imgArray[offset + (i*4+2)], imgArray[offset + (i*4+3)]) ){
-                //debug5 <<  my_id << "  ~ incrCode(tempCode) " << i << 
-                //"   tempCode.count:" << tempCode.count << "  tempCode.color: " << tempCode.color[0] << ", " << tempCode.color[1] << ", " << tempCode.color[2] << ", " << tempCode.color[3] <<
-                //"   array: " << imgArray[offset + (i*4+0)] << ", " <<  imgArray[offset + (i*4+1)] << ",  " <<  imgArray[offset + (i*4+2)] << ", " <<  imgArray[offset + (i*4+3)] << std::endl;
+            if ( compareColor(tempCode, imgArray[offset + (i*4+0)], imgArray[offset + (i*4+1)], imgArray[offset + (i*4+2)], imgArray[offset + (i*4+3)]) )
                 tempCode = incrCode(tempCode);
-            }
-            else
-            {
-                //debug5 <<  my_id << "  ~ encodingVec.push_back: " << i << "   tempCode.count:" << tempCode.count << "  tempCode.color: " << tempCode.color[0] << ", " << tempCode.color[1] << ", " << tempCode.color[2] << ", " << tempCode.color[3] << std::endl << std::endl;
+            else{
                 encodingVec.push_back(tempCode);
-                //debug5 <<  my_id << "  ~ create new i : " << i << std::endl;
                 tempCode = initCode(1, imgArray[offset + (i*4+0)],imgArray[offset + (i*4+1)],imgArray[offset + (i*4+2)],imgArray[offset + (i*4+3)]);
             }
-
-            //debug5 <<  my_id << "  ~ encodingVec.size: " << encodingVec.size() << "     tempCode.count:" << tempCode.count << "  tempCode.color: " << tempCode.color[0] << ", " << tempCode.color[1] << ", " << tempCode.color[2] << ", " << tempCode.color[3] << std::endl << std::endl;
         }
 
-        debug5 <<  std::endl << std::endl << std::endl;
-        debug5 <<  my_id << "  ~  before encodingVec.push_back" << std::endl;
-
         encodingVec.push_back(tempCode);
-
-        debug5 <<  my_id << "  ~  after encodingVec.push_back " << std::endl;
 
         if (j == 0)
             prev = sizeOfEncoding[j] = encodingVec.size();
@@ -1419,12 +1401,7 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *i
             sizeOfEncoding[j] = encodingVec.size() - prev;
             prev = encodingVec.size();
         }
-
-        debug5 <<  my_id << "  ~  encoding.size(): " << sizeOfEncoding[j] << "   offset: " << offset << "    original size: " << (dimsX * dimsY * 4) << "   size: " << encodingVec.size() << std::endl;
     }
-
-
-    std::cout <<  my_id << "  ~  Transfer the data to the encoding array -  encodingVec.size(): " << encodingVec.size() << std::endl;
 
     // Transfer the data to the encoding array
     int encSize = encodingVec.size();
@@ -1439,8 +1416,6 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *i
         encoding[index] = encodingVec[j].color[3];  index++;  
     }
     encodingVec.clear();
-
-    std::cout <<  my_id << "  ~  Transfer the data to the encoding array -  done - encSize: " << encSize << std::endl;
 
     return encSize;   // size of the array
 }
@@ -1517,7 +1492,6 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
     int *offsetBuffer = NULL;
     int totalDivisions = 0;
     std::multimap <float,int> depthPartitions;  //float: z-value, int: division index
-
 
     int numData = 4;
     int *dataToReceive = new int[numData * num_procs]; // 0: sizex, 1: size_y, 2: startingX, 3: startingY

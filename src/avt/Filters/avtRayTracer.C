@@ -455,9 +455,9 @@ avtRayTracer::Execute(void)
     extractor.SetJittering(true);
     extractor.SetInput(trans.GetOutput());
 
-    extractorRay.SetInput(trans.GetOutput());
-
     if (trilinearInterpolation || rayCastingSLIVR){
+        extractorRay.SetInput(trans.GetOutput());
+
         extractor.SetTrilinear(trilinearInterpolation);
         extractor.SetRayCastingSLIVR(rayCastingSLIVR);
         extractor.SetLighting(lighting);
@@ -482,7 +482,6 @@ avtRayTracer::Execute(void)
         extractorRay.SetParallelOn(parallelOn);
         extractorRay.SetScreen(screen);
         extractorRay.SetBackground(background);
-
     }
     else
         if (rayCastingSLIVR == false)
@@ -520,7 +519,6 @@ avtRayTracer::Execute(void)
         std::string mesh = md->MeshForVar(datts.GetVariableName());
         const avtMeshMetaData *mmd = md->GetMesh(mesh);
 
-        
         std::string varName = datts.GetVariableName();
         
         for (int i=0; i<3; i++){
@@ -529,12 +527,14 @@ avtRayTracer::Execute(void)
             logicalBounds[i]=mmd->logicalBounds[i];
         }
 
-        std::cout << "| db : " << db << "  mesh:  " << mesh << "   varname: " << varName << std::endl;
+        debug5 << "| db : " << db << "  mesh:  " << mesh << "   varname: " << varName << std::endl;
 
         extractorRay.SetVarName(varName);
         extractorRay.SetMeshDims(meshMin,meshMax);
         extractorRay.SetLogicalBounds(logicalBounds[0],logicalBounds[1],logicalBounds[2]);
 
+        std::cout << "| logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
+        std::cout << "| logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
         std::cout << "| logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
 
         // get partitions Extents
@@ -630,19 +630,18 @@ avtRayTracer::Execute(void)
             numChildren.push_back(childrenCount);            
         }
     
-        std::stringstream ssssss;
-        int index = 0;
-        for (int xx=0; xx<patchesIn.size(); xx++){
-            ssssss << PAR_Rank() << " ~ Parent: " << xx << " - num children = " << numChildren[xx] << " : ";
-            for (int yy=0; yy<numChildren[xx]; yy++){
-                ssssss << parentChild[index] << ", ";
-                index++;
-            }
-            ssssss << std::endl;
-        }
-        std::cout << ssssss.str() << std::endl;
+        // std::stringstream ssssss;
+        // int index = 0;
+        // for (int xx=0; xx<patchesIn.size(); xx++){
+        //     ssssss << PAR_Rank() << " ~ Parent: " << xx << " - num children = " << numChildren[xx] << " : ";
+        //     for (int yy=0; yy<numChildren[xx]; yy++){
+        //         ssssss << parentChild[index] << ", ";
+        //         index++;
+        //     }
+        //     ssssss << std::endl;
+        // }
+        // std::cout << ssssss.str() << std::endl;
             
-    
         debug5 << PAR_Rank() << " ~ varName: " << varName << 
                   "  Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
                                  "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
@@ -660,24 +659,30 @@ avtRayTracer::Execute(void)
         avtDataObject_p samplesRay = extractorRay.GetOutput();
         samplesRay->Update(GetGeneralContract());
 
-        debug5 << PAR_Rank() <<  "  ~    extractorRay: " << extractorRay.getImgPatchSize() << std::endl; 
-        avtImage_p finImage;
-         if (avtCallback::UseKdTreeLoadBalancer() == true){
-            std::cout << "Used kd tree load balancer" << std::endl;
-            finImage = extractorRay.ExecuteRayTracerLB();
-        }else{
-            std::cout << "NOT used kd tree load balancer" << std::endl;
-            finImage = extractorRay.ExecuteRayTracer();
-        }
-        SetOutput(finImage);
-
-        visitTimer->StopTimer(timingIndex, "Ray Tracing");
+        visitTimer->StopTimer(timingVolToImg, "Volume rendering of on each processor");
         visitTimer->DumpTimings();
 
-        extractorRay.delImgPatches();
+        int compositingTiming;
+        compositingTiming = visitTimer->StartTimer();
 
-        debug5 << "******************** avtRayTracer " << std::endl;
-        std::cout << "******************** avtRayTracer " << std::endl;
+        debug5 << PAR_Rank() <<  "  ~    extractorRay: " << extractorRay.getImgPatchSize() << std::endl; 
+
+        avtImage_p finalImage;
+        if (avtCallback::UseKdTreeLoadBalancer() == true){
+            debug5 << "Used kd tree load balancer" << std::endl;
+            finalImage = extractorRay.ExecuteRayTracerLB();
+        }else{
+            debug5 << "NOT used kd tree load balancer" << std::endl;
+            finalImage = extractorRay.ExecuteRayTracer();
+        }
+        SetOutput(finalImage);
+
+        visitTimer->StopTimer(compositingTiming, "Compositing");
+        visitTimer->DumpTimings();
+
+        visitTimer->StopTimer(timingIndex, "Full Ray Tracing");
+        visitTimer->DumpTimings();
+
         return;
     }
 
