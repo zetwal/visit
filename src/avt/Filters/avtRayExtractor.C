@@ -893,8 +893,8 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             patchCount++;
 
-           // std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
-           // createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
+            //std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
+            //createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
         }
         
     }
@@ -1150,7 +1150,6 @@ avtRayExtractor::ExecuteRayTracer(){
     imgComm.scatterNumDataToCompose(totalSendData, totalRecvData, numZDivisions, totalPatchesToCompositeLocally);
 
     debug5 << PAR_Rank() << " ~  num patches to send: " << totalSendData/2 << " num processors to recv from: " << totalRecvData/2 << "    numZDivisions: " << numZDivisions << "   totalPatchesToCompositeLocally: " <<   totalPatchesToCompositeLocally << endl;
-
     std::cout << PAR_Rank() << " ~  num patches to send: " << totalSendData/2 << " num processors to recv from: " << totalRecvData/2 << "    numZDivisions: " << numZDivisions << "   totalPatchesToCompositeLocally: " <<   totalPatchesToCompositeLocally << endl;
 
 
@@ -1707,9 +1706,6 @@ avtRayExtractor::ExecuteRayTracer(){
         imgComm.getcompositedImage(screen[0], screen[1], imgTest); 
         img->Delete();
 
-        debug5 << PAR_Rank() << "   ~ final: " << endl;
-        std::cout << PAR_Rank() << "   ~ final: " << std::endl;
-
         if (zbuffer != NULL)
             delete []zbuffer;
     }
@@ -1908,8 +1904,6 @@ avtRayExtractor::patchOverlap(float patchMinX, float patchMaxX, float patchMinY,
 
 avtImage_p
 avtRayExtractor::ExecuteRayTracerLB(){
-    std::cout << PAR_Rank() <<  " ~ avtRayExtractor::ExecuteRayTracerLB" << std::endl;
-    
     int timingVolToImg;
     // if (parallelOn){
     //     timingVolToImg = visitTimer->StartTimer();
@@ -1933,64 +1927,47 @@ avtRayExtractor::ExecuteRayTracerLB(){
         temp = getImgMetaPatch(i);
         allImgMetaData.push_back(temp);
     }
-    //debug5 << PAR_Rank() << "   avtRayTracer::ExecuteRayTracerLB  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
-    std::cout << PAR_Rank() << "   avtRayTracer::ExecuteRayTracerLB  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
+    debug5 << PAR_Rank() << " ~ avtRayTracer::ExecuteRayTracerLB  - Getting the patches - num patches used: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
+    std::cout << PAR_Rank() << " ~ avtRayTracer::ExecuteRayTracerLB  - Getting the patches - num patches used : " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
 
+    if (numPatches <= 0){   // less should not happen!!!
+        // no compositing to do
+        // no encoding to do
 
-    float avg_z = allImgMetaData[0].avg_z;
-    float startX = allImgMetaData[0].screen_ll[0];
-    float startY = allImgMetaData[0].screen_ll[1];
-    float endX, endY;
+    }
 
-
-    std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesX);
-    startX = allImgMetaData[0].screen_ll[0];
-
-    std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesLastX);
-    endX = allImgMetaData[0].screen_ur[0];
-
-    debug5 << PAR_Rank() <<  "  ~~~~  screen extents X: " << startX << ", " << endX << std::endl;
-
-
-
-
-/*
-bool sortImgByCoordinatesLastX(imgMetaData const& before, imgMetaData const& after){
-  //if(before.screen_ll[0] != after.screen_ll[0]) 
-    return (before.screen_ur[0] > after.screen_ur[0]);
-}
-
-bool sortImgByCoordinatesY(imgMetaData const& before, imgMetaData const& after){
-  //if(before.screen_ll[0] != after.screen_ll[0]) 
-    return (before.screen_ll[1] < after.screen_ll[1]);
-}
-
-bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& after){
-*/
-
-
-
-
-
-
-    std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesY);
-    startY = allImgMetaData[0].screen_ll[1];
-
-    std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesLastY);
-    endY = allImgMetaData[0].screen_ur[1];
-
-    debug5 << PAR_Rank() <<  "  ~~~~  screen extents Y: " << startY << ", " << endY << std::endl;
     
+    int imgBufferWidth, imgBufferHeight;
+    int startX, startY, endX, endY;
+    float avg_z;
+    imgBufferWidth = imgBufferHeight = 0;
+    if (numPatches > 0){ 
+        //
+        // Sort to find extents of patches
+        avg_z = allImgMetaData[0].avg_z;
 
-    //
-    // Sort with the largest z first
-    std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgMetaDataByDepthCopy);
+        std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesX);
+        startX = allImgMetaData[0].screen_ll[0];
 
-    debug5 << PAR_Rank() << "   ~ after sort: " << endl;
-    std::cout << PAR_Rank() << "   ~ after sort: " << endl;
+        std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesLastX);
+        endX = allImgMetaData[0].screen_ur[0];
 
+        std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesY);
+        startY = allImgMetaData[0].screen_ll[1];
 
-    //std::cout << PAR_Rank() << " ~  startX: " << startX << "   endX: " << endX << "    startY" << startY << "   endY: "<< endY << "    width" << endX - startX << "  height: " << endY - startY << std::endl;
+        std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesLastY);
+        endY = allImgMetaData[0].screen_ur[1];
+
+        
+        //
+        // Sort with the largest z first
+        std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgMetaDataByDepthCopy);
+
+        imgBufferWidth = endX - startX;
+        imgBufferHeight = endY - startY;
+
+        debug5 << PAR_Rank() << " ~ done sorting and extents: screen extents X: " << startX << ", " << endX <<  "  ~~~~  screen extents Y: " << startY << ", " << endY << std::endl;
+    }
 
 
     //
@@ -1998,31 +1975,23 @@ bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& aft
     //
     
     // Creates a buffer to store the composited image
-    int imgBufferWidth = endX - startX +1;
-    int imgBufferHeight = endY - startY +1;
     float *localBuffer = NULL;
     localBuffer = new float[imgBufferWidth * imgBufferHeight * 4]();
-
-    debug5 << PAR_Rank() << "   ~ before loop: " << endl;
 
     for (int i=0; i<numPatches; i++){
         imgMetaData currentPatch = allImgMetaData[i];
         imgData tempImgData;
         tempImgData.imagePatch = NULL;
         tempImgData.imagePatch = new float[currentPatch.dims[0] * currentPatch.dims[1] * 4]();
-        //getnDelImgData(currentPatch.patchNumber, tempImgData);
+
         getImgData(currentPatch.patchNumber, tempImgData);
 
         int startingX = currentPatch.screen_ll[0] - startX;
         int startingY = currentPatch.screen_ll[1] - startY; 
 
-        //std::cout << PAR_Rank() << " ~ " << i << "  patch: " << currentPatch.patchNumber << ": ll: " << currentPatch.screen_ll[0] << ", " << currentPatch.screen_ll[1] << "   ur: "<< currentPatch.screen_ur[0] << ", " << currentPatch.screen_ur[1] << "  dims: " << currentPatch.dims[0] << ", " << currentPatch.dims[1] << std::endl;
-
-
         for (int j=0; j<currentPatch.dims[1]; j++){
             for (int k=0; k<currentPatch.dims[0]; k++){
                 
-
                 if ((startingX + k) > imgBufferWidth)
                     continue;
 
@@ -2046,8 +2015,8 @@ bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& aft
             }
         }
 
-       // std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_composed_ " + NumbToString(PAR_Rank()) + "_"+ NumbToString(i) +"_"+ NumbToString(currentPatch.patchNumber) + "_.ppm";
-       // createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_comp);
+        //std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_composed_ " + NumbToString(PAR_Rank()) + "_"+ NumbToString(i) +"_"+ NumbToString(currentPatch.patchNumber) + "_.ppm";
+        //createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_comp);
 
         if (tempImgData.imagePatch != NULL)
             delete []tempImgData.imagePatch;
@@ -2056,40 +2025,40 @@ bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& aft
         delImgData(currentPatch.patchNumber);
     }
 
+    //
+    // No longer need patches at this point, so doing some clean up and memory release
     delImgPatches();
     allImgMetaData.clear();
     imageMetaPatchVector.clear();
     imgDataHashMap.clear();
 
-  //  std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_composed_"+ NumbToString(PAR_Rank()) + "_.ppm";
-  //  createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
+    //std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_composed_"+ NumbToString(PAR_Rank()) + "_.ppm";
+    //createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
 
-    debug5 << PAR_Rank() << "  ~ composing patch done: " << endl;
-    std::cout << PAR_Rank() << "  ~ composing patch done: " << endl;
+    debug5 << PAR_Rank() << " ~ compositing patch done!" << endl;
+    //std::cout << PAR_Rank() << "  ~ compositing patch done!" << endl;
 
 
     //
     // RLE Encoding
     //
-
     float *encoding = NULL;
     int *sizeEncoding = NULL;
-    std::cout << PAR_Rank() << "   ~ rleEncodeAll : imgBufferWidth,imgBufferHeight: " << imgBufferWidth << ", " <<  imgBufferHeight << "  numZDivisions: " << 1 << endl;
+    
     int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, 1,localBuffer,  encoding,sizeEncoding);
 
-    debug5 << PAR_Rank() << "  ~ encoding done!  "<< endl;
-    std::cout << PAR_Rank() << "  ~ encoding done!  "<< endl;
+    if (localBuffer != NULL)
+        delete []localBuffer;
+    localBuffer = NULL;
 
-    imgComm.syncAllProcs();
-
-    std::cout << PAR_Rank() << "  ~ after imgComm.syncAllProcs()!  "<< endl;
+    debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
+    std::cout << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
 
 
     //
     // --- Timing -- 
     int  finalSend = visitTimer->StartTimer();
     
-
     //
     // Proc 0 recieves and does the final assmebly
     //
@@ -2099,7 +2068,7 @@ bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& aft
     // Gather all the images
     imgComm.gatherEncodingSizesLB(sizeEncoding, 1);   
 
-    int dataToSend[4];                                                    // size of images
+    int dataToSend[4];                  // size of images
     dataToSend[0] = imgBufferWidth;
     dataToSend[1] = imgBufferHeight;
 
@@ -2107,12 +2076,8 @@ bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& aft
     dataToSend[3] = startY;
     imgComm.gatherAndAssembleEncodedImagesLB(screen[0], screen[1], dataToSend, totalEncodingSize*5, encoding, 1, avg_z);     // data from each processor
 
-    debug5 << PAR_Rank() << "  ~ gatherEncodingSizes " << endl;
-    std::cout << PAR_Rank() << "  ~ gatherEncodingSizes " << endl;
-
-    imgComm.syncAllProcs();
-
-    std::cout << PAR_Rank() << "  ~ after imgComm.syncAllProcs()2!  "<< endl;
+    debug5 << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
+    //std::cout << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
 
     if (encoding != NULL)
         delete []encoding;
@@ -2122,12 +2087,7 @@ bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& aft
         delete []sizeEncoding;
     sizeEncoding = NULL;
 
-    if (localBuffer != NULL)
-        delete []localBuffer;
-    localBuffer = NULL;
-
-    std::cout << PAR_Rank() << "  ~ delete []buffer!  "<< endl;
-   
+    
 
     //
     // --- Timing -- 
@@ -2137,9 +2097,9 @@ bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& aft
     int  timingCompositinig = visitTimer->StartTimer();
 
 
-    // //
-    // // Compositing
-    // //
+    //
+    // Compositing
+    //
 
     // create images structures to hold these
     avtImage_p whole_image, tempImage;
@@ -2173,9 +2133,8 @@ bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& aft
             img->Delete();
         img = NULL;
 
-       
-        debug5 << PAR_Rank() << "   ~ final: " << endl;
-        std::cout << PAR_Rank() << "   ~ final: " << std::endl;
+        //debug5 << PAR_Rank() << "   ~ final: " << endl;
+        //std::cout << PAR_Rank() << "   ~ final: " << std::endl;
 
         if (zbuffer != NULL)
             delete []zbuffer;
