@@ -128,7 +128,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetAMR(bool amr) {isAMR = amr; };
 
     // Getting the image
-    void             getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z);
+    void             getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, bool &_fullyInside);
     void             getComputedImage(float *image);
     void             setProcIdPatchID(int _proc, int _patch){ proc = _proc; patch = _patch; }
 
@@ -202,6 +202,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     int              imgUpperRight[2];      //
     float            imgDepth;              // from the depth buffer
     float            *imgArray;             // the image data
+    bool 			 fullyInside;			// checking if a patch is fully inside a kd tree patition
 
     int              proc;                  // id of the processor
     int              patch;                 // id of the patch

@@ -231,6 +231,7 @@
                              hang around, tying up parallel compute resources,
                              following an exit-triggering error condition on
                              any one process.
+        -amr-dup             Prevent dupliacation for AMR
                      
     Developer options (most for xml2... tools)
     ---------------------------------------------------------------------------

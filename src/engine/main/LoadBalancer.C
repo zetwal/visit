@@ -318,7 +318,7 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         list.push_back(patchesInsideList[j]);
 
     // Adding those that are not specifically in but only overlap!
-    if (amr)
+    if (amr && avtCallback::UseaMRDuplication() == true)
         for (int j=0; j<patchesOverlapList.size(); j++)
            list.push_back(patchesOverlapList[j]);
     
