@@ -59,6 +59,7 @@
 #include <vtkUnsignedCharArray.h>
 
 #include <DebugStream.h>
+#include <avtCallback.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -146,6 +147,7 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     ind_buffer    = new int[3*depth];
     valid_sample  = new bool[depth];
     lighting = false;
+    fullyInside = false;
     lightPosition[0] = lightPosition[1] = lightPosition[2] = 0.0;   lightPosition[3] = 1.0;
     materialProperties[0] = 0.4; materialProperties[1] = 0.75; materialProperties[3] = 0.0; materialProperties[3] = 15.0;
     gradient[0] = gradient[1] = gradient[2] = 0;
@@ -652,7 +654,19 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     minIndex[1] = dims[1]-1;
     minIndex[2] = dims[2]-1;
 
-    if (isAMR == true){
+    //
+    // Check whether fully inside or not
+    if (((X[0] >= currentPartitionExtents[0]  		 && X[0] < currentPartitionExtents[3]) && 
+    	 (X[dims[0]-1] >= currentPartitionExtents[0] && X[dims[0]-1] < currentPartitionExtents[3]))  &&
+    	 
+    	((Y[0] >= currentPartitionExtents[1] 		 && Y[0] < currentPartitionExtents[4]) && 
+    	 (Y[dims[1]-1] >= currentPartitionExtents[1] && Y[dims[1]-1] < currentPartitionExtents[3]))  &&
+    	 
+    	((Z[0] >= currentPartitionExtents[2] 		 && Z[0] < currentPartitionExtents[5]) && 
+    	 (Z[dims[2]-1] >= currentPartitionExtents[2] && Z[dims[2]-1] < currentPartitionExtents[3])) )
+    	 fullyInside = true;
+
+    if (isAMR == true && avtCallback::UseaMRDuplication() == true){
         // 
         // x
         minFound = maxFound = false;
@@ -799,7 +813,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     coordinates[6][0] = X[dims[0]-1];   coordinates[6][1] = Y[dims[1]-1];   coordinates[6][2] = Z[dims[2]-1];
     coordinates[7][0] = X[0];           coordinates[7][1] = Y[dims[1]-1];   coordinates[7][2] = Z[dims[2]-1];
 
-    std::cout << proc << " ~ " << patch << "  X[0]: " << X[0] << "   X[dims[0]-1]: " << X[dims[0]-1] << "   meshMin: " << meshMin[0] << "   meshMax: " << meshMax[0] << std::endl;
+    //std::cout << proc << " ~ " << patch << "  X[0]: " << X[0] << "   X[dims[0]-1]: " << X[dims[0]-1] << "   meshMin: " << meshMin[0] << "   meshMax: " << meshMax[0] << std::endl;
     double _world[4], _view[4];
     float offset, offset_0, error_correction;
     offset = offset_0 = error_correction = 0.0f;
@@ -888,7 +902,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 //
 // ****************************************************************************
 void
-avtMassVoxelExtractor::getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z)
+avtMassVoxelExtractor::getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, bool &_fullyInside)
 {
     inUse = patchDrawn;
 
@@ -898,6 +912,7 @@ avtMassVoxelExtractor::getImageDimensions(int &inUse, int dims[2], int screen_ll
     screen_ur[0] = imgUpperRight[0];    screen_ur[1] = imgUpperRight[1];
 
     avg_z = imgDepth;
+    _fullyInside = fullyInside;
 }
 
 
@@ -1670,7 +1685,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         if (calc_cell_index)
             index = ind[2]*((dims[0]-1)*(dims[1]-1)) + ind[1]*(dims[0]-1) + ind[0];
 
-        if (rayCastingSLIVR && isAMR){
+        if (rayCastingSLIVR && (isAMR && avtCallback::UseaMRDuplication() == true)){
             if (ind[0] < minIndex[0] || ind[0] > maxIndex[0])
                 valid_sample[i] = false;
 
@@ -1699,8 +1714,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         float dist_from_left, dist_from_right,  dist_from_top,dist_from_bottom,  dist_from_front, dist_from_back;
         
         int offsetLow[3], offsetHigh[3];
-        offsetLow[0] = offsetLow[1] = offsetLow[2] = 0;
-        offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 0;
+        offsetLow[0] = offsetLow[1] = offsetLow[2] = 1;
+        offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 2;
 
         int newInd[3];
         newInd[0] = ind[0];
@@ -1720,7 +1735,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         indices[4] = index_front;       indices[5] = index_back;
         indices[2] = index_bottom;      indices[3] = index_top;
         indices[0] = index_left;        indices[1] = index_right;
-
 
         if (logicalBounds[0] == 1)
             indices[0] = indices[1] = 0;
@@ -1775,8 +1789,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         }
 
 
-
-        if (rayCastingSLIVR && isAMR){
+        if (rayCastingSLIVR && (isAMR && avtCallback::UseaMRDuplication() == true)){
             if (indices[0] < minIndex[0] || indices[0] > maxIndex[0])
                 valid_sample[i] = false;
 

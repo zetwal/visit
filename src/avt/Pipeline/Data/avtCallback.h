@@ -157,21 +157,15 @@ class PIPELINE_API avtCallback
     static bool                  UseAMR(void)
                                      { return amr; }
 
+    static void                  SetaMRDuplication(bool b)
+                                     { aMRDuplication = b; }
+    static bool                  UseaMRDuplication(void)
+                                     { return aMRDuplication; }
+
     static void                  SetForceIntel(bool b)
                                      { forceIntel = b; }
     static bool                  UseForceIntel(void)
-                                     { return forceIntel; }  
-
-
-    // static void                  SetPatchesList(std::vector<int> v)
-    //                                 { for (int i=0; i<v.size(); i++)patchesList[i] = v[i];}
-    // static void                  GetPatchesList(std::vector<int> &v)
-    //                                 { for (int i=0; i<patchesList.size(); i++)v[i]=patchesList[i];}
-    // static void                  SetTestVal(int i)
-    //                                  { testVal = i; }
-    // static int                  UseTestVal(void)
-    //                                  { return testVal; }                  
-
+                                     { return forceIntel; }        
 
     static void                  RegisterGetDatabaseCallback(
                                                   GetDatabaseCallback, void *);
@@ -233,9 +227,7 @@ class PIPELINE_API avtCallback
     static bool                  useKdTreeLoadBalancer;
     static bool                  amr;
     static bool                  forceIntel;
-
-    //static int                    testVal;
-    //static std::vector<int>      patchesList;
+    static bool                  aMRDuplication;
 };
 
 

@@ -472,10 +472,13 @@ avtStructuredDomainNesting::ApplyGhost(vector<int> domainList,
             int descLevel  = domainNesting[descDom].level;
             int I0         = domainNesting[parentDom].logicalExtents[0];
             int I1         = domainNesting[parentDom].logicalExtents[3] + 1;
+            //int I1         = domainNesting[parentDom].logicalExtents[3];
             int J0         = domainNesting[parentDom].logicalExtents[1];
             int J1         = domainNesting[parentDom].logicalExtents[4] + 1;
+            //int J1         = domainNesting[parentDom].logicalExtents[4];
             int K0         = domainNesting[parentDom].logicalExtents[2];
             int K1         = domainNesting[parentDom].logicalExtents[5] + 1;
+            //int K1         = domainNesting[parentDom].logicalExtents[5];
 
             //
             // compute ratio to descendent from parent

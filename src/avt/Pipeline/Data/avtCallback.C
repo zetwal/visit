@@ -70,6 +70,7 @@ bool                          avtCallback::safeMode = false;
 bool                          avtCallback::useKdTreeLoadBalancer = false;
 bool                          avtCallback::amr = false;
 bool                          avtCallback::forceIntel = false;
+bool                          avtCallback::aMRDuplication = true;
 
 //std::vector<int>              avtCallback::patchesList;
 

@@ -1682,7 +1682,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
             }
 
 
-           std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_ " + NumbToString(counting) + "_.ppm";
+           std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_ " + NumbToString(index) + +"_"+ NumbToString(counting) + "_.ppm";
            createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_comp);
 
 

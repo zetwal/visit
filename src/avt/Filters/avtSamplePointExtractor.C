@@ -1058,7 +1058,7 @@ avtSamplePointExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             imgMetaData tmpImageMetaPatch;
             tmpImageMetaPatch = initMetaPatch(patchCount);
 
-            massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
+            massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z, tmpImageMetaPatch.fullyInside);
             if (tmpImageMetaPatch.inUse == 1){
                 //std::cout << PAR_Rank() << "  Rendered!!! YAY!!! " << num << std::endl;
                 double bounds[6];

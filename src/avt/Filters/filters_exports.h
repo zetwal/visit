@@ -87,6 +87,7 @@ struct imgMetaData{
   int screen_ur[2];
   float avg_z;      // depth of the patch
   float extents[6]; // original extents: xmin,xmax, ymin,ymax, zmin,zmax
+  bool fullyInside;
 };
 
 

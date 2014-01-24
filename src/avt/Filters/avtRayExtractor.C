@@ -845,7 +845,7 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
             return;
         
-         if (partitionExtentsComputationDone == false){
+        if (partitionExtentsComputationDone == false){
             int minPos[2], maxPos[2];
             float minDepth, maxDepth;
             double minExtents[4], maxExtents[4];
@@ -876,7 +876,7 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
 
 
-        massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z);
+        massVoxelExtractor->getImageDimensions(tmpImageMetaPatch.inUse, tmpImageMetaPatch.dims, tmpImageMetaPatch.screen_ll, tmpImageMetaPatch.screen_ur, tmpImageMetaPatch.avg_z, tmpImageMetaPatch.fullyInside);
         if (tmpImageMetaPatch.inUse == 1){
 
             tmpImageMetaPatch.destProcId = tmpImageMetaPatch.procId;
@@ -893,8 +893,8 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             patchCount++;
 
-            //std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
-            //createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
+            std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
+            createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
         }
         
     }
@@ -1963,8 +1963,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
         // Sort with the largest z first
         std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgMetaDataByDepthCopy);
 
-        imgBufferWidth = endX - startX;
-        imgBufferHeight = endY - startY;
+        imgBufferWidth = endX - startX + 1;
+        imgBufferHeight = endY - startY + 1;
 
         debug5 << PAR_Rank() << " ~ done sorting and extents: screen extents X: " << startX << ", " << endX <<  "  ~~~~  screen extents Y: " << startY << ", " << endY << std::endl;
     }

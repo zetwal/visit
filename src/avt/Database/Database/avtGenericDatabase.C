@@ -7522,13 +7522,9 @@ avtGenericDatabase::ApplyGhostForDomainNesting(avtDatasetCollection &ds,
     avtStructuredDomainNesting *ddn = (avtStructuredDomainNesting*)*vr;
 
 
-    //std::cout << PAR_Rank() << " ~ doms.size(): " << doms.size() << std::endl;
     for (int k=0; k<doms.size(); k++){
         //std::cout << "k: " << doms[k] << std::endl;
         ddn->GetNestingForDomain(doms[k], my_exts, childDomains, childExts);
-        //for (int i = 0 ; i < childDomains.size() ; i++){
-        //    std::cout << PAR_Rank() <<  "  ~!~!~  Parent: " << doms[k] << "   child: " << childDomains[i] << std::endl;
-        //}
     }
 
 
@@ -7573,7 +7569,7 @@ avtGenericDatabase::ApplyGhostForDomainNesting(avtDatasetCollection &ds,
     if (!shouldStop && dn != NULL)
     {
         int t0 = visitTimer->StartTimer();
-        rv = dn->ApplyGhost(doms, allDoms, list);
+        rv = dn->ApplyGhost(doms, allDoms, list);     // where stencilling is occuring
         visitTimer->StopTimer(t0, "DomainNesting::ApplyGhost");
 
         //
