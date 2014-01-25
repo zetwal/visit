@@ -107,6 +107,10 @@ avtImgCommunicator::avtImgCommunicator(){
 #ifdef PARALLEL
   ierr = MPI_Comm_size(VISIT_MPI_COMM, &num_procs);
   ierr = MPI_Comm_rank(VISIT_MPI_COMM, &my_id);
+  hostname = getHostname();
+
+  //debug5 << my_id << " ~ " << num_procs << " ~ " << hostname << std::endl;
+  //std::cout << my_id << " ~ " << num_procs << " ~ " << hostname << std::endl;
 
   _img_mpi = createMetaDataType();
   MPI_Type_commit(&_img_mpi);
@@ -207,6 +211,26 @@ MPI_Type_free(&_img_mpi);
 }
 
 
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+std::string avtImgCommunicator::getHostname(){
+  const int bufferLength = 512;
+  char hostanme[bufferLength];
+
+  gethostname(hostanme, bufferLength);
+  std::string myHostname(hostanme);
+
+  return myHostname;
+}
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::
@@ -1658,13 +1682,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
                     if (imgBuffer[bufferIndex+3] > 1.0) continue;
                     if (temp.image[imgIndex+3] <= 0.0) continue;
 
-                    
-                    
-
-
-
                     //std::cout <<  index << " IN compositing" << std::endl;
-
 
                     if (front_to_back){                    
                         // Front-to-Back compositing
@@ -1682,7 +1700,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
             }
 
 
-           std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_ " + NumbToString(index) + +"_"+ NumbToString(counting) + "_.ppm";
+           std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_FinalCompositing_ " + NumbToString(counting) + "_" + NumbToString(index) +"_" "_.ppm";
            createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_comp);
 
 

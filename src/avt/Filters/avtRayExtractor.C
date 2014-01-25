@@ -88,26 +88,10 @@
 #include <avtDatasetToImageFilter.h>
 
 bool sortImgMetaDataByDepthCopy(imgMetaData const& before, imgMetaData const& after){ return before.avg_z > after.avg_z; }
-
-bool sortImgByCoordinatesX(imgMetaData const& before, imgMetaData const& after){
-  //if(before.screen_ll[0] != after.screen_ll[0]) 
-    return (before.screen_ll[0] < after.screen_ll[0]);
-}
-
-bool sortImgByCoordinatesLastX(imgMetaData const& before, imgMetaData const& after){
-  //if(before.screen_ll[0] != after.screen_ll[0]) 
-    return (before.screen_ur[0] > after.screen_ur[0]);
-}
-
-bool sortImgByCoordinatesY(imgMetaData const& before, imgMetaData const& after){
-  //if(before.screen_ll[0] != after.screen_ll[0]) 
-    return (before.screen_ll[1] < after.screen_ll[1]);
-}
-
-bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& after){
-  //if(before.screen_ll[0] != after.screen_ll[0]) 
-    return (before.screen_ur[1] > after.screen_ur[1]);
-}
+bool sortImgByCoordinatesX(imgMetaData const& before, imgMetaData const& after){ return (before.screen_ll[0] < after.screen_ll[0]); }
+bool sortImgByCoordinatesLastX(imgMetaData const& before, imgMetaData const& after){ return (before.screen_ur[0] > after.screen_ur[0]); }
+bool sortImgByCoordinatesY(imgMetaData const& before, imgMetaData const& after){ return (before.screen_ll[1] < after.screen_ll[1]); }
+bool sortImgByCoordinatesLastY(imgMetaData const& before, imgMetaData const& after){ return (before.screen_ur[1] > after.screen_ur[1]); }
 
 // ****************************************************************************
 //  Method: avtRayExtractor constructor
@@ -319,8 +303,6 @@ avtRayExtractor::RestrictToTile(int wmin, int wmax, int hmin, int hmax)
 void
 avtRayExtractor::Execute(void)
 {
-    //std::cout << "          In Execute" << std::endl;
-
     int timingsIndex = visitTimer->StartTimer();
 
     SetUpExtractors();
@@ -339,9 +321,7 @@ avtRayExtractor::Execute(void)
     //
     // Determine partition extents
     //
-    //std::cout << PAR_Rank() << "   Partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << ", "
-    //                                                    << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl; 
-
+    
     avtDataTree_p tree = GetInputDataTree();
     totalNodes = tree->GetNumberOfLeaves();
     currentNode = 0;
@@ -349,9 +329,6 @@ avtRayExtractor::Execute(void)
     ExecuteTree(tree);
 
     visitTimer->StopTimer(timingsIndex, "Ray point extraction");
-
-    // avtImage_p image = ExecuteRayTracer();
-    // SetOutputImage(image);
 }
 
 
@@ -893,8 +870,8 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
             patchCount++;
 
-            std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
-            createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
+            //std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_"+ NumbToString(tmpImageDataHash.procId) + "_" + NumbToString(tmpImageDataHash.patchNumber) + ".ppm";
+            //createPpm(tmpImageDataHash.imagePatch, tmpImageMetaPatch.dims[0], tmpImageMetaPatch.dims[1], imgFilename_Final);
         }
         
     }
@@ -1208,7 +1185,6 @@ avtRayExtractor::ExecuteRayTracer(){
             composedPatch.dims[0]   = imgBufferWidth;
             composedPatch.dims[1]   = imgBufferHeight;
             composedPatch.inUse     = false;
-
 
             for (int patchIndex=start; patchIndex<=end; patchIndex++){
                 imgMetaData currentPatch = imgMetaDataMultiMap.find(patchesToCompositeLocally[patchIndex])->second;
@@ -2032,8 +2008,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
     imageMetaPatchVector.clear();
     imgDataHashMap.clear();
 
-    //std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_composed_"+ NumbToString(PAR_Rank()) + "_.ppm";
-    //createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
+    std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_composed_"+ NumbToString(PAR_Rank()) + "_.ppm";
+    createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
 
     debug5 << PAR_Rank() << " ~ compositing patch done!" << endl;
     //std::cout << PAR_Rank() << "  ~ compositing patch done!" << endl;
