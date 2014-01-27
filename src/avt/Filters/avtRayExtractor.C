@@ -76,7 +76,6 @@
 #include <avtWedgeExtractor.h>
 #include <avtCallback.h>
 
-#include <DebugStream.h>
 #include <InvalidCellTypeException.h>
 #include <TimingsManager.h>
 
@@ -200,7 +199,6 @@ avtRayExtractor::avtRayExtractor(int w, int h, int d)
 
 avtRayExtractor::~avtRayExtractor()
 {
-
     if (massVoxelExtractor != NULL)
     {
         delete massVoxelExtractor;
@@ -1821,7 +1819,7 @@ avtRayExtractor::chopPartitionRT(partitionExtents parent, partitionExtents & chi
 //
 // ****************************************************************************
 void          
-avtRayExtractor::getPartitionExtents(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], double extents[6]){
+avtRayExtractor::getPartitionExtents(int id, int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], double extents[6]){
     /////////////////////////////////////////////////////////////////
     // Sort to find the order of axes from largest to smallest
     int axisOrder[3];
@@ -1859,9 +1857,9 @@ avtRayExtractor::getPartitionExtents(int numDivisions, int logicalBounds[3], dou
 
     /////////////////////////////////////////////////////////////////
     // Determine which patch is in which region
-    extents[0] = myPartitions[PAR_Rank()].minExtents[0];  extents[3] = myPartitions[PAR_Rank()].maxExtents[0];
-    extents[1] = myPartitions[PAR_Rank()].minExtents[1];  extents[4] = myPartitions[PAR_Rank()].maxExtents[1];
-    extents[2] = myPartitions[PAR_Rank()].minExtents[2];  extents[5] = myPartitions[PAR_Rank()].maxExtents[2];
+    extents[0] = myPartitions[id].minExtents[0];  extents[3] = myPartitions[id].maxExtents[0];
+    extents[1] = myPartitions[id].minExtents[1];  extents[4] = myPartitions[id].maxExtents[1];
+    extents[2] = myPartitions[id].minExtents[2];  extents[5] = myPartitions[id].maxExtents[2];
 }
 
 bool 
@@ -1915,13 +1913,11 @@ avtRayExtractor::ExecuteRayTracerLB(){
     
     int imgBufferWidth, imgBufferHeight;
     int startX, startY, endX, endY;
-    float avg_z;
+    
     imgBufferWidth = imgBufferHeight = 0;
     if (numPatches > 0){ 
         //
         // Sort to find extents of patches
-        avg_z = allImgMetaData[0].avg_z;
-
         std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesX);
         startX = allImgMetaData[0].screen_ll[0];
 
@@ -1946,13 +1942,17 @@ avtRayExtractor::ExecuteRayTracerLB(){
     }
 
 
+
+
     //
-    // Composite the images
+    // Local composition
     //
-    
-    // Creates a buffer to store the composited image
     float *localBuffer = NULL;
     localBuffer = new float[imgBufferWidth * imgBufferHeight * 4]();
+    float avg_z = 0;
+
+    int localCompsitingTiming;
+    localCompsitingTiming = visitTimer->StartTimer();
 
     for (int i=0; i<numPatches; i++){
         imgMetaData currentPatch = allImgMetaData[i];
@@ -1964,6 +1964,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
         int startingX = currentPatch.screen_ll[0] - startX;
         int startingY = currentPatch.screen_ll[1] - startY; 
+        avg_z += currentPatch.avg_z;
 
         for (int j=0; j<currentPatch.dims[1]; j++){
             for (int k=0; k<currentPatch.dims[0]; k++){
@@ -2001,6 +2002,14 @@ avtRayExtractor::ExecuteRayTracerLB(){
         delImgData(currentPatch.patchNumber);
     }
 
+    debug5 << "Local compositing:  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight << std::endl;
+    std::cout << PAR_Rank() << " ~ Local compositing:  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight << std::endl;
+    visitTimer->StopTimer(localCompsitingTiming, "Local Compositing");
+    visitTimer->DumpTimings();
+
+    if (numPatches > 0)
+        avg_z = avg_z/numPatches;
+
     //
     // No longer need patches at this point, so doing some clean up and memory release
     delImgPatches();
@@ -2013,7 +2022,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
     debug5 << PAR_Rank() << " ~ compositing patch done!" << endl;
     //std::cout << PAR_Rank() << "  ~ compositing patch done!" << endl;
-
 
     //
     // RLE Encoding
@@ -2029,6 +2037,12 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
     debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
     std::cout << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
+
+
+    //
+    // Compositing among processors on one node
+    //
+
 
 
     //

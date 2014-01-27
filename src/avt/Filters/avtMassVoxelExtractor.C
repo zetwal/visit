@@ -837,9 +837,12 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         if (i == 0)
             imgDepth = tempImgDepth;
         else
-            if (imgDepth > tempImgDepth)
-                imgDepth = tempImgDepth;
+            imgDepth += tempImgDepth;
+            //if (imgDepth > tempImgDepth)
+                //imgDepth = tempImgDepth;
     }
+    imgDepth = imgDepth/8.0;
+
 
     xMin = xMin - error_correction;
     yMin = yMin - error_correction;
