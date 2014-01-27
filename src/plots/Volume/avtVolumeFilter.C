@@ -567,6 +567,8 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
     vi.SetCameraFromView(camera);
     vtkMatrix4x4 *cameraMatrix = camera->GetViewTransformMatrix();
 
+    
+
     double modelViewMatrix[16];
     modelViewMatrix[0] = cameraMatrix->GetElement(0,0);
     modelViewMatrix[1] = cameraMatrix->GetElement(0,1);
@@ -587,6 +589,14 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
     modelViewMatrix[13] = cameraMatrix->GetElement(3,1);
     modelViewMatrix[14] = cameraMatrix->GetElement(3,2);
     modelViewMatrix[15] = cameraMatrix->GetElement(3,3);
+
+    // if (PAR_Rank() == 0){
+    //     std::cout << " camera: " << std::endl
+    //               << modelViewMatrix[0] << "   " << modelViewMatrix[1] << "   " << modelViewMatrix[2] << "   " << modelViewMatrix[3] << std::endl
+    //               << modelViewMatrix[4] << "   " << modelViewMatrix[5] << "   " << modelViewMatrix[6] << "   " << modelViewMatrix[7] << std::endl
+    //               << modelViewMatrix[8] << "   " << modelViewMatrix[9] << "   " << modelViewMatrix[10] << "   " << modelViewMatrix[11] << std::endl
+    //               << modelViewMatrix[12] << "   " << modelViewMatrix[13] << "   " << modelViewMatrix[14] << "   " << modelViewMatrix[15] << std::endl;
+    // }
     software->SetModelViewMatrix(modelViewMatrix);
 
     //

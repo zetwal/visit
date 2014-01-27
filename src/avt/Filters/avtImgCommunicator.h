@@ -48,6 +48,7 @@
 #include <avtSamplePointExtractor.h>
 #include <algorithm>
 #include <string>
+#include <map>
 
 #ifdef PARALLEL
 #   include <mpi.h>
@@ -112,7 +113,8 @@ class avtImgCommunicator
 
   int     num_procs;
   int     my_id;
-  std::string hostname;       
+  std::string hostname;
+  int nodeLeader;
   std::vector<int> procsInMyGroup; // id of processors on the same node as me; we share the same hostname
 
   imgMetaData setImg(int _inUse, int _procId, int _patchNumber, float dim_x, float dim_y, float screen_ll_x, float screen_ll_y, float screen_ur_x, float screen_ur_y, float _avg_z);
@@ -120,6 +122,7 @@ class avtImgCommunicator
   int getDataPatchID(int procID, int patchID);
 
   std::string getHostname();
+  void topoInfo();
 
 
 public:

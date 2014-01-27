@@ -52,6 +52,9 @@
 #include <fstream>
 #include <DebugStream.h>
 #include <float.h>
+#include <string.h>
+#include <algorithm>
+
 
 
 #ifdef PARALLEL
@@ -109,6 +112,7 @@ avtImgCommunicator::avtImgCommunicator(){
   ierr = MPI_Comm_rank(VISIT_MPI_COMM, &my_id);
   hostname = getHostname();
 
+  topoInfo();
   //debug5 << my_id << " ~ " << num_procs << " ~ " << hostname << std::endl;
   //std::cout << my_id << " ~ " << num_procs << " ~ " << hostname << std::endl;
 
@@ -223,7 +227,7 @@ MPI_Type_free(&_img_mpi);
 //
 // ****************************************************************************
 std::string avtImgCommunicator::getHostname(){
-  const int bufferLength = 512;
+  const int bufferLength = 256;
   char hostanme[bufferLength];
 
   gethostname(hostanme, bufferLength);
@@ -265,8 +269,72 @@ return (sumPatches+patchID);
 //
 // ****************************************************************************
 void avtImgCommunicator::init(){
+
 }
 
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::
+//
+//  Purpose:
+//    initialize 
+//
+//  Programmer: Pascal Grosset
+//  Creation: July 2013  
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::topoInfo(){
+
+  #ifdef PARALLEL
+
+  // 
+  // exchange node information
+  char *hostnameBuffer = new char[256*num_procs];
+  char *myHostname = new char[256];
+  strcpy(myHostname, hostname.c_str());
+
+  MPI_Allgather(myHostname, 256, MPI_CHAR,    hostnameBuffer, 256, MPI_CHAR,  MPI_COMM_WORLD);
+
+  // 
+  // Find the nodes that are in my partition
+  int index = 0;
+    for (int i=0; i<num_procs; i++){
+      if (i == my_id)
+        continue;
+      if (strcmp(myHostname,hostnameBuffer) == 0)
+        procsInMyGroup.push_back(i);
+    }
+
+  // std::stringstream ssss;
+  // ssss << my_id << " neighbors : ";
+  // for (int i=0; i<procsInMyGroup.size();i++)
+  //   ssss << procsInMyGroup[i] << ", ";
+  //std::cout << ssss.str() << std::endl;
+  //debug5 << ssss.str() << std::endl;
+
+  //
+  // Find node leader - min processor id
+  std::sort (procsInMyGroup.begin(), procsInMyGroup.end());
+  nodeLeader = std::min(my_id,procsInMyGroup[0]);
+
+  //std::cout << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
+  //debug5 << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
+
+  //
+  // Done!
+  if (hostnameBuffer != NULL)
+    delete [] hostnameBuffer;
+  hostnameBuffer = NULL;
+
+  if (myHostname != NULL)
+    delete [] myHostname;
+  myHostname = NULL;
+
+  #endif
+}
 
 // ****************************************************************************
 //  Method: avtImgCommunicator::waitToSync
@@ -1699,7 +1767,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
                 }
             }
 
-
+     
            std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_FinalCompositing_ " + NumbToString(counting) + "_" + NumbToString(index) +"_" "_.ppm";
            createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_comp);
 
