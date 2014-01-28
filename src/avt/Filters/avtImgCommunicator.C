@@ -55,6 +55,8 @@
 #include <string.h>
 #include <algorithm>
 
+#include <unistd.h>
+
 
 
 #ifdef PARALLEL
@@ -1767,7 +1769,7 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
                 }
             }
 
-     
+
            std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_FinalCompositing_ " + NumbToString(counting) + "_" + NumbToString(index) +"_" "_.ppm";
            createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_comp);
 

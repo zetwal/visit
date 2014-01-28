@@ -589,6 +589,8 @@ class ENGINE_MAIN_API NetworkManager
     virtual void       StopTimer(int windowID);
     void               DumpImage(avtDataObject_p img, const char* prefix) const;
     void               DumpImage(const avtImage_p, const char *fmt) const;
+    void               DumpImageB(const avtImage_p, const char *fmt) const;
+    void               DumpImageB(avtDataObject_p img, const char *fmt) const;
     virtual void       FormatDebugImage(char*, size_t, const char*) const;
 
     static double      RenderBalance(int numTrianglesIHave);

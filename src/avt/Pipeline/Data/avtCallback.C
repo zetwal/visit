@@ -71,10 +71,7 @@ bool                          avtCallback::useKdTreeLoadBalancer = false;
 bool                          avtCallback::amr = false;
 bool                          avtCallback::forceIntel = false;
 bool                          avtCallback::aMRDuplication = true;
-
-//std::vector<int>              avtCallback::patchesList;
-
-//int                          avtCallback::testVal = -1;
+bool                          avtCallback::usingIcet = false;
 
 UpdatePlotAttributesCallback  avtCallback::updatePlotAttributesCallback = NULL;
 void                         *avtCallback::updatePlotAttributesCallbackArgs 

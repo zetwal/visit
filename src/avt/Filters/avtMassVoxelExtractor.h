@@ -202,7 +202,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     int              imgUpperRight[2];      //
     float            imgDepth;              // from the depth buffer
     float            *imgArray;             // the image data
-    bool 			 fullyInside;			// checking if a patch is fully inside a kd tree patition
+    bool             fullyInside;           // checking if a patch is fully inside a kd tree patition
 
     int              proc;                  // id of the processor
     int              patch;                 // id of the patch

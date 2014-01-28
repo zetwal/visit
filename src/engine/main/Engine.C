@@ -2194,10 +2194,7 @@ Engine::ProcessCommandLine(int argc, char **argv)
         {
             LoadBalancer::SetScheme(LOAD_BALANCE_KDTREE);
             avtCallback::SetKdTreeLoadBalancer(true);
-        }
-        else if (strcmp(argv[i], "-amr-dup") == 0)
-        {
-            avtCallback::SetaMRDuplication(false);
+            //avtAMRInfo::setAMR(true);
         }
         else if (strcmp(argv[i], "-create-ghosts-for-t-intersections") == 0)
         {
@@ -2221,6 +2218,7 @@ Engine::ProcessCommandLine(int argc, char **argv)
             if(!haveHWAccel)
             {
               this->useIceT = true;
+              avtCallback::SetusingIcet(true);
                std::cout << "Ithis->useIceT = true \n";
             }
             else
@@ -2235,6 +2233,7 @@ Engine::ProcessCommandLine(int argc, char **argv)
         else if (strcmp(argv[i], "-no-icet") == 0)
         {
             this->useIceT = false;
+            avtCallback::SetusingIcet(false);
         }
         else if(strcmp(argv[i], "-auxsessionkey") == 0)
         {

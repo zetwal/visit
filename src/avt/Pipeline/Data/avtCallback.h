@@ -44,6 +44,7 @@
 #define AVT_CALLBACK_H
 #include <pipeline_exports.h>
 
+
 #include <vector>
 #include <string>
 
@@ -156,7 +157,6 @@ class PIPELINE_API avtCallback
                                      { amr = b; }
     static bool                  UseAMR(void)
                                      { return amr; }
-
     static void                  SetaMRDuplication(bool b)
                                      { aMRDuplication = b; }
     static bool                  UseaMRDuplication(void)
@@ -165,7 +165,13 @@ class PIPELINE_API avtCallback
     static void                  SetForceIntel(bool b)
                                      { forceIntel = b; }
     static bool                  UseForceIntel(void)
-                                     { return forceIntel; }        
+                                     { return forceIntel; }   
+
+    static void                  SetusingIcet(bool b)
+                                     { usingIcet = b; }
+    static bool                  UseusingIcet(void)
+                                     { return usingIcet; }           
+
 
     static void                  RegisterGetDatabaseCallback(
                                                   GetDatabaseCallback, void *);
@@ -228,6 +234,7 @@ class PIPELINE_API avtCallback
     static bool                  amr;
     static bool                  forceIntel;
     static bool                  aMRDuplication;
+    static bool                  usingIcet;
 };
 
 

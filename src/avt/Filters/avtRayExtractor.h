@@ -201,6 +201,8 @@ class AVTFILTERS_API avtRayExtractor
     void                      delImgPatches();   
     avtImage_p                ExecuteRayTracer();
     avtImage_p                ExecuteRayTracerLB();
+    void                      InsertOpaqueImage(avtImage_p img);
+    vtkImageData*             toVTKImage(float* buffer, int width, int height, int startingX, int startingY, float avg_z);
 
     int                       chopPartitionRT(partitionExtents parent, partitionExtents & childOne, partitionExtents & childTwo, int axisOrder[3]);
     void                      getPartitionExtents(int id, int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], double extents[6]);
@@ -214,6 +216,7 @@ class AVTFILTERS_API avtRayExtractor
   protected:
     avtImgCommunicator        imgComm;
     bool                      parallelOn;
+    avtImage_p                opaqueImage;
     int                       screen[2];
     unsigned char             background[3];
 

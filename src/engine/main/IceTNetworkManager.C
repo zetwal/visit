@@ -58,6 +58,8 @@
 #include <GL/ice-t_mpi.h>
 #include <mpi.h>
 #include <vtkImageData.h>
+#include <TimingsManager.h>
+
 
 // ****************************************************************************
 // Debugging help.
@@ -108,6 +110,12 @@
 
 static void SendImageToRenderNodes(int, int, bool, GLubyte * const,
                                    GLuint * const);
+
+static GLfloat* GatherZBuffer(GLfloat * const);
+
+static unsigned char *
+SendBackground(int, int,
+               unsigned char *);
 
 // ****************************************************************************
 //  Method: lerp
@@ -306,11 +314,48 @@ IceTNetworkManager::TileLayout(size_t width, size_t height) const
 //
 // ****************************************************************************
 
+void createPpmICENM_RGBA(unsigned char array[], int dimx, int dimy, std::string filename){
+    int i, j;
+    //std::cout << "createPpm2  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    for (j = 0; j < dimy; ++j){
+        for (i = 0; i < dimx; ++i){
+            static unsigned char color[3];
+            float alpha = array[j*(dimx*4) + i*4 + 3] / 255.0;
+            color[0] = array[j*(dimx*4) + i*4 + 0]  * alpha;  // red
+            color[1] = array[j*(dimx*4) + i*4 + 1] * alpha;  // green
+            color[2] = array[j*(dimx*4) + i*4 + 2] * alpha;  // blue 
+            (void) fwrite(color, 1, 3, fp);
+        }
+    }
+    (void) fclose(fp);
+    //std::cout << "End createPpm: " << std::endl;
+}
+
+void createPpmICENM(unsigned char array[], int dimx, int dimy, std::string filename){
+    int i, j;
+    //std::cout << "createPpm2  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    for (j = 0; j < dimy; ++j){
+        for (i = 0; i < dimx; ++i){
+            static unsigned char color[3];
+            color[0] = array[j*(dimx*3) + i*3 + 0] ;  // red
+            color[1] = array[j*(dimx*3) + i*3 + 1] ;  // green
+            color[2] = array[j*(dimx*3) + i*3 + 2] ;  // blue 
+            (void) fwrite(color, 1, 3, fp);
+        }
+    }
+    (void) fclose(fp);
+    //std::cout << "End createPpm: " << std::endl;
+}
+
 avtDataObject_p
 IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZBuffer,
                            int annotMode, int windowID, bool leftEye)
 {
-    std::cout << "IceTNetworkManager::Render... " << std::endl;
+    std::cout << PAR_Rank() << "    IceTNetworkManager::Render... " << std::endl;
     int t0 = visitTimer->StartTimer();
     DataNetwork *origWorkingNet = workingNet;
     avtDataObject_p retval;
@@ -326,6 +371,9 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
     {
         this->StartTimer();
         this->RenderSetup(networkIds, getZBuffer, annotMode, windowID, leftEye);
+
+        avtImage_p screenshot = viswin->ScreenCapture(true, true);
+        //avtImage_p nImage2 = viswin->ScreenCapture(true, true);
 
         bool plotDoingTransparencyOutsideTransparencyActor = false;
         for(int i = 0 ; i < networkIds.size() ; i++)
@@ -399,6 +447,88 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
             ICET(icetDisable(ICET_CORRECT_COLORED_BACKGROUND));
         }
 
+        int width, height, width_start, height_start;
+        // This basically gets the width and the height.
+        // The distinction is for 2D rendering, where we only want the
+        // width and the height of the viewport.
+        viswin->GetCaptureRegion(width_start, height_start, width, height,
+                                 this->r_mgmt.viewportedMode);
+        int iceTTiming;
+
+        // If the plot is image based, use ordered instead of Z-Buffer compositing
+        // It's a hack for now since Z-Buffer compositing doesn't seem to work
+        if(!imageBasedPlots.empty() && avtCallback::UseusingIcet() == true) {
+
+            isImageBasedPlot    = true;
+            useIceTOrdered      = true;
+
+            // We don't need Z-Buffer for ordered compositing
+            needZB              = false;
+
+            // Do the volume rendering here and get the images for each processor
+            // Why is is called RenderPostProcess? Should be RenderPreProcess
+
+            avtDataObject_p db;
+            this->RenderPostProcess(imageBasedPlots, db, this->r_mgmt.windowID);
+            CopyTo(image_global, db);
+            
+            iceTTiming = visitTimer->StartTimer();
+
+            // Get the zbuffer value for ordered compositing
+            float         *zbuf_all = image_global->GetImage().GetZBuffer();
+
+            // Transmit the z buffer to all nodes
+            float         *zbuf = GatherZBuffer(&zbuf_all[0]);
+
+            // Store zbuffer in a multimap which automatically sorts according to key
+            std::multimap<float,int> sortedZbuf;
+            int num_proc;
+            ICET(icetGetIntegerv(ICET_NUM_PROCESSES, &num_proc));
+
+            for(int i=0; i<num_proc; i++)
+                sortedZbuf.insert(std::pair<float,int>(zbuf[i],i));
+
+            int local_startx = 0, local_starty = 0, local_width = 0, local_height = 0;
+            float global_startx = - width * 0.5;
+            float global_starty = - height * 0.5;
+
+            image_global->GetImage().GetOrigin(&local_startx, &local_starty);
+            //image_global->GetImage().GetSize(&local_width, &local_height);
+            image_global->GetImage().GetBoundingSize(&local_width, &local_height);
+            //std::cout<<PAR_Rank() << " \t" << local_startx << ", " << local_starty <<   std::endl;
+
+            // Override the previous input output buffers. 
+            // Don't want to mess the previous setup right now
+            ICET(icetInputOutputBuffers(ICET_COLOR_BUFFER_BIT , ICET_COLOR_BUFFER_BIT));
+            ICET(icetEnable(ICET_ORDERED_COMPOSITE));
+            ICET(icetEnable(ICET_CORRECT_COLORED_BACKGROUND));
+
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+            glOrtho(0, width, 0, height, -1, 1);
+
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+
+            ICET(icetBoundingBoxf (local_startx, 
+                                   local_startx + local_width,
+                                   local_starty, 
+                                   local_starty + local_height,
+                                    -1, 1));
+
+            GLint *procs;
+            procs = new int[num_proc];
+
+            int i = 0;
+            for (std::multimap<float,int>::iterator it=sortedZbuf.begin(); it!=sortedZbuf.end(); ++it){
+                procs[i] =  (*it).second;
+                i++;
+            }
+
+            // Set the compositing order for ICET
+            ICET(icetCompositeOrder(procs));
+        }
+
         // scalable threshold test (the 0.5 is to add some hysteresus to avoid 
         // the misfortune of oscillating switching of modes around the
         // threshold)
@@ -413,13 +543,6 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
         debug5 << "Rendering " << viswin->GetNumPrimitives()
                << " primitives.  Balanced speedup = "
                << RenderBalance(viswin->GetNumPrimitives()) << "x" << endl;
-
-        int width, height, width_start, height_start;
-        // This basically gets the width and the height.
-        // The distinction is for 2D rendering, where we only want the
-        // width and the height of the viewport.
-        viswin->GetCaptureRegion(width_start, height_start, width, height,
-                                 this->r_mgmt.viewportedMode);
         
         this->TileLayout(width, height);
 
@@ -443,11 +566,20 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
         ICET(icetDrawFunc(render));
         ICET(icetDrawFrame());
 
+
         // Now that we're done rendering, we need to post process the image.
+        debug3 << "IceTNM: Starting readback." << std::endl;
         avtDataObject_p dob;
         {
+            std::cout <<  PAR_Rank() << "       IceTNetworkManager::Render... IceTNM: Starting readback ..." << std::endl;
             avtImage_p img = this->Readback(viswin, needZB);
             CopyTo(dob, img);
+        }
+
+        if(avtCallback::UseusingIcet() == true){
+
+            visitTimer->StopTimer(iceTTiming, "IceT");
+            visitTimer->DumpTimings();
         }
 
         // Now its essentially back to the same behavior as our parent:
@@ -470,7 +602,8 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
         // If the engine is doing more than just 3D annotations,
         // post-process the composited image.
         //
-        this->RenderPostProcess(imageBasedPlots, dob, windowID);
+        if(avtCallback::UseusingIcet() == false)
+            this->RenderPostProcess(imageBasedPlots, dob, windowID);
 
         retval = dob;
 
@@ -485,7 +618,7 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
     workingNet = origWorkingNet;
     visitTimer->StopTimer(t0, "Ice-T Render");
 
-    std::cout << "IceTNetworkManager::Render... End!!!" << std::endl;
+    std::cout << PAR_Rank() << "        IceTNetworkManager::Render... End!!!" << std::endl;
     return retval;
 }
 
@@ -519,27 +652,33 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
 void
 IceTNetworkManager::RealRender()
 {
-    avtImage_p dob = this->RenderGeometry();
+    avtImage_p dob;
+
+    if(!isImageBasedPlot) dob = this->RenderGeometry();
+    else                  dob = this->RenderImage();
+
     if(avtDebugDumpOptions::DumpEnabled())
     {
         this->DumpImage(dob, "icet-render-geom");
     }
 
-    VisWindow *viswin =
-        this->viswinMap.find(this->r_mgmt.windowID)->second.viswin;
-    if(this->MemoMultipass(viswin))
-    {
-        avtDataObject_p trans_dob;
-        // why doesn't RenderTranslucent return an avtImage_p??
-        trans_dob = this->RenderTranslucent(this->r_mgmt.windowID, dob);
-        CopyTo(dob, trans_dob);
-    }
+    if(!isImageBasedPlot){
+        VisWindow *viswin =
+            this->viswinMap.find(this->r_mgmt.windowID)->second.viswin;
+        if(this->MemoMultipass(viswin))
+        {
+            avtDataObject_p trans_dob;
+            // why doesn't RenderTranslucent return an avtImage_p??
+            trans_dob = this->RenderTranslucent(this->r_mgmt.windowID, dob);
+            CopyTo(dob, trans_dob);
+        }
 
-    if(avtDebugDumpOptions::DumpEnabled())
-    {
-        this->DumpImage(dob, "icet-render-translucent");
+        if(avtDebugDumpOptions::DumpEnabled())
+        {
+            this->DumpImage(dob, "icet-render-translucent");
+        }
+        this->renderings++;
     }
-    this->renderings++;
 }
 
 // ****************************************************************************
@@ -571,6 +710,48 @@ IceTNetworkManager::RenderGeometry()
     CallProgressCallback("IceTNetworkManager", "Render geometry", 0, 1);
         viswin->ScreenRender(this->r_mgmt.viewportedMode, true);
     CallProgressCallback("IceTNetworkManager", "Render geometry", 0, 1);
+    return NULL;
+}
+
+// ****************************************************************************
+//  Method: RenderImage
+//
+//  Purpose: Renders the geometry for a scene; this is always the opaque
+//           objects, and may or may not include translucent objects (depending
+//           on the current multipass rendering settings).
+//           We override this method because we can avoid a readback in the
+//           one-pass case (we'll read it back from IceT later anyway).
+//
+//  Programmer: Tom Fogal
+//  Creation:   July 26, 2008
+//
+//  Modifications:
+//
+//    Manasa Prasad, Mon Jul 28 14:57:01 EDT 2008
+//    Need to return NULL in the single-pass case!
+//
+// ****************************************************************************
+avtImage_p
+IceTNetworkManager::RenderImage()
+{
+    //std::cout << PAR_Rank() << "\t In RenderImage" << std::endl;
+    VisWindow *viswin = viswinMap.find(this->r_mgmt.windowID)->second.viswin;
+    CallProgressCallback("IceTNetworkManager", "Render image", 0, 1);
+
+    AnnotationAttributes::BackgroundMode bm = viswin->GetBackgroundMode();
+    viswin->SetBackgroundMode(AnnotationAttributes::Solid);
+
+    viswin->ScreenRender_two(this->r_mgmt.viewportedMode, 
+        false,              // Z buffer
+        false,              // render opaque
+        true,               // render translucent
+        PAR_Rank(),         // processor id for debugging
+        image_global        // image for each processor from ray tracing
+        );
+    // Restore the background mode for next time
+    viswin->SetBackgroundMode(bm);
+
+    CallProgressCallback("IceTNetworkManager", "Render image", 0, 1);
     return NULL;
 }
 
@@ -713,13 +894,6 @@ IceTNetworkManager::Readback(VisWindow * const viswin,
         dynamic = true;
     }
     SendImageToRenderNodes(width, height, readZ, pixels, depth);
-    //debug5 << "icet width, height: " << width << ", " << height << std::endl;
-    // for (int j=0; j<height; j++)
-    //     for (int i=0; i<width; i++){
-    //         int index = j*width + i;
-    //         debug5 << depth[index] << ", ";
-    //     }
-    debug5 << std::endl;
 
     vtkImageData *image = avtImageRepresentation::NewImage(width, height);
     // NewImage assumes we want a 3-component ("GL_RGB") image, but IceT gives
@@ -736,11 +910,18 @@ IceTNetworkManager::Readback(VisWindow * const viswin,
             *img_pix++ = *pixels++;
             *img_pix++ = *pixels++;
             *img_pix++ = *pixels++;
-             pixels++; // Alpha
+            pixels++; // Alpha
         }
     }
-    float *visit_depth_buffer = NULL;
+    
+    // int dims[3];
+    // image->GetDimensions(dims);
+    // std::ostringstream os;
+    // os << PAR_Rank();
+    // std::string imgFilename_Full = "/users/pbmanasa/Desktop/debug/_ICET_VTK_"+ os.str() + ".ppm";
+    // createPpmICENM((unsigned char*)image->GetScalarPointer(0,0,0), dims[0], dims[1], imgFilename_Full);
 
+    float *visit_depth_buffer = NULL;
     if(readZ)
     {
         debug4 << "Converting depth values ..." << std::endl;
@@ -903,4 +1084,53 @@ SendImageToRenderNodes(int width, int height, bool Z,
     if(Z) {
         MPI_Bcast(depth, width*height, MPI_UNSIGNED, 0, VISIT_MPI_COMM);
     }
+}
+
+
+// ****************************************************************************
+//  Function: gatherZBuffer
+//
+//  Purpose: 
+//
+//  Programmer: Manasa Prasad
+//  Creation:   
+//
+// ****************************************************************************
+static unsigned char *
+SendBackground(int width, int height,
+               unsigned char * const background){
+  
+    GLint n_procs;
+    ICET(icetGetIntegerv(ICET_NUM_PROCESSES, &n_procs));
+
+    MPI_Bcast(background, 3*width*height, MPI_UNSIGNED_CHAR, 0, VISIT_MPI_COMM);
+
+    return background;
+}
+
+
+
+// ****************************************************************************
+//  Function: gatherZBuffer
+//
+//  Purpose: 
+//
+//  Programmer: Manasa Prasad
+//  Creation:   
+//
+// ****************************************************************************
+
+static GLfloat* 
+GatherZBuffer(GLfloat * const zBuffer){
+  
+    GLint n_procs;
+    ICET(icetGetIntegerv(ICET_NUM_PROCESSES, &n_procs));
+
+    GLfloat *all_zBuffer = new GLfloat[n_procs];
+
+    MPI_Allgather(zBuffer, 1, MPI_FLOAT, 
+                  all_zBuffer, 1, MPI_FLOAT,
+                  VISIT_MPI_COMM);
+
+    return all_zBuffer;
 }

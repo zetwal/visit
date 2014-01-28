@@ -466,6 +466,12 @@ public:
                                       bool doOpaque = true,
                                       bool doTranslucent = true,
                                       avtImage_p input = NULL);
+    void                 ScreenRender_two(bool doViewportOnly = false,
+                                      bool doZBufferToo = false,
+                                      bool doOpaque = true,
+                                      bool doTranslucent = true,
+                                      int Par_Rank = 0,
+                                      avtImage_p input = NULL);
     avtImage_p           ScreenCapture(bool doViewportOnly = false,
                                        bool doZBufferToo = false,
                                        bool doOpaque = true,
