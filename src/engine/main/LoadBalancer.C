@@ -584,7 +584,6 @@ LoadBalancer::UpdateProgress(int current, int total)
 
 LoadBalancer::LoadBalancer(int np, int r)
 {
-    std::cout << "LoadBalancer::LoadBalancer" << std::endl;
     //
     // Pipeline index 0 is reserved for meta-data pipelines.
     //

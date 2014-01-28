@@ -1962,7 +1962,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
     
     int imgBufferWidth, imgBufferHeight;
     int startX, startY, endX, endY;
-    float avg_z;
+    float avg_z = 0;
     imgBufferWidth = imgBufferHeight = 0;
     if (numPatches > 0){ 
         //
@@ -2018,7 +2018,11 @@ avtRayExtractor::ExecuteRayTracerLB(){
         int startingY = currentPatch.screen_ll[1] - startY; 
 
         //std::cout << PAR_Rank() << "    " << i << " \t (" <<  currentPatch.screen_ll[0] << " x " << currentPatch.screen_ll[1] << ") ,  (" << currentPatch.screen_ll[0] + currentPatch.dims[0] << " x " << currentPatch.screen_ll[1] + currentPatch.dims[1] <<  ") " <<std::endl;
-        avg_z += currentPatch.avg_z;
+        if (i == 0)
+            avg_z = currentPatch.avg_z;
+        //else
+        //    if (currentPatch.avg_z > avg_z)
+        //        avg_z = currentPatch.avg_z;
 
         for (int j=0; j<currentPatch.dims[1]; j++){
             for (int k=0; k<currentPatch.dims[0]; k++){
@@ -2061,8 +2065,11 @@ avtRayExtractor::ExecuteRayTracerLB(){
     visitTimer->StopTimer(localCompsitingTiming, "Local Compositing");
     visitTimer->DumpTimings();
 
-    if (numPatches > 0)
-        avg_z = avg_z/numPatches;
+    //if (numPatches > 0)
+    //    avg_z = avg_z/numPatches;
+
+    std::cout << PAR_Rank() << " ~  avg_z: " <<  avg_z << std::endl;
+        
     //
     // No longer need patches at this point, so doing some clean up and memory release
     delImgPatches();
@@ -2080,18 +2087,15 @@ avtRayExtractor::ExecuteRayTracerLB(){
     // Compositing
     //
 
+	//
     // create images structures to hold these
     avtImage_p whole_image, tempImage;
     whole_image = new avtImage(this);
     
-    tempImage = new avtImage(this);     // for processors other than proc 0 ; a dummy
-
+    tempImage = new avtImage(this);     	// for processors other than proc 0 ; a dummy
     float *zbuffer = new float[screen[0] * screen[1]];
 
-    //float *zbuffer = imgComm.gatherZBuffer(avg_z);
-
     if (avtCallback::UseusingIcet() == false){
-
         //
         // RLE Encoding
         //
@@ -2100,14 +2104,33 @@ avtRayExtractor::ExecuteRayTracerLB(){
         
         int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, 1,localBuffer,  encoding,sizeEncoding);
 
-        // if (localBuffer != NULL)
         debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
         std::cout << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
-        //     delete []localBuffer;
-        // localBuffer = NULL;
 
         debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
+		
+		//
+		// Compose with images on the same node 
+		//
+		/*
+		// Check if the next one i need to compose with is on my node
+		int myID = PAR_Rank();
+        int myPosition = -1;
+        std::vector<int>::iterator it;
+        it = find(processorCompositingOrder.begin(), processorCompositingOrder.end(), myID);
+        if (it != processorCompositingOrder.end())
+            myPosition = it-processorCompositingOrder.begin();
 
+        
+        if (myID%2 == 0){   // one below
+            checkIfProcessorIsOnMyNode()
+        }
+        else    // one above
+        {
+
+        }
+		*/
+		
         //
         // --- Timing -- 
         int  finalSend = visitTimer->StartTimer();
@@ -2211,8 +2234,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
         imgComm.syncAllProcs();
 
         //std::cout << PAR_Rank() << "    writing to image" << std::endl;
-        std::string imgFilename_Full = "/home/pascal/Desktop/icet-tests/_RT_VTK_"+ ss.str() + ".ppm";
-        createPpmRE_RGBA(vtk_image->GetRGBBuffer(), imgBufferWidth, imgBufferHeight, imgFilename_Full);
+        //std::string imgFilename_Full = "/home/pascal/Desktop/icet-tests/_RT_VTK_"+ ss.str() + ".ppm";
+        //createPpmRE_RGBA(vtk_image->GetRGBBuffer(), imgBufferWidth, imgBufferHeight, imgFilename_Full);
         //////
 
 
