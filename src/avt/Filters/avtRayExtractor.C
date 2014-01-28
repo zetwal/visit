@@ -2076,9 +2076,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
     debug5 << PAR_Rank() << " ~ compositing patch done!" << endl;
 
 
-    // //
-    // // Compositing
-    // //
+    //
+    // Compositing
+    //
 
     // create images structures to hold these
     avtImage_p whole_image, tempImage;
@@ -2090,7 +2090,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
     //float *zbuffer = imgComm.gatherZBuffer(avg_z);
 
-    if(avtCallback::UseusingIcet() == false){
+    if (avtCallback::UseusingIcet() == false){
 
         //
         // RLE Encoding
@@ -2186,9 +2186,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
         visitTimer->StopTimer(timingCompositinig, "Compositing");
         visitTimer->DumpTimings();
     } 
-
-    //using iceT
-    else{
+    else    // Using iceT
+    {
 
         std::ostringstream ss;
         ss << PAR_Rank(); 
@@ -2218,10 +2217,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
 
 
-
-
         // vtk = toVTKImage(localBuffer, imgBufferWidth, imgBufferHeight, startX, startY, avg_z);
-
 
         // vtk_image = new avtImageRepresentation(vtk, zbuffer);
 
@@ -2234,10 +2230,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
         
         // imgFilename_Full = "/users/pbmanasa/Desktop/debug/_RT_VTK_TWO_"+ ss.str() + ".ppm";
         // createPpmRE_RGBA(vtk_image->GetRGBBuffer(), screen[0], screen[1], imgFilename_Full);
-
-
-
-
 
 
         //////

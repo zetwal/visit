@@ -189,6 +189,7 @@ class AVTFILTERS_API avtRayExtractor
     void                      SetNumChildren(std::vector<int> v){numChildren = v;}
     void                      SetNumInEachLevel(std::vector<int> v){numInEachLevel = v;}
     void                      SetPatchLevel(std::vector<int> v){patchLevel = v;}
+    void                      SetProcessorCompositingOrder(std::vector<int> v){processorCompositingOrder = v;}
 
     // Getting image information
     int                       getTotalAssignedPatches() { return totalAssignedPatches; }              // gets the max number of patches it could have
@@ -284,6 +285,8 @@ class AVTFILTERS_API avtRayExtractor
     std::vector<int>          numChildren;      // number of children for each patch
     std::vector<int>          numInEachLevel;   // number of patches for each level
     std::vector<int>          patchLevel;       // level of each patch
+    std::vector<int>          processorCompositingOrder;       // order patches will be composited
+
 
     std::string               varName;
     int                       amrLevels;

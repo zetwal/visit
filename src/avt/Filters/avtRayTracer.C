@@ -558,9 +558,9 @@ avtRayTracer::Execute(void)
         //     std::cout << PAR_Rank() << " ~ " << ssss.str() << std::endl;
         // }
 
-
         vtkMatrix4x4 *worldToview  = vtkMatrix4x4::New();
         worldToview->DeepCopy(modelViewMatrix);
+        std::vector<int> processorCompositingOrder;
 
         if (PAR_Rank() == 0){
             std::cout << "Camera inside ray tracer: " 
@@ -569,7 +569,6 @@ avtRayTracer::Execute(void)
                   << modelViewMatrix[8] << "   " << modelViewMatrix[9] << "   " << modelViewMatrix[10] << "   " << modelViewMatrix[11] << std::endl
                   << modelViewMatrix[12] << "   " << modelViewMatrix[13] << "   " << modelViewMatrix[14] << "   " << modelViewMatrix[15] << std::endl;
         }
-
 
         std::multimap<double,int> depths;
         for (int i=0; i< PAR_Size(); i++){
@@ -593,13 +592,22 @@ avtRayTracer::Execute(void)
 
         if (PAR_Rank() == 0){
             std::cout << "Rank: " << std::endl;
-            int cc = 0;
-            std::multimap<double,int>::iterator it;
-            for (it=depths.begin(); it!=depths.end(); it++){
-                std::cout << cc << " : " << it->first << ", " << it->second << std::endl;
-                cc++;
-            }
         }
+        int cc = 0;
+        std::multimap<double,int>::iterator it;
+        for (it=depths.begin(); it!=depths.end(); it++){
+            processorCompositingOrder.push_back(it->second);
+            if (PAR_Rank() == 0)
+                std::cout << cc << " : " << it->first << ", " << it->second << std::endl;
+            cc++;
+        }
+        extractorRay.SetProcessorCompositingOrder(processorCompositingOrder);
+        // if (PAR_Rank() == 0){
+        //     std::cout << "Rank only: " << std::endl;
+        //     for (int i=processorCompositingOrder.size()-1; i>=0; i--)
+        //         std::cout << processorCompositingOrder[i] << std::endl;
+        // }
+
 
         // for (int p=0; p<mmd->patch_parent.size(); p++){
         //     std::stringstream ssss;
@@ -609,9 +617,6 @@ avtRayTracer::Execute(void)
         //     std::cout << PAR_Rank() << " ~ " << ssss.str() << std::endl;
         // }
 
-        std::cout << PAR_Rank() << " ~ ||||||||||||||||||||||||||||||| " << std::endl;
-        
-        
 
         for (int p=0; p<mmd->patch_parent.size(); p++){
             patchMetaData temp = mmd->patches[p];
