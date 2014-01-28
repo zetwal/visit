@@ -1044,6 +1044,8 @@ VisWinRendering::ScreenRender(bool doViewportOnly, bool doCanvasZBufferToo,
     int t1 = visitTimer->StartTimer();
     bool second_pass = (*input != NULL);
 
+    std::cout << " In ScreenRender" << std::endl;
+
     vtkRenderWindow *renWin = GetRenderWindow();
 
     if (doCanvasZBufferToo)
@@ -1089,6 +1091,133 @@ VisWinRendering::ScreenRender(bool doViewportOnly, bool doCanvasZBufferToo,
         renWin->SetZbufferData(r0,c0,w-1,h-1,zbuf);
         glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
     }
+
+    //
+    // Make sure that the window is up-to-date.
+    //
+    avtCallback::ClearRenderingExceptions();
+    int t2 = visitTimer->StartTimer();
+    if (second_pass)
+    {
+        // We can't erase the rgb/z data we just worked
+        // so hard to put there a second ago!
+        renWin->EraseOff();
+        RenderRenderWindow();
+        renWin->EraseOn();
+    }
+    else
+    {
+        // Okay, this is either the first pass or the only pass, 
+        // so we better darn well allow erasing before drawing.
+        RenderRenderWindow();
+    }
+    visitTimer->StopTimer(t2, "Time for actual vtkRenderWindow::Render()");
+
+    std::string errorMsg = avtCallback::GetRenderingException();
+    if (errorMsg != "")
+    {
+        EXCEPTION1(VisItException, errorMsg.c_str());
+    }
+
+    //
+    // If we removed the foreground layers to get the canvas' zbuffer,
+    // put it back before we leave
+    //
+    if (doCanvasZBufferToo)
+    {
+       renWin->AddRenderer(foreground);
+    }
+
+    // return geometry from hidden status
+    if(!doOpaque)
+        mediator.ResumeOpaqueGeometry();
+    if(!doTranslucent)
+        mediator.ResumeTranslucentGeometry();
+    visitTimer->StopTimer(t1, "Time spent in VisWinRendering::ScreenRender");
+}
+
+
+
+void
+VisWinRendering::ScreenRender_two(bool doViewportOnly, bool doCanvasZBufferToo,
+                                  bool doOpaque, bool doTranslucent, int Par_Rank,
+                                  avtImage_p input)
+{
+    int t1 = visitTimer->StartTimer();
+    bool second_pass = (*input != NULL);
+
+    int local_startx = 0, local_starty = 0, local_width = 0, local_height = 0;
+    input->GetImage().GetOrigin(&local_startx, &local_starty);
+
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // glMatrixMode(GL_MODELVIEW);
+    // glPushMatrix();
+    // glTranslatef(-local_startx, 0, 0);
+
+    vtkRenderWindow *renWin = GetRenderWindow();
+
+    std::cout << Par_Rank <<  " In ScreenRender_two" << std::endl;
+    //
+    // Set region origin/size to be captured
+    //
+    int r0, c0, w, h;
+    GetCaptureRegion(r0, c0, w, h, doViewportOnly);
+
+    //std::cout << Par_Rank << " :::: viewport:: " << w << " x " << h << std::endl;
+
+    input->GetSize(&w, &h);
+
+    //std::cout << Par_Rank << " :::: input   :: " << w << " x " << h << std::endl;
+
+    unsigned char *temp = new unsigned char[w*h*4];
+    temp = input->GetImage().GetRGBBuffer();
+
+    if (doCanvasZBufferToo)
+    {
+        //
+        // If we want zbuffer for the canvas, we need to take care that
+        // the canvas is rendered last. To achieve this, we temporarily
+        // remove the foreground renderer. 
+        //
+        renWin->RemoveRenderer(foreground);
+    }
+
+    // hide the appropriate geometry here
+    if(!doOpaque)
+        mediator.SuspendOpaqueGeometry();
+    if(!doTranslucent)
+        mediator.SuspendTranslucentGeometry();
+    
+    // if we already finished the first pass, 
+    // then we should load the existing data from the input image
+    if (second_pass)
+    {
+        float   *zbuf = input->GetImage().GetZBuffer();
+        float   *alphabuf = new float[w * h * 4];
+
+        for (int j = 0; j < w*h*4; ++j)
+            alphabuf[j] = temp[j] / 255.0;
+
+        // Okay, this is a horrible, horrible, ugly hack, and I know it.
+        // For now, it's perfectly safe -- there's just no good way to 
+        // get the VTK render window to draw both the pixel and Z buffer
+        // data.  Unless I override vtkRenderWindow, vtkOpenGLRenderWindow,
+        // vtkXOpenGLRenderWindow, vtkWin32OpenGLRenderWindow,
+        // vtkMesaRenderWindow, vtkXMesaRenderWindow, and so on....
+
+        int useStoredFrameBuffer = 0;
+        glDepthMask(GL_FALSE);
+        //renWin->SetRGBAPixelData(local_startx,local_starty,local_startx+ w-1, local_starty + h-1,alphabuf, renWin->GetDoubleBuffer(), useStoredFrameBuffer);
+        renWin->SetRGBAPixelData(r0,c0, w-1, h-1,alphabuf, renWin->GetDoubleBuffer(), useStoredFrameBuffer);
+        glDepthMask(GL_TRUE);
+
+        glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE);
+        renWin->SetZbufferData(r0,c0,w-1,h-1,zbuf);
+        glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
+    }
+
+    // glPopMatrix();
 
     //
     // Make sure that the window is up-to-date.

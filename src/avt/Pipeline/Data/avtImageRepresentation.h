@@ -112,6 +112,8 @@ class PIPELINE_API avtImageRepresentation
 
     void                 SetOrigin(const int rowOrigin, const int colOrigin);
     void                 GetOrigin(int *rowOrigin, int *colOrigin) const;
+    void                 SetBoundingSize(const int width, const int height);
+    void                 GetBoundingSize(int *width, int *height) const;
     virtual int          GetNumberOfCells(bool polysOnly = false) const; 
 
     float                GetCompressionRatio() const;
@@ -133,6 +135,8 @@ class PIPELINE_API avtImageRepresentation
 
     int                  rowOrigin;
     int                  colOrigin;
+    int                  width;
+    int                  height;
 
     float                compressionRatio;
     float                timeToCompress;
@@ -161,6 +165,21 @@ void avtImageRepresentation::GetOrigin(int *_rowOrigin, int *_colOrigin) const
 {
    *_rowOrigin = rowOrigin;
    *_colOrigin = colOrigin;
+}
+
+inline
+void avtImageRepresentation::SetBoundingSize(const int _width,
+                                             const int _height)
+{
+   width = _width;
+   height = _height;
+}
+
+inline
+void avtImageRepresentation::GetBoundingSize(int *_width, int *_height) const
+{
+   *_width = width;
+   *_height = height;
 }
 
 #endif

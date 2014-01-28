@@ -656,15 +656,15 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
     //
     // Check whether fully inside or not
-    if (((X[0] >= currentPartitionExtents[0]  		 && X[0] < currentPartitionExtents[3]) && 
-    	 (X[dims[0]-1] >= currentPartitionExtents[0] && X[dims[0]-1] < currentPartitionExtents[3]))  &&
-    	 
-    	((Y[0] >= currentPartitionExtents[1] 		 && Y[0] < currentPartitionExtents[4]) && 
-    	 (Y[dims[1]-1] >= currentPartitionExtents[1] && Y[dims[1]-1] < currentPartitionExtents[3]))  &&
-    	 
-    	((Z[0] >= currentPartitionExtents[2] 		 && Z[0] < currentPartitionExtents[5]) && 
-    	 (Z[dims[2]-1] >= currentPartitionExtents[2] && Z[dims[2]-1] < currentPartitionExtents[3])) )
-    	 fullyInside = true;
+    if (((X[0] >= currentPartitionExtents[0]         && X[0] < currentPartitionExtents[3]) && 
+         (X[dims[0]-1] >= currentPartitionExtents[0] && X[dims[0]-1] < currentPartitionExtents[3]))  &&
+         
+        ((Y[0] >= currentPartitionExtents[1]         && Y[0] < currentPartitionExtents[4]) && 
+         (Y[dims[1]-1] >= currentPartitionExtents[1] && Y[dims[1]-1] < currentPartitionExtents[3]))  &&
+         
+        ((Z[0] >= currentPartitionExtents[2]         && Z[0] < currentPartitionExtents[5]) && 
+         (Z[dims[2]-1] >= currentPartitionExtents[2] && Z[dims[2]-1] < currentPartitionExtents[3])) )
+         fullyInside = true;
 
     if (isAMR == true && avtCallback::UseaMRDuplication() == true){
         // 

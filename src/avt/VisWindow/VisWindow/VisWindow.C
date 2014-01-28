@@ -2067,6 +2067,16 @@ VisWindow::ScreenRender(bool doViewportOnly, bool doZBufferToo,
                             doOpaque, doTranslucent, input);
 }
 
+void
+VisWindow::ScreenRender_two(bool doViewportOnly, bool doZBufferToo,
+                        bool doOpaque, bool doTranslucent,
+                        int Par_Rank,
+                        avtImage_p input)
+{
+    rendering->ScreenRender_two(doViewportOnly, doZBufferToo,
+                            doOpaque, doTranslucent, Par_Rank, input);
+}
+
 // ****************************************************************************
 //  Method: VisWindow::ScreenCapture
 //

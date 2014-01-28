@@ -280,6 +280,8 @@ avtImageRepresentation::Copy(const avtImageRepresentation &r)
 
     rowOrigin = r.rowOrigin;
     colOrigin = r.colOrigin;
+    width = r.width;
+    height = r.height;
     compressionRatio = r.compressionRatio;
     timeToCompress = r.timeToCompress;
     timeToDecompress = r.timeToDecompress;

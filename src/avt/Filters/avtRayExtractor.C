@@ -76,6 +76,7 @@
 #include <avtWedgeExtractor.h>
 #include <avtCallback.h>
 
+#include <DebugStream.h>
 #include <InvalidCellTypeException.h>
 #include <TimingsManager.h>
 
@@ -87,6 +88,7 @@
 #include <avtDatasetToImageFilter.h>
 
 bool sortImgMetaDataByDepthCopy(imgMetaData const& before, imgMetaData const& after){ return before.avg_z > after.avg_z; }
+
 bool sortImgByCoordinatesX(imgMetaData const& before, imgMetaData const& after){ return (before.screen_ll[0] < after.screen_ll[0]); }
 bool sortImgByCoordinatesLastX(imgMetaData const& before, imgMetaData const& after){ return (before.screen_ur[0] > after.screen_ur[0]); }
 bool sortImgByCoordinatesY(imgMetaData const& before, imgMetaData const& after){ return (before.screen_ll[1] < after.screen_ll[1]); }
@@ -199,6 +201,7 @@ avtRayExtractor::avtRayExtractor(int w, int h, int d)
 
 avtRayExtractor::~avtRayExtractor()
 {
+
     if (massVoxelExtractor != NULL)
     {
         delete massVoxelExtractor;
@@ -301,6 +304,8 @@ avtRayExtractor::RestrictToTile(int wmin, int wmax, int hmin, int hmax)
 void
 avtRayExtractor::Execute(void)
 {
+    //std::cout << "          In Execute" << std::endl;
+
     int timingsIndex = visitTimer->StartTimer();
 
     SetUpExtractors();
@@ -319,7 +324,9 @@ avtRayExtractor::Execute(void)
     //
     // Determine partition extents
     //
-    
+    //std::cout << PAR_Rank() << "   Partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << ", "
+    //                                                    << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl; 
+
     avtDataTree_p tree = GetInputDataTree();
     totalNodes = tree->GetNumberOfLeaves();
     currentNode = 0;
@@ -327,6 +334,9 @@ avtRayExtractor::Execute(void)
     ExecuteTree(tree);
 
     visitTimer->StopTimer(timingsIndex, "Ray point extraction");
+
+    // avtImage_p image = ExecuteRayTracer();
+    // SetOutputImage(image);
 }
 
 
@@ -367,7 +377,7 @@ void
 avtRayExtractor::SetUpExtractors(void)
 {
     avtImage_p output = GetTypedOutput();
-	
+    
     if (massVoxelExtractor != NULL)
         delete massVoxelExtractor;
 
@@ -820,7 +830,7 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
             return;
         
-        if (partitionExtentsComputationDone == false){
+         if (partitionExtentsComputationDone == false){
             int minPos[2], maxPos[2];
             float minDepth, maxDepth;
             double minExtents[4], maxExtents[4];
@@ -1183,6 +1193,7 @@ avtRayExtractor::ExecuteRayTracer(){
             composedPatch.dims[0]   = imgBufferWidth;
             composedPatch.dims[1]   = imgBufferHeight;
             composedPatch.inUse     = false;
+
 
             for (int patchIndex=start; patchIndex<=end; patchIndex++){
                 imgMetaData currentPatch = imgMetaDataMultiMap.find(patchesToCompositeLocally[patchIndex])->second;
@@ -1876,6 +1887,44 @@ avtRayExtractor::patchOverlap(float patchMinX, float patchMaxX, float patchMinY,
 }
 
 
+void createPpmCopyComp(unsigned char array[], int dimx, int dimy, std::string filename){
+    int i, j;
+    //std::cout << "createPpm2  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    for (j = 0; j < dimy; ++j){
+        for (i = 0; i < dimx; ++i){
+            static unsigned char color[3];
+            color[0] = array[j*(dimx*3) + i*3 + 0] ;  // red
+            color[1] = array[j*(dimx*3) + i*3 + 1] ;  // green
+            color[2] = array[j*(dimx*3) + i*3 + 2] ;  // blue 
+            (void) fwrite(color, 1, 3, fp);
+        }
+    }
+    (void) fclose(fp);
+    //std::cout << "End createPpm: " << std::endl;
+}
+
+
+void createPpmRE_RGBA(unsigned char array[], int dimx, int dimy, std::string filename){
+    int i, j;
+    //std::cout << "createPpm2  dims: " << dimx << ", " << dimy << " -  " << filename.c_str() << std::endl;
+    FILE *fp = fopen(filename.c_str(), "wb"); // b - binary mode 
+    (void) fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    for (j = 0; j < dimy; ++j){
+        for (i = 0; i < dimx; ++i){
+            static unsigned char color[3];
+            float alpha = array[j*(dimx*4) + i*4 + 3] / 255.0;
+            color[0] = array[j*(dimx*4) + i*4 + 0]  * alpha;  // red
+            color[1] = array[j*(dimx*4) + i*4 + 1] * alpha;  // green
+            color[2] = array[j*(dimx*4) + i*4 + 2] * alpha;  // blue 
+            (void) fwrite(color, 1, 3, fp);
+        }
+    }
+    (void) fclose(fp);
+    //std::cout << "End createPpm: " << std::endl;
+}
+
 avtImage_p
 avtRayExtractor::ExecuteRayTracerLB(){
     int timingVolToImg;
@@ -1913,11 +1962,13 @@ avtRayExtractor::ExecuteRayTracerLB(){
     
     int imgBufferWidth, imgBufferHeight;
     int startX, startY, endX, endY;
-    
+    float avg_z;
     imgBufferWidth = imgBufferHeight = 0;
     if (numPatches > 0){ 
         //
         // Sort to find extents of patches
+        //avg_z = allImgMetaData[0].avg_z;
+
         std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesX);
         startX = allImgMetaData[0].screen_ll[0];
 
@@ -1939,17 +1990,18 @@ avtRayExtractor::ExecuteRayTracerLB(){
         imgBufferHeight = endY - startY + 1;
 
         debug5 << PAR_Rank() << " ~ done sorting and extents: screen extents X: " << startX << ", " << endX <<  "  ~~~~  screen extents Y: " << startY << ", " << endY << std::endl;
+
+        //std::cout << PAR_Rank() << " ~ done sorting and extents: screen extents X: " << startX << ", " << endX <<  "  ~~~~  screen extents Y: " << startY << ", " << endY << std::endl;
     }
 
 
-
-
     //
-    // Local composition
+    // Composite the images
     //
+    
+    // Creates a buffer to store the composited image
     float *localBuffer = NULL;
     localBuffer = new float[imgBufferWidth * imgBufferHeight * 4]();
-    float avg_z = 0;
 
     int localCompsitingTiming;
     localCompsitingTiming = visitTimer->StartTimer();
@@ -1964,6 +2016,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
         int startingX = currentPatch.screen_ll[0] - startX;
         int startingY = currentPatch.screen_ll[1] - startY; 
+
+        //std::cout << PAR_Rank() << "    " << i << " \t (" <<  currentPatch.screen_ll[0] << " x " << currentPatch.screen_ll[1] << ") ,  (" << currentPatch.screen_ll[0] + currentPatch.dims[0] << " x " << currentPatch.screen_ll[1] + currentPatch.dims[1] <<  ") " <<std::endl;
         avg_z += currentPatch.avg_z;
 
         for (int j=0; j<currentPatch.dims[1]; j++){
@@ -2009,7 +2063,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
     if (numPatches > 0)
         avg_z = avg_z/numPatches;
-
     //
     // No longer need patches at this point, so doing some clean up and memory release
     delImgPatches();
@@ -2017,125 +2070,276 @@ avtRayExtractor::ExecuteRayTracerLB(){
     imageMetaPatchVector.clear();
     imgDataHashMap.clear();
 
-    std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_composed_"+ NumbToString(PAR_Rank()) + "_.ppm";
-    createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
+    // std::string imgFilename_Final = "/users/pbmanasa/Desktop/debug/_composed_"+ ss.str() + "_.ppm";
+    // createPpmRE_RGBA(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
 
     debug5 << PAR_Rank() << " ~ compositing patch done!" << endl;
-    //std::cout << PAR_Rank() << "  ~ compositing patch done!" << endl;
 
-    //
-    // RLE Encoding
-    //
-    float *encoding = NULL;
-    int *sizeEncoding = NULL;
+
+    // //
+    // // Compositing
+    // //
+
+    // create images structures to hold these
+    avtImage_p whole_image, tempImage;
+    whole_image = new avtImage(this);
     
-    int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, 1,localBuffer,  encoding,sizeEncoding);
+    tempImage = new avtImage(this);     // for processors other than proc 0 ; a dummy
+
+    float *zbuffer = new float[screen[0] * screen[1]];
+
+    //float *zbuffer = imgComm.gatherZBuffer(avg_z);
+
+    if(avtCallback::UseusingIcet() == false){
+
+        //
+        // RLE Encoding
+        //
+        float *encoding = NULL;
+        int *sizeEncoding = NULL;
+        
+        int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, 1,localBuffer,  encoding,sizeEncoding);
+
+        // if (localBuffer != NULL)
+        debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
+        std::cout << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
+        //     delete []localBuffer;
+        // localBuffer = NULL;
+
+        debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
+
+        //
+        // --- Timing -- 
+        int  finalSend = visitTimer->StartTimer();
+        
+        //
+        // Proc 0 recieves and does the final assmebly
+        //
+        if (PAR_Rank() == 0)
+            imgComm.setBackground(background);
+
+        // Gather all the images
+        imgComm.gatherEncodingSizesLB(sizeEncoding, 1);   
+
+        int dataToSend[4];                  // size of images
+        dataToSend[0] = imgBufferWidth;
+        dataToSend[1] = imgBufferHeight;
+
+        dataToSend[2] = startX;
+        dataToSend[3] = startY;
+        imgComm.gatherAndAssembleEncodedImagesLB(screen[0], screen[1], dataToSend, totalEncodingSize*5, encoding, 1, avg_z);     // data from each processor
+
+        debug5 << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
+        //std::cout << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
+
+        if (encoding != NULL)
+            delete []encoding;
+        encoding = NULL;
+
+        if (sizeEncoding != NULL)
+            delete []sizeEncoding;
+        sizeEncoding = NULL;
+
+        
+
+        //
+        // --- Timing -- 
+        visitTimer->StopTimer(finalSend, "Final send ");
+        visitTimer->DumpTimings();
+
+        int  timingCompositinig = visitTimer->StartTimer();
+        unsigned char *imgTest = NULL;
+        
+        // Processor 0 does a special compositing
+        if (PAR_Rank() == 0)
+        {
+            whole_image = new avtImage(this);
+
+            // creates input for the
+            vtkImageData *img = avtImageRepresentation ::NewImage(screen[0], screen[1]);
+            whole_image->GetImage() = img;
+
+
+            imgTest = new unsigned char[screen[0] * screen[1] * 3];
+            imgTest = whole_image->GetImage().GetRGBBuffer();
+
+            zbuffer = new float[screen[0] * screen[1]]();
+            for (int s=0; s<screen[0] * screen[1]; s++)
+                zbuffer[s] = 20.0;
+            zbuffer = whole_image->GetImage().GetZBuffer();
+
+            
+            // Get the composited image
+            imgComm.getcompositedImage(screen[0], screen[1], imgTest); 
+            img->Delete();
+
+            debug5 << PAR_Rank() << "   ~ final: " << endl;
+
+            if (zbuffer != NULL)
+                delete []zbuffer;
+        }
+        imgComm.syncAllProcs();
+
+        if (PAR_Rank() == 0)
+            tempImage->Copy(*whole_image);
+
+        visitTimer->StopTimer(timingCompositinig, "Compositing");
+        visitTimer->DumpTimings();
+    } 
+
+    //using iceT
+    else{
+
+        std::ostringstream ss;
+        ss << PAR_Rank(); 
+
+        //if(PAR_Rank() == 0)  toVTKImage(buffer, 10, 10, avg_z);
+
+        for (int i = 0 ; i < screen[0] * screen[1] ; i++)
+            zbuffer[i] = avg_z;
+
+        //vtkImageData *vtk = toVTKImage(localBuffer, imgBufferWidth, imgBufferHeight, startX, startY, avg_z);
+        vtkImageData *vtk = toVTKImage(localBuffer, imgBufferWidth, imgBufferHeight, 0, 0, -1);
+
+
+        //avtImageRepresentation *vtk_image = new avtImageRepresentation(vtk);
+        //avtImageRepresentation *vtk_image = new avtImageRepresentation(vtk, zbuffer, imgComm.GetNumProcs(), true);
+        avtImageRepresentation *vtk_image = new avtImageRepresentation(vtk, zbuffer);
+
+        vtk_image->SetOrigin(startX, startY);
+        vtk_image->SetBoundingSize(imgBufferWidth, imgBufferHeight);
+
+        imgComm.syncAllProcs();
+
+        //std::cout << PAR_Rank() << "    writing to image" << std::endl;
+        std::string imgFilename_Full = "/home/pascal/Desktop/icet-tests/_RT_VTK_"+ ss.str() + ".ppm";
+        createPpmRE_RGBA(vtk_image->GetRGBBuffer(), imgBufferWidth, imgBufferHeight, imgFilename_Full);
+        //////
+
+
+
+
+
+        // vtk = toVTKImage(localBuffer, imgBufferWidth, imgBufferHeight, startX, startY, avg_z);
+
+
+        // vtk_image = new avtImageRepresentation(vtk, zbuffer);
+
+        // vtk_image->SetOrigin(startX, startY);
+        // vtk_image->SetBoundingSize(imgBufferWidth, imgBufferHeight);
+
+        // imgComm.syncAllProcs();
+        // std::cout << PAR_Rank() << "    writing to image" << std::endl;
+
+        
+        // imgFilename_Full = "/users/pbmanasa/Desktop/debug/_RT_VTK_TWO_"+ ss.str() + ".ppm";
+        // createPpmRE_RGBA(vtk_image->GetRGBBuffer(), screen[0], screen[1], imgFilename_Full);
+
+
+
+
+
+
+        //////
+        whole_image->GetImage() = *vtk_image;
+        tempImage->Copy(*whole_image);
+
+        // imgFilename_Full = "/users/pbmanasa/Desktop/debug/_RT_Temp_"+ ss.str() + ".ppm";
+        // createPpmRE_RGBA(tempImage->GetImage().GetRGBBuffer(), screen[0], screen[1], imgFilename_Full);
+
+    }
 
     if (localBuffer != NULL)
         delete []localBuffer;
     localBuffer = NULL;
 
-    debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
-    std::cout << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
-
-
-    //
-    // Compositing among processors on one node
-    //
-
-
-
-    //
-    // --- Timing -- 
-    int  finalSend = visitTimer->StartTimer();
-    
-    //
-    // Proc 0 recieves and does the final assmebly
-    //
-    if (PAR_Rank() == 0)
-        imgComm.setBackground(background);
-
-    // Gather all the images
-    imgComm.gatherEncodingSizesLB(sizeEncoding, 1);   
-
-    int dataToSend[4];                  // size of images
-    dataToSend[0] = imgBufferWidth;
-    dataToSend[1] = imgBufferHeight;
-
-    dataToSend[2] = startX;
-    dataToSend[3] = startY;
-    imgComm.gatherAndAssembleEncodedImagesLB(screen[0], screen[1], dataToSend, totalEncodingSize*5, encoding, 1, avg_z);     // data from each processor
-
-    debug5 << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
-    //std::cout << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
-
-    if (encoding != NULL)
-        delete []encoding;
-    encoding = NULL;
-
-    if (sizeEncoding != NULL)
-        delete []sizeEncoding;
-    sizeEncoding = NULL;
-
-    
-
-    //
-    // --- Timing -- 
-    visitTimer->StopTimer(finalSend, "Final send ");
-    visitTimer->DumpTimings();
-
-    int  timingCompositinig = visitTimer->StartTimer();
-
-
-    //
-    // Compositing
-    //
-
-    // create images structures to hold these
-    avtImage_p whole_image, tempImage;
-
-    tempImage = new avtImage(this);     // for processors other than proc 0 ; a dummy
-    unsigned char *imgTest = NULL;
-    
-    // Processor 0 does a special compositing
-    if (PAR_Rank() == 0)
-    {
-        whole_image = new avtImage(this);
-
-        float *zbuffer = new float[screen[0] * screen[1]];
-        
-        // creates input for the
-        vtkImageData *img = avtImageRepresentation ::NewImage(screen[0], screen[1]);
-        whole_image->GetImage() = img;
-
-        imgTest = new unsigned char[screen[0] * screen[1] * 3];
-        imgTest = whole_image->GetImage().GetRGBBuffer();
-
-        zbuffer = new float[screen[0] * screen[1]]();
-        for (int s=0; s<screen[0] * screen[1]; s++)
-            zbuffer[s] = 20.0;
-        zbuffer = whole_image->GetImage().GetZBuffer();
-
-        
-        // Get the composited image
-        imgComm.getcompositedImage(screen[0], screen[1], imgTest); 
-        if (img != NULL)
-            img->Delete();
-        img = NULL;
-
-        //debug5 << PAR_Rank() << "   ~ final: " << endl;
-        //std::cout << PAR_Rank() << "   ~ final: " << std::endl;
-
-        if (zbuffer != NULL)
-            delete []zbuffer;
-    }
-    imgComm.syncAllProcs();
-
-    if (PAR_Rank() == 0)
-        tempImage->Copy(*whole_image);
-
-    visitTimer->StopTimer(timingCompositinig, "Compositing");
-    visitTimer->DumpTimings();
+    if (zbuffer != NULL)
+        delete []zbuffer;
+    zbuffer = NULL;
 
     return tempImage;
+}
+
+
+
+vtkImageData* 
+avtRayExtractor::toVTKImage(float* buffer, int width, int height, int startX, int startY, float avg_z ){
+    //
+    // Create an image that we can place each pixel into.
+    //
+
+    int fullHeight;
+    int fullWidth;
+
+    if(avg_z == -1){
+      fullWidth = width;//screen[0];
+      fullHeight = height;//screen[1];
+    }else{
+      fullWidth = screen[0];
+      fullHeight = screen[1];
+    }
+
+
+    int nPixels = fullWidth*fullHeight;
+
+    vtkImageData *image = avtImageRepresentation::NewImage(fullWidth, fullHeight);
+    image->AllocateScalars(VTK_UNSIGNED_CHAR, 4);
+    //image->SetNumberOfScalarComponents(4, image->GetInformation());
+
+    //
+    // Populate an initial image, either with the background or with an
+    // opaque image that is to be inserted into the middle of the rendering.
+    //
+    unsigned char *data = (unsigned char *)image->GetScalarPointer(0, 0, 0);
+
+    //
+    // Now that we have the background in the full image, copy it into what
+    // we need for this image.
+    //
+    for (int i = 0 ; i < 4*nPixels ; i++)
+        data[i] = 0;
+
+    //  std::cout << PAR_Rank() <<  "   before writing buffer to data" << std::endl;
+
+    for (int j = 0 ; j < height ; j++){
+        for (int k = 0 ; k < width ; k++){
+            int index = width*4*j + k*4;
+
+            if ((startX + k) > fullWidth)
+                continue;
+
+            if ((startY + j) > fullHeight)
+            continue;
+
+            int bufferIndex = (startY*fullWidth*4 + j*fullWidth*4) + (startX*4+ k*4); 
+
+            if(bufferIndex > fullWidth * fullHeight * 4) {
+                continue;
+            }
+            if(index > width * height * 4) continue;
+
+            data[bufferIndex    ] = buffer[index ] * 255;
+            data[bufferIndex + 1] = buffer[index +1] * 255;
+            data[bufferIndex + 2] = buffer[index +2] * 255;
+            data[bufferIndex + 3] = buffer[index +3] * 255;
+        }
+    }
+
+    avtImageRepresentation *temp = new avtImageRepresentation(image);
+
+    // std::ostringstream ss;
+    // ss << PAR_Rank(); 
+    // std::string imgFilename_Full = "/users/pbmanasa/Desktop/debug/_RT_VTK_Image_"+ ss.str() + ".ppm";
+    // createPpmRE_RGBA(temp->GetRGBBuffer(), fullWidth, fullHeight, imgFilename_Full);
+
+    return image;
+    //SetOutputImage(image);
+}
+
+
+void    
+avtRayExtractor::InsertOpaqueImage(avtImage_p img)
+{
+    opaqueImage = img;
+    std::cout << PAR_Rank() << "        inserting opaque image" << std::endl;
 }

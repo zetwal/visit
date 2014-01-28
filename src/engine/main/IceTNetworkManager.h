@@ -92,6 +92,7 @@ class ENGINE_MAIN_API IceTNetworkManager: public NetworkManager
  protected:
 
     virtual avtImage_p RenderGeometry();
+    virtual avtImage_p RenderImage();
     virtual avtDataObject_p
                        RenderTranslucent(int windowID,
                                          const avtImage_p& input);
@@ -104,6 +105,9 @@ class ENGINE_MAIN_API IceTNetworkManager: public NetworkManager
     void  VerifyColorFormat() const;
 
  private:
+    avtImage_p image_global;
+    bool useIceTOrdered;
+    bool isImageBasedPlot;
     IceTCommunicator comm;
     IceTContext context;
     unsigned int renderings; ///< counts how many renderings we've done.

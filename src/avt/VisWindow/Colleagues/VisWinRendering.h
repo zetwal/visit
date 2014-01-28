@@ -263,6 +263,13 @@ class VISWINDOW_API VisWinRendering : public VisWinColleague
                                           bool doOpaque = true,
                                           bool doTranslucent = true,
                                           avtImage_p input = NULL);
+
+    void                    ScreenRender_two(bool doViewportOnly, 
+                                            bool doCanvasZBufferToo,
+                                            bool doOpaque, 
+                                            bool doTranslucent, 
+                                            int Par_Rank,
+                                            avtImage_p input);
     avtImage_p               ScreenReadback(bool doViewportOnly,
                                             bool doCanvasZBufferToo);
     avtImage_p               PostProcessScreenCapture(avtImage_p capturedImage,

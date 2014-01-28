@@ -537,6 +537,7 @@ avtRayTracer::Execute(void)
         std::cout << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
         std::cout << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
 
+
         // get partitions Extents
         extractorRay.getPartitionExtents(PAR_Rank(),PAR_Size(), logicalBounds, meshMin, meshMax, currentPartitionExtents);
 
@@ -548,9 +549,16 @@ avtRayTracer::Execute(void)
         double minX = currentPartitionExtents[0];  double maxX = currentPartitionExtents[3];
         double minY = currentPartitionExtents[1];  double maxY = currentPartitionExtents[4];
         double minZ = currentPartitionExtents[2];  double maxZ = currentPartitionExtents[5];
-        
-        
-        
+
+        // for (int p=0; p<mmd->patch_parent.size(); p++){
+        //     std::stringstream ssss;
+        //     ssss << p << " <> ";
+        //     for (int c=0; c<mmd->patch_parent[p].size(); c++)
+        //         ssss << mmd->patch_parent[p][c] << ", ";
+        //     std::cout << PAR_Rank() << " ~ " << ssss.str() << std::endl;
+        // }
+
+
         vtkMatrix4x4 *worldToview  = vtkMatrix4x4::New();
         worldToview->DeepCopy(modelViewMatrix);
 
@@ -579,7 +587,7 @@ avtRayTracer::Execute(void)
 
             if (PAR_Rank() == 0)
                 std::cout << PAR_Rank() << " ~  id: "<< i << "  original: " << patchCentroid[0] << ", " <<  patchCentroid[1] << ", " <<  patchCentroid[2] << "  -  " 
-        		  				        << " transformed: " <<  viewPos[0] << ", " <<  viewPos[1] << ", " <<  viewPos[2] <<", " << viewPos[3] << std::endl;
+                                        << " transformed: " <<  viewPos[0] << ", " <<  viewPos[1] << ", " <<  viewPos[2] <<", " << viewPos[3] << std::endl;
         }
 
 
@@ -601,8 +609,10 @@ avtRayTracer::Execute(void)
         //     std::cout << PAR_Rank() << " ~ " << ssss.str() << std::endl;
         // }
 
-		std::cout << PAR_Rank() << " ~ ||||||||||||||||||||||||||||||| " << std::endl;
-		
+        std::cout << PAR_Rank() << " ~ ||||||||||||||||||||||||||||||| " << std::endl;
+        
+        
+
         for (int p=0; p<mmd->patch_parent.size(); p++){
             patchMetaData temp = mmd->patches[p];
 

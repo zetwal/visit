@@ -258,10 +258,18 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
 
     while (myPartitions.size() != numDivisions){
         parent = myPartitions.front();   myPartitions.pop_front();
-
+        //if (rank == 0)
+        //     std::cout << rank << " ~~~ " << "Parent: "<< parent.axisIndex << "   - Extents (min-max):  " << parent.minExtents[0]<< ", " << parent.minExtents[1]<< ", " << parent.minExtents[2] << "   -   " << parent.maxExtents[0]<< ", " << parent.maxExtents[1]<< ", " << parent.maxExtents[2] << "  dims: " << parent.dims[0]<< ", " << parent.dims[1]<< ", " << parent.dims[2] << std::endl;
+        
         chopPartition(parent,one,two,axisOrder);
         myPartitions.push_back(one);
         myPartitions.push_back(two);
+
+        // if (rank == 0){
+        //     std::cout << rank << " ~~ " <<"One: "<<  one.axisIndex << "   - Extents (min-max):  " << one.minExtents[0]<< ", " << one.minExtents[1]<< ", " << one.minExtents[2] << "   -   " << one.maxExtents[0]<< ", " << one.maxExtents[1]<< ", " << one.maxExtents[2] << "  dims: " << one.dims[0]<< ", " << one.dims[1]<< ", " << one.dims[2] << std::endl;
+        //     std::cout << rank << " ~~ " <<"two: "<<  two.axisIndex << "   - Extents (min-max):  " << two.minExtents[0]<< ", " << two.minExtents[1]<< ", " << two.minExtents[2] << "   -   " << two.maxExtents[0]<< ", " << two.maxExtents[1]<< ", " << two.maxExtents[2] << "  dims: " << two.dims[0]<< ", " << two.dims[1]<< ", " << two.dims[2] << std::endl;
+        //     std::cout << std::endl;
+        // }
     }
 
 
@@ -317,10 +325,11 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     for (int j=0; j<patchesInsideList.size(); j++)
         list.push_back(patchesInsideList[j]);
 
+
     // Adding those that are not specifically in but only overlap!
-    if (amr && avtCallback::UseaMRDuplication() == true)
+    if (amr)
         for (int j=0; j<patchesOverlapList.size(); j++)
-           list.push_back(patchesOverlapList[j]);
+            list.push_back(patchesOverlapList[j]);
     
     std::cout << rank << " ~ " << "  patchesInsideList.size(): " << patchesInsideList.size() << 
                                   "  patchesOverlapList.size(): " << patchesOverlapList.size() << 
@@ -575,6 +584,7 @@ LoadBalancer::UpdateProgress(int current, int total)
 
 LoadBalancer::LoadBalancer(int np, int r)
 {
+    std::cout << "LoadBalancer::LoadBalancer" << std::endl;
     //
     // Pipeline index 0 is reserved for meta-data pipelines.
     //
@@ -754,12 +764,11 @@ LoadBalancer::DetermineAppropriateScheme(avtContract_p input)
 
     const avtMeshMetaData *mmd = md->GetMesh(meshName);
 
-    // if (rank == 0)
-    //     for (int p=0; p<mmd->numBlocks; p++){
-    //         std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
-    //         for (int j=0; j<mmd->patch_parent[p].size(); j++)
-    //             std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
-    //     }
+    // for (int p=0; p<mmd->numBlocks; p++){
+    //     std::cout << "  ~ 2D Load balance  Parent: " << p << "   size: " << mmd->patch_parent[p].size() << std::endl;
+    //     for (int j=0; j<mmd->patch_parent[p].size(); j++)
+    //         std::cout << "  ~ 2D Vec Parent: " <<  p << "   child: " << mmd->patch_parent[p][j] << std::endl;
+    // }
 
     if (mmd && mmd->loadBalanceScheme != LOAD_BALANCE_UNKNOWN)
     {
@@ -1091,8 +1100,6 @@ LoadBalancer::Reduce(avtContract_p input)
             mylist.reserve(numPatches);
             for (int j=0; j<numPatches; j++)
                 mylist.push_back(templist[j]);
-
-            //avtCallback::SetTestVal(rank);
         }
         else if (theScheme == LOAD_BALANCE_CONTIGUOUS_BLOCKS_TOGETHER)
         {
@@ -1185,9 +1192,7 @@ LoadBalancer::Reduce(avtContract_p input)
         ss << rank << " ~ size: " << mylist.size() << "  patches: ";
         for (int i=0; i<mylist.size(); i++)
             ss << mylist[i] << ", ";
-        std::cout << ss.str() << std::endl;
-
-         // avtCallback::SetPatchesList(mylist);
+        //std::cout << ss.str() << std::endl;
 
         silr->RestrictDomainsForLoadBalance(mylist);
         pipelineInfo[input->GetPipelineIndex()].complete = true;
@@ -1343,6 +1348,8 @@ LoadBalancer::Reduce(avtContract_p input)
             lbInfo.complete = true;
             new_data->GetRestriction()->TurnOffAll();
             MPI_Barrier(VISIT_MPI_COMM);
+
+
         }
         else
         {
