@@ -7497,7 +7497,6 @@ avtGenericDatabase::ApplyGhostForDomainNesting(avtDatasetCollection &ds,
    intVector &doms, intVector &allDoms, avtDataRequest_p &spec, 
    bool canDoCollectiveCommunication)
 {
-    std::cout << "avtGenericDatabase::ApplyGhostForDomainNesting" << std::endl;
     bool rv = false;
 
     int ts = spec->GetTimestep();

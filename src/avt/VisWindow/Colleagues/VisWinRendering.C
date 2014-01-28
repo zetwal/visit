@@ -1044,8 +1044,6 @@ VisWinRendering::ScreenRender(bool doViewportOnly, bool doCanvasZBufferToo,
     int t1 = visitTimer->StartTimer();
     bool second_pass = (*input != NULL);
 
-    std::cout << " In ScreenRender" << std::endl;
-
     vtkRenderWindow *renWin = GetRenderWindow();
 
     if (doCanvasZBufferToo)
@@ -1157,18 +1155,13 @@ VisWinRendering::ScreenRender_two(bool doViewportOnly, bool doCanvasZBufferToo,
 
     vtkRenderWindow *renWin = GetRenderWindow();
 
-    std::cout << Par_Rank <<  " In ScreenRender_two" << std::endl;
     //
     // Set region origin/size to be captured
     //
     int r0, c0, w, h;
     GetCaptureRegion(r0, c0, w, h, doViewportOnly);
 
-    //std::cout << Par_Rank << " :::: viewport:: " << w << " x " << h << std::endl;
-
     input->GetSize(&w, &h);
-
-    //std::cout << Par_Rank << " :::: input   :: " << w << " x " << h << std::endl;
 
     unsigned char *temp = new unsigned char[w*h*4];
     temp = input->GetImage().GetRGBBuffer();

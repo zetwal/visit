@@ -1770,8 +1770,8 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
             }
 
 
-           std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_FinalCompositing_ " + NumbToString(counting) + "_" + NumbToString(index) +"_" "_.ppm";
-           createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_comp);
+           //std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_FinalCompositing_ " + NumbToString(counting) + "_" + NumbToString(index) +"_" "_.ppm";
+           //createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_comp);
 
 
 
@@ -1804,11 +1804,11 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
             }
     }
  // }
-    if (my_id == 0){
-        std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_finalimage_.ppm";
-        createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_Final);
-        //std::cout << my_id <<  "  done with compositing" << std::endl;
-    }
+    // if (my_id == 0){
+    //     std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_finalimage_.ppm";
+    //     createPpm(imgBuffer, fullsizex, fullsizey, imgFilename_Final);
+    //     //std::cout << my_id <<  "  done with compositing" << std::endl;
+    // }
 
 
     if (tempRecvBuffer != NULL)
@@ -1826,6 +1826,18 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
     syncAllProcs();
 
 #endif
+}
+
+
+
+
+int avtImgCommunicator::checkIfProcessorIsOnMyNode(int id){
+  std::vector<int>::iterator it;
+  it = find(procsInMyGroup.begin(), procsInMyGroup.end(), id);
+  if (it == procsInMyGroup.end())
+    return -1;
+  else
+    return(it-procsInMyGroup.begin());
 }
 
 

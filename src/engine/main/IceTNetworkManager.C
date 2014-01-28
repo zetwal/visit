@@ -520,9 +520,13 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
             procs = new int[num_proc];
 
             int i = 0;
+            if (PAR_Rank() == 0)
+                std::cout << "IceT Rank;" << std::endl;
             for (std::multimap<float,int>::iterator it=sortedZbuf.begin(); it!=sortedZbuf.end(); ++it){
                 procs[i] =  (*it).second;
                 i++;
+                if (PAR_Rank() == 0)
+                    std::cout << i << " : " << (*it).first << ", " << (*it).second << ": " <<  std::endl;
             }
 
             // Set the compositing order for ICET
