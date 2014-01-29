@@ -210,6 +210,8 @@ class AVTFILTERS_API avtRayExtractor
     bool                      patchOverlap(float patchMinX, float patchMaxX, float patchMinY, float patchMaxY, float patchMinZ, float patchMaxZ,
     float partitionMinX, float partitionMaxX, float partitionMinY, float partitionMaxY, float partitionMinZ, float partitionMaxZ);
 
+    void                     GetContiguousNodeList();
+
     std::vector<int>         getAllChildrenOfPatch(int patchId);
     std::vector<int>         getDirectChildrenOfPatch(int patchId);
     // Check if not outside; if it is not outside it has to be somewhere inside 
@@ -250,7 +252,6 @@ class AVTFILTERS_API avtRayExtractor
     std::vector<imgMetaData>    imageMetaPatchVector;
     std::multimap<int, imgData> imgDataHashMap;
     typedef std::multimap<int, imgData>::iterator iter_t;
-
 
     // triliniear / raycastin SLIVR
     bool                      trilinearInterpolation;

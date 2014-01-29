@@ -250,11 +250,13 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
 
     partitionExtents parent, one, two;
     parent.axisIndex = 2;   // set it to the last one so that on the next iteration we get the first one! :)
+    parent.head = true;
     parent.dims[0] = logicalBounds[0];  parent.dims[1] = logicalBounds[1];  parent.dims[2] = logicalBounds[2];
     parent.minExtents[0] = minSpatialExtents[0];    parent.minExtents[1] = minSpatialExtents[1];    parent.minExtents[2] = minSpatialExtents[2];
     parent.maxExtents[0] = maxSpatialExtents[0];    parent.maxExtents[1] = maxSpatialExtents[1];    parent.maxExtents[2] = maxSpatialExtents[2];
 
     myPartitions.push_back(parent);
+    int startIndex = 0;
 
     while (myPartitions.size() != numDivisions){
         parent = myPartitions.front();   myPartitions.pop_front();
@@ -264,6 +266,10 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         chopPartition(parent,one,two,axisOrder);
         myPartitions.push_back(one);
         myPartitions.push_back(two);
+        if (one.head == true)
+        	startIndex = myPartitions.size()-2;
+        else
+        	startIndex = startIndex-1;
 
         // if (rank == 0){
         //     std::cout << rank << " ~~ " <<"One: "<<  one.axisIndex << "   - Extents (min-max):  " << one.minExtents[0]<< ", " << one.minExtents[1]<< ", " << one.minExtents[2] << "   -   " << one.maxExtents[0]<< ", " << one.maxExtents[1]<< ", " << one.maxExtents[2] << "  dims: " << one.dims[0]<< ", " << one.dims[1]<< ", " << one.dims[2] << std::endl;
@@ -271,6 +277,20 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         //     std::cout << std::endl;
         // }
     }
+    
+    //
+    //Push head to the start of the list: this ensures more contiguity
+    headfound = false;
+    do{
+    	partitionExtents tempExt = myPartitions.front();
+    	if (tempExt.head == true)
+    		headfound = true;
+    	else{
+    		// remove the front and put it at the back
+    		myPartitions.pop_front();
+    		myPartitions.push_back(tempExt);
+    	}
+    }while(headfound == true);
 
 
     /////////////////////////////////////////////////////////////////
@@ -440,6 +460,11 @@ LoadBalancer::chopPartition(partitionExtents parent, partitionExtents & childOne
                 childTwo.minExtents[2] = childOne.maxExtents[2];
                 childTwo.maxExtents[2] = parent.maxExtents[2];
             }
+    if (parent.head == true)
+    	childOne.head = true;
+    else
+    	childOne.head = false;
+    childTwo.head = false;
     
     return 0;
 }

@@ -148,6 +148,7 @@ struct iotaMeta{
 //
 // ****************************************************************************
 struct partitionExtents{
+	bool head;
     int axisIndex;
     int dims[3];
     double minExtents[3], maxExtents[3];

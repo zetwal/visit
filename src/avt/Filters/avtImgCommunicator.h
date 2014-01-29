@@ -120,7 +120,7 @@ class avtImgCommunicator
   imgMetaData setImg(int _inUse, int _procId, int _patchNumber, float dim_x, float dim_y, float screen_ll_x, float screen_ll_y, float screen_ur_x, float screen_ur_y, float _avg_z);
   iotaMeta setIota(int _procId, int _patchNumber, int dim_x, int dim_y, int screen_ll_x, int screen_ll_y, float _avg_z);
   int getDataPatchID(int procID, int patchID);
-  int checkIfProcessorIsOnMyNode(int id);
+  
 
   std::string getHostname();
   void topoInfo();
@@ -162,6 +162,7 @@ public:
 
   void getcompositedImage(int imgBufferWidth, int imgBufferHeight, unsigned char *wholeImage);  // get the final composited image
 
+  bool checkIfProcessorIsOnMyNode(int id);
 
   int rleEncodeAll(int dimsX, int dimsY, int numDivs, float *imgArray,  float *& encoding, int *& sizeOfEncoding);
   void rleDecode(int encSize, float *encoding, int offset, float *& img);
