@@ -280,7 +280,7 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     
     //
     //Push head to the start of the list: this ensures more contiguity
-    headfound = false;
+    bool headfound = false;
     do{
     	partitionExtents tempExt = myPartitions.front();
     	if (tempExt.head == true)
