@@ -1141,6 +1141,7 @@ VisWinRendering::ScreenRender_two(bool doViewportOnly, bool doCanvasZBufferToo,
                                   bool doOpaque, bool doTranslucent, int Par_Rank,
                                   avtImage_p input)
 {
+    std::cout << "ScreenRender_two" << std::endl;
     int t1 = visitTimer->StartTimer();
     bool second_pass = (*input != NULL);
 

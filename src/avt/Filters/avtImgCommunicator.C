@@ -109,12 +109,15 @@ else
 avtImgCommunicator::avtImgCommunicator(){
   int ierr;
 
+  debug5 << "avtImgCommunicator: " << std::endl;
+
 #ifdef PARALLEL
   ierr = MPI_Comm_size(VISIT_MPI_COMM, &num_procs);
   ierr = MPI_Comm_rank(VISIT_MPI_COMM, &my_id);
   hostname = getHostname();
 
-  topoInfo();
+  //topoInfo();
+
   //debug5 << my_id << " ~ " << num_procs << " ~ " << hostname << std::endl;
   //std::cout << my_id << " ~ " << num_procs << " ~ " << hostname << std::endl;
 
@@ -234,6 +237,8 @@ std::string avtImgCommunicator::getHostname(){
 
   gethostname(hostanme, bufferLength);
   std::string myHostname(hostanme);
+
+  debug5 << "hostname: " << hostanme << std::endl;
 
   return myHostname;
 }
@@ -1831,13 +1836,13 @@ void avtImgCommunicator::gatherAndAssembleEncodedImagesLB(int fullsizex, int ful
 
 
 
-int avtImgCommunicator::checkIfProcessorIsOnMyNode(int id){
+bool avtImgCommunicator::checkIfProcessorIsOnMyNode(int id){
   std::vector<int>::iterator it;
   it = find(procsInMyGroup.begin(), procsInMyGroup.end(), id);
   if (it == procsInMyGroup.end())
-    return -1;
+    return false;
   else
-    return(it-procsInMyGroup.begin());
+    return true;
 }
 
 

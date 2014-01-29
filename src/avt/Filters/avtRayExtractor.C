@@ -2112,24 +2112,31 @@ avtRayExtractor::ExecuteRayTracerLB(){
 		//
 		// Compose with images on the same node 
 		//
-		/*
-		// Check if the next one i need to compose with is on my node
-		int myID = PAR_Rank();
-        int myPosition = -1;
-        std::vector<int>::iterator it;
-        it = find(processorCompositingOrder.begin(), processorCompositingOrder.end(), myID);
-        if (it != processorCompositingOrder.end())
-            myPosition = it-processorCompositingOrder.begin();
+		
+		// // Check if the next one i need to compose with is on my node
+		// int myID = PAR_Rank();
+  //       int myPosition = -1;
+  //       std::vector<int>::iterator it;
+  //       it = find(processorCompositingOrder.begin(), processorCompositingOrder.end(), myID);
+  //       if (it != processorCompositingOrder.end())
+  //           myPosition = it-processorCompositingOrder.begin();
 
         
-        if (myID%2 == 0){   // one below
-            checkIfProcessorIsOnMyNode()
-        }
-        else    // one above
-        {
+  //       if (myPosition%2 == 0){   // check above
+  //           int processorIDAbove = processorCompositingOrder[myPosition+1];
+  //           checkIfProcessorIsOnMyNode(processorIDAbove);
 
-        }
-		*/
+  //           // if above is on my node:
+  //               // check if that processor is ready to exchange information
+                
+  //               // merge and send to the
+  //       }
+  //       else    // one above
+  //       {
+  //           int processorIDAbove = processorCompositingOrder[myPosition+1];
+
+  //       }
+		
 		
         //
         // --- Timing -- 
@@ -2358,3 +2365,63 @@ avtRayExtractor::InsertOpaqueImage(avtImage_p img)
     opaqueImage = img;
     std::cout << PAR_Rank() << "        inserting opaque image" << std::endl;
 }
+
+void
+avtRayExtractor::GetContiguousNodeList()
+{
+	// std::list<int> contiguousProcs;
+	// int id = PAR_Rank();
+ //    int position = -1;
+ //    int myPos, myId;
+    
+ //    std::vector<int>::iterator it;
+ //    it = find(processorCompositingOrder.begin(), processorCompositingOrder.end(), id);
+ //    if (it != processorCompositingOrder.end())
+ //        position = it-processorCompositingOrder.begin();
+        
+ //    contiguousProcs.push_back(id);
+ //    //
+	// // Check if the ones around me are on my node: two directions up and down
+	
+	// // Up
+	// myPos = position;
+	// myId = id;
+ //    bool found = false;
+	// do{
+	// 	int nextUp = myPos-1;
+	// 	if (nextUp < 0)
+	// 		break;
+	// 	int nodeId = processorCompositingOrder[nextUp];
+
+	// 	if (checkIfProcessorIsOnMyNode(nodeId)){
+	// 		contiguousProcs.push_front(nodeId);
+	// 		found = true;
+	// 		myPos = nextUp;
+	// 		myId = nodeId;
+	// 	}
+	// }while(found == false);
+        
+ //    // Down
+	// myPos = position;
+	// myId = id;
+ //    found = false;
+	// do{
+		
+	// 	int nextDown = myPos+1;
+	// 	if (nextDown >= processorCompositingOrder.size())
+	// 		break;
+			
+	// 	int nodeId = processorCompositingOrder[nextDown];
+
+	// 	if (checkIfProcessorIsOnMyNode(nodeId)){
+	// 		contiguousProcs.push_back(nodeId);
+	// 		found = true;
+	// 		myPos = nextDown;
+	// 		myId = nodeId;
+	// 	}
+	// }while(found == false);
+	
+ //    for (std::list<int>::iterator it=contiguousProcs.begin(); it != contiguousProcs.end(); ++it)
+ //        std::cout << ' ' << *it;
+}
+
