@@ -225,8 +225,6 @@ int
 LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minSpatialExtents[3], double maxSpatialExtents[3], 
                                                std::vector<patchMetaData> patches, std::vector<int> &list, bool amr){
 
-    std::cout << rank << " ~~~ " << " LoadBalancer::kdtreeBuilding " << numDivisions << std::endl;
-
     /////////////////////////////////////////////////////////////////
     // Sort to find the order of axes from largest to smallest
     int axisOrder[3];
@@ -240,9 +238,7 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         axisOrder[order]=(*it).second;
         order--;
     }
-    std::cout << rank << " ~~~ " << "axisOrder: " << axisOrder[0] << ", " << axisOrder[1] << ", " << axisOrder[2] << std::endl << std::endl;
-
-
+    
     /////////////////////////////////////////////////////////////////
     // Do the region splitting according to a k-d tree
     std::deque<partitionExtents> myPartitions;
@@ -260,9 +256,7 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
 
     while (myPartitions.size() != numDivisions){
         parent = myPartitions.front();   myPartitions.pop_front();
-        //if (rank == 0)
-        //     std::cout << rank << " ~~~ " << "Parent: "<< parent.axisIndex << "   - Extents (min-max):  " << parent.minExtents[0]<< ", " << parent.minExtents[1]<< ", " << parent.minExtents[2] << "   -   " << parent.maxExtents[0]<< ", " << parent.maxExtents[1]<< ", " << parent.maxExtents[2] << "  dims: " << parent.dims[0]<< ", " << parent.dims[1]<< ", " << parent.dims[2] << std::endl;
-        
+
         chopPartition(parent,one,two,axisOrder);
 
         myPartitions.push_back(one);
@@ -281,7 +275,6 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     int tempCount = 0;
     do{
     	partitionExtents tempExt = myPartitions.front();
-        //std::cout << "tempExt: " << tempExt.head << ", " << tempExt.axisIndex << ", " << tempExt.dims[0] << ", " << tempExt.dims[1] << ", " << std::endl;
     	if (tempExt.head == true){
     		headfound = true;
             break;
@@ -292,10 +285,11 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     		myPartitions.push_back(tempExt);
     	}
 
-
         tempCount++;
-        if (tempCount > myPartitions.size())    // should not have to resort to this!!!!
+        if (tempCount > myPartitions.size()){    // should not have to resort to this!!!!
+            debug5 << "loadbalancer kdtree has had to abort an infinite loop!!!! shouldn't be happening" << std::endl;
             break;
+        }
     }while(headfound == false);
 
     /////////////////////////////////////////////////////////////////
@@ -356,8 +350,8 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         for (int j=0; j<patchesOverlapList.size(); j++)
             list.push_back(patchesOverlapList[j]);
     
-    std::cout << rank << " ~ " << "  patchesInsideList.size(): " << patchesInsideList.size() << 
-                                  "  patchesOverlapList.size(): " << patchesOverlapList.size() << 
+    debug5 << rank << " ~ " << "  patchesInsideList.size(): " << patchesInsideList.size() << 
+                              "  patchesOverlapList.size(): " << patchesOverlapList.size() << 
                                   "  list.size(): " << list.size() << std::endl;
 
     return list.size();
@@ -399,7 +393,7 @@ LoadBalancer::chopPartition(partitionExtents parent, partitionExtents & childOne
     }
 
     if (count == 3){
-        std::cout << "Error in kdtree" << std::endl;
+        debug5 << "LoadBalancer::chopPartition Error in kdtree" << std::endl;
         return -1;  // We are going to be cycling forever here! So stop!
     }
         
@@ -1123,10 +1117,10 @@ LoadBalancer::Reduce(avtContract_p input)
 
         if (theScheme == LOAD_BALANCE_KDTREE)
         {
-            std::cout << "||| K-d tree load balancing ||| " << patchesInfo.size() << std::endl;
+            debug5 << "||| K-d tree load balancing ||| " << patchesInfo.size() << std::endl;
 
             int numPatches = kdtreeBuilding(nProcs, logicalBounds, minSpatialExtents, maxSpatialExtents, patchesInfo,templist,amrOn);
-            std::cout << rank << "  numPatches: " << numPatches << std::endl;
+            debug5 << rank << " ~ numPatches: " << numPatches << std::endl;
             
             mylist.clear();
             mylist.reserve(numPatches);
@@ -1220,10 +1214,10 @@ LoadBalancer::Reduce(avtContract_p input)
         }
 
         //Display the list:
-        std::stringstream ss;
-        ss << rank << " ~ size: " << mylist.size() << "  patches: ";
-        for (int i=0; i<mylist.size(); i++)
-            ss << mylist[i] << ", ";
+        // std::stringstream ss;
+        // ss << rank << " ~ size: " << mylist.size() << "  patches: ";
+        // for (int i=0; i<mylist.size(); i++)
+        //     ss << mylist[i] << ", ";
         //std::cout << ss.str() << std::endl;
 
         silr->RestrictDomainsForLoadBalance(mylist);

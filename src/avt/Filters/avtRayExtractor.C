@@ -1866,12 +1866,37 @@ avtRayExtractor::getPartitionExtents(int id, int numDivisions, int logicalBounds
         myPartitions.push_back(two);
     }
 
+
+    //
+    //Push head to the start of the list: this ensures more contiguity
+    bool headfound = false;
+    int tempCount = 0;
+    do{
+        partitionExtents tempExt = myPartitions.front();
+        if (tempExt.head == true){
+            headfound = true;
+            break;
+        }
+        else{
+            // remove the front and put it at the back
+            myPartitions.pop_front();
+            myPartitions.push_back(tempExt);
+        }
+
+        tempCount++;
+        if (tempCount > myPartitions.size()){    // should not have to resort to this!!!!
+            debug5 << "avtRayExtractor::getPartitionExtents kdtree has had to abort an infinite loop!!!! shouldn't be happening" << std::endl;
+            break;
+        }
+    }while(headfound == false);
+
     /////////////////////////////////////////////////////////////////
     // Determine which patch is in which region
     extents[0] = myPartitions[id].minExtents[0];  extents[3] = myPartitions[id].maxExtents[0];
     extents[1] = myPartitions[id].minExtents[1];  extents[4] = myPartitions[id].maxExtents[1];
     extents[2] = myPartitions[id].minExtents[2];  extents[5] = myPartitions[id].maxExtents[2];
 }
+
 
 bool 
 avtRayExtractor::patchOverlap(float patchMinX, float patchMaxX, float patchMinY, float patchMaxY, float patchMinZ, float patchMaxZ,
@@ -2369,59 +2394,65 @@ avtRayExtractor::InsertOpaqueImage(avtImage_p img)
 void
 avtRayExtractor::GetContiguousNodeList()
 {
-	// std::list<int> contiguousProcs;
-	// int id = PAR_Rank();
- //    int position = -1;
- //    int myPos, myId;
+	std::list<int> contiguousProcs;
+	int id = PAR_Rank();
+    int position = -1;
+    int myPos, myId;
     
- //    std::vector<int>::iterator it;
- //    it = find(processorCompositingOrder.begin(), processorCompositingOrder.end(), id);
- //    if (it != processorCompositingOrder.end())
- //        position = it-processorCompositingOrder.begin();
+    std::vector<int>::iterator it;
+    it = find(processorCompositingOrder.begin(), processorCompositingOrder.end(), id);
+    if (it != processorCompositingOrder.end())
+        position = it-processorCompositingOrder.begin();
         
- //    contiguousProcs.push_back(id);
- //    //
-	// // Check if the ones around me are on my node: two directions up and down
+    contiguousProcs.push_back(id);
+    //
+	// Check if the ones around me are on my node: two directions up and down
 	
-	// // Up
-	// myPos = position;
-	// myId = id;
- //    bool found = false;
-	// do{
-	// 	int nextUp = myPos-1;
-	// 	if (nextUp < 0)
-	// 		break;
-	// 	int nodeId = processorCompositingOrder[nextUp];
+	// Up
+	myPos = position;
+	myId = id;
+    bool found = false;
+	do{
+		int nextUp = myPos-1;
+		if (nextUp < 0)
+			break;
+		int nodeId = processorCompositingOrder[nextUp];
 
-	// 	if (checkIfProcessorIsOnMyNode(nodeId)){
-	// 		contiguousProcs.push_front(nodeId);
-	// 		found = true;
-	// 		myPos = nextUp;
-	// 		myId = nodeId;
-	// 	}
-	// }while(found == false);
+		if (imgComm.checkIfProcessorIsOnMyNode(nodeId)){
+			contiguousProcs.push_front(nodeId);
+			found = true;
+			myPos = nextUp;
+			myId = nodeId;
+		}else
+            found = false;
+
+	}while(found == true);
         
- //    // Down
-	// myPos = position;
-	// myId = id;
- //    found = false;
-	// do{
-		
-	// 	int nextDown = myPos+1;
-	// 	if (nextDown >= processorCompositingOrder.size())
-	// 		break;
+    // Down
+	myPos = position;
+	myId = id;
+    found = false;
+	do{
+		int nextDown = myPos+1;
+		if (nextDown >= processorCompositingOrder.size())
+			break;
 			
-	// 	int nodeId = processorCompositingOrder[nextDown];
+		int nodeId = processorCompositingOrder[nextDown];
 
-	// 	if (checkIfProcessorIsOnMyNode(nodeId)){
-	// 		contiguousProcs.push_back(nodeId);
-	// 		found = true;
-	// 		myPos = nextDown;
-	// 		myId = nodeId;
-	// 	}
-	// }while(found == false);
+		if (imgComm.checkIfProcessorIsOnMyNode(nodeId)){
+			contiguousProcs.push_back(nodeId);
+			found = true;
+			myPos = nextDown;
+			myId = nodeId;
+		}else
+            found = false;
+
+	}while(found == true);
 	
- //    for (std::list<int>::iterator it=contiguousProcs.begin(); it != contiguousProcs.end(); ++it)
- //        std::cout << ' ' << *it;
+    std::stringstream ss;
+    ss << PAR_Rank() << " ~ Contiguous procs size: " << contiguousProcs.size() << "  patches: ";
+    for (std::list<int>::iterator it=contiguousProcs.begin(); it != contiguousProcs.end(); ++it)
+        ss <<  ", " << *it;
+    std::cout << ss.str() << std::endl;
 }
 

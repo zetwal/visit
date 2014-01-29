@@ -510,6 +510,7 @@ avtRayTracer::Execute(void)
 
         avtDataObject_p temp = extractorRay.GetInput();
 
+        // Finding name of mesh and variable 
         const avtDataAttributes &datts = temp->GetInfo().GetAttributes();
         
         std::string db = temp->GetInfo().GetAttributes().GetFullDBName();
@@ -526,17 +527,14 @@ avtRayTracer::Execute(void)
             meshMax[i] = mmd->maxSpatialExtents[i];
             logicalBounds[i]=mmd->logicalBounds[i];
         }
-
-        debug5 << "| db : " << db << "  mesh:  " << mesh << "   varname: " << varName << std::endl;
-
         extractorRay.SetVarName(varName);
         extractorRay.SetMeshDims(meshMin,meshMax);
         extractorRay.SetLogicalBounds(logicalBounds[0],logicalBounds[1],logicalBounds[2]);
 
+        debug5 << "| db : " << db << "  mesh:  " << mesh << "   varname: " << varName << std::endl;
+        debug5 << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
         std::cout << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
-        std::cout << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
-        std::cout << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
-
+        
 
         // get partitions Extents
         extractorRay.getPartitionExtents(PAR_Rank(),PAR_Size(), logicalBounds, meshMin, meshMax, currentPartitionExtents);
@@ -587,6 +585,9 @@ avtRayTracer::Execute(void)
             if (PAR_Rank() == 0)
                 std::cout << PAR_Rank() << " ~  id: "<< i << "  original: " << patchCentroid[0] << ", " <<  patchCentroid[1] << ", " <<  patchCentroid[2] << "  -  " 
                                         << " transformed: " <<  viewPos[0] << ", " <<  viewPos[1] << ", " <<  viewPos[2] <<", " << viewPos[3] << std::endl;
+
+            debug5 << " ~  id: "<< i << "  original: " << patchCentroid[0] << ", " <<  patchCentroid[1] << ", " <<  patchCentroid[2] << "  -  " 
+                   << " transformed: " <<  viewPos[0] << ", " <<  viewPos[1] << ", " <<  viewPos[2] <<", " << viewPos[3] << std::endl;   
         }
 
 
@@ -602,6 +603,7 @@ avtRayTracer::Execute(void)
             cc++;
         }
         extractorRay.SetProcessorCompositingOrder(processorCompositingOrder);
+        extractorRay.GetContiguousNodeList();
         // if (PAR_Rank() == 0){
         //     std::cout << "Rank only: " << std::endl;
         //     for (int i=processorCompositingOrder.size()-1; i>=0; i--)
