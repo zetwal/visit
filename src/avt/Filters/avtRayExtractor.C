@@ -304,7 +304,8 @@ avtRayExtractor::RestrictToTile(int wmin, int wmax, int hmin, int hmax)
 void
 avtRayExtractor::Execute(void)
 {
-    //std::cout << "          In Execute" << std::endl;
+    std::cout << PAR_Rank() << " ~  avtRayExtractor::Execute" << std::endl;
+    debug5 << " ~  avtRayExtractor::Execute" << std::endl;
 
     int timingsIndex = visitTimer->StartTimer();
 
@@ -2394,7 +2395,7 @@ avtRayExtractor::InsertOpaqueImage(avtImage_p img)
 void
 avtRayExtractor::GetContiguousNodeList()
 {
-	std::list<int> contiguousProcs;
+    contiguousMergingProcs.clear();
 	int id = PAR_Rank();
     int position = -1;
     int myPos, myId;
@@ -2404,7 +2405,7 @@ avtRayExtractor::GetContiguousNodeList()
     if (it != processorCompositingOrder.end())
         position = it-processorCompositingOrder.begin();
         
-    contiguousProcs.push_back(id);
+    contiguousMergingProcs.push_back(id);
     //
 	// Check if the ones around me are on my node: two directions up and down
 	
@@ -2419,7 +2420,7 @@ avtRayExtractor::GetContiguousNodeList()
 		int nodeId = processorCompositingOrder[nextUp];
 
 		if (imgComm.checkIfProcessorIsOnMyNode(nodeId)){
-			contiguousProcs.push_front(nodeId);
+			contiguousMergingProcs.push_front(nodeId);
 			found = true;
 			myPos = nextUp;
 			myId = nodeId;
@@ -2440,7 +2441,7 @@ avtRayExtractor::GetContiguousNodeList()
 		int nodeId = processorCompositingOrder[nextDown];
 
 		if (imgComm.checkIfProcessorIsOnMyNode(nodeId)){
-			contiguousProcs.push_back(nodeId);
+			contiguousMergingProcs.push_back(nodeId);
 			found = true;
 			myPos = nextDown;
 			myId = nodeId;
@@ -2450,10 +2451,9 @@ avtRayExtractor::GetContiguousNodeList()
 	}while(found == true);
 	
     std::stringstream ss;
-    ss << PAR_Rank() << " ~ Contiguous procs size: " << contiguousProcs.size() << "  patches: ";
-    for (std::list<int>::iterator it=contiguousProcs.begin(); it != contiguousProcs.end(); ++it)
+    ss << PAR_Rank() << " ~ Contiguous procs size: " << contiguousMergingProcs.size() << "  patches: ";
+    for (std::list<int>::iterator it=contiguousMergingProcs.begin(); it != contiguousMergingProcs.end(); ++it)
         ss <<  ", " << *it;
     std::cout << ss.str() << std::endl;
     debug5 << ss.str() << std::endl;
 }
-
