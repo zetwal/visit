@@ -109,7 +109,7 @@ else
 avtImgCommunicator::avtImgCommunicator(){
   int ierr;
 
-  debug5 << "avtImgCommunicator: " << std::endl;
+
 
 #ifdef PARALLEL
   ierr = MPI_Comm_size(VISIT_MPI_COMM, &num_procs);
@@ -117,7 +117,6 @@ avtImgCommunicator::avtImgCommunicator(){
   hostname = getHostname();
 
   topoInfo();
-
   //debug5 << my_id << " ~ " << num_procs << " ~ " << hostname << std::endl;
   //std::cout << my_id << " ~ " << num_procs << " ~ " << hostname << std::endl;
 
@@ -299,20 +298,30 @@ void avtImgCommunicator::topoInfo(){
 
   // 
   // exchange node information
-  char *hostnameBuffer = new char[256*num_procs];
-  char *myHostname = new char[256];
-  strcpy(myHostname, hostname.c_str());
-
+  char *hostnameBuffer = new char[256*num_procs]();
+  char *myHostname = new char[256]();
+  strncpy(myHostname, hostname.c_str(),hostname.length());
+  std::cout << my_id << " ~ topoInfo myHostname: " << myHostname << std::endl;
   MPI_Allgather(myHostname, 256, MPI_CHAR,    hostnameBuffer, 256, MPI_CHAR,  MPI_COMM_WORLD);
 
-  debug5 << my_id << " ~ After gather " << std::endl;
+  // if (my_id == 0){
+  //   char tempStr[256];
+  //   for (int i=0; i<num_procs; i++){
+  //     memcpy(tempStr,hostnameBuffer+i*256,256);
+  //     std::cout << i << " ~ nm: " << tempStr << std::endl;
+  //   }
+  // }
+
   // 
   // Find the nodes that are in my partition
   int index = 0;
     for (int i=0; i<num_procs; i++){
       if (i == my_id)
         continue;
-      if (strcmp(myHostname,hostnameBuffer) == 0)
+
+      char tempStr[256];
+      memcpy(tempStr,hostnameBuffer+i*256,256);
+      if (strcmp(myHostname,tempStr) == 0)
         procsInMyGroup.push_back(i);
     }
 
@@ -329,7 +338,7 @@ void avtImgCommunicator::topoInfo(){
   nodeLeader = std::min(my_id,procsInMyGroup[0]);
 
   //std::cout << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
-  debug5 << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
+  //debug5 << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
 
   //
   // Done!
