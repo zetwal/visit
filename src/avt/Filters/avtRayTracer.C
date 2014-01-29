@@ -510,6 +510,7 @@ avtRayTracer::Execute(void)
 
         avtDataObject_p temp = extractorRay.GetInput();
 
+        //
         // Finding name of mesh and variable 
         const avtDataAttributes &datts = temp->GetInfo().GetAttributes();
         
@@ -536,10 +537,14 @@ avtRayTracer::Execute(void)
         std::cout << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
         
 
-        // get partitions Extents
+
+        //
+        // Get partitions extents
+        //
         extractorRay.getPartitionExtents(PAR_Rank(),PAR_Size(), logicalBounds, meshMin, meshMax, currentPartitionExtents);
 
-        // Determine the partitions in this partition
+        //
+        // Determine the patches in this partition
         std::vector<int> patchesIn;
         std::vector<int> patchesInsideList;  //list of patches that belong to that partition
         std::vector<int> patchesOverlapList; //list of division that overlap that partition
@@ -556,60 +561,77 @@ avtRayTracer::Execute(void)
         //     std::cout << PAR_Rank() << " ~ " << ssss.str() << std::endl;
         // }
 
-        vtkMatrix4x4 *worldToview  = vtkMatrix4x4::New();
-        worldToview->DeepCopy(modelViewMatrix);
-        std::vector<int> processorCompositingOrder;
 
-        if (PAR_Rank() == 0){
-            std::cout << "Camera inside ray tracer: " 
-                  << modelViewMatrix[0] << "   " << modelViewMatrix[1] << "   " << modelViewMatrix[2] << "   " << modelViewMatrix[3] << std::endl
-                  << modelViewMatrix[4] << "   " << modelViewMatrix[5] << "   " << modelViewMatrix[6] << "   " << modelViewMatrix[7] << std::endl
-                  << modelViewMatrix[8] << "   " << modelViewMatrix[9] << "   " << modelViewMatrix[10] << "   " << modelViewMatrix[11] << std::endl
-                  << modelViewMatrix[12] << "   " << modelViewMatrix[13] << "   " << modelViewMatrix[14] << "   " << modelViewMatrix[15] << std::endl;
-        }
 
-        std::multimap<double,int> depths;
-        for (int i=0; i< PAR_Size(); i++){
-            double exts[6];
-            extractorRay.getPartitionExtents(i,PAR_Size(), logicalBounds, meshMin, meshMax, exts);
+        if (avtCallback::UseusingIcet() == false){
+            //
+            // Determine the order of composition of the partitions
+            //
 
-            double patchCentroid[4], viewPos[4];
-            patchCentroid[0] = (exts[0] + exts[3])/2.0;
-            patchCentroid[1] = (exts[1] + exts[4])/2.0;
-            patchCentroid[2] = (exts[2] + exts[5])/2.0;
-            patchCentroid[3] = 1.0;
+            //
+            // Get the model view projection
+            vtkMatrix4x4 *worldToview  = vtkMatrix4x4::New();
+            worldToview->DeepCopy(modelViewMatrix);
+            std::vector<int> processorCompositingOrder;
 
-            worldToview->MultiplyPoint(patchCentroid, viewPos);
-            depths.insert( std::pair<double, int> (viewPos[2], i) );
+            if (PAR_Rank() == 0){
+                std::cout << "Camera inside ray tracer: " 
+                      << modelViewMatrix[0] << "   " << modelViewMatrix[1] << "   " << modelViewMatrix[2] << "   " << modelViewMatrix[3] << std::endl
+                      << modelViewMatrix[4] << "   " << modelViewMatrix[5] << "   " << modelViewMatrix[6] << "   " << modelViewMatrix[7] << std::endl
+                      << modelViewMatrix[8] << "   " << modelViewMatrix[9] << "   " << modelViewMatrix[10] << "   " << modelViewMatrix[11] << std::endl
+                      << modelViewMatrix[12] << "   " << modelViewMatrix[13] << "   " << modelViewMatrix[14] << "   " << modelViewMatrix[15] << std::endl;
+            }
 
+            //
+            // Project the partitions into eye space
+            std::multimap<double,int> depths;
+            for (int i=0; i< PAR_Size(); i++){
+                double exts[6];
+                extractorRay.getPartitionExtents(i,PAR_Size(), logicalBounds, meshMin, meshMax, exts);
+
+                double patchCentroid[4], viewPos[4];
+                patchCentroid[0] = (exts[0] + exts[3])/2.0;
+                patchCentroid[1] = (exts[1] + exts[4])/2.0;
+                patchCentroid[2] = (exts[2] + exts[5])/2.0;
+                patchCentroid[3] = 1.0;
+
+                worldToview->MultiplyPoint(patchCentroid, viewPos);
+                depths.insert( std::pair<double, int> (viewPos[2], i) );
+
+                if (PAR_Rank() == 0)
+                    std::cout << PAR_Rank() << " ~  id: "<< i << "  original: " << patchCentroid[0] << ", " <<  patchCentroid[1] << ", " <<  patchCentroid[2] << "  -  " 
+                                            << " transformed: " <<  viewPos[0] << ", " <<  viewPos[1] << ", " <<  viewPos[2] <<", " << viewPos[3] << std::endl;
+
+                debug5 << " ~  id: "<< i << "  original: " << patchCentroid[0] << ", " <<  patchCentroid[1] << ", " <<  patchCentroid[2] << "  -  " 
+                       << " transformed: " <<  viewPos[0] << ", " <<  viewPos[1] << ", " <<  viewPos[2] <<", " << viewPos[3] << std::endl;   
+            }
+
+
+            //
+            // Sort to find the closest from the camera
             if (PAR_Rank() == 0)
-                std::cout << PAR_Rank() << " ~  id: "<< i << "  original: " << patchCentroid[0] << ", " <<  patchCentroid[1] << ", " <<  patchCentroid[2] << "  -  " 
-                                        << " transformed: " <<  viewPos[0] << ", " <<  viewPos[1] << ", " <<  viewPos[2] <<", " << viewPos[3] << std::endl;
+                std::cout << "Rank: " << std::endl;
+            int cc = 0;
+            std::multimap<double,int>::iterator it;
+            for (it=depths.begin(); it!=depths.end(); it++){
+                processorCompositingOrder.push_back(it->second);
+                if (PAR_Rank() == 0)
+                    std::cout << cc << " : " << it->first << ", " << it->second << std::endl;
+                cc++;
+            }
 
-            debug5 << " ~  id: "<< i << "  original: " << patchCentroid[0] << ", " <<  patchCentroid[1] << ", " <<  patchCentroid[2] << "  -  " 
-                   << " transformed: " <<  viewPos[0] << ", " <<  viewPos[1] << ", " <<  viewPos[2] <<", " << viewPos[3] << std::endl;   
+             // if (PAR_Rank() == 0){
+            //     std::cout << "Rank only: " << std::endl;
+            //     for (int i=processorCompositingOrder.size()-1; i>=0; i--)
+            //         std::cout << processorCompositingOrder[i] << std::endl;
+            // }
+
+            //
+            // Send the list the extractor and compute if processors on one node are adjacent
+            extractorRay.SetProcessorCompositingOrder(processorCompositingOrder);
+            extractorRay.GetContiguousNodeList();
         }
-
-
-        if (PAR_Rank() == 0){
-            std::cout << "Rank: " << std::endl;
-        }
-        int cc = 0;
-        std::multimap<double,int>::iterator it;
-        for (it=depths.begin(); it!=depths.end(); it++){
-            processorCompositingOrder.push_back(it->second);
-            if (PAR_Rank() == 0)
-                std::cout << cc << " : " << it->first << ", " << it->second << std::endl;
-            cc++;
-        }
-        extractorRay.SetProcessorCompositingOrder(processorCompositingOrder);
-        extractorRay.GetContiguousNodeList();
-        // if (PAR_Rank() == 0){
-        //     std::cout << "Rank only: " << std::endl;
-        //     for (int i=processorCompositingOrder.size()-1; i>=0; i--)
-        //         std::cout << processorCompositingOrder[i] << std::endl;
-        // }
-
+       
 
         // for (int p=0; p<mmd->patch_parent.size(); p++){
         //     std::stringstream ssss;
@@ -620,6 +642,10 @@ avtRayTracer::Execute(void)
         // }
 
 
+
+        //
+        // AMR stuff
+        //
         for (int p=0; p<mmd->patch_parent.size(); p++){
             patchMetaData temp = mmd->patches[p];
 
@@ -647,8 +673,8 @@ avtRayTracer::Execute(void)
                     patchesOverlapList.push_back(p);
             }
         }
-
         std::sort(patchesInsideList.begin(),patchesInsideList.end()); // not specifically required
+
         // Adding those that belong
         for (int j=0; j<patchesInsideList.size(); j++)
             patchesIn.push_back(patchesInsideList[j]);
@@ -705,8 +731,9 @@ avtRayTracer::Execute(void)
         // }
         // std::cout << ssssss.str() << std::endl;
             
-        debug5 << PAR_Rank() << " ~ varName: " << varName << 
-                  "  Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
+        debug5 << PAR_Rank() << 
+                    " ~ varName: " << varName << 
+                  "   Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 
                                  "      " << mmd->minSpatialExtents[1] << " , " << mmd->maxSpatialExtents[1] << 
                                  "      " << mmd->minSpatialExtents[2] << " , " << mmd->maxSpatialExtents[2] << std::endl;
         
@@ -716,9 +743,11 @@ avtRayTracer::Execute(void)
         extractorRay.SetPatchLevel(patchLevel);
         extractorRay.SetPartitionExtents(currentPartitionExtents);
 
-    //
-    // Ray casting: SLIVR
-    //
+
+
+        //
+        // Ray casting: SLIVR
+        //
         avtDataObject_p samplesRay = extractorRay.GetOutput();
         samplesRay->Update(GetGeneralContract());
 
@@ -748,7 +777,7 @@ avtRayTracer::Execute(void)
 
         return;
     }
-
+    
     avtDataObject_p samples = extractor.GetOutput();
 
 #ifdef PARALLEL
