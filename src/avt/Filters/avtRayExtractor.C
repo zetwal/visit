@@ -2454,5 +2454,6 @@ avtRayExtractor::GetContiguousNodeList()
     for (std::list<int>::iterator it=contiguousProcs.begin(); it != contiguousProcs.end(); ++it)
         ss <<  ", " << *it;
     std::cout << ss.str() << std::endl;
+    debug5 << ss.str() << std::endl;
 }
 
