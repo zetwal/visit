@@ -264,12 +264,9 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
         //     std::cout << rank << " ~~~ " << "Parent: "<< parent.axisIndex << "   - Extents (min-max):  " << parent.minExtents[0]<< ", " << parent.minExtents[1]<< ", " << parent.minExtents[2] << "   -   " << parent.maxExtents[0]<< ", " << parent.maxExtents[1]<< ", " << parent.maxExtents[2] << "  dims: " << parent.dims[0]<< ", " << parent.dims[1]<< ", " << parent.dims[2] << std::endl;
         
         chopPartition(parent,one,two,axisOrder);
+
         myPartitions.push_back(one);
         myPartitions.push_back(two);
-        if (one.head == true)
-        	startIndex = myPartitions.size()-2;
-        else
-        	startIndex = startIndex-1;
 
         // if (rank == 0){
         //     std::cout << rank << " ~~ " <<"One: "<<  one.axisIndex << "   - Extents (min-max):  " << one.minExtents[0]<< ", " << one.minExtents[1]<< ", " << one.minExtents[2] << "   -   " << one.maxExtents[0]<< ", " << one.maxExtents[1]<< ", " << one.maxExtents[2] << "  dims: " << one.dims[0]<< ", " << one.dims[1]<< ", " << one.dims[2] << std::endl;
@@ -281,17 +278,25 @@ LoadBalancer::kdtreeBuilding(int numDivisions, int logicalBounds[3], double minS
     //
     //Push head to the start of the list: this ensures more contiguity
     bool headfound = false;
+    int tempCount = 0;
     do{
     	partitionExtents tempExt = myPartitions.front();
-    	if (tempExt.head == true)
+        //std::cout << "tempExt: " << tempExt.head << ", " << tempExt.axisIndex << ", " << tempExt.dims[0] << ", " << tempExt.dims[1] << ", " << std::endl;
+    	if (tempExt.head == true){
     		headfound = true;
+            break;
+        }
     	else{
     		// remove the front and put it at the back
     		myPartitions.pop_front();
     		myPartitions.push_back(tempExt);
     	}
-    }while(headfound == true);
 
+
+        tempCount++;
+        if (tempCount > myPartitions.size())    // should not have to resort to this!!!!
+            break;
+    }while(headfound == false);
 
     /////////////////////////////////////////////////////////////////
     // Determine which patch is in which region
@@ -392,8 +397,11 @@ LoadBalancer::chopPartition(partitionExtents parent, partitionExtents & childOne
         if (count == 3)
             break;
     }
-    if (count == 3)
+
+    if (count == 3){
+        std::cout << "Error in kdtree" << std::endl;
         return -1;  // We are going to be cycling forever here! So stop!
+    }
         
     childOne.axisIndex = axisIndex;
     childTwo.axisIndex = axisIndex;
