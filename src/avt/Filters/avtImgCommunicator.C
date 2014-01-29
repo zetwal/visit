@@ -116,7 +116,7 @@ avtImgCommunicator::avtImgCommunicator(){
   ierr = MPI_Comm_rank(VISIT_MPI_COMM, &my_id);
   hostname = getHostname();
 
-  //topoInfo();
+  topoInfo();
 
   //debug5 << my_id << " ~ " << num_procs << " ~ " << hostname << std::endl;
   //std::cout << my_id << " ~ " << num_procs << " ~ " << hostname << std::endl;
