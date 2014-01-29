@@ -338,7 +338,10 @@ void avtImgCommunicator::topoInfo(){
   nodeLeader = std::min(my_id,procsInMyGroup[0]);
 
   //std::cout << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
-  //debug5 << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
+  debug5 << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
+  for (int i=0; i<procsInMyGroup.size(); i++){
+    std::cout << i << " : " << procsInMyGroup[i] << std::endl;
+  }
 
   //
   // Done!
