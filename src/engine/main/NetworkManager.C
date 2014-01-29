@@ -5301,7 +5301,7 @@ BroadcastImage(avtImage_p &img, bool send_zbuf, int root)
     }
     if(PAR_Rank() != root)
     {
-        debug5 << "(PAR_Rank() != root)"
+        debug5 << "(PAR_Rank() != root)" << std::endl;
         vtkImageData *image = avtImageRepresentation::NewImage(w,h);
         {
             void *img_data = image->GetScalarPointer();
