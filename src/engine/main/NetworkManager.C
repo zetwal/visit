@@ -2617,6 +2617,7 @@ NetworkManager::Render(bool checkThreshold, intVector plotIds, bool getZBuffer,
         // will have any data.  If the plot utilizes transparency, we'll fade
         // process 0's (correct) image by compositing, because process 0 will
         // have the right image and everybody else will have a plain white BG.
+        debug5 << "before (OnlyRootNodeHasData(theImage))" << std::endl;
         if(OnlyRootNodeHasData(theImage))
         {
             int t1B = visitTimer->StartTimer();
@@ -2644,12 +2645,14 @@ NetworkManager::Render(bool checkThreshold, intVector plotIds, bool getZBuffer,
             compositedImageAsDataObject = imageCompositer->GetOutput();
         }
 
+         debug5 << "CallProgressCallback" << std::endl;
         CallProgressCallback("NetworkManager", "Compositing", 1, 1);
 
         // ************************************************************
         // SECOND PASS - Translucent only
         // ************************************************************
 
+        debug5 << "(this->MemoMultipass(viswin))" << std::endl;
         if (this->MemoMultipass(viswin))
         {
             int t1C = visitTimer->StartTimer();
@@ -5297,6 +5300,7 @@ BroadcastImage(avtImage_p &img, bool send_zbuf, int root)
     }
     if(PAR_Rank() != root)
     {
+        debug5 << "(PAR_Rank() != root)"
         vtkImageData *image = avtImageRepresentation::NewImage(w,h);
         {
             void *img_data = image->GetScalarPointer();
