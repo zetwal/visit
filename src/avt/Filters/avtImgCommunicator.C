@@ -305,6 +305,7 @@ void avtImgCommunicator::topoInfo(){
 
   MPI_Allgather(myHostname, 256, MPI_CHAR,    hostnameBuffer, 256, MPI_CHAR,  MPI_COMM_WORLD);
 
+  debug5 << my_id << " ~ After gather " << std::endl;
   // 
   // Find the nodes that are in my partition
   int index = 0;
@@ -328,7 +329,7 @@ void avtImgCommunicator::topoInfo(){
   nodeLeader = std::min(my_id,procsInMyGroup[0]);
 
   //std::cout << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
-  //debug5 << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
+  debug5 << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
 
   //
   // Done!
