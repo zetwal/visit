@@ -340,7 +340,7 @@ void avtImgCommunicator::topoInfo(){
   //std::cout << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
   debug5 << my_id << " ~ Node Leader: " << nodeLeader <<  "sssize: " << procsInMyGroup.size() << std::endl;
   for (int i=0; i<procsInMyGroup.size(); i++){
-    std::cout << i << " : the others " << procsInMyGroup[i] << std::endl;
+    debug5 << i << " : the others " << procsInMyGroup[i] << std::endl;
   }
 
   //
