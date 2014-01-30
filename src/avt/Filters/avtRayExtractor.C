@@ -88,6 +88,7 @@
 #include <avtDatasetToImageFilter.h>
 
 bool sortImgMetaDataByDepthCopy(imgMetaData const& before, imgMetaData const& after){ return before.avg_z > after.avg_z; }
+bool sortImgMetaDataByDepthLargest(imgMetaData const& before, imgMetaData const& after){ return before.avg_z < after.avg_z; }
 
 bool sortImgByCoordinatesX(imgMetaData const& before, imgMetaData const& after){ return (before.screen_ll[0] < after.screen_ll[0]); }
 bool sortImgByCoordinatesLastX(imgMetaData const& before, imgMetaData const& after){ return (before.screen_ur[0] > after.screen_ur[0]); }
@@ -1954,16 +1955,6 @@ void createPpmRE_RGBA(unsigned char array[], int dimx, int dimy, std::string fil
 avtImage_p
 avtRayExtractor::ExecuteRayTracerLB(){
     int timingVolToImg;
-    // if (parallelOn){
-    //     timingVolToImg = visitTimer->StartTimer();
-    //     debug5 << "parallelOn: " << parallelOn << std::endl;
-    // }
-
-    //
-    // -- -- -- Timing -- 
-    // visitTimer->StopTimer(timingVolToImg, "VolToImg");
-    // visitTimer->DumpTimings();
-    
 
     //
     // Get the metadata
@@ -1979,12 +1970,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
     debug5 << PAR_Rank() << " ~ avtRayTracer::ExecuteRayTracerLB  - Getting the patches - num patches used: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
     std::cout << PAR_Rank() << " ~ avtRayTracer::ExecuteRayTracerLB  - Getting the patches - num patches used : " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
 
-    if (numPatches <= 0){   // less should not happen!!!
-        // no compositing to do
-        // no encoding to do
-
-    }
-
     
     int imgBufferWidth, imgBufferHeight;
     int startX, startY, endX, endY;
@@ -1993,8 +1978,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
     if (numPatches > 0){ 
         //
         // Sort to find extents of patches
-        //avg_z = allImgMetaData[0].avg_z;
-
         std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesX);
         startX = allImgMetaData[0].screen_ll[0];
 
@@ -2007,22 +1990,20 @@ avtRayExtractor::ExecuteRayTracerLB(){
         std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgByCoordinatesLastY);
         endY = allImgMetaData[0].screen_ur[1];
 
-        
         //
         // Sort with the largest z first
-        std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgMetaDataByDepthCopy);
+        std::sort(allImgMetaData.begin(), allImgMetaData.end(), &sortImgMetaDataByDepthLargest);
 
         imgBufferWidth = endX - startX + 1;
         imgBufferHeight = endY - startY + 1;
 
         debug5 << PAR_Rank() << " ~ done sorting and extents: screen extents X: " << startX << ", " << endX <<  "  ~~~~  screen extents Y: " << startY << ", " << endY << std::endl;
-
         //std::cout << PAR_Rank() << " ~ done sorting and extents: screen extents X: " << startX << ", " << endX <<  "  ~~~~  screen extents Y: " << startY << ", " << endY << std::endl;
     }
 
 
     //
-    // Composite the images
+    // Local Compositing within one processor
     //
     
     // Creates a buffer to store the composited image
@@ -2043,36 +2024,26 @@ avtRayExtractor::ExecuteRayTracerLB(){
         int startingX = currentPatch.screen_ll[0] - startX;
         int startingY = currentPatch.screen_ll[1] - startY; 
 
-        //std::cout << PAR_Rank() << "    " << i << " \t (" <<  currentPatch.screen_ll[0] << " x " << currentPatch.screen_ll[1] << ") ,  (" << currentPatch.screen_ll[0] + currentPatch.dims[0] << " x " << currentPatch.screen_ll[1] + currentPatch.dims[1] <<  ") " <<std::endl;
         if (i == 0)
             avg_z = currentPatch.avg_z;
-        //else
-        //    if (currentPatch.avg_z > avg_z)
-        //        avg_z = currentPatch.avg_z;
 
         for (int j=0; j<currentPatch.dims[1]; j++){
             for (int k=0; k<currentPatch.dims[0]; k++){
                 
-                if ((startingX + k) > imgBufferWidth)
-                    continue;
-
-                if ((startingY + j) > imgBufferHeight)
-                    continue;
+                if ((startingX + k) > imgBufferWidth) continue;
+                if ((startingY + j) > imgBufferHeight) continue;
                 
                 int subImgIndex = currentPatch.dims[0]*j*4 + k*4;                                           // index in the subimage 
                 int bufferIndex = (startingY*imgBufferWidth*4 + j*imgBufferWidth*4) + (startingX*4 + k*4);  // index in the big buffer
 
-                if (localBuffer[bufferIndex+3] > 1.0)
-                    continue;
+                if (localBuffer[bufferIndex+3] > 1.0) continue;
+                if (tempImgData.imagePatch[subImgIndex+3] <= 0.0) continue;
 
-                if (tempImgData.imagePatch[subImgIndex+3] <= 0.0)
-                    continue;
-
-                // back to Front compositing: composited_i = composited_i-1 * (1.0 - alpha_i) + incoming; alpha = alpha_i-1 * (1- alpha_i)
-                localBuffer[bufferIndex+0] = imgComm.clamp((localBuffer[bufferIndex+0] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+0]);
-                localBuffer[bufferIndex+1] = imgComm.clamp((localBuffer[bufferIndex+1] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+1]);
-                localBuffer[bufferIndex+2] = imgComm.clamp((localBuffer[bufferIndex+2] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+2]);
-                localBuffer[bufferIndex+3] = imgComm.clamp((localBuffer[bufferIndex+3] * (1.0 - tempImgData.imagePatch[subImgIndex+3])) + tempImgData.imagePatch[subImgIndex+3]);
+                // Front to Back
+                localBuffer[bufferIndex+0] = imgComm.clamp( (tempImgData.imagePatch[subImgIndex+0] * (1.0 - localBuffer[bufferIndex+3])) + localBuffer[bufferIndex+0] );
+                localBuffer[bufferIndex+1] = imgComm.clamp( (tempImgData.imagePatch[subImgIndex+1] * (1.0 - localBuffer[bufferIndex+3])) + localBuffer[bufferIndex+1] );
+                localBuffer[bufferIndex+2] = imgComm.clamp( (tempImgData.imagePatch[subImgIndex+2] * (1.0 - localBuffer[bufferIndex+3])) + localBuffer[bufferIndex+2] );
+                localBuffer[bufferIndex+3] = imgComm.clamp( (tempImgData.imagePatch[subImgIndex+3] * (1.0 - localBuffer[bufferIndex+3])) + localBuffer[bufferIndex+3] ); 
             }
         }
 
@@ -2085,17 +2056,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
         delImgData(currentPatch.patchNumber);
     }
+    imgComm.setHasImageToComposite(true);
 
-    debug5 << "Local compositing:  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight << std::endl;
-    std::cout << PAR_Rank() << " ~ Local compositing:  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight << std::endl;
-    visitTimer->StopTimer(localCompsitingTiming, "Local Compositing");
-    visitTimer->DumpTimings();
-
-    //if (numPatches > 0)
-    //    avg_z = avg_z/numPatches;
-
-    std::cout << PAR_Rank() << " ~  avg_z: " <<  avg_z << std::endl;
-        
     //
     // No longer need patches at this point, so doing some clean up and memory release
     delImgPatches();
@@ -2103,10 +2065,14 @@ avtRayExtractor::ExecuteRayTracerLB(){
     imageMetaPatchVector.clear();
     imgDataHashMap.clear();
 
+    visitTimer->StopTimer(localCompsitingTiming, "Local Compositing");
+    visitTimer->DumpTimings();
+
+    debug5 << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
+    std::cout << PAR_Rank()  << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
+
     // std::string imgFilename_Final = "/users/pbmanasa/Desktop/debug/_composed_"+ ss.str() + "_.ppm";
     // createPpmRE_RGBA(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
-
-    debug5 << PAR_Rank() << " ~ compositing patch done!" << endl;
 
 
     //
@@ -2122,6 +2088,18 @@ avtRayExtractor::ExecuteRayTracerLB(){
     float *zbuffer = new float[screen[0] * screen[1]];
 
     if (avtCallback::UseusingIcet() == false){
+
+        // Composite on one node
+        std::vector<int>collocatedProcs;
+        for (std::list<int>::iterator it=contiguousMergingProcs.begin(); it != contiguousMergingProcs.end(); ++it)
+            contiguousMergingProcs.push_back(*it);
+        imgComm.doNodeCompositing(collocatedProcs, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer);
+
+        //
+        // Compositing across nodes
+        //
+		
+		
         //
         // RLE Encoding
         //
@@ -2133,37 +2111,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
         debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
         std::cout << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
 
-        debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
-		
-		//
-		// Compose with images on the same node 
-		//
-		
-		// // Check if the next one i need to compose with is on my node
-		// int myID = PAR_Rank();
-  //       int myPosition = -1;
-  //       std::vector<int>::iterator it;
-  //       it = find(processorCompositingOrder.begin(), processorCompositingOrder.end(), myID);
-  //       if (it != processorCompositingOrder.end())
-  //           myPosition = it-processorCompositingOrder.begin();
 
-        
-  //       if (myPosition%2 == 0){   // check above
-  //           int processorIDAbove = processorCompositingOrder[myPosition+1];
-  //           checkIfProcessorIsOnMyNode(processorIDAbove);
-
-  //           // if above is on my node:
-  //               // check if that processor is ready to exchange information
-                
-  //               // merge and send to the
-  //       }
-  //       else    // one above
-  //       {
-  //           int processorIDAbove = processorCompositingOrder[myPosition+1];
-
-  //       }
-		
-		
         //
         // --- Timing -- 
         int  finalSend = visitTimer->StartTimer();
@@ -2195,8 +2143,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
         if (sizeEncoding != NULL)
             delete []sizeEncoding;
         sizeEncoding = NULL;
-
-        
 
         //
         // --- Timing -- 
@@ -2242,23 +2188,16 @@ avtRayExtractor::ExecuteRayTracerLB(){
         visitTimer->StopTimer(timingCompositinig, "Compositing");
         visitTimer->DumpTimings();
     } 
-    else    // Using iceT
+    else   // Using iceT
     {
 
-        std::ostringstream ss;
-        ss << PAR_Rank(); 
-
-        //if(PAR_Rank() == 0)  toVTKImage(buffer, 10, 10, avg_z);
+        //std::ostringstream ss;
+        //ss << PAR_Rank(); 
 
         for (int i = 0 ; i < screen[0] * screen[1] ; i++)
             zbuffer[i] = avg_z;
 
-        //vtkImageData *vtk = toVTKImage(localBuffer, imgBufferWidth, imgBufferHeight, startX, startY, avg_z);
         vtkImageData *vtk = toVTKImage(localBuffer, imgBufferWidth, imgBufferHeight, 0, 0, -1);
-
-
-        //avtImageRepresentation *vtk_image = new avtImageRepresentation(vtk);
-        //avtImageRepresentation *vtk_image = new avtImageRepresentation(vtk, zbuffer, imgComm.GetNumProcs(), true);
         avtImageRepresentation *vtk_image = new avtImageRepresentation(vtk, zbuffer);
 
         vtk_image->SetOrigin(startX, startY);
@@ -2266,35 +2205,11 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
         imgComm.syncAllProcs();
 
-        //std::cout << PAR_Rank() << "    writing to image" << std::endl;
-        //std::string imgFilename_Full = "/home/pascal/Desktop/icet-tests/_RT_VTK_"+ ss.str() + ".ppm";
-        //createPpmRE_RGBA(vtk_image->GetRGBBuffer(), imgBufferWidth, imgBufferHeight, imgFilename_Full);
-        //////
-
-
-
-        // vtk = toVTKImage(localBuffer, imgBufferWidth, imgBufferHeight, startX, startY, avg_z);
-
-        // vtk_image = new avtImageRepresentation(vtk, zbuffer);
-
-        // vtk_image->SetOrigin(startX, startY);
-        // vtk_image->SetBoundingSize(imgBufferWidth, imgBufferHeight);
-
-        // imgComm.syncAllProcs();
-        // std::cout << PAR_Rank() << "    writing to image" << std::endl;
-
-        
-        // imgFilename_Full = "/users/pbmanasa/Desktop/debug/_RT_VTK_TWO_"+ ss.str() + ".ppm";
-        // createPpmRE_RGBA(vtk_image->GetRGBBuffer(), screen[0], screen[1], imgFilename_Full);
-
-
-        //////
         whole_image->GetImage() = *vtk_image;
         tempImage->Copy(*whole_image);
 
         // imgFilename_Full = "/users/pbmanasa/Desktop/debug/_RT_Temp_"+ ss.str() + ".ppm";
         // createPpmRE_RGBA(tempImage->GetImage().GetRGBBuffer(), screen[0], screen[1], imgFilename_Full);
-
     }
 
     if (localBuffer != NULL)

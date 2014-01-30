@@ -129,6 +129,7 @@ avtImgCommunicator::avtImgCommunicator(){
 
   totalPatches = 0;
   numPatchesToCompose = 0;
+  hasImageToComposite = false;
 
   processorPatchesCount = NULL;
   imgBuffer = NULL;
@@ -1932,4 +1933,337 @@ void createPpm(float array[], int dimx, int dimy, std::string filename){
     }
     (void) fclose(fp);
     //std::cout << "End createPpm: " << std::endl;
+}
+
+
+void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &startX, int &startY, int &bufferWidth, int &bufferHeight, float avg_z, float *localImage){
+  #ifdef PARALLEL
+
+  std::vector<int>::iterator it;
+  
+  while (compositeFrom.size() > 1){
+    it = std::find(compositeFrom.begin(), compositeFrom.end(), my_id);
+    if (hasImageToComposite == false)
+      break;
+    	
+    int myIndex = it-compositeFrom.begin();
+
+    if (myIndex%2==0)	// Send section
+    {	
+        if (myIndex == compositeFrom.size()-1){
+        	//has nothing to send to
+        }
+        
+        int destIndex = compositeFrom[myIndex+1];
+        int dataToSend[6];  //0: -1 = no data,1=data| 1: length | 2:width | 3:compressed size
+        if (hasImageToComposite == false){
+          dataToSend[0]=-1;
+
+          // MPI 1 up Send if it has something
+          MPI_Send(dataToSend, 4, MPI_INT, destIndex, 0, MPI_COMM_WORLD);
+        }
+        else
+        {
+          float *encoding = NULL;
+          int *sizeEncoding = NULL;
+
+          rleEncodeAll(bufferWidth, bufferHeight, 1, localImage,  encoding, sizeEncoding);
+
+          dataToSend[0]=my_id;
+          dataToSend[1]=startX;
+          dataToSend[2]=startY;
+          dataToSend[3]=bufferWidth;
+          dataToSend[4]=bufferHeight;
+          dataToSend[5]=*sizeEncoding;
+
+          // MPI 1 up Send if it has something
+          MPI_Send(dataToSend, 6, MPI_INT, destIndex, 0, MPI_COMM_WORLD);
+          MPI_Send(&avg_z, 1, MPI_FLOAT, destIndex, 1, MPI_COMM_WORLD);
+        
+          // MPI Send it
+          MPI_Send(encoding, *sizeEncoding, MPI_FLOAT, destIndex, 2, MPI_COMM_WORLD);
+
+          if (encoding != NULL)
+            delete []encoding;
+          encoding = NULL;
+          hasImageToComposite = false;
+     
+        }
+    }
+    else		// Receive section
+    {
+    	// MPI Recv from Any if it has something
+      int dataToRecv[6]; 
+      float *localRecvBuffer = NULL;
+      MPI_Recv(dataToRecv, 6, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+
+      
+      // MPI Recv it
+      if (dataToRecv[0] != -1){
+        float recv_z;
+        MPI_Recv(&recv_z, 1, MPI_FLOAT, dataToRecv[0], 1, MPI_COMM_WORLD, &status);
+
+        localRecvBuffer = new float[dataToRecv[5]];
+        MPI_Recv(localRecvBuffer, dataToRecv[5], MPI_FLOAT, dataToRecv[0], 2, MPI_COMM_WORLD, &status);
+      
+        // Decode
+        float *localRecvImage = NULL;
+        localRecvImage = new float[dataToRecv[3]*dataToRecv[4]*4];
+    	  rleDecode(dataToRecv[5], localRecvBuffer, 0, localRecvImage);
+
+        if (localRecvBuffer != NULL)
+          delete []localRecvBuffer;
+        localRecvBuffer = NULL;
+
+    	  // Do Compositing
+        float *localCompositedImage = NULL;
+        compositeTwoImages(startX, startY,   bufferWidth, bufferHeight,   avg_z,  localImage,
+                           dataToRecv[1],dataToRecv[2],  dataToRecv[2],dataToRecv[3],  recv_z, localRecvImage,
+                           startX, startY,   bufferWidth, bufferHeight,   avg_z, localCompositedImage);
+      
+        if (localRecvImage != NULL)
+          delete []localRecvImage;
+        localRecvImage = NULL;
+
+        if (localImage != NULL)
+          delete []localImage;
+        localImage = localCompositedImage;  // reallocate to the new one
+      }
+    
+      // Update the compositeFrom buffer
+      std::vector<int> compositeFromTemp;
+      for (int i=0; i<compositeFrom.size()-2; i++)
+    	 if (i%2 != 0)
+    		compositeFromTemp.push_back(compositeFrom[i]);
+      compositeFrom.clear();
+      compositeFrom = compositeFromTemp;
+    }
+  }
+  #endif
+}  
+
+
+void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY,   int imgOneX,   int imgOneY,   float one_z,    float *imgOne,
+                                            int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,   int imgTwoY,   float two_z,    float *imgTwo,
+                                            int &imgCompX, int &imgCompY, int &imgCompStartX, int &imgCompStartY, float &final_z, float *compositedImg){
+  #ifdef PARALLEL
+
+  int inputImagesX[2], inputImagesY[2], inputImagesStartX[2], inputImagesStartY[2];
+  inputImagesX[0] = imgOneX;  inputImagesY[0] = imgOneY;  inputImagesStartX[0] = imgOneStartX;  inputImagesStartY[0] = imgOneStartY; 
+  inputImagesX[1] = imgTwoX;  inputImagesY[1] = imgTwoY;  inputImagesStartX[1] = imgTwoStartX;  inputImagesStartY[1] = imgTwoStartY; 
+
+  //
+  // Compute new starting X and Y
+  if (imgOneStartX < imgTwoStartX)
+    imgCompStartX = imgOneStartX;
+  else
+    imgCompStartX = imgTwoStartX;
+
+  if (imgOneStartY < imgTwoStartY)
+    imgCompStartY = imgOneStartY;
+  else
+    imgCompStartY = imgTwoStartY;
+
+  //
+  // Compute new dimensions
+  int endOneX = imgOneX + imgOneStartX;
+  int endOneY = imgOneY + imgOneStartY;
+
+  int endTwoX = imgTwoX + imgTwoStartX;
+  int endTwoY = imgTwoY + imgTwoStartY;
+
+  if (endOneX > endTwoX)
+    imgCompX = endOneX - imgCompStartX + 1;
+  else
+    imgCompX = endTwoX - imgCompStartX + 1;
+
+  if (endOneY > endTwoY)
+    imgCompY = endOneY - imgCompStartY + 1;
+  else
+    imgCompY = endTwoY - imgCompStartY + 1;
+
+
+  int orderArray[2];
+
+  // set the final z
+  if (one_z < two_z){
+    final_z = two_z;
+
+    orderArray[0] = 1;
+    orderArray[2] = 0;
+  }
+  else{
+    final_z = one_z;
+
+    orderArray[0] = 0;
+    orderArray[2] = 1;
+  }
+
+  // clean first and then allocate size
+  if (compositedImg != NULL)
+    delete []compositedImg;
+  compositedImg = NULL;
+
+  compositedImg = new float[imgCompX*imgCompY*4]();
+
+  // subimage to composite with
+  float *subImage;
+
+  // Composite
+  for (int z=0; z<2; z++){
+      if (orderArray[0] == 0)
+          subImage = imgOne;
+      else
+          subImage = imgTwo;
+
+      for (int j=0; j<inputImagesY[ orderArray[z] ]; j++){
+          for (int k=0; k<inputImagesX[ orderArray[z] ]; k++){  
+              if ((inputImagesStartX[ orderArray[z] ] + k) > imgCompX) continue;
+              if ((inputImagesStartY[ orderArray[z] ] + j) > imgCompY) continue;
+
+              int subImgIndex = inputImagesX[ orderArray[z] ]*j*4 + k*4;                                                                        // index in the subimage 
+              int bufferIndex = (inputImagesStartY[ orderArray[z] ]*imgCompX*4 + j*imgCompX*4) + (inputImagesStartX[ orderArray[z] ]*4 + k*4);  // index in the big buffer
+
+              if (compositedImg[bufferIndex+3] > 1.0) continue;
+              if (subImage[subImgIndex+3] <= 0.0) continue;
+
+              // Front to Back
+              compositedImg[bufferIndex+0] = clamp( (subImage[subImgIndex+0] * (1.0 - compositedImg[bufferIndex+3])) + compositedImg[bufferIndex+0] );
+              compositedImg[bufferIndex+1] = clamp( (subImage[subImgIndex+1] * (1.0 - compositedImg[bufferIndex+3])) + compositedImg[bufferIndex+1] );
+              compositedImg[bufferIndex+2] = clamp( (subImage[subImgIndex+2] * (1.0 - compositedImg[bufferIndex+3])) + compositedImg[bufferIndex+2] );
+              compositedImg[bufferIndex+3] = clamp( (subImage[subImgIndex+3] * (1.0 - compositedImg[bufferIndex+3])) + compositedImg[bufferIndex+3] ); 
+          }
+      }
+  }
+
+  #endif
+}
+
+void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int startX, int startY, int sizeX, int sizeY, float *image){
+  #ifdef PARALLEL
+
+  if (hasImageToComposite == false && my_id != 0){
+    return;
+  }
+
+  if (hasImageToComposite == true && my_id == 0){
+    imgBuffer = new float[fullsizex*fullsizey*4]();
+    
+    for (int i=startY; i<sizeY; i++){
+      for (int j=startX; j<sizeX; j++){
+        if ((startX + j) > fullsizex) continue;
+        if ((startY + i) > fullsizey) continue;
+
+        int subImgIndex = sizeX*i*4 + j*4;                                                           // index in the subimage 
+        int bufferIndex = (startY*fullsizex*4 + i*fullsizex*4) + (startX*4 + j*4);  // index in the big buffer
+
+        if (imgBuffer[bufferIndex+3] > 1.0) continue;
+        if (image[subImgIndex+3] <= 0.0) continue;
+
+        // Front to Back
+        imgBuffer[bufferIndex+0] = clamp( (image[subImgIndex+0] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+0] );
+        imgBuffer[bufferIndex+1] = clamp( (image[subImgIndex+1] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+1] );
+        imgBuffer[bufferIndex+2] = clamp( (image[subImgIndex+2] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+2] );
+        imgBuffer[bufferIndex+3] = clamp( (image[subImgIndex+3] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+3] ); 
+      }
+    }
+  }
+
+  if (hasImageToComposite == true && my_id != 0){   // send it to 0
+    // encode image
+    float *encoding = NULL;
+    int *sizeEncoding = NULL;
+
+    rleEncodeAll(sizeX, sizeY, 1, image,  encoding, sizeEncoding);
+
+    int dataToSend[6];
+    dataToSend[0]=my_id;
+    dataToSend[1]=startX;
+    dataToSend[2]=startY;
+    dataToSend[3]=sizeX;
+    dataToSend[4]=sizeY;
+    dataToSend[5]=*sizeEncoding;
+
+    // MPI 1 up Send if it has something
+    MPI_Send(dataToSend, 6, MPI_INT, 0, 10, MPI_COMM_WORLD);
+
+    // MPI Send it
+    MPI_Send(encoding, *sizeEncoding, MPI_FLOAT, 0, 11, MPI_COMM_WORLD);
+
+    if (encoding != NULL)
+      delete []encoding;
+    encoding = NULL;
+
+    // send image
+    
+    return;
+  }
+
+  if (hasImageToComposite == false && my_id == 0){   // 
+    int dataToRecv[6]; 
+    float *localRecvBuffer = NULL;
+      
+      
+    float recv_z;
+    MPI_Recv(&recv_z, 1, MPI_FLOAT, dataToRecv[0], 10, MPI_COMM_WORLD, &status);
+
+    localRecvBuffer = new float[dataToRecv[5]];
+    // recv image
+    MPI_Recv(localRecvBuffer, dataToRecv[5], MPI_FLOAT, dataToRecv[0], 11, MPI_COMM_WORLD, &status);
+
+    // decode image
+    float *localRecvImage = NULL;
+    localRecvImage = new float[dataToRecv[3]*dataToRecv[4]*4];
+    rleDecode(dataToRecv[5], localRecvBuffer, 0, localRecvImage);
+
+    if (localRecvBuffer != NULL)
+      delete []localRecvBuffer;
+    localRecvBuffer = NULL;
+
+    startX = dataToRecv[1];
+    startY = dataToRecv[2];
+    sizeX = dataToRecv[3];
+    sizeY = dataToRecv[4];
+
+    imgBuffer = new float[fullsizex*fullsizey*4]();
+
+    for (int i=startY; i<sizeY; i++){
+      for (int j=startX; j<sizeX; j++){
+        if ((startX + j) > fullsizex) continue;
+        if ((startY + i) > fullsizey) continue;
+
+        int subImgIndex = sizeX*i*4 + j*4;                                                           // index in the subimage 
+        int bufferIndex = (startY*fullsizex*4 + i*fullsizex*4) + (startX*4 + j*4);  // index in the big buffer
+
+        if (imgBuffer[bufferIndex+3] > 1.0) continue;
+        if (localRecvImage[subImgIndex+3] <= 0.0) continue;
+
+        // Front to Back
+        imgBuffer[bufferIndex+0] = clamp( (localRecvImage[subImgIndex+0] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+0] );
+        imgBuffer[bufferIndex+1] = clamp( (localRecvImage[subImgIndex+1] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+1] );
+        imgBuffer[bufferIndex+2] = clamp( (localRecvImage[subImgIndex+2] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+2] );
+        imgBuffer[bufferIndex+3] = clamp( (localRecvImage[subImgIndex+3] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+3] ); 
+      }
+    }
+
+    if (localRecvImage != NULL)
+      delete []localRecvImage;
+    localRecvImage = NULL;
+  }
+
+
+  // Add the background
+  for (int j=0; j<fullsizey; j++){
+    for (int k=0; k<fullsizex; k++){
+        int imgIndex = fullsizex*4*j + k*4;                   // index in the image 
+
+        // Front-to-Back compositing
+        imgBuffer[imgIndex+0] = clamp((1.0 - imgBuffer[imgIndex+3])*background[0]/255.0)  + imgBuffer[imgIndex+0];
+        imgBuffer[imgIndex+1] = clamp((1.0 - imgBuffer[imgIndex+3])*background[1]/255.0)  + imgBuffer[imgIndex+1];
+        imgBuffer[imgIndex+2] = clamp((1.0 - imgBuffer[imgIndex+3])*background[2]/255.0)  + imgBuffer[imgIndex+2];
+        imgBuffer[imgIndex+3] = clamp((1.0 - imgBuffer[imgIndex+3])*1.0)  + imgBuffer[imgIndex+3];
+    }
+  }
+
+  #endif
 }
