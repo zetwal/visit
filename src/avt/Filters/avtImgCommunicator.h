@@ -114,7 +114,8 @@ class avtImgCommunicator
   int     num_procs;
   int     my_id;
   std::string hostname;
-  int nodeLeader;
+  int     nodeLeader;
+  bool    hasImageToComposite;
   std::vector<int> procsInMyGroup; // id of processors on the same node as me; we share the same hostname
 
   imgMetaData setImg(int _inUse, int _procId, int _patchNumber, float dim_x, float dim_y, float screen_ll_x, float screen_ll_y, float screen_ur_x, float screen_ur_y, float _avg_z);
@@ -173,6 +174,15 @@ public:
 
   float clamp(float x);
   void setBackground(unsigned char _background[3]){ for (int i=0; i<3; i++) background[i] = _background[i]; }
+
+  void setHasImageToComposite(bool has){hasImageToComposite = has;}
+  bool getHasImageToComposite(){ return hasImageToComposite;}
+
+  void doNodeCompositing(std::vector<int> compositeFrom, int &startX, int &startY, int &bufferWidth, int &bufferHeight, float avg_z, float *localImage);
+  void finalAssemblyOnRoot(int fullsizex, int fullsizey, int startX, int startY, int sizeX, int sizeY, float *image);
+  void compositeTwoImages(int imgOneStartX,   int imgOneStartY,   int imgOneX,   int imgOneY,   float one_z,    float *imgOne,
+                                            int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,   int imgTwoY,   float two_z,    float *imgTwo,
+                                            int &imgCompX, int &imgCompY, int &imgCompStartX, int &imgCompStartY, float &final_z, float *compositedImg);
   
 #ifdef PARALLEL
   MPI_Status status;
