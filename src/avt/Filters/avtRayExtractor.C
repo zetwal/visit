@@ -2097,11 +2097,11 @@ avtRayExtractor::ExecuteRayTracerLB(){
         if (PAR_Size() > 1){
             std::cout << " PAR_Size() !!! " << std::endl;
             // Composite on one node
-            std::vector<int>collocatedProcs;
-            for (std::list<int>::iterator it=contiguousMergingProcs.begin(); it != contiguousMergingProcs.end(); ++it)
-                contiguousMergingProcs.push_back(*it);
-            imgComm.doNodeCompositing(collocatedProcs, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer);
-            imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer);
+            // std::vector<int>collocatedProcs;
+            // for (std::list<int>::iterator it=contiguousMergingProcs.begin(); it != contiguousMergingProcs.end(); ++it)
+            //     contiguousMergingProcs.push_back(*it);
+            // imgComm.doNodeCompositing(collocatedProcs, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer);
+            // imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer);
 
 
             //
