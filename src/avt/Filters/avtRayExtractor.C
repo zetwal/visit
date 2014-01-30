@@ -2071,6 +2071,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
     debug5 << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
     std::cout << PAR_Rank()  << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
 
+    //std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_final_.ppm";
+    //createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_comp);
+
     // std::string imgFilename_Final = "/users/pbmanasa/Desktop/debug/_composed_"+ ss.str() + "_.ppm";
     // createPpmRE_RGBA(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
 
@@ -2087,67 +2090,77 @@ avtRayExtractor::ExecuteRayTracerLB(){
     tempImage = new avtImage(this);     	// for processors other than proc 0 ; a dummy
     float *zbuffer = new float[screen[0] * screen[1]];
 
+    if (PAR_Rank() == 0)
+        imgComm.setBackground(background);
+
     if (avtCallback::UseusingIcet() == false){
-
-        // Composite on one node
-        std::vector<int>collocatedProcs;
-        for (std::list<int>::iterator it=contiguousMergingProcs.begin(); it != contiguousMergingProcs.end(); ++it)
-            contiguousMergingProcs.push_back(*it);
-        imgComm.doNodeCompositing(collocatedProcs, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer);
-
-        //
-        // Compositing across nodes
-        //
-		
-		
-        //
-        // RLE Encoding
-        //
-        float *encoding = NULL;
-        int *sizeEncoding = NULL;
-        
-        int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, 1,localBuffer,  encoding,sizeEncoding);
-
-        debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
-        std::cout << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
+        if (PAR_Size() > 1){
+            std::cout << " PAR_Size() !!! " << std::endl;
+            // Composite on one node
+            std::vector<int>collocatedProcs;
+            for (std::list<int>::iterator it=contiguousMergingProcs.begin(); it != contiguousMergingProcs.end(); ++it)
+                contiguousMergingProcs.push_back(*it);
+            imgComm.doNodeCompositing(collocatedProcs, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer);
+            imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer);
 
 
-        //
-        // --- Timing -- 
-        int  finalSend = visitTimer->StartTimer();
-        
-        //
-        // Proc 0 recieves and does the final assmebly
-        //
-        if (PAR_Rank() == 0)
-            imgComm.setBackground(background);
+            //
+            // Compositing across nodes
+            //
+    		
+    		
+            //
+            // RLE Encoding
+            //
+            float *encoding = NULL;
+            int *sizeEncoding = NULL;
+            
+            int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, 1,localBuffer,  encoding,sizeEncoding);
 
-        // Gather all the images
-        imgComm.gatherEncodingSizesLB(sizeEncoding, 1);   
+            debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
+            std::cout << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
 
-        int dataToSend[4];                  // size of images
-        dataToSend[0] = imgBufferWidth;
-        dataToSend[1] = imgBufferHeight;
 
-        dataToSend[2] = startX;
-        dataToSend[3] = startY;
-        imgComm.gatherAndAssembleEncodedImagesLB(screen[0], screen[1], dataToSend, totalEncodingSize*5, encoding, 1, avg_z);     // data from each processor
+            //
+            // --- Timing -- 
+            int  finalSend = visitTimer->StartTimer();
+            
+            //
+            // Proc 0 recieves and does the final assmebly
+            //
+            
 
-        debug5 << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
-        //std::cout << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
+            // Gather all the images
+            imgComm.gatherEncodingSizesLB(sizeEncoding, 1);   
 
-        if (encoding != NULL)
-            delete []encoding;
-        encoding = NULL;
+            int dataToSend[4];                  // size of images
+            dataToSend[0] = imgBufferWidth;
+            dataToSend[1] = imgBufferHeight;
 
-        if (sizeEncoding != NULL)
-            delete []sizeEncoding;
-        sizeEncoding = NULL;
+            dataToSend[2] = startX;
+            dataToSend[3] = startY;
+            imgComm.gatherAndAssembleEncodedImagesLB(screen[0], screen[1], dataToSend, totalEncodingSize*5, encoding, 1, avg_z);     // data from each processor
 
-        //
-        // --- Timing -- 
-        visitTimer->StopTimer(finalSend, "Final send ");
-        visitTimer->DumpTimings();
+            debug5 << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
+            //std::cout << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
+
+            if (encoding != NULL)
+                delete []encoding;
+            encoding = NULL;
+
+            if (sizeEncoding != NULL)
+                delete []sizeEncoding;
+            sizeEncoding = NULL;
+
+            //
+            // --- Timing -- 
+            visitTimer->StopTimer(finalSend, "Final send ");
+            visitTimer->DumpTimings();
+        }else{
+            std::cout << " PAR_Size() 1" << std::endl;
+            imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer);
+            std::cout << "Done final assembly " << std::endl;
+        }
 
         int  timingCompositinig = visitTimer->StartTimer();
         unsigned char *imgTest = NULL;
@@ -2155,12 +2168,12 @@ avtRayExtractor::ExecuteRayTracerLB(){
         // Processor 0 does a special compositing
         if (PAR_Rank() == 0)
         {
+            std::cout << " Done final assembly 2" << std::endl;
             whole_image = new avtImage(this);
 
             // creates input for the
             vtkImageData *img = avtImageRepresentation ::NewImage(screen[0], screen[1]);
             whole_image->GetImage() = img;
-
 
             imgTest = new unsigned char[screen[0] * screen[1] * 3];
             imgTest = whole_image->GetImage().GetRGBBuffer();
@@ -2168,13 +2181,14 @@ avtRayExtractor::ExecuteRayTracerLB(){
             zbuffer = new float[screen[0] * screen[1]]();
             for (int s=0; s<screen[0] * screen[1]; s++)
                 zbuffer[s] = 20.0;
-            zbuffer = whole_image->GetImage().GetZBuffer();
 
-            
+            std::cout << " Done final assembly 2.5" << std::endl;
+            zbuffer = whole_image->GetImage().GetZBuffer();
+            std::cout << " Done final assembly 3" << std::endl;
             // Get the composited image
             imgComm.getcompositedImage(screen[0], screen[1], imgTest); 
             img->Delete();
-
+            std::cout << " Done final assembly 4" << std::endl;
             debug5 << PAR_Rank() << "   ~ final: " << endl;
 
             if (zbuffer != NULL)
