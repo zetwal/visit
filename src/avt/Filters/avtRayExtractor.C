@@ -2259,6 +2259,8 @@ avtRayExtractor::toVTKImage(float* buffer, int width, int height, int startX, in
 
     int nPixels = fullWidth*fullHeight;
 
+    debug5 << PAR_Rank() << "\t\t fullWidth: " << fullWidth << "    fullHeight: " << fullHeight << std::endl; 
+
     vtkImageData *image = avtImageRepresentation::NewImage(fullWidth, fullHeight);
     image->AllocateScalars(VTK_UNSIGNED_CHAR, 4);
     //image->SetNumberOfScalarComponents(4, image->GetInformation());
