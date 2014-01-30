@@ -563,7 +563,8 @@ avtRayTracer::Execute(void)
 
 
 
-        if (avtCallback::UseusingIcet() == false){
+        //if (avtCallback::UseusingIcet() == false)
+        {
             //
             // Determine the order of composition of the partitions
             //
@@ -777,7 +778,7 @@ avtRayTracer::Execute(void)
 
         return;
     }
-    
+
     avtDataObject_p samples = extractor.GetOutput();
 
 #ifdef PARALLEL
