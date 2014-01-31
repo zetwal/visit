@@ -2216,7 +2216,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
         if(imgBufferWidth == 0 || imgBufferHeight == 0){
             vtk_image->SetOrigin(0, 0);
-            vtk_image->SetBoundingSize(1, 1);
+            vtk_image->SetBoundingSize(0, 0);
         }else{
             vtk_image->SetOrigin(startX, startY);
             vtk_image->SetBoundingSize(imgBufferWidth, imgBufferHeight);
