@@ -2265,6 +2265,8 @@ avtRayExtractor::toVTKImage(float* buffer, int width, int height, int startX, in
         fullWidth = 1;
         fullHeight = 1;
 
+        int nPixels = fullWidth*fullHeight;
+
         vtkImageData *image = avtImageRepresentation::NewImage(fullWidth, fullHeight);
         image->AllocateScalars(VTK_UNSIGNED_CHAR, 4);
         unsigned char *data = (unsigned char *)image->GetScalarPointer(0, 0, 0);
