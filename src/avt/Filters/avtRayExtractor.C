@@ -2214,8 +2214,13 @@ avtRayExtractor::ExecuteRayTracerLB(){
         vtkImageData *vtk = toVTKImage(localBuffer, imgBufferWidth, imgBufferHeight, 0, 0, -1);
         avtImageRepresentation *vtk_image = new avtImageRepresentation(vtk, zbuffer);
 
-        vtk_image->SetOrigin(startX, startY);
-        vtk_image->SetBoundingSize(imgBufferWidth, imgBufferHeight);
+        if(imgBufferWidth == 0 || imgBufferHeight == 0){
+            vtk_image->SetOrigin(0, 0);
+            vtk_image->SetBoundingSize(1, 1);
+        }else{
+            vtk_image->SetOrigin(startX, startY);
+            vtk_image->SetBoundingSize(imgBufferWidth, imgBufferHeight);
+        }
 
         imgComm.syncAllProcs();
 
@@ -2256,6 +2261,19 @@ avtRayExtractor::toVTKImage(float* buffer, int width, int height, int startX, in
       fullHeight = screen[1];
     }
 
+    if(fullWidth == 0 || fullHeight == 0){
+        fullWidth = 1;
+        fullHeight = 1;
+
+        vtkImageData *image = avtImageRepresentation::NewImage(fullWidth, fullHeight);
+        image->AllocateScalars(VTK_UNSIGNED_CHAR, 4);
+        unsigned char *data = (unsigned char *)image->GetScalarPointer(0, 0, 0);
+
+        for (int i = 0 ; i < 4*nPixels ; i++)
+            data[i] = 0;
+
+        return image;
+    }
 
     int nPixels = fullWidth*fullHeight;
 
