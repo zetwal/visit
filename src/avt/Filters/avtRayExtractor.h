@@ -191,6 +191,8 @@ class AVTFILTERS_API avtRayExtractor
     void                      SetNumInEachLevel(std::vector<int> v){numInEachLevel = v;}
     void                      SetPatchLevel(std::vector<int> v){patchLevel = v;}
     void                      SetProcessorCompositingOrder(std::vector<int> v){processorCompositingOrder = v;}
+    void                      SetRootGathersAll(bool _rootGathersAll){rootGathersAll = _rootGathersAll;}
+    bool                      GetRootGathersAll(){return rootGathersAll;}
 
     // Getting image information
     int                       getTotalAssignedPatches() { return totalAssignedPatches; }              // gets the max number of patches it could have
@@ -295,6 +297,7 @@ class AVTFILTERS_API avtRayExtractor
 
     std::string               varName;
     int                       amrLevels;
+    bool                      rootGathersAll;
 
     typedef struct 
     {
