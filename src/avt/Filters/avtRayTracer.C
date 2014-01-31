@@ -537,7 +537,6 @@ avtRayTracer::Execute(void)
         std::cout << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
         
 
-
         //
         // Get partitions extents
         //
