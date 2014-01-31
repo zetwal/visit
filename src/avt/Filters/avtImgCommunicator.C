@@ -2054,7 +2054,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
             if (dataToRecv[0] != -1){
                 float recv_z;
                 MPI_Recv(&recv_z, 1, MPI_FLOAT, dataToRecv[0], 1, MPI_COMM_WORLD, &status);
-                std::cout << my_id << " ~ all recv 1 " << std::endl;
+                std::cout << my_id << " ~ all recv 1   from: " << dataToRecv[0] << std::endl;
                 localRecvBuffer = new float[dataToRecv[5]];
                 MPI_Recv(localRecvBuffer, dataToRecv[5], MPI_FLOAT, dataToRecv[0], 2, MPI_COMM_WORLD, &status);
                 std::cout << my_id << " ~ all recv 2 " << std::endl;
@@ -2071,6 +2071,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 
                 // Do Compositing
                 float *localCompositedImage = NULL;
+                std::cout << my_id << " ~ go compositeTwoImages " << std::endl;
                 compositeTwoImages(startX, startY,   bufferWidth, bufferHeight,   avg_z,  localImage,
                     dataToRecv[1],dataToRecv[2],  dataToRecv[2],dataToRecv[3],  recv_z, localRecvImage,
                     startX, startY,   bufferWidth, bufferHeight,   avg_z, localCompositedImage);
@@ -2086,25 +2087,26 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 localImage = localCompositedImage;  // reallocate to the new one
             }
         }
-            // Update the compositeFrom buffer
-            std::vector<int> compositeFromTemp;
-            for (int i=0; i<compositeFrom.size(); i++)
-                if (i%2 != 0)
+
+
+        // Update the compositeFrom buffer
+        std::vector<int> compositeFromTemp;
+        for (int i=0; i<compositeFrom.size(); i++)
+            if (i%2 != 0)
+                compositeFromTemp.push_back(compositeFrom[i]);
+            else
+                if (i == compositeFrom.size()-1)
                     compositeFromTemp.push_back(compositeFrom[i]);
-                else
-                    if (i == compositeFrom.size()-1)
-                        compositeFromTemp.push_back(compositeFrom[i]);
 
-            compositeFrom.clear();
-            compositeFrom = compositeFromTemp;
+        compositeFrom.clear();
+        compositeFrom = compositeFromTemp;
         
-
         std::stringstream ss;
-    ss << my_id << " doNodeCompositing next : " << compositeFrom.size() << " : ";
-    for (int i=0; i<compositeFrom.size();i++)
-       ss << compositeFrom[i] << ", ";
-    std::cout << ss.str() << std::endl;
-    debug5 << ss.str() << std::endl;
+        ss << my_id << " doNodeCompositing next : " << compositeFrom.size() << " : ";
+        for (int i=0; i<compositeFrom.size();i++)
+        ss << compositeFrom[i] << ", ";
+        std::cout << ss.str() << std::endl;
+        debug5 << ss.str() << std::endl;
 
         syncAllProcs();
     }
@@ -2133,6 +2135,7 @@ void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY
         inputImagesX[0] = imgOneX;  inputImagesY[0] = imgOneY;  inputImagesStartX[0] = imgOneStartX;  inputImagesStartY[0] = imgOneStartY; 
         inputImagesX[1] = imgTwoX;  inputImagesY[1] = imgTwoY;  inputImagesStartX[1] = imgTwoStartX;  inputImagesStartY[1] = imgTwoStartY; 
 
+        std::cout << my_id << " ~ In compositeTwoImages" << std::endl;
         //
         // Compute new starting X and Y
         if (imgOneStartX < imgTwoStartX)
@@ -2179,10 +2182,13 @@ void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY
             orderArray[1] = 1;
         }
 
+         std::cout << my_id << " ~ clean first and then allocate size" << std::endl;
+
         // clean first and then allocate size
         if (compositedImg != NULL)
             delete []compositedImg;
         compositedImg = NULL;
+
         std::cout << my_id << " ~ Creating composite image!!!!!!!!" << std::endl;
         compositedImg = new float[imgCompX*imgCompY*4]();
 
