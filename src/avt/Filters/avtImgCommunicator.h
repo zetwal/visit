@@ -178,17 +178,20 @@
     void setHasImageToComposite(bool has){hasImageToComposite = has;}
     bool getHasImageToComposite(){ return hasImageToComposite;}
 
-    void doNodeCompositing(std::vector<int> compositeFrom, int &startX, int &startY, int &bufferWidth, int &bufferHeight, float avg_z, float *localImage);
+    void doNodeCompositing(std::vector<int> compositeFrom, int &startX, int &startY, int &bufferWidth, int &bufferHeight, float avg_z, float *&localImage);
     void finalAssemblyOnRoot(int fullsizex, int fullsizey, int startX, int startY, int sizeX, int sizeY, float *image);
-    void compositeTwoImages(int imgOneStartX,   int imgOneStartY,   int imgOneX,   int imgOneY,   float one_z,    float *imgOne,
-    int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,   int imgTwoY,   float two_z,    float *imgTwo,
-    int &imgCompX, int &imgCompY, int &imgCompStartX, int &imgCompStartY, float &final_z, float *compositedImg);
+    void compositeTwoImages(int imgOneStartX,   int imgOneStartY,   int imgOneX,        int imgOneY,        float one_z,    float *imgOne,
+                            int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,        int imgTwoY,        float two_z,    float *imgTwo,
+                            int &imgCompStartX, int &imgCompStartY, int &imgCompX,      int &imgCompY,      float &final_z, float *&compositedImg);
+
+    void compositeTwoImagesDims(int imgOneStartX,   int imgOneStartY,   int imgOneX,        int imgOneY,
+                                int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,        int imgTwoY,
+                                int &imgCompStartX, int &imgCompStartY, int &imgCompX,      int &imgCompY);
 
     #ifdef PARALLEL
-    MPI_Status status;
-    MPI_Datatype _img_mpi;
-
-    MPI_Datatype createMetaDataType();
+        MPI_Status status;
+        MPI_Datatype _img_mpi;
+        MPI_Datatype createMetaDataType();
     #endif
     };
 

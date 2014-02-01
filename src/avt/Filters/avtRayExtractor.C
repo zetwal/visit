@@ -2073,11 +2073,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
     debug5 << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
     std::cout << PAR_Rank()  << " ~ Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
 
-    //std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_final_.ppm";
-    //createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_comp);
+    std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_proc_ " + NumbToString(PAR_Rank()) + "_.ppm";
+    createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_comp);
 
-    // std::string imgFilename_Final = "/users/pbmanasa/Desktop/debug/_composed_"+ ss.str() + "_.ppm";
-    // createPpmRE_RGBA(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_Final);
 
 
     //
@@ -2098,7 +2096,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
     if (avtCallback::UseusingIcet() == false){
         if (PAR_Size() > 1){
             if (rootGathersAll == false){
-                      
+
                 // Composite on one node
                 std::vector<int>collocatedProcs;
                 collocatedProcs.clear();
@@ -2205,10 +2203,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
     } 
     else   // Using iceT
     {
-
-        //std::ostringstream ss;
-        //ss << PAR_Rank(); 
-
         for (int i = 0 ; i < screen[0] * screen[1] ; i++)
             zbuffer[i] = avg_z;
 
@@ -2227,9 +2221,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
         whole_image->GetImage() = *vtk_image;
         tempImage->Copy(*whole_image);
-
-        // imgFilename_Full = "/users/pbmanasa/Desktop/debug/_RT_Temp_"+ ss.str() + ".ppm";
-        // createPpmRE_RGBA(tempImage->GetImage().GetRGBBuffer(), screen[0], screen[1], imgFilename_Full);
     }
 
     if (localBuffer != NULL)
@@ -2327,13 +2318,7 @@ avtRayExtractor::toVTKImage(float* buffer, int width, int height, int startX, in
 
     avtImageRepresentation *temp = new avtImageRepresentation(image);
 
-    // std::ostringstream ss;
-    // ss << PAR_Rank(); 
-    // std::string imgFilename_Full = "/users/pbmanasa/Desktop/debug/_RT_VTK_Image_"+ ss.str() + ".ppm";
-    // createPpmRE_RGBA(temp->GetRGBBuffer(), fullWidth, fullHeight, imgFilename_Full);
-
     return image;
-    //SetOutputImage(image);
 }
 
 
