@@ -1460,38 +1460,38 @@ void avtImgCommunicator::syncAllProcs(){
 
 
 
-        // ****************************************************************************
-        //  Method: avtImgCommunicator::rleEncodeAll
-        //
-        //  Purpose:
-        //    Encodes an image using RLE: Runlength, R, G, B, A
-        //
-        //  Arguments:
-        //    dimsX & dimsY : width & height of the image
-        //    imgArray    : array containing all the division composited by this processor
-        //    numDivs     : number of Z divisions
-        //
-        //    encoding      : the image compressed using RLE; it's a float so that it can be sent directly using MPI
-        //    sizeOfEncoding  : the compressed size of each image
-        //
-        //
-        //  Programmer: Pascal Grosset
-        //  Creation: August 23, 2013
-        //
-        //  Modifications:
-        //
-        // ****************************************************************************
-        int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *imgArray,  float *& encoding, int *& sizeOfEncoding){
-            std::vector<code> encodingVec;
-            encodingVec.clear();
-            code tempCode;
-            sizeOfEncoding = new int[numDivs];
-            int prev = 0;
+// ****************************************************************************
+//  Method: avtImgCommunicator::rleEncodeAll
+//
+//  Purpose:
+//    Encodes an image using RLE: Runlength, R, G, B, A
+//
+//  Arguments:
+//    dimsX & dimsY : width & height of the image
+//    imgArray    : array containing all the division composited by this processor
+//    numDivs     : number of Z divisions
+//
+//    encoding      : the image compressed using RLE; it's a float so that it can be sent directly using MPI
+//    sizeOfEncoding  : the compressed size of each image
+//
+//
+//  Programmer: Pascal Grosset
+//  Creation: August 23, 2013
+//
+//  Modifications:
+//
+// ****************************************************************************
+int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *imgArray,  float *& encoding, int *& sizeOfEncoding){
+    std::vector<code> encodingVec;
+    encodingVec.clear();
+    code tempCode;
+    sizeOfEncoding = new int[numDivs];
+    int prev = 0;
 
-            debug5 <<  my_id << "  ~  before Compress the data dimX: " << dimsX << "   dimsY: " << dimsY << "   numDivs: " << numDivs << std::endl;
+    debug5 <<  my_id << "  ~  before Compress the data dimX: " << dimsX << "   dimsY: " << dimsY << "   numDivs: " << numDivs << std::endl;
 
-        // Compress the data
-            for (int j=0; j<numDivs; j++){
+    // Compress the data
+    for (int j=0; j<numDivs; j++){
         int offset = dimsX*dimsY*4  *  j; // to get the next image in the array of images
 
         int i=0;
@@ -1530,45 +1530,47 @@ void avtImgCommunicator::syncAllProcs(){
     }
     encodingVec.clear();
 
-        return encSize;   // size of the array
-    }
+    return encSize;   // size of the array
+}
 
 
 
-        // ****************************************************************************
-        //  Method: avtImgCommunicator::rleDecode
-        //
-        //  Purpose:
-        //    Decodes rle encoded image to an RGBA image the size of the screen
-        //
-        //  Arguments:
-        //    encSize : size of compressed image
-        //    encoding: the image to be decoded
-        //    offset  : offset in the encoding array (all images from all procs are stored in 1 array)
-        //    img     : an array containing the RGBA decompressed image
-        //
-        //  Programmer: Pascal Grosset
-        //  Creation: August 23, 2013
-        //
-        //  Modifications:
-        //
-        // ****************************************************************************
-    void avtImgCommunicator::rleDecode(int encSize, float *encoding, int offset, float *& img){
-        int imgIndex = 0; // index into the image to be decompressed
 
-        //debug5 << " 0 ~ offset: " << offset  << " encSize: " << encSize << std::endl;
 
-        for (int i=0; i<encSize; i++)
+// ****************************************************************************
+//  Method: avtImgCommunicator::rleDecode
+//
+//  Purpose:
+//    Decodes rle encoded image to an RGBA image the size of the screen
+//
+//  Arguments:
+//    encSize : size of compressed image
+//    encoding: the image to be decoded
+//    offset  : offset in the encoding array (all images from all procs are stored in 1 array)
+//    img     : an array containing the RGBA decompressed image
+//
+//  Programmer: Pascal Grosset
+//  Creation: August 23, 2013
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtImgCommunicator::rleDecode(int encSize, float *encoding, int offset, float *& img){
+    int imgIndex = 0; // index into the image to be decompressed
+
+    //debug5 << " 0 ~ offset: " << offset  << " encSize: " << encSize << std::endl;
+
+    for (int i=0; i<encSize; i++)
         for (int j=0; j<(int)encoding[offset + i*5 + 0]; j++) // *5 to offset into image; +0 run count
         {
-        img[imgIndex*4 + 0] = encoding[offset + i*5 + 1]; // R
-        img[imgIndex*4 + 1] = encoding[offset + i*5 + 2]; // G
-        img[imgIndex*4 + 2] = encoding[offset + i*5 + 3]; // B
-        img[imgIndex*4 + 3] = encoding[offset + i*5 + 4]; // A
+            img[imgIndex*4 + 0] = encoding[offset + i*5 + 1]; // R
+            img[imgIndex*4 + 1] = encoding[offset + i*5 + 2]; // G
+            img[imgIndex*4 + 2] = encoding[offset + i*5 + 3]; // B
+            img[imgIndex*4 + 3] = encoding[offset + i*5 + 4]; // A
 
-        imgIndex++;
-    }
-    }
+            imgIndex++;
+        }
+}
 
 
 // ****************************************************************************
@@ -1970,7 +1972,7 @@ void createPpm(float array[], int dimx, int dimy, std::string filename){
 //  Modifications:
 //
 // ****************************************************************************
-void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &startX, int &startY, int &bufferWidth, int &bufferHeight, float avg_z, float *localImage){
+void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &startX, int &startY, int &bufferWidth, int &bufferHeight, float avg_z, float *&localImage){
     #ifdef PARALLEL
 
     std::stringstream ssss;
@@ -1980,6 +1982,8 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
     std::cout << ssss.str() << std::endl;
     debug5 << ssss.str() << std::endl;
 
+    bool allSentDone = false;
+
     std::vector<int>::iterator it;
     while (compositeFrom.size() > 1){
         it = std::find(compositeFrom.begin(), compositeFrom.end(), my_id);
@@ -1987,7 +1991,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
             break;
 
         int myIndex = it-compositeFrom.begin();
-        std::cout << my_id << " ~ index: " << myIndex << "    compositeFrom.size(): " << compositeFrom.size() << std::endl;
+        std::cout << std::cout << my_id << " ~ index: " << myIndex << "   _____  compositeFrom.size(): " << compositeFrom.size() << std::endl;
 
         if (myIndex%2==0)	// Send section
         {	
@@ -2012,7 +2016,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 float *encoding = NULL;
                 int *sizeEncoding = NULL;
 
-                rleEncodeAll(bufferWidth, bufferHeight, 1, localImage,  encoding, sizeEncoding);
+                rleEncodeAll(bufferWidth, bufferHeight, 1, localImage,     encoding, sizeEncoding);
 
                 dataToSend[0]=my_id;
                 dataToSend[1]=startX;
@@ -2021,21 +2025,26 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 dataToSend[4]=bufferHeight;
                 dataToSend[5]=*sizeEncoding;
 
+                // std::string imgFilename_send = "/home/pascal/Desktop/imgTests/_localImg_"+ NumbToString(my_id) + "_sending_" + NumbToString(destProc) + "_" + NumbToString(compositeFrom.size()) +"_.ppm";
+                // createPpm(localImage, dataToSend[3], dataToSend[4], imgFilename_send);
                 std::cout << my_id << " ~ send hasImageToComposite == true " << compositeFrom.size() << " : " << dataToSend[0] << ", " << dataToSend[1] << ", " << dataToSend[2] 
                         << ", " << dataToSend[3] << ", " << dataToSend[4] << ", " << dataToSend[5] << std::endl;
 
                 // MPI 1 up Send if it has something
-                MPI_Send(dataToSend, 6, MPI_INT, destProc, 0, MPI_COMM_WORLD);
-                MPI_Send(&avg_z, 1, MPI_FLOAT, destProc, 1, MPI_COMM_WORLD);
-                MPI_Send(encoding, dataToSend[5], MPI_FLOAT, destProc, 2, MPI_COMM_WORLD);
+                MPI_Send(dataToSend, 6, MPI_INT, destProc, 42, MPI_COMM_WORLD);
+                MPI_Send(&avg_z, 1, MPI_FLOAT, destProc, 43, MPI_COMM_WORLD);
+                MPI_Send(encoding, dataToSend[5]*5, MPI_FLOAT, destProc, 44, MPI_COMM_WORLD);
 
-                std::cout << my_id << " ~ all sent " << std::endl;
+                // std::cout << my_id << " ~ all sent " << 
+                // encoding[0] << ", " << encoding[1] << ", " << encoding[2] << ", " << encoding[3] << ", " << encoding[4] << ", " << encoding[5] << " -- " << 
+                // encoding[dataToSend[5]-5] << ", " << encoding[dataToSend[5]-4] << ", " << encoding[dataToSend[5]-3] << ", " << encoding[dataToSend[5]-2] << ", " << encoding[dataToSend[5]-1] << std::endl;
 
                 if (encoding != NULL)
                     delete []encoding;
                 encoding = NULL;
 
                 hasImageToComposite = false;
+                allSentDone = true;
             }
         }
         else		// Receive section
@@ -2045,7 +2054,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
             // MPI Recv from Any if it has something
             int dataToRecv[6]; 
             float *localRecvBuffer = NULL;
-            MPI_Recv(dataToRecv, 6, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+            MPI_Recv(dataToRecv,                    6,  MPI_INT,   MPI_ANY_SOURCE, 42, MPI_COMM_WORLD, &status);
 
             std::cout << my_id << " ~ recv hasImageToComposite == true " << compositeFrom.size() << " : " << dataToRecv[0] << ", " << dataToRecv[1] << ", " << dataToRecv[2] 
                         << ", " << dataToRecv[3] << ", " << dataToRecv[4] << ", " <<  dataToRecv[5] << std::endl;
@@ -2053,40 +2062,82 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
             // MPI Recv it
             if (dataToRecv[0] != -1){
                 float recv_z;
-                MPI_Recv(&recv_z, 1, MPI_FLOAT, dataToRecv[0], 1, MPI_COMM_WORLD, &status);
+                MPI_Recv(&recv_z, 1, MPI_FLOAT, dataToRecv[0], 43, MPI_COMM_WORLD, &status);
                 std::cout << my_id << " ~ all recv 1   from: " << dataToRecv[0] << std::endl;
-                localRecvBuffer = new float[dataToRecv[5]];
-                MPI_Recv(localRecvBuffer, dataToRecv[5], MPI_FLOAT, dataToRecv[0], 2, MPI_COMM_WORLD, &status);
-                std::cout << my_id << " ~ all recv 2 " << std::endl;
+
+
+                localRecvBuffer = new float[dataToRecv[5]*5];
+                MPI_Recv(localRecvBuffer, dataToRecv[5]*5, MPI_FLOAT, dataToRecv[0], 44, MPI_COMM_WORLD, &status);
+
+                std::cout << my_id << " ~ all recv 2 " << localRecvBuffer[0] << ", " << localRecvBuffer[1] << ", " << localRecvBuffer[2] << ", " << localRecvBuffer[3] << ", " << localRecvBuffer[4] << ", " << localRecvBuffer[5] << " -- " 
+                << localRecvBuffer[dataToRecv[5]-5] << ", " << localRecvBuffer[dataToRecv[5]-4] << ", " << localRecvBuffer[dataToRecv[5]-3] << ", " << localRecvBuffer[dataToRecv[5]-2] << ", " << localRecvBuffer[dataToRecv[5]-1] << std::endl;
+
+               
+                std::string imgFilename_recv = "/home/pascal/Desktop/imgTests/_localImg_"+ NumbToString(my_id) + "_recving_" + NumbToString(dataToRecv[0]) + "_" + NumbToString(compositeFrom.size()) +"_.ppm";
+                createPpm(localImage, bufferWidth, bufferHeight, imgFilename_recv);
+
+               
+
+
                 // Decode
                 float *localRecvImage = NULL;
                 localRecvImage = new float[dataToRecv[3]*dataToRecv[4]*4];
                 rleDecode(dataToRecv[5], localRecvBuffer, 0, localRecvImage);
 
-                std::cout << my_id << " ~ all rleDecode " << std::endl;
+                // std::string imgFilename_Final2 = "/home/pascal/Desktop/imgTests/_compositeTwoImages_"+ NumbToString(my_id) + "_decoded_two_" + NumbToString(dataToRecv[0]) + "_.ppm";
+                // createPpm(localRecvImage, dataToRecv[3], dataToRecv[4], imgFilename_Final2);
 
-                if (localRecvBuffer != NULL)
-                    delete []localRecvBuffer;
-                localRecvBuffer = NULL;
+                // std::cout << my_id << " ~ all rleDecode " << std::endl;
+
+                std::string imgFilename_send3 = "/home/pascal/Desktop/imgTests/_localImg_"+ NumbToString(dataToRecv[0]) + "_sending_" + NumbToString(my_id) + "_recv_" + NumbToString(compositeFrom.size()) +"_.ppm";
+                createPpm(localRecvImage, dataToRecv[3], dataToRecv[4], imgFilename_send3);
+
+                
 
                 // Do Compositing
                 float *localCompositedImage = NULL;
                 std::cout << my_id << " ~ go compositeTwoImages " << std::endl;
-                compositeTwoImages(startX, startY,   bufferWidth, bufferHeight,   avg_z,  localImage,
-                    dataToRecv[1],dataToRecv[2],  dataToRecv[2],dataToRecv[3],  recv_z, localRecvImage,
-                    startX, startY,   bufferWidth, bufferHeight,   avg_z, localCompositedImage);
+                int _x,_y, _sizeX, _sizeY;
 
-                std::cout << my_id << " ~ all compositeTwoImages " << std::endl;
+                compositeTwoImagesDims(startX,          startY,         bufferWidth,    bufferHeight,
+                                      dataToRecv[1],   dataToRecv[2],  dataToRecv[3],  dataToRecv[4],
+                                      _x,_y, _sizeX, _sizeY);
+
+                localCompositedImage = new float[_sizeX *_sizeY * 4]();
+                compositeTwoImages(startX,          startY,         bufferWidth,    bufferHeight,   avg_z,  localImage,
+                                   dataToRecv[1],   dataToRecv[2],  dataToRecv[3],  dataToRecv[4],  recv_z, localRecvImage,
+                                   startX,          startY,         bufferWidth,    bufferHeight,   avg_z,  localCompositedImage);
+
+                std::cout << my_id << " ~ Done compositeTwoImages: " << startX << ", " << startY << "  -- " << bufferWidth << ", " <<  bufferHeight << std::endl;
+                std::string imgFilename_Final2 = "/home/pascal/Desktop/imgTests/_composited_"+ NumbToString(my_id) + "_n_" + NumbToString(dataToRecv[0]) + "_" + NumbToString(compositeFrom.size()) + "_.ppm";
+                createPpm(localCompositedImage, bufferWidth, bufferHeight, imgFilename_Final2);
 
                 if (localRecvImage != NULL)
                     delete []localRecvImage;
                 localRecvImage = NULL;
 
+                if (localRecvBuffer != NULL)
+                    delete []localRecvBuffer;
+                localRecvBuffer = NULL;
+
                 if (localImage != NULL)
                     delete []localImage;
-                localImage = localCompositedImage;  // reallocate to the new one
+                localImage = new float[bufferWidth*bufferHeight*4];
+                memcpy((void*)localImage,(const void*)localCompositedImage,sizeof(float)*bufferWidth*bufferHeight*4);
+
+                std::string imgFilename_Final22 = "/home/pascal/Desktop/imgTests/_localImage_composited_"+ NumbToString(my_id) + "_n_" + NumbToString(dataToRecv[0]) + "_.ppm";
+                createPpm(localImage, bufferWidth, bufferHeight, imgFilename_Final22);
+
+                if (localCompositedImage != NULL)
+                    delete []localCompositedImage;
+                localCompositedImage = NULL;
+
+                hasImageToComposite = true;
             }
         }
+
+        if (allSentDone == true)
+            break;
 
 
         // Update the compositeFrom buffer
@@ -2107,12 +2158,48 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
         ss << compositeFrom[i] << ", ";
         std::cout << ss.str() << std::endl;
         debug5 << ss.str() << std::endl;
-
-        syncAllProcs();
     }
+    std::cout << my_id << " ~ done and waiting for the others!" << std::endl << std::endl << std::endl;
+    std::cout << my_id << " ~ All done!" << std::endl << std::endl << std::endl;
+
     #endif
 }  
 
+
+
+void avtImgCommunicator::compositeTwoImagesDims(int imgOneStartX,   int imgOneStartY,   int imgOneX,        int imgOneY,
+                                                int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,        int imgTwoY,
+                                                int &imgCompStartX, int &imgCompStartY, int &imgCompX,      int &imgCompY){
+    //
+    // Compute new starting X and Y
+    if (imgOneStartX < imgTwoStartX)
+        imgCompStartX = imgOneStartX;
+    else
+        imgCompStartX = imgTwoStartX;
+
+    if (imgOneStartY < imgTwoStartY)
+        imgCompStartY = imgOneStartY;
+    else
+        imgCompStartY = imgTwoStartY;
+
+    //
+    // Compute new dimensions
+    int endOneX = imgOneX + imgOneStartX;
+    int endOneY = imgOneY + imgOneStartY;
+
+    int endTwoX = imgTwoX + imgTwoStartX;
+    int endTwoY = imgTwoY + imgTwoStartY;
+
+    if (endOneX > endTwoX)
+        imgCompX = endOneX - imgCompStartX + 1;
+    else
+        imgCompX = endTwoX - imgCompStartX + 1;
+
+    if (endOneY > endTwoY)
+        imgCompY = endOneY - imgCompStartY + 1;
+    else
+        imgCompY = endTwoY - imgCompStartY + 1;
+}
 
 
 // ****************************************************************************
@@ -2126,16 +2213,15 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 //  Modifications:
 //
 // ****************************************************************************
-void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY,   int imgOneX,   int imgOneY,   float one_z,    float *imgOne,
-                                            int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,   int imgTwoY,   float two_z,    float *imgTwo,
-                                            int &imgCompX, int &imgCompY, int &imgCompStartX, int &imgCompStartY, float &final_z, float *compositedImg){
+void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY,   int imgOneX,        int imgOneY,        float one_z,    float *imgOne,
+                                            int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,        int imgTwoY,        float two_z,    float *imgTwo,
+                                            int &imgCompStartX, int &imgCompStartY, int &imgCompX,      int &imgCompY,      float &final_z, float *&compositedImg){
     #ifdef PARALLEL
 
         int inputImagesX[2], inputImagesY[2], inputImagesStartX[2], inputImagesStartY[2];
         inputImagesX[0] = imgOneX;  inputImagesY[0] = imgOneY;  inputImagesStartX[0] = imgOneStartX;  inputImagesStartY[0] = imgOneStartY; 
         inputImagesX[1] = imgTwoX;  inputImagesY[1] = imgTwoY;  inputImagesStartX[1] = imgTwoStartX;  inputImagesStartY[1] = imgTwoStartY; 
 
-        std::cout << my_id << " ~ In compositeTwoImages" << std::endl;
         //
         // Compute new starting X and Y
         if (imgOneStartX < imgTwoStartX)
@@ -2171,49 +2257,44 @@ void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY
         // set the final z
         if (one_z < two_z){
             final_z = two_z;
-
-            orderArray[0] = 1;
-            orderArray[1] = 0;
+            orderArray[0] = 1;  orderArray[1] = 0;
         }
         else{
             final_z = one_z;
-
-            orderArray[0] = 0;
-            orderArray[1] = 1;
+            orderArray[0] = 0;  orderArray[1] = 1;
         }
 
-         std::cout << my_id << " ~ clean first and then allocate size" << std::endl;
-
-        // clean first and then allocate size
-        if (compositedImg != NULL)
-            delete []compositedImg;
-        compositedImg = NULL;
-
-        std::cout << my_id << " ~ Creating composite image!!!!!!!!" << std::endl;
-        compositedImg = new float[imgCompX*imgCompY*4]();
-
+        std::cout << my_id << " ~ Creating composite final image: " << imgCompX << ", " << imgCompY << " - " <<  imgCompStartX << ", " << imgCompStartY << std::endl;
+        
+        //
         // subimage to composite with
         float *subImage;
 
+        //
         // Composite
         for (int z=0; z<2; z++){
-            if (orderArray[0] == 0)
-                subImage = imgOne;
+            if (z == 0)
+                if (orderArray[0] == 0)
+                    subImage = imgOne;
+                else
+                    subImage = imgTwo;
             else
-                subImage = imgTwo;
+                if (orderArray[0] == 0)
+                    subImage = imgTwo;
+                else
+                    subImage = imgOne;
+
+            std::cout << my_id << " ~ z:" << z << " | " << inputImagesX[ orderArray[z] ]  << ", " << inputImagesY[ orderArray[z] ] << " -- " <<  inputImagesStartX[ orderArray[z] ] << ", " << inputImagesStartY[ orderArray[z] ] << std::endl;
 
             for (int j=0; j<inputImagesY[ orderArray[z] ]; j++){
                 for (int k=0; k<inputImagesX[ orderArray[z] ]; k++){  
-                    if ((inputImagesStartX[ orderArray[z] ] + k) > imgCompX) continue;
-                    if ((inputImagesStartY[ orderArray[z] ] + j) > imgCompY) continue;
+
+                    if ((inputImagesStartX[ orderArray[z] ]-imgCompStartX + k) > imgCompX) continue;
+                    if ((inputImagesStartY[ orderArray[z] ]-imgCompStartY + j) > imgCompY) continue;
 
                     int subImgIndex = inputImagesX[ orderArray[z] ]*j*4 + k*4;                                                                        // index in the subimage 
-                    int bufferIndex = (inputImagesStartY[ orderArray[z] ]*imgCompX*4 + j*imgCompX*4) + (inputImagesStartX[ orderArray[z] ]*4 + k*4);  // index in the big buffer
+                    int bufferIndex = ((inputImagesStartY[orderArray[z]]-imgCompStartY)*imgCompX*4 + j*imgCompX*4) + ((inputImagesStartX[ orderArray[z] ]-imgCompStartX)*4 + k*4);  // index in the big buffer
 
-                    if (compositedImg[bufferIndex+3] > 1.0) continue;
-                    if (subImage[subImgIndex+3] <= 0.0) continue;
-
-                    // Front to Back
                     compositedImg[bufferIndex+0] = clamp( (subImage[subImgIndex+0] * (1.0 - compositedImg[bufferIndex+3])) + compositedImg[bufferIndex+0] );
                     compositedImg[bufferIndex+1] = clamp( (subImage[subImgIndex+1] * (1.0 - compositedImg[bufferIndex+3])) + compositedImg[bufferIndex+1] );
                     compositedImg[bufferIndex+2] = clamp( (subImage[subImgIndex+2] * (1.0 - compositedImg[bufferIndex+3])) + compositedImg[bufferIndex+2] );
@@ -2222,6 +2303,16 @@ void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY
             }
         }
 
+        // std::string imgFilename_Final1 = "/home/pascal/Desktop/imgTests/_compositeTwoImages_"+ NumbToString(my_id) + "_one_" + NumbToString(imgOneStartX) + "_.ppm";
+        // createPpm(imgOne, imgOneX, imgOneY, imgFilename_Final1);
+        // std::cout << my_id << " ~ Done compositing#######" << std::endl;
+
+        // std::string imgFilename_Final2 = "/home/pascal/Desktop/imgTests/_compositeTwoImages_"+ NumbToString(my_id) + "_two_" + NumbToString(imgOneStartX) + "_.ppm";
+        // createPpm(imgTwo, imgTwoX, imgTwoY, imgFilename_Final2);
+        // std::cout << my_id << " ~ Done compositing#######" << std::endl;
+
+        std::string imgFilename_Final = "/home/pascal/Desktop/imgTests/_compositeTwoImages_"+ NumbToString(my_id) + "_assembled_" + NumbToString(imgOneStartX) + "_.ppm";
+        createPpm(compositedImg, imgCompX, imgCompY, imgFilename_Final);
         std::cout << my_id << " ~ Done compositing#######" << std::endl;
 
     #endif
@@ -2291,7 +2382,7 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             MPI_Send(dataToSend, 6, MPI_INT, 0, 10, MPI_COMM_WORLD);
 
             // MPI Send it
-            MPI_Send(encoding, *sizeEncoding, MPI_FLOAT, 0, 11, MPI_COMM_WORLD);
+            MPI_Send(encoding, dataToSend[5]*5, MPI_FLOAT, 0, 11, MPI_COMM_WORLD);
 
             if (encoding != NULL)
                 delete []encoding;
@@ -2305,11 +2396,11 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             float *localRecvBuffer = NULL;
 
             float recv_z;
-            MPI_Recv(&recv_z, 1, MPI_FLOAT, dataToRecv[0], 10, MPI_COMM_WORLD, &status);
+            MPI_Recv(dataToRecv, 6, MPI_FLOAT, MPI_ANY_SOURCE, 10, MPI_COMM_WORLD, &status);
 
-            localRecvBuffer = new float[dataToRecv[5]];
+            localRecvBuffer = new float[dataToRecv[5]*5];
             // recv image
-            MPI_Recv(localRecvBuffer, dataToRecv[5], MPI_FLOAT, dataToRecv[0], 11, MPI_COMM_WORLD, &status);
+            MPI_Recv(localRecvBuffer, dataToRecv[5]*5, MPI_FLOAT, dataToRecv[0], 11, MPI_COMM_WORLD, &status);
 
             // decode image
             float *localRecvImage = NULL;
