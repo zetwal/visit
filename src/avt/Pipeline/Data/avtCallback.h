@@ -170,7 +170,13 @@ class PIPELINE_API avtCallback
     static void                  SetusingIcet(bool b)
                                      { usingIcet = b; }
     static bool                  UseusingIcet(void)
-                                     { return usingIcet; }           
+                                     { return usingIcet; } 
+
+    static void                  SetDirectSend(bool b)
+                                     { directSend = b; }
+    static bool                  UseDirectSend(void)
+                                     { return directSend; }
+                                               
 
 
     static void                  RegisterGetDatabaseCallback(
@@ -235,6 +241,7 @@ class PIPELINE_API avtCallback
     static bool                  forceIntel;
     static bool                  aMRDuplication;
     static bool                  usingIcet;
+    static bool                  directSend;
 };
 
 

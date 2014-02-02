@@ -2103,9 +2103,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
     int sendingTags[2] = {15,16};
     if (avtCallback::UseusingIcet() == false){
         if (PAR_Size() > 1){
-            if (rootGathersAll == false){
+            if (avtCallback::UseDirectSend() == false){{
             
-            	debug5 << PAR_Rank() << " ~ Do compositing on one node ... " << numPatches << std::endl << std::endl << std::endl;
+            	debug5 << PAR_Rank() << " ~ Do compositing on one node ...................... " << numPatches << std::endl << std::endl << std::endl;
                 //
                 // Compositing among contiguous processors on one node
                 //
@@ -2122,14 +2122,14 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 
                 visitTimer->StopTimer(compositingNodeTiming, "Compositing Node Timing");
                 visitTimer->DumpTimings();
-				debug5 << PAR_Rank() << " ~ Done with compositing on one node!" << numPatches << std::endl << std::endl;
+				debug5 << PAR_Rank() << " ~ Done with compositing on one node!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
                 std::cout << PAR_Rank() << " ~ Done with compositing on one node!" << numPatches << std::endl << std::endl;
 				
 
                 //
                 // Compositing across nodes
                 //
-                debug5 << PAR_Rank() << " ~ Do compositing across nodes ... " << numPatches << std::endl << std::endl << std::endl;
+                debug5 << PAR_Rank() << " ~ Do compositing across nodes ........................ " << numPatches << std::endl << std::endl << std::endl;
                 
                 int compositingAcrossNodesTiming;
                 compositingAcrossNodesTiming = visitTimer->StartTimer();
@@ -2140,7 +2140,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 visitTimer->StopTimer(compositingAcrossNodesTiming, "Compositing Across Nodes");
                 visitTimer->DumpTimings();
 
-                debug5 << PAR_Rank() << " ~ Done with compositing across nodes!" << numPatches << std::endl << std::endl;
+                debug5 << PAR_Rank() << " ~ Done with compositing across nodes!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
                 std::cout << PAR_Rank() << " ~ Done with compositing across nodes!" << numPatches << std::endl << std::endl;
                 
                 
@@ -2148,17 +2148,17 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 //
                 // Root Node timing
                 //
-                debug5 << PAR_Rank() << " ~ Do gather on 0 ... " << numPatches << std::endl << std::endl << std::endl;
+                debug5 << PAR_Rank() << " ~ Do gather on 0 .............................. " << numPatches << std::endl << std::endl << std::endl;
                 int rootNodeFinalTiming;
                 rootNodeFinalTiming = visitTimer->StartTimer();
                     imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer, sendingTags);
                 visitTimer->StopTimer(rootNodeFinalTiming, "Root Node final timing");
                 visitTimer->DumpTimings();
-                debug5 << PAR_Rank() << " ~ Done gather on 0 !!!" << numPatches << std::endl << std::endl;
+                debug5 << PAR_Rank() << " ~ Done gather on 0 !!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
 
                 debug5 << PAR_Rank() << " ~ waiting for other procs to catch up!" << std::endl << std::endl;
                 imgComm.syncAllProcs();
-                debug5 << PAR_Rank() << " ~ All done. Drawing the image now!" << std::endl << std::endl;
+                debug5 << PAR_Rank() << " ~ Tree Compositing - All done. Drawing the image now!" << std::endl << std::endl;
             }
             else{
                 //
@@ -2189,8 +2189,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 dataToSend[3] = startY;
                 imgComm.gatherAndAssembleEncodedImagesLB(screen[0], screen[1], dataToSend, totalEncodingSize*5, encoding, 1, avg_z);     // data from each processor
 
-                debug5 << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
-                //std::cout << PAR_Rank() << " ~ gatherEncodingSizes " << endl;
+                debug5 << PAR_Rank() << " ~ Direct Send - All done. Drawing the image now!" << std::endl << std::endl;
 
                 if (encoding != NULL)
                     delete []encoding;
