@@ -2102,7 +2102,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 
                     if (localImage != NULL)
                         delete []localImage;
-                    localImage = new float[bufferWidth*bufferHeight];
+                    localImage = new float[bufferWidth*bufferHeight*4];
 
                     memcpy((void*)localImage,(const void*)localRecvImage,sizeof(float)*bufferWidth*bufferHeight*4);
                     hasImageToComposite = true;
