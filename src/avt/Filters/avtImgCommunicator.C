@@ -1989,7 +1989,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
         it = std::find(compositeFrom.begin(), compositeFrom.end(), my_id);
         int myIndex = it-compositeFrom.begin();
         //std::cout << std::cout << my_id << " ~ index: " << myIndex << "   _____  compositeFrom.size(): " << compositeFrom.size() << std::endl;
-		debug5 << my_id << " ~ index: " << myIndex << "   _____  compositeFrom.size(): " << compositeFrom.size() << std::endl;
+		debug5 << "\n\n\n" <<my_id << " ~ index: " << myIndex << "   _____  compositeFrom.size(): " << compositeFrom.size() << std::endl;
 
         if (myIndex%2==0)	// Send section
         {	
@@ -2059,6 +2059,8 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
             int dataToRecv[6]; 
             float *localRecvBuffer = NULL;
             int sourceProc = compositeFrom[myIndex-1];
+            std::cout << my_id << " To receive from: " << sourceProc <<  std::endl;
+
             MPI_Recv(dataToRecv, 6,  MPI_INT,   sourceProc, tags[0], MPI_COMM_WORLD, &status);
             if (sourceProc != dataToRecv[0] && dataToRecv[0] != -1){
                 debug5 << my_id << " !!! Synchronization error !!!  myIndex: " << myIndex << "    source proc: " << sourceProc << "   dataToRecv[0]: " << dataToRecv[0] << "    sz: " << compositeFrom.size() << std::endl;
@@ -2189,7 +2191,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
         compositeFrom = compositeFromTemp;
         
         std::stringstream ss;
-        ss << my_id << " doNodeCompositing next : " << compositeFrom.size() << " : ";
+        ss << "\n\n" << my_id << " doNodeCompositing next : " << compositeFrom.size() << " : ";
         for (int i=0; i<compositeFrom.size();i++)
         	ss << compositeFrom[i] << ", ";
         //std::cout << ss.str() << std::endl;
