@@ -171,6 +171,9 @@ avtRayExtractor::avtRayExtractor(int w, int h, int d)
     patchCount = 0;
     totalAssignedPatches = 0;
 
+    imgComm.setDoneVolumeRendering(true);
+
+
     rayCastingSLIVR = false;
     trilinearInterpolation = false;
     lighting = false;
@@ -2004,8 +2007,10 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
         debug5 << PAR_Rank() << " ~ done sorting and extents: screen extents X: " << startX << ", " << endX <<  "  ~~~~  screen extents Y: " << startY << ", " << endY << std::endl;
         //std::cout << PAR_Rank() << " ~ done sorting and extents: screen extents X: " << startX << ", " << endX <<  "  ~~~~  screen extents Y: " << startY << ", " << endY << std::endl;
+    }else{
+        imgComm.setHasImageToComposite(false);
     }
-
+    imgComm.setDoneVolumeRendering(true);
 
     //
     // Local Compositing within one processor
@@ -2071,6 +2076,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
     visitTimer->StopTimer(localProcCompsitingTiming, "Local Proc Compositing Timing");
     visitTimer->DumpTimings();
+
+    imgComm.syncAllProcs();
 
     debug5 << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
     std::cout << PAR_Rank()  << " ~ Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
