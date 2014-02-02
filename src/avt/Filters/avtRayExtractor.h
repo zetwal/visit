@@ -256,6 +256,9 @@ class AVTFILTERS_API avtRayExtractor
     std::multimap<int, imgData> imgDataHashMap;
     typedef std::multimap<int, imgData>::iterator iter_t;
 
+
+    std::vector<int>          processorCompositingOrder;       // order patches will be composited
+    std::list<int>            contiguousMergingProcs;          // patches next to each other that can be merged
     
 
     // triliniear / raycastin SLIVR
@@ -291,9 +294,6 @@ class AVTFILTERS_API avtRayExtractor
     std::vector<int>          numChildren;      // number of children for each patch
     std::vector<int>          numInEachLevel;   // number of patches for each level
     std::vector<int>          patchLevel;       // level of each patch
-
-    std::vector<int>          processorCompositingOrder;       // order patches will be composited
-    std::list<int>            contiguousMergingProcs;          // patches next to each other that can be merged
 
     std::string               varName;
     int                       amrLevels;

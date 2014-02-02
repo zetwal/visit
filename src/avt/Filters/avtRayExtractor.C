@@ -2135,7 +2135,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 compositingAcrossNodesTiming = visitTimer->StartTimer();
 
                     int externalTags[3]={52,53,54};
-                    imgComm.doNodeCompositing(collocatedProcs, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer, externalTags);
+                    imgComm.doNodeCompositing(processorCompositingOrder, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer, externalTags);
 
                 visitTimer->StopTimer(compositingAcrossNodesTiming, "Compositing Across Nodes");
                 visitTimer->DumpTimings();
@@ -2434,9 +2434,9 @@ avtRayExtractor::GetContiguousNodeList()
 	}while(found == true);
 	
     std::stringstream ss;
-    ss << PAR_Rank() << " ~ Contiguous procs size: " << contiguousMergingProcs.size() << "  patches: ";
+    ss << PAR_Rank() << " ~ Contiguous procs size: " << contiguousMergingProcs.size() << "  patches:  \n";
     for (std::list<int>::iterator it=contiguousMergingProcs.begin(); it != contiguousMergingProcs.end(); ++it)
-        ss <<  ", " << *it;
+        ss << *it << "\n";
     std::cout << ss.str() << std::endl;
     debug5 << ss.str() << std::endl;
 }
