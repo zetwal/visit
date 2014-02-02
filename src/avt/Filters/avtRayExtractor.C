@@ -2077,7 +2077,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
     visitTimer->StopTimer(localProcCompsitingTiming, "Local Proc Compositing Timing");
     visitTimer->DumpTimings();
 
-    imgComm.syncAllProcs();
+    //imgComm.syncAllProcs();
 
     debug5 << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
     std::cout << PAR_Rank()  << " ~ Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
