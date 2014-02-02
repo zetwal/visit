@@ -2103,7 +2103,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
     int sendingTags[2] = {15,16};
     if (avtCallback::UseusingIcet() == false){
         if (PAR_Size() > 1){
-            if (avtCallback::UseDirectSend() == false){{
+            if (avtCallback::UseDirectSend() == false){
             
             	debug5 << PAR_Rank() << " ~ Do compositing on one node ...................... " << numPatches << std::endl << std::endl << std::endl;
                 //
