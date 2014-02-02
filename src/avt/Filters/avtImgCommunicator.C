@@ -2077,7 +2077,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 int decodingTiming;
                 decodingTiming = visitTimer->StartTimer();
                     rleDecode(dataToRecv[5], localRecvBuffer, 0, localRecvImage);
-                visitTimer->StopTimer(decodingTiming, "Encoding timing for " + NumbToString(dataToRecv[3]) + " x " + NumbToString(dataToRecv[4]));
+                visitTimer->StopTimer(decodingTiming, "Decoding timing for " + NumbToString(dataToRecv[3]) + " x " + NumbToString(dataToRecv[4]));
                 visitTimer->DumpTimings();
 
                 if (hasImageToComposite == false){
