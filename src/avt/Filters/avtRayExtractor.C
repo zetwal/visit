@@ -2155,6 +2155,10 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 visitTimer->StopTimer(rootNodeFinalTiming, "Root Node final timing");
                 visitTimer->DumpTimings();
                 debug5 << PAR_Rank() << " ~ Done gather on 0 !!!" << numPatches << std::endl << std::endl;
+
+                debug5 << PAR_Rank() << " ~ waiting for other procs to catch up!" << std::endl << std::endl;
+                imgComm.syncAllProcs();
+                debug5 << PAR_Rank() << " ~ All done. Drawing the image now!" << std::endl << std::endl;
             }
             else{
                 //
