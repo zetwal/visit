@@ -2104,7 +2104,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
     if (avtCallback::UseusingIcet() == false){
         if (PAR_Size() > 1){
             if (avtCallback::UseDirectSend() == false){
-            
+                std::cout << PAR_Rank() << " ~ Tree compositing "  << endl;
+                debug5 << PAR_Rank() << " ~ Tree compositing "  << endl;
             	debug5 << PAR_Rank() << " ~ Do compositing on one node ...................... " << numPatches << std::endl << std::endl << std::endl;
                 //
                 // Compositing among contiguous processors on one node
@@ -2161,6 +2162,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 debug5 << PAR_Rank() << " ~ Tree Compositing - All done. Drawing the image now!" << std::endl << std::endl;
             }
             else{
+                debug5 << PAR_Rank() << "  ~ Direct Send compositing "  << endl;
                 //
                 // RLE Encoding
                 //
