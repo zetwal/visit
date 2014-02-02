@@ -130,6 +130,7 @@
             totalPatches = 0;
             numPatchesToCompose = 0;
             hasImageToComposite = false;
+            doneVolumeRendering = false;
 
             processorPatchesCount = NULL;
             imgBuffer = NULL;

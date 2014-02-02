@@ -117,6 +117,7 @@
     std::string hostname;
     int     nodeLeader;
     bool    hasImageToComposite;
+    bool    doneVolumeRendering;
     std::vector<int> procsInMyGroup; // id of processors on the same node as me; we share the same hostname
 
     imgMetaData setImg(int _inUse, int _procId, int _patchNumber, float dim_x, float dim_y, float screen_ll_x, float screen_ll_y, float screen_ur_x, float screen_ur_y, float _avg_z);
@@ -178,6 +179,9 @@
 
     void setHasImageToComposite(bool has){hasImageToComposite = has;}
     bool getHasImageToComposite(){ return hasImageToComposite;}
+
+    void setDoneVolumeRendering(bool done){doneVolumeRendering = done;}
+    bool getDoneVolumeRendering(){ return doneVolumeRendering;}
 
     void doNodeCompositing(std::vector<int> compositeFrom, int &startX, int &startY, int &bufferWidth, int &bufferHeight, float avg_z, float *&localImage, int tags[3]);
     void finalAssemblyOnRoot(int fullsizex, int fullsizey, int startX, int startY, int sizeX, int sizeY, float *image, int tags[2]);
