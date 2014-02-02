@@ -1971,6 +1971,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
     debug5 << PAR_Rank() << " ~ avtRayTracer::ExecuteRayTracerLB  - Getting the patches - num patches used: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
     std::cout << PAR_Rank() << " ~ avtRayTracer::ExecuteRayTracerLB  - Getting the patches - num patches used : " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
 
+    int localNodeCompositingTiming;
+    localNodeCompositingTiming = visitTimer->StartTimer();
     
     int imgBufferWidth, imgBufferHeight;
     int startX, startY, endX, endY;
@@ -2013,8 +2015,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
     float *localBuffer = NULL;
     localBuffer = new float[imgBufferWidth * imgBufferHeight * 4]();
 
-    int localCompsitingTiming;
-    localCompsitingTiming = visitTimer->StartTimer();
+    int localProcCompsitingTiming;
+    localProcCompsitingTiming = visitTimer->StartTimer();
 
     for (int i=0; i<numPatches; i++){
         imgMetaData currentPatch = allImgMetaData[i];
@@ -2067,16 +2069,14 @@ avtRayExtractor::ExecuteRayTracerLB(){
     imageMetaPatchVector.clear();
     imgDataHashMap.clear();
 
-    visitTimer->StopTimer(localCompsitingTiming, "Local Compositing");
+    visitTimer->StopTimer(localProcCompsitingTiming, "Local Proc Compositing Timing");
     visitTimer->DumpTimings();
 
     debug5 << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
     std::cout << PAR_Rank()  << " ~ Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
 
-    std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_proc_ " + NumbToString(PAR_Rank()) + "_.ppm";
-    createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_comp);
-
-
+    //std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_proc_ " + NumbToString(PAR_Rank()) + "_.ppm";
+    //createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_comp);
 
     //
     // Compositing
@@ -2093,22 +2093,50 @@ avtRayExtractor::ExecuteRayTracerLB(){
     if (PAR_Rank() == 0)
         imgComm.setBackground(background);
 
+    int sendingTags[2] = {15,16};
     if (avtCallback::UseusingIcet() == false){
         if (PAR_Size() > 1){
             if (rootGathersAll == false){
+                //
+                // Compositing among contiguous processors on one node
+                //
+                int compositingNodeTiming;
+                compositingNodeTiming = visitTimer->StartTimer();
 
-                // Composite on one node
                 std::vector<int>collocatedProcs;
                 collocatedProcs.clear();
                 for (std::list<int>::iterator it=contiguousMergingProcs.begin(); it != contiguousMergingProcs.end(); ++it)
                     collocatedProcs.push_back((int)*it);
                 
-                imgComm.doNodeCompositing(collocatedProcs, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer);
-                imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer);
+                int internalTags[3]={42,43,44};
+                imgComm.doNodeCompositing(collocatedProcs, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer, internalTags);
+                
+                visitTimer->StopTimer(compositingNodeTiming, "Compositing Node Timing");
+                visitTimer->DumpTimings();
+
 
                 //
                 // Compositing across nodes
                 //
+                int compositingAcrossNodesTiming;
+                compositingAcrossNodesTiming = visitTimer->StartTimer();
+
+                    int externalTags[3]={52,53,54};
+                    imgComm.doNodeCompositing(collocatedProcs, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer, externalTags);
+
+                visitTimer->StopTimer(compositingAcrossNodesTiming, "Compositing Across Nodes");
+                visitTimer->DumpTimings();
+
+                
+
+                //
+                // Root Node timing
+                //
+                int rootNodeFinalTiming;
+                rootNodeFinalTiming = visitTimer->StartTimer();
+                    imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer, sendingTags);
+                visitTimer->StopTimer(rootNodeFinalTiming, "Root Node final timing");
+                visitTimer->DumpTimings();
             }
             else{
                 //
@@ -2157,7 +2185,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
             }
         }else{
             std::cout << " PAR_Size() 1" << std::endl;
-            imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer);
+            imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer, sendingTags);
             std::cout << "Done final assembly " << std::endl;
         }
 
