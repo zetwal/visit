@@ -2398,6 +2398,8 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
 
 
         if (hasImageToComposite == true && my_id != 0){   // send it to 0
+
+            debug5 << my_id << " ~ sending to 0for final compositing" << std::endl;
             // encode image
             float *encoding = NULL;
             int *sizeEncoding = NULL;
@@ -2421,11 +2423,15 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             if (encoding != NULL)
                 delete []encoding;
             encoding = NULL;
+
+            debug5 << my_id << " ~ Done sending to 0 for final compositing!!!" << std::endl;
             return;
         }
 
 
         if (hasImageToComposite == false && my_id == 0){   // 
+
+            debug5 << my_id << " ~ waiting to receive from ... for  final compositing ..." << std::endl;
             int dataToRecv[6]; 
             float *localRecvBuffer = NULL;
 
@@ -2470,6 +2476,8 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
                     imgBuffer[bufferIndex+3] = clamp( (localRecvImage[subImgIndex+3] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+3] ); 
                 }
             }
+
+            debug5 << my_id << " ~ Received from " << dataToRecv[0] << " for final compositing!" << std::endl;
 
             if (localRecvImage != NULL)
                 delete []localRecvImage;
