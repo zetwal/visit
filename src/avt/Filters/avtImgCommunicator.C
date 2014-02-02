@@ -1993,7 +1993,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 
         if (myIndex%2==0)	// Send section
         {	
-            if (myIndex != compositeFrom().size -1){ // does not send but waits to receive
+            if (myIndex != (compositeFrom.size()-1)){ // does not send but waits to receive
                 int destProc = compositeFrom[myIndex+1];
                 int dataToSend[6];  //0: -1 = no data,1=data| 1: length | 2:width | 3:compressed size
 
