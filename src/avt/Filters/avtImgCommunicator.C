@@ -2058,7 +2058,12 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
             // MPI Recv from Any if it has something
             int dataToRecv[6]; 
             float *localRecvBuffer = NULL;
-            MPI_Recv(dataToRecv,                    6,  MPI_INT,   MPI_ANY_SOURCE, tags[0], MPI_COMM_WORLD, &status);
+            int sourceProc = compositeFrom[myIndex-1];
+            MPI_Recv(dataToRecv,                    6,  MPI_INT,   sourceProc, tags[0], MPI_COMM_WORLD, &status);
+            if (sourceProc != dataToRecv[0]){
+                debug5 << "Synchronization error!!!" << std::endl;
+                std::cout << "!!! Synchronization error !!!" << std::endl;
+            }
 
             debug5 << my_id << " ~ Recv  _________ " << compositeFrom.size() << " : " 
             	   << dataToRecv[0] << ", " << dataToRecv[1] << ", " << dataToRecv[2]  << ", " << dataToRecv[3] << ", " << dataToRecv[4] << ", " <<  dataToRecv[5] << std::endl;
