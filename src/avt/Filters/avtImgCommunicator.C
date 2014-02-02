@@ -1993,62 +1993,70 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 
         if (myIndex%2==0)	// Send section
         {	
-            int destProc = compositeFrom[myIndex+1];
-            int dataToSend[6];  //0: -1 = no data,1=data| 1: length | 2:width | 3:compressed size
+            if (myIndex != compositeFrom().size -1){ // does not send but waits to receive
+                int destProc = compositeFrom[myIndex+1];
+                int dataToSend[6];  //0: -1 = no data,1=data| 1: length | 2:width | 3:compressed size
 
-            //std::cout << my_id << " ~ Send - index: " << myIndex << "    destProc: " << destProc << std::endl;
-            debug5 << my_id << " ~ Sending - index: " << myIndex << "    destProc: " << destProc << std::endl;
-            
-            if (hasImageToComposite == false){		// has NO data to compose
-                dataToSend[0]=-1;
+                //std::cout << my_id << " ~ Send - index: " << myIndex << "    destProc: " << destProc << std::endl;
+                debug5 << my_id << " ~ Sending - index: " << myIndex << "    destProc: " << destProc << std::endl;
 
-                // MPI 1 up Send if it has something
-                MPI_Send(dataToSend, 4, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
 
-                allSentDone = true;
-                //std::cout << my_id << " ~ hasImageToComposite == false" << std::endl;
-                debug5 << my_id << " ~ Sending - hasImageToComposite == false. Done!" << std::endl;
-            }
-            else
-            {
-                float *encoding = NULL;
-                int *sizeEncoding = NULL;
-
-                int encodingTiming;
-                encodingTiming = visitTimer->StartTimer();
-               		rleEncodeAll(bufferWidth, bufferHeight, 1, localImage,     encoding, sizeEncoding);
-                visitTimer->StopTimer(encodingTiming, "Encoding timing for " + NumbToString(bufferWidth) + " x " + NumbToString(bufferHeight));
-                visitTimer->DumpTimings();
-
-                dataToSend[0]=my_id;
-                dataToSend[1]=startX;
-                dataToSend[2]=startY;
-                dataToSend[3]=bufferWidth;
-                dataToSend[4]=bufferHeight;
-                dataToSend[5]=*sizeEncoding;
-
-                // std::string imgFilename_send = "/home/pascal/Desktop/imgTests/_localImg_"+ NumbToString(my_id) + "_sending_" + NumbToString(destProc) + "_" + NumbToString(compositeFrom.size()) +"_.ppm";
-                // createPpm(localImage, dataToSend[3], dataToSend[4], imgFilename_send);
-                debug5 << my_id << " ~ Sending hasImageToComposite == true " << compositeFrom.size() << " : " 
-                	   << dataToSend[0] << ", " << dataToSend[1] << ", " << dataToSend[2] << ", " << dataToSend[3] << ", " << dataToSend[4] << ", " << dataToSend[5] << std::endl;
-
-                // MPI 1 up Send if it has something
-                MPI_Send(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
-                MPI_Send(&avg_z, 1, MPI_FLOAT, destProc, tags[1], MPI_COMM_WORLD);
-                MPI_Send(encoding, dataToSend[5]*5, MPI_FLOAT, destProc, tags[2], MPI_COMM_WORLD);
-
-                // std::cout << my_id << " ~ all sent " << 
-                // encoding[0] << ", " << encoding[1] << ", " << encoding[2] << ", " << encoding[3] << ", " << encoding[4] << ", " << encoding[5] << " -- " << 
-                // encoding[dataToSend[5]-5] << ", " << encoding[dataToSend[5]-4] << ", " << encoding[dataToSend[5]-3] << ", " << encoding[dataToSend[5]-2] << ", " << encoding[dataToSend[5]-1] << std::endl;
-
-                if (encoding != NULL)
-                    delete []encoding;
-                encoding = NULL;
-
-                hasImageToComposite = false;
-                allSentDone = true;
                 
-                 debug5 << my_id << " ~ Sending - hasImageToComposite == true. Done!" << std::endl;
+                if (hasImageToComposite == false){		// has NO data to compose
+                    dataToSend[0]=-1;
+
+                    // MPI 1 up Send if it has something
+                    MPI_Send(dataToSend, 4, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
+
+                    allSentDone = true;
+                    //std::cout << my_id << " ~ hasImageToComposite == false" << std::endl;
+                    debug5 << my_id << " ~ Sending - hasImageToComposite == false. Done!" << std::endl;
+                }
+                else
+                {
+                    float *encoding = NULL;
+                    int *sizeEncoding = NULL;
+
+                    int encodingTiming;
+                    encodingTiming = visitTimer->StartTimer();
+                   		rleEncodeAll(bufferWidth, bufferHeight, 1, localImage,     encoding, sizeEncoding);
+                    visitTimer->StopTimer(encodingTiming, "Encoding timing for " + NumbToString(bufferWidth) + " x " + NumbToString(bufferHeight));
+                    visitTimer->DumpTimings();
+
+                    dataToSend[0]=my_id;
+                    dataToSend[1]=startX;
+                    dataToSend[2]=startY;
+                    dataToSend[3]=bufferWidth;
+                    dataToSend[4]=bufferHeight;
+                    dataToSend[5]=*sizeEncoding;
+
+                    // std::string imgFilename_send = "/home/pascal/Desktop/imgTests/_localImg_"+ NumbToString(my_id) + "_sending_" + NumbToString(destProc) + "_" + NumbToString(compositeFrom.size()) +"_.ppm";
+                    // createPpm(localImage, dataToSend[3], dataToSend[4], imgFilename_send);
+                    debug5 << my_id << " ~ Sending hasImageToComposite == true " << compositeFrom.size() << " : " 
+                    	   << dataToSend[0] << ", " << dataToSend[1] << ", " << dataToSend[2] << ", " << dataToSend[3] << ", " << dataToSend[4] << ", " << dataToSend[5] << std::endl;
+
+                    // MPI 1 up Send if it has something
+                    MPI_Send(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
+                    MPI_Send(&avg_z, 1, MPI_FLOAT, destProc, tags[1], MPI_COMM_WORLD);
+                    MPI_Send(encoding, dataToSend[5]*5, MPI_FLOAT, destProc, tags[2], MPI_COMM_WORLD);
+
+                    // std::cout << my_id << " ~ all sent " << 
+                    // encoding[0] << ", " << encoding[1] << ", " << encoding[2] << ", " << encoding[3] << ", " << encoding[4] << ", " << encoding[5] << " -- " << 
+                    // encoding[dataToSend[5]-5] << ", " << encoding[dataToSend[5]-4] << ", " << encoding[dataToSend[5]-3] << ", " << encoding[dataToSend[5]-2] << ", " << encoding[dataToSend[5]-1] << std::endl;
+
+                    if (encoding != NULL)
+                        delete []encoding;
+                    encoding = NULL;
+
+                    hasImageToComposite = false;
+                    allSentDone = true;
+                    
+                     debug5 << my_id << " ~ Sending - hasImageToComposite == true. Done!" << std::endl;
+                }
+            }else{
+                // skip to next turn!
+                std::cout << my_id << " ~ skipping to next turn!!" << std::endl;
+                debug5 << my_id << " ~ skipping to next turn!!" << std::endl;
             }
         }
         else		// Receive section
