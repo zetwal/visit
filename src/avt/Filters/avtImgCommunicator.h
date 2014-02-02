@@ -49,6 +49,7 @@
     #include <algorithm>
     #include <string>
     #include <map>
+    #include <TimingsManager.h>
 
     #ifdef PARALLEL
     #   include <mpi.h>
@@ -178,8 +179,8 @@
     void setHasImageToComposite(bool has){hasImageToComposite = has;}
     bool getHasImageToComposite(){ return hasImageToComposite;}
 
-    void doNodeCompositing(std::vector<int> compositeFrom, int &startX, int &startY, int &bufferWidth, int &bufferHeight, float avg_z, float *&localImage);
-    void finalAssemblyOnRoot(int fullsizex, int fullsizey, int startX, int startY, int sizeX, int sizeY, float *image);
+    void doNodeCompositing(std::vector<int> compositeFrom, int &startX, int &startY, int &bufferWidth, int &bufferHeight, float avg_z, float *&localImage, int tags[3]);
+    void finalAssemblyOnRoot(int fullsizex, int fullsizey, int startX, int startY, int sizeX, int sizeY, float *image, int tags[2]);
     void compositeTwoImages(int imgOneStartX,   int imgOneStartY,   int imgOneX,        int imgOneY,        float one_z,    float *imgOne,
                             int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,        int imgTwoY,        float two_z,    float *imgTwo,
                             int &imgCompStartX, int &imgCompStartY, int &imgCompX,      int &imgCompY,      float &final_z, float *&compositedImg);
