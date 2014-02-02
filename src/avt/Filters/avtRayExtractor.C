@@ -2123,6 +2123,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 visitTimer->StopTimer(compositingNodeTiming, "Compositing Node Timing");
                 visitTimer->DumpTimings();
 				debug5 << PAR_Rank() << " ~ Done with compositing on one node!" << numPatches << std::endl << std::endl;
+                std::cout << PAR_Rank() << " ~ Done with compositing on one node!" << numPatches << std::endl << std::endl;
 				
 
                 //
@@ -2140,6 +2141,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 visitTimer->DumpTimings();
 
                 debug5 << PAR_Rank() << " ~ Done with compositing across nodes!" << numPatches << std::endl << std::endl;
+                std::cout << PAR_Rank() << " ~ Done with compositing across nodes!" << numPatches << std::endl << std::endl;
                 
                 
 
