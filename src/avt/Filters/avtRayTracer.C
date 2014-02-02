@@ -609,14 +609,14 @@ avtRayTracer::Execute(void)
 
             //
             // Sort to find the closest from the camera
-            if (PAR_Rank() == 0)
-                std::cout << "Rank: " << std::endl;
+            //if (PAR_Rank() == 0)
+            debug5 << "processorCompositingOrder Rank: " << std::endl;
             int cc = 0;
             std::multimap<double,int>::iterator it;
             for (it=depths.begin(); it!=depths.end(); it++){
                 processorCompositingOrder.push_back(it->second);
-                if (PAR_Rank() == 0)
-                    std::cout << cc << " : " << it->first << ", " << it->second << std::endl;
+                //if (PAR_Rank() == 0)
+                    debug5 << cc << " : " << it->first << ", " << it->second << std::endl;
                 cc++;
             }
 
