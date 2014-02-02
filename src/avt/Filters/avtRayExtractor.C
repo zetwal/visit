@@ -2097,6 +2097,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
     if (avtCallback::UseusingIcet() == false){
         if (PAR_Size() > 1){
             if (rootGathersAll == false){
+            
+            	debug5 << PAR_Rank() << " ~ Do compositing on one node ... " << numPatches << std::endl;
                 //
                 // Compositing among contiguous processors on one node
                 //
@@ -2113,11 +2115,14 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 
                 visitTimer->StopTimer(compositingNodeTiming, "Compositing Node Timing");
                 visitTimer->DumpTimings();
-
+				debug5 << PAR_Rank() << " ~ Done with compositing on one node!" << numPatches << std::endl;
+				
 
                 //
                 // Compositing across nodes
                 //
+                debug5 << PAR_Rank() << " ~ Do compositing across nodes ... " << numPatches << std::endl;
+                
                 int compositingAcrossNodesTiming;
                 compositingAcrossNodesTiming = visitTimer->StartTimer();
 
@@ -2127,16 +2132,20 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 visitTimer->StopTimer(compositingAcrossNodesTiming, "Compositing Across Nodes");
                 visitTimer->DumpTimings();
 
+                debug5 << PAR_Rank() << " ~ Done with compositing across nodes!" << numPatches << std::endl;
+                
                 
 
                 //
                 // Root Node timing
                 //
+                debug5 << PAR_Rank() << " ~ Do gather on 0 ... " << numPatches << std::endl;
                 int rootNodeFinalTiming;
                 rootNodeFinalTiming = visitTimer->StartTimer();
                     imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer, sendingTags);
                 visitTimer->StopTimer(rootNodeFinalTiming, "Root Node final timing");
                 visitTimer->DumpTimings();
+                debug5 << PAR_Rank() << " ~ Done gather on 0 !!!" << numPatches << std::endl;
             }
             else{
                 //
