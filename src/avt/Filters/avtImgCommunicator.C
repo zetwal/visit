@@ -339,7 +339,7 @@
             nodeLeader = std::min(my_id,procsInMyGroup[0]);
 
         //std::cout << my_id << " ~ Node Leader: " << nodeLeader << std::endl;
-            debug5 << my_id << " ~ Node Leader: " << nodeLeader <<  "sssize: " << procsInMyGroup.size() << std::endl;
+            debug5 << my_id << " ~ Node Leader: " << nodeLeader <<  "     size: " << procsInMyGroup.size() << std::endl;
             for (int i=0; i<procsInMyGroup.size(); i++){
                 debug5 << i << " : the others " << procsInMyGroup[i] << std::endl;
             }
@@ -1975,7 +1975,7 @@ void createPpm(float array[], int dimx, int dimy, std::string filename){
 void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &startX, int &startY, int &bufferWidth, int &bufferHeight, float avg_z, float *&localImage,  int tags[3]){
     #ifdef PARALLEL
     std::stringstream ssss;
-    ssss << my_id << " doNodeCompositing  size: " << compositeFrom.size() << std::endl;
+    ssss << "\n " << my_id << " doNodeCompositing  size: " << compositeFrom.size() << std::endl;
     for (int i=0; i<compositeFrom.size();i++)
         ssss << compositeFrom[i] << ", ";
     //std::cout << ssss.str() << std::endl;
@@ -2166,7 +2166,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
         }
 
         if (allSentDone == true){
-        	debug5 << my_id << " ~ done with this !!!"  << std::endl;
+        	debug5 << my_id << " ~ done with this !!!"  << std::endl << std::endl;
             break;
         }
 
@@ -2187,7 +2187,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
         for (int i=0; i<compositeFrom.size();i++)
         	ss << compositeFrom[i] << ", ";
         //std::cout << ss.str() << std::endl;
-        debug5 << ss.str() << std::endl;
+        debug5 << ss.str() << std::endl << std::endl ;
     }
     //std::cout << my_id << " ~ done and waiting for the others!" << std::endl << std::endl << std::endl;
 
