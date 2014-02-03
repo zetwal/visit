@@ -534,7 +534,7 @@ avtRayTracer::Execute(void)
 
         debug5 << "| db : " << db << "  mesh:  " << mesh << "   varname: " << varName << std::endl;
         debug5 << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
-        std::cout << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
+        //std::cout << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
         
 
         //
@@ -574,13 +574,13 @@ avtRayTracer::Execute(void)
             worldToview->DeepCopy(modelViewMatrix);
             std::vector<int> processorCompositingOrder;
 
-            if (PAR_Rank() == 0){
-                std::cout << "Camera inside ray tracer: " 
+            
+            debug5 << "Camera inside ray tracer: " 
                       << modelViewMatrix[0] << "   " << modelViewMatrix[1] << "   " << modelViewMatrix[2] << "   " << modelViewMatrix[3] << std::endl
                       << modelViewMatrix[4] << "   " << modelViewMatrix[5] << "   " << modelViewMatrix[6] << "   " << modelViewMatrix[7] << std::endl
                       << modelViewMatrix[8] << "   " << modelViewMatrix[9] << "   " << modelViewMatrix[10] << "   " << modelViewMatrix[11] << std::endl
                       << modelViewMatrix[12] << "   " << modelViewMatrix[13] << "   " << modelViewMatrix[14] << "   " << modelViewMatrix[15] << std::endl;
-            }
+           
 
             //
             // Project the partitions into eye space
@@ -597,10 +597,6 @@ avtRayTracer::Execute(void)
 
                 worldToview->MultiplyPoint(patchCentroid, viewPos);
                 depths.insert( std::pair<double, int> (viewPos[2], i) );
-
-                if (PAR_Rank() == 0)
-                    std::cout << PAR_Rank() << " ~  id: "<< i << "  original: " << patchCentroid[0] << ", " <<  patchCentroid[1] << ", " <<  patchCentroid[2] << "  -  " 
-                                            << " transformed: " <<  viewPos[0] << ", " <<  viewPos[1] << ", " <<  viewPos[2] <<", " << viewPos[3] << std::endl;
 
                 debug5 << " ~  id: "<< i << "  original: " << patchCentroid[0] << ", " <<  patchCentroid[1] << ", " <<  patchCentroid[2] << "  -  " 
                        << " transformed: " <<  viewPos[0] << ", " <<  viewPos[1] << ", " <<  viewPos[2] <<", " << viewPos[3] << std::endl;   

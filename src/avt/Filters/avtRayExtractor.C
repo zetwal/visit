@@ -309,7 +309,7 @@ avtRayExtractor::RestrictToTile(int wmin, int wmax, int hmin, int hmax)
 void
 avtRayExtractor::Execute(void)
 {
-    std::cout << PAR_Rank() << " ~  avtRayExtractor::Execute" << std::endl;
+    //std::cout << PAR_Rank() << " ~  avtRayExtractor::Execute" << std::endl;
     debug5 << " ~  avtRayExtractor::Execute" << std::endl;
 
     int timingsIndex = visitTimer->StartTimer();
@@ -853,7 +853,7 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             massVoxelExtractor->world_to_screen(minExtents, width,height, minPos,minDepth);
             massVoxelExtractor->world_to_screen(maxExtents, width,height, maxPos,maxDepth);
 
-            std::cout << PAR_Rank() << " ~ " << minExtents[0] << ", " << minExtents[1] << ", " << minExtents[2] << "  -  " << maxExtents[0] << ", " << maxExtents[1] << ", " << maxExtents[2] << "     screen width, height: " << width << ", " << height  << "   Partitions  min: " << minPos[0] << ", " << minPos[1] << ", " << minDepth << "     max: " << maxPos[0] << ", " << maxPos[1] << ", " << maxDepth << std::endl;
+            //std::cout << PAR_Rank() << " ~ " << minExtents[0] << ", " << minExtents[1] << ", " << minExtents[2] << "  -  " << maxExtents[0] << ", " << maxExtents[1] << ", " << maxExtents[2] << "     screen width, height: " << width << ", " << height  << "   Partitions  min: " << minPos[0] << ", " << minPos[1] << ", " << minDepth << "     max: " << maxPos[0] << ", " << maxPos[1] << ", " << maxDepth << std::endl;
             partitionExtentsComputationDone = true;
         }
         massVoxelExtractor->SetPartitionExtents(currentPartitionExtents);  // minX, minY, minZ,    maxX, maxY,maxZ
@@ -927,21 +927,21 @@ avtRayExtractor::ExecuteRayTracer(){
     // std::cout << "patch size: " << getImgPatchSize() << std::endl;
 
     if (avtCallback::UseKdTreeLoadBalancer() == true)
-        std::cout << "Used kd tree load balancer" << std::endl;
+        debug5 << "Used kd tree load balancer" << std::endl;
     else
-        std::cout << "NOT used kd tree load balancer" << std::endl;
+        debug5 << "NOT used kd tree load balancer" << std::endl;
 
     if (avtCallback::UseAMR() == true)
-        std::cout << "AMR" << std::endl;
+        debug5 << "AMR" << std::endl;
     else
-        std::cout << "NOT AMR" << std::endl;
+        debug5 << "NOT AMR" << std::endl;
 
     //
     // Single Processor
     //
     if (parallelOn == false){
         
-        std::cout << "In serial mode" << std::endl;
+        debug5 << "In serial mode" << std::endl;
         //
         // Get the metadata
         //
@@ -1075,7 +1075,7 @@ avtRayExtractor::ExecuteRayTracer(){
     imgComm.gatherNumPatches(numPatches);
 
     debug5 << PAR_Rank() << "   avtRayTracer::Execute  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
-    std::cout << PAR_Rank() << "   avtRayTracer::Execute  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
+    //std::cout << PAR_Rank() << "   avtRayTracer::Execute  - Getting the patches -    numPatches: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
 
 
     //
@@ -1126,7 +1126,7 @@ avtRayExtractor::ExecuteRayTracer(){
         imgComm.patchAllocationLogic();    
 
     debug5 << PAR_Rank() << "   avtRayTracer::Execute  - imgComm.patchAllocationLogic() " << endl;
-    std::cout << PAR_Rank() << "   avtRayTracer::Execute  - imgComm.patchAllocationLogic() " << endl;
+    //std::cout << PAR_Rank() << "   avtRayTracer::Execute  - imgComm.patchAllocationLogic() " << endl;
 
     // informationToRecvArray:   (procId, numPatches)           (procId, numPatches)         (procId, numPatches)  ...
     // informationToSendArray:   (patchNumber, destProcId)     (patchNumber, destProcId)    (patchNumber, destProcId)  ...
@@ -1141,7 +1141,7 @@ avtRayExtractor::ExecuteRayTracer(){
     imgComm.scatterNumDataToCompose(totalSendData, totalRecvData, numZDivisions, totalPatchesToCompositeLocally);
 
     debug5 << PAR_Rank() << " ~  num patches to send: " << totalSendData/2 << " num processors to recv from: " << totalRecvData/2 << "    numZDivisions: " << numZDivisions << "   totalPatchesToCompositeLocally: " <<   totalPatchesToCompositeLocally << endl;
-    std::cout << PAR_Rank() << " ~  num patches to send: " << totalSendData/2 << " num processors to recv from: " << totalRecvData/2 << "    numZDivisions: " << numZDivisions << "   totalPatchesToCompositeLocally: " <<   totalPatchesToCompositeLocally << endl;
+    //std::cout << PAR_Rank() << " ~  num patches to send: " << totalSendData/2 << " num processors to recv from: " << totalRecvData/2 << "    numZDivisions: " << numZDivisions << "   totalPatchesToCompositeLocally: " <<   totalPatchesToCompositeLocally << endl;
 
 
     //
@@ -1193,7 +1193,7 @@ avtRayExtractor::ExecuteRayTracer(){
             int imgBufferWidth = abs(lastPatch.screen_ll[0] + lastPatch.dims[0] - composedPatch.screen_ll[0]);
             int imgBufferHeight = abs(lastPatch.screen_ll[1] + lastPatch.dims[1] - composedPatch.screen_ll[1]);
 
-            std::cout << PAR_Rank() << " ~ imgBufferWidth: " << imgBufferWidth << "   imgBufferHeight: " << imgBufferHeight << std::endl;
+            //std::cout << PAR_Rank() << " ~ imgBufferWidth: " << imgBufferWidth << "   imgBufferHeight: " << imgBufferHeight << std::endl;
             composedData.imagePatch = new float[((imgBufferWidth * imgBufferHeight * 4)) ]();  //size: imgBufferWidth * imgBufferHeight * 4, initialized to 0
 
             composedPatch.dims[0]   = imgBufferWidth;
@@ -1980,7 +1980,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
         allImgMetaData.push_back(temp);
     }
     debug5 << PAR_Rank() << " ~ avtRayTracer::ExecuteRayTracerLB  - Getting the patches - num patches used: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
-    std::cout << PAR_Rank() << " ~ avtRayTracer::ExecuteRayTracerLB  - Getting the patches - num patches used : " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
+    //std::cout << PAR_Rank() << " ~ avtRayTracer::ExecuteRayTracerLB  - Getting the patches - num patches used : " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
 
     int localNodeCompositingTiming;
     localNodeCompositingTiming = visitTimer->StartTimer();
@@ -2088,7 +2088,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
     //imgComm.syncAllProcs();
 
     debug5 << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
-    std::cout << PAR_Rank()  << " ~ Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
+    //std::cout << PAR_Rank()  << " ~ Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
 
     //std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_proc_ " + NumbToString(PAR_Rank()) + "_.ppm";
     //createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_comp);
@@ -2112,7 +2112,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
     if (avtCallback::UseusingIcet() == false){
         if (PAR_Size() > 1){
             if (avtCallback::UseDirectSend() == false){
-                std::cout << PAR_Rank() << " ~ Tree compositing "  << endl;
+                //std::cout << PAR_Rank() << " ~ Tree compositing "  << endl;
                 debug5 << PAR_Rank() << " ~ Tree compositing "  << endl;
             	debug5 << PAR_Rank() << " ~ Do compositing on one node ...................... " << numPatches << std::endl << std::endl << std::endl;
                 //
@@ -2132,9 +2132,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 visitTimer->StopTimer(compositingNodeTiming, "Compositing Node Timing");
                 visitTimer->DumpTimings();
 				debug5 << PAR_Rank() << " ~ Done with compositing on one node!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
-                std::cout << PAR_Rank() << " ~ Done with compositing on one node!" << numPatches << std::endl << std::endl;
+                //std::cout << PAR_Rank() << " ~ Done with compositing on one node!" << numPatches << std::endl << std::endl;
 				//imgComm.syncAllProcs();
-                std::cout << PAR_Rank() << " ~ All done with compositing on one node!" << numPatches << std::endl << std::endl;
+                //std::cout << PAR_Rank() << " ~ All done with compositing on one node!" << numPatches << std::endl << std::endl;
 
                 //
                 // Compositing across nodes
@@ -2151,9 +2151,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 visitTimer->DumpTimings();
 
                 debug5 << PAR_Rank() << " ~ Done with compositing across nodes!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
-                std::cout << PAR_Rank() << " ~ Done with compositing across nodes!" << numPatches << std::endl << std::endl;
+                //std::cout << PAR_Rank() << " ~ Done with compositing across nodes!" << numPatches << std::endl << std::endl;
                 //imgComm.syncAllProcs();
-                std::cout << PAR_Rank() << " ~ All done with compositing across node!" << numPatches << std::endl << std::endl;
+                //std::cout << PAR_Rank() << " ~ All done with compositing across node!" << numPatches << std::endl << std::endl;
 
                 
                 
@@ -2184,7 +2184,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 int totalEncodingSize = imgComm.rleEncodeAll(imgBufferWidth,imgBufferHeight, 1,localBuffer,  encoding,sizeEncoding);
 
                 debug5 << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
-                std::cout << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
+                //std::cout << PAR_Rank() << "  ~ encoding done!  initial size: " << imgBufferWidth * imgBufferHeight * 4 << "    now: " << totalEncodingSize << endl;
 
 
                 //
@@ -2219,9 +2219,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 visitTimer->DumpTimings();
             }
         }else{
-            std::cout << " PAR_Size() 1" << std::endl;
+            //std::cout << " PAR_Size() 1" << std::endl;
             imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer, sendingTags);
-            std::cout << "Done final assembly " << std::endl;
+            //std::cout << "Done final assembly " << std::endl;
         }
 
         int  timingCompositinig = visitTimer->StartTimer();
@@ -2230,7 +2230,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
         // Processor 0 does a special compositing
         if (PAR_Rank() == 0)
         {
-            std::cout << " Done final assembly 2" << std::endl;
+            //std::cout << " Done final assembly 2" << std::endl;
             whole_image = new avtImage(this);
 
             // creates input for the
@@ -2244,13 +2244,13 @@ avtRayExtractor::ExecuteRayTracerLB(){
             for (int s=0; s<screen[0] * screen[1]; s++)
                 zbuffer[s] = 20.0;
 
-            std::cout << " Done final assembly 2.5" << std::endl;
+            //std::cout << " Done final assembly 2.5" << std::endl;
             zbuffer = whole_image->GetImage().GetZBuffer();
-            std::cout << " Done final assembly 3" << std::endl;
+            //std::cout << " Done final assembly 3" << std::endl;
             // Get the composited image
             imgComm.getcompositedImage(screen[0], screen[1], imgTest); 
             img->Delete();
-            std::cout << " Done final assembly 4" << std::endl;
+            //std::cout << " Done final assembly 4" << std::endl;
             debug5 << PAR_Rank() << "   ~ final: " << endl;
 
             if (zbuffer != NULL)
@@ -2389,7 +2389,7 @@ void
 avtRayExtractor::InsertOpaqueImage(avtImage_p img)
 {
     opaqueImage = img;
-    std::cout << PAR_Rank() << "        inserting opaque image" << std::endl;
+    //std::cout << PAR_Rank() << "        inserting opaque image" << std::endl;
 }
 
 void
@@ -2454,6 +2454,6 @@ avtRayExtractor::GetContiguousNodeList()
     ss << PAR_Rank() << " ~ Contiguous procs size: " << contiguousMergingProcs.size() << "  patches:  \n";
     for (std::list<int>::iterator it=contiguousMergingProcs.begin(); it != contiguousMergingProcs.end(); ++it)
         ss << *it << "\n";
-    std::cout << ss.str() << std::endl;
+    //std::cout << ss.str() << std::endl;
     debug5 << ss.str() << std::endl;
 }
