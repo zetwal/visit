@@ -2113,7 +2113,10 @@ avtRayExtractor::ExecuteRayTracerLB(){
         if (PAR_Size() > 1){
             if (avtCallback::UseTree() == true){
                 debug5 << PAR_Rank() << " ~ Tree compositing "  << endl;
-            	
+
+                int compositingTimer;
+            	compositingTimer = visitTimer->StartTimer();
+
                 //
                 // Compositing among contiguous processors on one node
                 //
@@ -2166,6 +2169,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 debug5 << PAR_Rank() << " ~ Done gather on 0 !!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
                 imgComm.syncAllProcs();
                 debug5 << PAR_Rank() << " ~ Tree Compositing - All done. Drawing the image now!" << std::endl << std::endl;
+
+                visitTimer->StopTimer(compositingTimer, "Compositing local + global + set on 0");
+                visitTimer->DumpTimings();
             }
             else{
                 debug5 << PAR_Rank() << "  ~ Direct Send compositing "  << endl;
