@@ -2198,6 +2198,12 @@ Engine::ProcessCommandLine(int argc, char **argv)
         else if (strcmp(argv[i], "-directsend") == 0)
         {
             avtCallback::SetDirectSend(true);
+            avtCallback::SetTree(false);
+        }
+        else if (strcmp(argv[i], "-tree") == 0)
+        {
+            avtCallback::SetTree(true);
+            avtCallback::SetDirectSend(false);
         }
         else if (strcmp(argv[i], "-create-ghosts-for-t-intersections") == 0)
         {
