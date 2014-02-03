@@ -2085,7 +2085,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
     visitTimer->StopTimer(localProcCompsitingTiming, "Local Proc Compositing Timing");
     visitTimer->DumpTimings();
 
-    imgComm.syncAllProcs();
+    //imgComm.syncAllProcs();
 
     debug5 << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
     std::cout << PAR_Rank()  << " ~ Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
@@ -2133,7 +2133,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 visitTimer->DumpTimings();
 				debug5 << PAR_Rank() << " ~ Done with compositing on one node!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
                 std::cout << PAR_Rank() << " ~ Done with compositing on one node!" << numPatches << std::endl << std::endl;
-				imgComm.syncAllProcs();
+				//imgComm.syncAllProcs();
                 std::cout << PAR_Rank() << " ~ All done with compositing on one node!" << numPatches << std::endl << std::endl;
 
                 //
@@ -2152,7 +2152,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
                 debug5 << PAR_Rank() << " ~ Done with compositing across nodes!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
                 std::cout << PAR_Rank() << " ~ Done with compositing across nodes!" << numPatches << std::endl << std::endl;
-                imgComm.syncAllProcs();
+                //imgComm.syncAllProcs();
                 std::cout << PAR_Rank() << " ~ All done with compositing across node!" << numPatches << std::endl << std::endl;
 
                 
