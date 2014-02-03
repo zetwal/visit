@@ -391,15 +391,12 @@ LoadBalancer::chopPartition(partitionExtents parent, partitionExtents & childOne
         if (count == 3)
             break;
     }
-
     if (count == 3){
         debug5 << "LoadBalancer::chopPartition Error in kdtree" << std::endl;
         return -1;  // We are going to be cycling forever here! So stop!
     }
         
-    childOne.axisIndex = axisIndex;
-    childTwo.axisIndex = axisIndex;
-    //std::cout << "axis: " << axis << std::endl;
+    childOne.axisIndex = childTwo.axisIndex = axisIndex;
         
     if (axis == 0){             // x-axis
         childOne.dims[1] = childTwo.dims[1] = parent.dims[1];
