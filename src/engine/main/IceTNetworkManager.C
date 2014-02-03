@@ -570,6 +570,14 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
         ICET(icetDrawFunc(render));
         ICET(icetDrawFrame());
 
+        GLdouble time_icet_render, time_icet_composite;
+        ICET(icetGetDoublev(ICET_RENDER_TIME, &time_icet_render));
+        std::cout << PAR_Rank() << " IceT Timings Render: " << time_icet_render << std::endl;
+        debug5 << PAR_Rank() << " IceT Timings Render: " << time_icet_render << std::endl;
+
+        ICET(icetGetDoublev(ICET_COMPOSITE_TIME, &time_icet_composite));
+        std::cout << PAR_Rank() << " IceT Timings Composite: " << time_icet_composite << std::endl; 
+        debug5 << PAR_Rank() << " IceT Timings Composite: " << time_icet_composite << std::endl; 
 
         // Now that we're done rendering, we need to post process the image.
         debug3 << "IceTNM: Starting readback." << std::endl;
