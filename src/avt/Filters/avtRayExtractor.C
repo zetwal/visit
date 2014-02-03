@@ -2112,26 +2112,28 @@ avtRayExtractor::ExecuteRayTracerLB(){
     if (avtCallback::UseusingIcet() == false){
         if (PAR_Size() > 1){
             if (avtCallback::UseTree() == true){
-                //std::cout << PAR_Rank() << " ~ Tree compositing "  << endl;
                 debug5 << PAR_Rank() << " ~ Tree compositing "  << endl;
-            	debug5 << PAR_Rank() << " ~ Do compositing on one node ...................... " << numPatches << std::endl << std::endl << std::endl;
+            	
                 //
                 // Compositing among contiguous processors on one node
                 //
-                int compositingNodeTiming;
-                compositingNodeTiming = visitTimer->StartTimer();
+                if (avtCallback::UseLocalCompositingOff() == true){
+                    debug5 << PAR_Rank() << " ~ Do compositing on one node ...................... " << numPatches << std::endl << std::endl << std::endl;
+                    int compositingNodeTiming;
+                    compositingNodeTiming = visitTimer->StartTimer();
 
-                std::vector<int>collocatedProcs;
-                collocatedProcs.clear();
-                for (std::list<int>::iterator it=contiguousMergingProcs.begin(); it != contiguousMergingProcs.end(); ++it)
-                    collocatedProcs.push_back((int)*it);
-                
-                int internalTags[3]={42,43,44};
-                imgComm.doNodeCompositing(collocatedProcs, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer, internalTags);
-                
-                visitTimer->StopTimer(compositingNodeTiming, "Compositing Node Timing");
-                visitTimer->DumpTimings();
-				debug5 << PAR_Rank() << " ~ Done with compositing on one node!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
+                    std::vector<int>collocatedProcs;
+                    collocatedProcs.clear();
+                    for (std::list<int>::iterator it=contiguousMergingProcs.begin(); it != contiguousMergingProcs.end(); ++it)
+                        collocatedProcs.push_back((int)*it);
+                    
+                    int internalTags[3]={42,43,44};
+                    imgComm.doNodeCompositing(collocatedProcs, startX, startY, imgBufferWidth, imgBufferHeight, avg_z, localBuffer, internalTags);
+                    
+                    visitTimer->StopTimer(compositingNodeTiming, "Compositing Node Timing");
+                    visitTimer->DumpTimings();
+    				debug5 << PAR_Rank() << " ~ Done with compositing on one node!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
+                }
 
                 //
                 // Compositing across nodes
