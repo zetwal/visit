@@ -75,6 +75,7 @@ bool                          avtCallback::aMRDuplication = true;
 bool                          avtCallback::usingIcet = false;
 bool                          avtCallback::directSend = false;
 bool                          avtCallback::tree = true;
+bool                          avtCallback::localCompositingOff = false;
 
 UpdatePlotAttributesCallback  avtCallback::updatePlotAttributesCallback = NULL;
 void                         *avtCallback::updatePlotAttributesCallbackArgs 

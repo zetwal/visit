@@ -2205,6 +2205,10 @@ Engine::ProcessCommandLine(int argc, char **argv)
             avtCallback::SetTree(true);
             avtCallback::SetDirectSend(false);
         }
+        else if (strcmp(argv[i], "-nolocal") == 0)
+        {
+            avtCallback::SetLocalCompositingOff(true);
+        }
         else if (strcmp(argv[i], "-create-ghosts-for-t-intersections") == 0)
         {
             avtStructuredDomainBoundaries::SetCreateGhostsForTIntersections(true);

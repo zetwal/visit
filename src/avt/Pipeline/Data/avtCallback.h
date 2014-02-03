@@ -182,6 +182,12 @@ class PIPELINE_API avtCallback
                                      { tree = b; }
     static bool                  UseTree(void)
                                      { return tree; }
+
+    static void                  SetLocalCompositingOff(bool b)
+                                     { localCompositingOff = b; }
+    static bool                  UseLocalCompositingOff(void)
+                                     { return localCompositingOff; }
+                                               
                                                
 
 
@@ -250,6 +256,8 @@ class PIPELINE_API avtCallback
 
     static bool                  directSend;
     static bool                  tree;
+
+    static bool                  localCompositingOff;
 };
 
 
