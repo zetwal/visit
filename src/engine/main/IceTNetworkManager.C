@@ -355,7 +355,7 @@ avtDataObject_p
 IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZBuffer,
                            int annotMode, int windowID, bool leftEye)
 {
-    std::cout << PAR_Rank() << "    IceTNetworkManager::Render... " << std::endl;
+    //std::cout << PAR_Rank() << "    IceTNetworkManager::Render... " << std::endl;
     int t0 = visitTimer->StartTimer();
     DataNetwork *origWorkingNet = workingNet;
     avtDataObject_p retval;
@@ -520,13 +520,13 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
             procs = new int[num_proc];
 
             int i = 0;
-            if (PAR_Rank() == 0)
-                std::cout << "IceT Rank;" << std::endl;
+            //if (PAR_Rank() == 0)
+            //    std::cout << "IceT Rank;" << std::endl;
             for (std::multimap<float,int>::iterator it=sortedZbuf.begin(); it!=sortedZbuf.end(); ++it){
                 procs[i] =  (*it).second;
                 i++;
-                if (PAR_Rank() == 0)
-                    std::cout << i << " : " << (*it).first << ", " << (*it).second << ": " <<  std::endl;
+                //if (PAR_Rank() == 0)
+                //    std::cout << i << " : " << (*it).first << ", " << (*it).second << ": " <<  std::endl;
             }
 
             // Set the compositing order for ICET
@@ -583,7 +583,7 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
         debug3 << "IceTNM: Starting readback." << std::endl;
         avtDataObject_p dob;
         {
-            std::cout <<  PAR_Rank() << "       IceTNetworkManager::Render... IceTNM: Starting readback ..." << std::endl;
+            //std::cout <<  PAR_Rank() << "       IceTNetworkManager::Render... IceTNM: Starting readback ..." << std::endl;
             avtImage_p img = this->Readback(viswin, needZB);
             CopyTo(dob, img);
         }
@@ -630,7 +630,7 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
     workingNet = origWorkingNet;
     visitTimer->StopTimer(t0, "Ice-T Render");
 
-    std::cout << PAR_Rank() << "        IceTNetworkManager::Render... End!!!" << std::endl;
+    //std::cout << PAR_Rank() << "        IceTNetworkManager::Render... End!!!" << std::endl;
     return retval;
 }
 
