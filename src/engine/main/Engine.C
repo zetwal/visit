@@ -2232,7 +2232,7 @@ Engine::ProcessCommandLine(int argc, char **argv)
             {
               this->useIceT = true;
               avtCallback::SetusingIcet(true);
-               std::cout << "Ithis->useIceT = true \n";
+              // std::cout << "Ithis->useIceT = true \n";
             }
             else
             {
