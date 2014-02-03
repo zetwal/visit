@@ -2120,7 +2120,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 //
                 // Compositing among contiguous processors on one node
                 //
-                if (avtCallback::UseLocalCompositingOff() == true){
+                if (avtCallback::UseLocalCompositingOff() == false){
                     debug5 << PAR_Rank() << " ~ Do compositing on one node ...................... " << numPatches << std::endl << std::endl << std::endl;
                     int compositingNodeTiming;
                     compositingNodeTiming = visitTimer->StartTimer();
