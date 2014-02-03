@@ -1747,9 +1747,11 @@ avtRayExtractor::chopPartitionRT(partitionExtents parent, partitionExtents & chi
         if (count == 3)
             break;
     }
-    if (count == 3)
+    if (count == 3){
+    	debug5 << "LoadBalancer::chopPartition Error in kdtree" << std::endl;
         return -1;  // We are going to be cycling forever here! So stop!
-        
+    }
+    
     childOne.axisIndex = childTwo.axisIndex = axisIndex;
         
     if (axis == 0){             // x-axis
@@ -1813,6 +1815,11 @@ avtRayExtractor::chopPartitionRT(partitionExtents parent, partitionExtents & chi
                 childTwo.minExtents[2] = childOne.maxExtents[2];
                 childTwo.maxExtents[2] = parent.maxExtents[2];
             }
+    if (parent.head == true)
+    	childOne.head = true;
+    else
+    	childOne.head = false;
+    childTwo.head = false;
     
     return 0;
 }
@@ -1858,6 +1865,7 @@ avtRayExtractor::getPartitionExtents(int id, int numDivisions, int logicalBounds
 
     partitionExtents parent, one, two;
     parent.axisIndex = 2;   // set it to the last one so that on the next iteration we get the first one! :)
+    parent.head = true;
     parent.dims[0] = logicalBounds[0];  parent.dims[1] = logicalBounds[1];  parent.dims[2] = logicalBounds[2];
     parent.minExtents[0] = minSpatialExtents[0];    parent.minExtents[1] = minSpatialExtents[1];    parent.minExtents[2] = minSpatialExtents[2];
     parent.maxExtents[0] = maxSpatialExtents[0];    parent.maxExtents[1] = maxSpatialExtents[1];    parent.maxExtents[2] = maxSpatialExtents[2];
