@@ -303,7 +303,7 @@
             char *hostnameBuffer = new char[256*num_procs]();
             char *myHostname = new char[256]();
             strncpy(myHostname, hostname.c_str(),hostname.length());
-            std::cout << my_id << " ~ topoInfo myHostname: " << myHostname << std::endl;
+            debug5 << my_id << " ~ topoInfo myHostname: " << myHostname << std::endl;
             MPI_Allgather(myHostname, 256, MPI_CHAR,    hostnameBuffer, 256, MPI_CHAR,  MPI_COMM_WORLD);
 
         // if (my_id == 0){
@@ -2067,11 +2067,11 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
             int dataToRecv[6]; 
             float *localRecvBuffer = NULL;
             int sourceProc = compositeFrom[myIndex-1];
-            std::cout << my_id << " To receive from: " << sourceProc <<  std::endl;
+            debug5 << my_id << " To receive from: " << sourceProc <<  std::endl;
 
             MPI_Recv(dataToRecv, 6,  MPI_INT,   sourceProc, tags[0], MPI_COMM_WORLD, &status);
             if (sourceProc != dataToRecv[0] && dataToRecv[0] != -1){
-                debug5 << my_id << " !!! Synchronization error !!!  myIndex: " << myIndex << "    source proc: " << sourceProc << "   dataToRecv[0]: " << dataToRecv[0] << "    sz: " << compositeFrom.size() << std::endl;
+                //debug5 << my_id << " !!! Synchronization error !!!  myIndex: " << myIndex << "    source proc: " << sourceProc << "   dataToRecv[0]: " << dataToRecv[0] << "    sz: " << compositeFrom.size() << std::endl;
                 std::cout << my_id << " !!! Synchronization error !!!  myIndex: " << myIndex << "    source proc: " << sourceProc << "   dataToRecv[0]: " << dataToRecv[0] << "    sz: " << compositeFrom.size() << std::endl;
             }
 
@@ -2309,7 +2309,7 @@ void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY
             orderArray[0] = 0;  orderArray[1] = 1;
         }
 
-        std::cout << my_id << " ~ Creating composite final image: " << imgCompX << ", " << imgCompY << " - " <<  imgCompStartX << ", " << imgCompStartY << std::endl;
+        //std::cout << my_id << " ~ Creating composite final image: " << imgCompX << ", " << imgCompY << " - " <<  imgCompStartX << ", " << imgCompStartY << std::endl;
         
         //
         // subimage to composite with
@@ -2329,7 +2329,7 @@ void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY
                 else
                     subImage = imgOne;
 
-            std::cout << my_id << " ~ z:" << z << " | " << inputImagesX[ orderArray[z] ]  << ", " << inputImagesY[ orderArray[z] ] << " -- " <<  inputImagesStartX[ orderArray[z] ] << ", " << inputImagesStartY[ orderArray[z] ] << std::endl;
+            //std::cout << my_id << " ~ z:" << z << " | " << inputImagesX[ orderArray[z] ]  << ", " << inputImagesY[ orderArray[z] ] << " -- " <<  inputImagesStartX[ orderArray[z] ] << ", " << inputImagesStartY[ orderArray[z] ] << std::endl;
 
             for (int j=0; j<inputImagesY[ orderArray[z] ]; j++){
                 for (int k=0; k<inputImagesX[ orderArray[z] ]; k++){  

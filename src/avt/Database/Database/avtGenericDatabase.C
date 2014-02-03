@@ -5032,7 +5032,6 @@ avtGenericDatabase::ReadDataset(avtDatasetCollection &ds, intVector &domains,
                       avtDataRequest_p &spec, avtSourceFromDatabase *src,
                       boolVector &selectionsApplied)
 {
-    std::cout << "avtGenericDatabase::ReadDataset" << std::endl;
     int timerHandle = visitTimer->StartTimer();
     int ts = spec->GetTimestep();
 

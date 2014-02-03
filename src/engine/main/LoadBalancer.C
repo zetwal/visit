@@ -1058,7 +1058,7 @@ LoadBalancer::Reduce(avtContract_p input)
         // load balancing, we override the scheme here
         //
         LoadBalanceScheme theScheme = DetermineAppropriateScheme(input);
-        std::cout << "theScheme: " << theScheme << std::endl;
+        debug5 << "theScheme: " << theScheme << std::endl;
 
         int index = input->GetPipelineIndex();
         const LBInfo &lbinfo = pipelineInfo[index];
@@ -1068,7 +1068,7 @@ LoadBalancer::Reduce(avtContract_p input)
         avtDataRequest_p data = input->GetDataRequest();
         avtDatabaseMetaData *md = db->GetMetaData(db->GetMostRecentTimestep());
         string meshname = md->MeshForVar(new_data->GetVariable());
-        std::cout << "!!!! !!!! meshname: " << meshname << std::endl;
+        debug5 << "Meshname: " << meshname << std::endl;
 
         const avtMeshMetaData *mmd = md->GetMesh(meshname);
         patchesInfo = mmd->patches;
