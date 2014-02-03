@@ -172,10 +172,16 @@ class PIPELINE_API avtCallback
     static bool                  UseusingIcet(void)
                                      { return usingIcet; } 
 
+
     static void                  SetDirectSend(bool b)
                                      { directSend = b; }
     static bool                  UseDirectSend(void)
                                      { return directSend; }
+
+    static void                  SetTree(bool b)
+                                     { tree = b; }
+    static bool                  UseTree(void)
+                                     { return tree; }
                                                
 
 
@@ -241,7 +247,9 @@ class PIPELINE_API avtCallback
     static bool                  forceIntel;
     static bool                  aMRDuplication;
     static bool                  usingIcet;
+
     static bool                  directSend;
+    static bool                  tree;
 };
 
 

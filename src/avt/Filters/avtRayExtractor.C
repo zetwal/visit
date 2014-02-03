@@ -2111,7 +2111,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
     int sendingTags[2] = {15,16};
     if (avtCallback::UseusingIcet() == false){
         if (PAR_Size() > 1){
-            if (avtCallback::UseDirectSend() == false){
+            if (avtCallback::UseTree() == true){
                 //std::cout << PAR_Rank() << " ~ Tree compositing "  << endl;
                 debug5 << PAR_Rank() << " ~ Tree compositing "  << endl;
             	debug5 << PAR_Rank() << " ~ Do compositing on one node ...................... " << numPatches << std::endl << std::endl << std::endl;
@@ -2132,9 +2132,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 visitTimer->StopTimer(compositingNodeTiming, "Compositing Node Timing");
                 visitTimer->DumpTimings();
 				debug5 << PAR_Rank() << " ~ Done with compositing on one node!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
-                //std::cout << PAR_Rank() << " ~ Done with compositing on one node!" << numPatches << std::endl << std::endl;
-				//imgComm.syncAllProcs();
-                //std::cout << PAR_Rank() << " ~ All done with compositing on one node!" << numPatches << std::endl << std::endl;
 
                 //
                 // Compositing across nodes
@@ -2151,10 +2148,6 @@ avtRayExtractor::ExecuteRayTracerLB(){
                 visitTimer->DumpTimings();
 
                 debug5 << PAR_Rank() << " ~ Done with compositing across nodes!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
-                //std::cout << PAR_Rank() << " ~ Done with compositing across nodes!" << numPatches << std::endl << std::endl;
-                //imgComm.syncAllProcs();
-                //std::cout << PAR_Rank() << " ~ All done with compositing across node!" << numPatches << std::endl << std::endl;
-
                 
                 
 
@@ -2167,9 +2160,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
                     imgComm.finalAssemblyOnRoot(screen[0], screen[1], startX, startY, imgBufferWidth, imgBufferHeight, localBuffer, sendingTags);
                 visitTimer->StopTimer(rootNodeFinalTiming, "Root Node final timing");
                 visitTimer->DumpTimings();
-                debug5 << PAR_Rank() << " ~ Done gather on 0 !!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
 
-                debug5 << PAR_Rank() << " ~ waiting for other procs to catch up!" << std::endl << std::endl;
+                debug5 << PAR_Rank() << " ~ Done gather on 0 !!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
                 imgComm.syncAllProcs();
                 debug5 << PAR_Rank() << " ~ Tree Compositing - All done. Drawing the image now!" << std::endl << std::endl;
             }
