@@ -1866,22 +1866,39 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
     for (int i=0; i<compositeFrom.size();i++)
         ssss << compositeFrom[i] << ", ";
     debug5 << ssss.str() << std::endl;
+    //cout << ssss.str() << std::endl;
 
     bool allSentDone = false;
-    int skipProcs = 2;
+    int skipProcs = avtCallback::UseTogetherSize();
 
     std::vector<int>::iterator it;
     while (compositeFrom.size() != 1){
+        int localSkipProcs;
+
         it = std::find(compositeFrom.begin(), compositeFrom.end(), my_id);
         int myIndex = it-compositeFrom.begin();
         //std::cout << std::cout << my_id << " ~ index: " << myIndex << "   _____  compositeFrom.size(): " << compositeFrom.size() << std::endl;
 		debug5 << "\n\n\n" <<my_id << " ~ index: " << myIndex << "   _____  compositeFrom.size(): " << compositeFrom.size() << std::endl;
+        
+        localSkipProcs = skipProcs;
+        if (compositeFrom.size()%skipProcs == 0) {
+            // do nothing
+        }else  
+        {
+            int sizeDiv = compositeFrom.size()/skipProcs;
+            int myDiv = myIndex/skipProcs;
+            if (myDiv == sizeDiv)
+                localSkipProcs = compositeFrom.size()- ((compositeFrom.size()/skipProcs)*skipProcs);
+        }
+        //std::cout << my_id << " ~ localSkipProcs: " << localSkipProcs << "    myIndex%localSkipProcs: " << myIndex%localSkipProcs <<  "   localSkipProcs-1: " << localSkipProcs-1 << std::endl;
+        debug5 << my_id << " ~ localSkipProcs: " << localSkipProcs << "    SkipProcs: " << skipProcs << std::endl;
 
-        if (myIndex%skipProcs != (skipProcs-1))	// Send section - 0%3 = 0, 1%3 = 2, 2%3 = 1
+        if (myIndex%localSkipProcs != (localSkipProcs-1))	// Send section - 0%3 = 0, 1%3 = 2, 2%3 = 1
         {	
-            if (myIndex != (compositeFrom.size()-1)){ // does not send but waits to receive
-                int destProc = compositeFrom[myIndex+1];
-                int dataToSend[6];  //0: -1 = no data,1=data| 1: length | 2:width | 3:compressed size
+            if (myIndex != (compositeFrom.size()-1)){ 
+
+                int destProc = compositeFrom[myIndex+( (localSkipProcs-1)-(myIndex%localSkipProcs) )];
+                int dataToSend[6];                          //0: -1 = no data,1=data| 1: length | 2:width | 3:compressed size
 
                 //std::cout << my_id << " ~ Send - index: " << myIndex << "    destProc: " << destProc << std::endl;
                 debug5 << my_id << " ~ Sending - index: " << myIndex << "    destProc: " << destProc << std::endl;
@@ -1931,111 +1948,113 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 }
             }else{
                 // skip to next turn!
-                std::cout << my_id << " ~ skipping to next turn!!" << std::endl;
+                //std::cout << my_id << " ~ skipping to next turn!!" << std::endl;
                 debug5 << my_id << " ~ skipping to next turn!!" << std::endl;
             }
         }
         else		// Receive section
         {
-            // MPI Recv from Any if it has something
-            int dataToRecv[6]; 
-            float *localRecvBuffer = NULL;
-            int sourceProc = compositeFrom[myIndex-1];
+            for (int rp = 1; rp<localSkipProcs; rp++){
+                // MPI Recv from Any if it has something
+                int dataToRecv[6]; 
+                float *localRecvBuffer = NULL;
+                int sourceProc = compositeFrom[myIndex-rp];
 
-            debug5 << my_id << " To receive from: " << sourceProc <<  std::endl;
+                debug5 << my_id << " To receive from: " << sourceProc <<  std::endl;
 
-            MPI_Recv(dataToRecv, 6,  MPI_INT,   sourceProc, tags[0], MPI_COMM_WORLD, &status);
-            if (sourceProc != dataToRecv[0] && dataToRecv[0] != -1){
-                std::cout << my_id << " !!! Synchronization error !!!  myIndex: " << myIndex << "    source proc: " << sourceProc << "   dataToRecv[0]: " << dataToRecv[0] << "    sz: " << compositeFrom.size() << std::endl;
-            }
+                MPI_Recv(dataToRecv, 6,  MPI_INT,   sourceProc, tags[0], MPI_COMM_WORLD, &status);
+                if (sourceProc != dataToRecv[0] && dataToRecv[0] != -1){
+                    std::cout << my_id << " !!! Synchronization error !!!  myIndex: " << myIndex << "    source proc: " << sourceProc << "   dataToRecv[0]: " << dataToRecv[0] << "    sz: " << compositeFrom.size() << std::endl;
+                }
 
-            debug5 << my_id << " ~ Recv  _________ " << compositeFrom.size() << " : " 
-            	   << dataToRecv[0] << ", " << dataToRecv[1] << ", " << dataToRecv[2]  << ", " << dataToRecv[3] << ", " << dataToRecv[4] << ", " <<  dataToRecv[5] << std::endl;
+                debug5 << my_id << " ~ Recv  _________ " << compositeFrom.size() << " : " 
+                	   << dataToRecv[0] << ", " << dataToRecv[1] << ", " << dataToRecv[2]  << ", " << dataToRecv[3] << ", " << dataToRecv[4] << ", " <<  dataToRecv[5] << std::endl;
 
-            // MPI Recv it
-            if (dataToRecv[0] != -1){   // has data to receive
-                localRecvBuffer = new float[dataToRecv[5]*5];
-                MPI_Recv(localRecvBuffer, dataToRecv[5]*5, MPI_FLOAT, dataToRecv[0], tags[2], MPI_COMM_WORLD, &status);
+                // MPI Recv it
+                if (dataToRecv[0] != -1){   // has data to receive
+                    localRecvBuffer = new float[dataToRecv[5]*5];
+                    MPI_Recv(localRecvBuffer, dataToRecv[5]*5, MPI_FLOAT, dataToRecv[0], tags[2], MPI_COMM_WORLD, &status);
 
-				debug5 << my_id << " ~ Recv all from " << dataToRecv[0] << "   now decoding!" << std::endl;
-				
-                // Decode
-                float *localRecvImage = NULL;
-                localRecvImage = new float[dataToRecv[3]*dataToRecv[4]*4];
+    				debug5 << my_id << " ~ Recv all from " << dataToRecv[0] << "   now decoding!" << std::endl;
+    				
+                    // Decode
+                    float *localRecvImage = NULL;
+                    localRecvImage = new float[dataToRecv[3]*dataToRecv[4]*4];
 
-                int decodingTiming;
-                decodingTiming = visitTimer->StartTimer();
-                    rleDecode(dataToRecv[5], localRecvBuffer, 0, localRecvImage);
-                visitTimer->StopTimer(decodingTiming, "Decoding timing for " + NumbToString(dataToRecv[3]) + " x " + NumbToString(dataToRecv[4]) +  "  from " + NumbToString(dataToRecv[0]));
-                visitTimer->DumpTimings();
+                    int decodingTiming;
+                    decodingTiming = visitTimer->StartTimer();
+                        rleDecode(dataToRecv[5], localRecvBuffer, 0, localRecvImage);
+                    visitTimer->StopTimer(decodingTiming, "Decoding timing for " + NumbToString(dataToRecv[3]) + " x " + NumbToString(dataToRecv[4]) +  "  from " + NumbToString(dataToRecv[0]));
+                    visitTimer->DumpTimings();
 
-				debug5 << my_id << " ~ Recv - Done decoding!" << std::endl;
-				
-                if (hasImageToComposite == false){
-                	debug5 << my_id << " ~ Recv - replace by: " << dataToRecv[0] << std::endl;
+    				debug5 << my_id << " ~ Recv - Done decoding!" << std::endl;
+    				
+                    if (hasImageToComposite == false){
+                    	debug5 << my_id << " ~ Recv - replace by: " << dataToRecv[0] << std::endl;
 
-                    startX = dataToRecv[1];
-                    startY = dataToRecv[2];         
-                    bufferWidth = dataToRecv[3];
-                    bufferHeight = dataToRecv[4];
+                        startX = dataToRecv[1];
+                        startY = dataToRecv[2];         
+                        bufferWidth = dataToRecv[3];
+                        bufferHeight = dataToRecv[4];
 
-                    if (localImage != NULL)
-                        delete []localImage;
-                    localImage = new float[bufferWidth*bufferHeight*4];
+                        if (localImage != NULL)
+                            delete []localImage;
+                        localImage = new float[bufferWidth*bufferHeight*4];
 
-                    memcpy((void*)localImage,(const void*)localRecvImage,sizeof(float)*bufferWidth*bufferHeight*4);
-                    hasImageToComposite = true;
+                        memcpy((void*)localImage,(const void*)localRecvImage,sizeof(float)*bufferWidth*bufferHeight*4);
+                        hasImageToComposite = true;
+                        
+                        debug5 << my_id << " ~ Recv - replaced by received!" << std::endl;
+                    }else{
+                        // Do Compositing
+                        float *localCompositedImage = NULL;
+
+    					debug5 << my_id << " ~ Recv - compositing with " << dataToRecv[0] << " ... "  << std::endl;
+    					
+    					int compositingTiming;
+                    	compositingTiming = visitTimer->StartTimer();
+    					
+                        int _x,_y, _sizeX, _sizeY;
+                        compositeTwoImagesDims(startX,          startY,         bufferWidth,    bufferHeight,
+                                              dataToRecv[1],   dataToRecv[2],  dataToRecv[3],  dataToRecv[4],
+                                              _x,_y, _sizeX, _sizeY);
+
+                        localCompositedImage = new float[_sizeX *_sizeY * 4]();
+                        compositeTwoImages(startX,          startY,         bufferWidth,    bufferHeight,   1,  localImage,
+                                           dataToRecv[1],   dataToRecv[2],  dataToRecv[3],  dataToRecv[4],  0, localRecvImage,
+                                           startX,          startY,         bufferWidth,    bufferHeight,   avg_z,  localCompositedImage);
+
+    					visitTimer->StopTimer(compositingTiming, "compositingTiming timing for " + NumbToString(bufferWidth) + " x " + NumbToString(bufferHeight));
+                    	visitTimer->DumpTimings();
                     
-                    debug5 << my_id << " ~ Recv - replaced by received!" << std::endl;
-                }else{
-                    // Do Compositing
-                    float *localCompositedImage = NULL;
+                        // free up memory
+                        if (localRecvImage != NULL)
+                            delete []localRecvImage;
+                        localRecvImage = NULL;
 
-					debug5 << my_id << " ~ Recv - compositing with " << dataToRecv[0] << " ... "  << std::endl;
-					
-					int compositingTiming;
-                	compositingTiming = visitTimer->StartTimer();
-					
-                    int _x,_y, _sizeX, _sizeY;
-                    compositeTwoImagesDims(startX,          startY,         bufferWidth,    bufferHeight,
-                                          dataToRecv[1],   dataToRecv[2],  dataToRecv[3],  dataToRecv[4],
-                                          _x,_y, _sizeX, _sizeY);
+                        if (localRecvBuffer != NULL)
+                            delete []localRecvBuffer;
+                        localRecvBuffer = NULL;
 
-                    localCompositedImage = new float[_sizeX *_sizeY * 4]();
-                    compositeTwoImages(startX,          startY,         bufferWidth,    bufferHeight,   1,  localImage,
-                                       dataToRecv[1],   dataToRecv[2],  dataToRecv[3],  dataToRecv[4],  0, localRecvImage,
-                                       startX,          startY,         bufferWidth,    bufferHeight,   avg_z,  localCompositedImage);
-
-					visitTimer->StopTimer(compositingTiming, "compositingTiming timing for " + NumbToString(bufferWidth) + " x " + NumbToString(bufferHeight));
-                	visitTimer->DumpTimings();
-                
-                    // free up memory
-                    if (localRecvImage != NULL)
-                        delete []localRecvImage;
-                    localRecvImage = NULL;
-
-                    if (localRecvBuffer != NULL)
-                        delete []localRecvBuffer;
-                    localRecvBuffer = NULL;
-
-                    if (localImage != NULL)
-                        delete []localImage;
-                    localImage = new float[bufferWidth*bufferHeight*4];
-                    memcpy((void*)localImage,(const void*)localCompositedImage,sizeof(float)*bufferWidth*bufferHeight*4);
+                        if (localImage != NULL)
+                            delete []localImage;
+                        localImage = new float[bufferWidth*bufferHeight*4];
+                        memcpy((void*)localImage,(const void*)localCompositedImage,sizeof(float)*bufferWidth*bufferHeight*4);
 
 
-                    if (localCompositedImage != NULL)
-                        delete []localCompositedImage;
-                    localCompositedImage = NULL;
+                        if (localCompositedImage != NULL)
+                            delete []localCompositedImage;
+                        localCompositedImage = NULL;
 
-                    hasImageToComposite = true;
-                    debug5 << my_id << " ~ Recv - done compositing with " << dataToRecv[0] << " !!!"  << std::endl;
-                }
-            }else
-                if (hasImageToComposite == true){
-                    hasImageToComposite = true;
-                    debug5 << my_id << " ~ Recv - passing this one on  !!!"  << std::endl;
-                }
+                        hasImageToComposite = true;
+                        debug5 << my_id << " ~ Recv - done compositing with " << dataToRecv[0] << " !!!"  << std::endl;
+                    }
+                }else
+                    if (hasImageToComposite == true){
+                        hasImageToComposite = true;
+                        debug5 << my_id << " ~ Recv - passing this one on  !!!"  << std::endl;
+                    }
+            }
         }
 
         if (allSentDone == true){
@@ -2045,12 +2064,25 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 
         // Update the compositeFrom buffer
         std::vector<int> compositeFromTemp;
-        for (int i=0; i<compositeFrom.size(); i++)
-            if (i%2 != 0)
+        localSkipProcs = skipProcs;
+        for (int i=0; i<compositeFrom.size(); i++){
+            if (compositeFrom.size()%skipProcs == 0) {
+            // do nothing
+            }else  
+            {
+                int sizeDiv = compositeFrom.size()/skipProcs;
+                int myDiv = i/skipProcs;
+                if (myDiv == sizeDiv)
+                    localSkipProcs = compositeFrom.size()- ((compositeFrom.size()/skipProcs)*skipProcs);
+            }
+
+
+            if (i%localSkipProcs == (localSkipProcs-1))
                 compositeFromTemp.push_back(compositeFrom[i]);
-            else
-                if (i == compositeFrom.size()-1)
-                    compositeFromTemp.push_back(compositeFrom[i]);
+           // else
+           //     if (i == compositeFrom.size()-1)
+           //        compositeFromTemp.push_back(compositeFrom[i]);
+        }
 
         compositeFrom.clear();
         compositeFrom = compositeFromTemp;
