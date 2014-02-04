@@ -1871,13 +1871,13 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
     int skipProcs = 2;
 
     std::vector<int>::iterator it;
-    while (compositeFrom.size() != (skipProcs-1)){
+    while (compositeFrom.size() != 1){
         it = std::find(compositeFrom.begin(), compositeFrom.end(), my_id);
         int myIndex = it-compositeFrom.begin();
         //std::cout << std::cout << my_id << " ~ index: " << myIndex << "   _____  compositeFrom.size(): " << compositeFrom.size() << std::endl;
 		debug5 << "\n\n\n" <<my_id << " ~ index: " << myIndex << "   _____  compositeFrom.size(): " << compositeFrom.size() << std::endl;
 
-        if (myIndex%skipProcs > 1)	// Send section - 0%3 = 0, 1%3 = 2, 2%3 = 1
+        if (myIndex%skipProcs != (skipProcs-1))	// Send section - 0%3 = 0, 1%3 = 2, 2%3 = 1
         {	
             if (myIndex != (compositeFrom.size()-1)){ // does not send but waits to receive
                 int destProc = compositeFrom[myIndex+1];
