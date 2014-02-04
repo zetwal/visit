@@ -187,6 +187,11 @@ class PIPELINE_API avtCallback
                                      { localCompositingOff = b; }
     static bool                  UseLocalCompositingOff(void)
                                      { return localCompositingOff; }
+
+    static void                 SetTogetherSize(int i)
+                                     { togetherSize = i; }
+    static int                  UseTogetherSize(void)
+                                     { return togetherSize; }
                                                
                                                
 
@@ -256,6 +261,8 @@ class PIPELINE_API avtCallback
 
     static bool                  directSend;
     static bool                  tree;
+
+    static int                   togetherSize;
 
     static bool                  localCompositingOff;
 };

@@ -572,18 +572,38 @@ IceTNetworkManager::Render(bool checkThreshold, intVector networkIds, bool getZB
 
         GLdouble time_icet_render, time_icet_composite, time_icet_total;
         ICET(icetGetDoublev(ICET_RENDER_TIME, &time_icet_render));
-        std::cout << PAR_Rank() << " IceT Timings Render: " << time_icet_render << std::endl;
+        //std::cout << PAR_Rank() << " IceT Timings Render: " << time_icet_render << std::endl;
         debug5 << PAR_Rank() << " IceT Timings Render: " << time_icet_render << std::endl;
 
         ICET(icetGetDoublev(ICET_TOTAL_DRAW_TIME, &time_icet_total));
-        std::cout << PAR_Rank() << " IceT Timings Total: " << time_icet_total << std::endl; 
+        //std::cout << PAR_Rank() << " IceT Timings Total: " << time_icet_total << std::endl; 
         debug5 << PAR_Rank() << " IceT Timings Total: " << time_icet_total << std::endl;
 
         ICET(icetGetDoublev(ICET_COMPOSITE_TIME, &time_icet_composite));
-        std::cout << PAR_Rank() << " IceT Timings Composite: " << time_icet_composite << std::endl; 
+        //std::cout << PAR_Rank() << " IceT Timings Composite: " << time_icet_composite << std::endl; 
         debug5 << PAR_Rank() << " IceT Timings Composite: " << time_icet_composite << std::endl; 
 
         // Now that we're done rendering, we need to post process the image.
+
+        std::ostringstream convert1; 
+        convert1 << time_icet_render;
+        int ir = visitTimer->StartTimer();
+        visitTimer->StopTimer(ir, "IceT  Render \t" + convert1.str() );
+        visitTimer->DumpTimings();
+
+        std::ostringstream convert2; 
+        convert2 << time_icet_composite;
+        int ic = visitTimer->StartTimer();
+        visitTimer->StopTimer(ic, "IceT  Composite \t" + convert2.str() );
+        visitTimer->DumpTimings();
+
+        std::ostringstream convert3; 
+        convert3 << time_icet_total;
+        int it = visitTimer->StartTimer();
+        visitTimer->StopTimer(it, "IceT  Total \t" + convert3.str() );
+        visitTimer->DumpTimings();
+
+
         debug3 << "IceTNM: Starting readback." << std::endl;
         avtDataObject_p dob;
         {

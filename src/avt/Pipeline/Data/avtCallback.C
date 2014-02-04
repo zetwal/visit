@@ -77,6 +77,8 @@ bool                          avtCallback::directSend = false;
 bool                          avtCallback::tree = true;
 bool                          avtCallback::localCompositingOff = false;
 
+int                          avtCallback::togetherSize = 2;
+
 UpdatePlotAttributesCallback  avtCallback::updatePlotAttributesCallback = NULL;
 void                         *avtCallback::updatePlotAttributesCallbackArgs 
                                                                         = NULL;

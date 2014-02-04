@@ -821,7 +821,7 @@ Engine::InitializeCompute()
     {
         if (DebugStream::Level2()){
             debug2 << "Using IceT network manager." << std::endl;
-            std::cout << "Using IceT network manager." << std::endl;
+          //  std::cout << "Using IceT network manager." << std::endl;
           }
         netmgr = new IceTNetworkManager;
     }
@@ -829,7 +829,7 @@ Engine::InitializeCompute()
     {
         if (DebugStream::Level2()){
             debug2 << "Using standard network manager." << std::endl;
-            std::cout << "Using standard network manager." << std::endl;
+           // std::cout << "Using standard network manager." << std::endl;
         }
         netmgr = new NetworkManager;
     }
@@ -2208,6 +2208,22 @@ Engine::ProcessCommandLine(int argc, char **argv)
         else if (strcmp(argv[i], "-nolocal") == 0)
         {
             avtCallback::SetLocalCompositingOff(true);
+        }
+        else if (strcmp(argv[i], "-two") == 0)
+        {
+            avtCallback::SetTogetherSize(2);
+        }
+        else if (strcmp(argv[i], "-three") == 0)
+        {
+            avtCallback::SetTogetherSize(3);
+        }
+         else if (strcmp(argv[i], "-four") == 0)
+        {
+            avtCallback::SetTogetherSize(4);
+        }
+        else if (strcmp(argv[i], "-five") == 0)
+        {
+            avtCallback::SetTogetherSize(5);
         }
         else if (strcmp(argv[i], "-create-ghosts-for-t-intersections") == 0)
         {

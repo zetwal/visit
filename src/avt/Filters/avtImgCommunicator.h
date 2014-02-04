@@ -51,6 +51,8 @@
     #include <map>
     #include <TimingsManager.h>
 
+    #include <avtCallback.h>
+
     #ifdef PARALLEL
     #   include <mpi.h>
     #endif
