@@ -1894,7 +1894,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
         {	
             if (myIndex != (compositeFrom.size()-1))
             { 
-                int destProc = compositeFrom[myIndex+( (localSkipProcs-1)-(myIndex%localSkipProcs) )];
+                int destProc = compositeFrom[myIndex+( (localSkipProcs-1)-(myIndex%skipProcs) )];
                 int dataToSend[6];                          //0: -1 = no data,1=data| 1: length | 2:width | 3:compressed size
 
                 debug5 << my_id << " ~ Sending - index: " << myIndex << "    destProc: " << destProc << std::endl;
@@ -2075,7 +2075,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                     localSkipProcs = compositeFrom.size()- ((compositeFrom.size()/skipProcs)*skipProcs);
             }
 
-            if (i%localSkipProcs == (localSkipProcs-1))
+            if (i%skipProcs == (localSkipProcs-1))
                 compositeFromTemp.push_back(compositeFrom[i]);
         }
 
