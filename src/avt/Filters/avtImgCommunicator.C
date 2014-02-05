@@ -1861,7 +1861,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
     #ifdef PARALLEL
 
     std::stringstream ssss;
-    ssss << "\n " << my_id << " doNodeCompositing  size: " << compositeFrom.size() << std::endl;
+    ssss << "\n " << my_id << " avtImgCommunicator::doNodeCompositing   list size: " << compositeFrom.size() << " : " << std::endl;
     for (int i=0; i<compositeFrom.size();i++)
         ssss << compositeFrom[i] << ", ";
     debug5 << ssss.str() << std::endl;
@@ -1876,7 +1876,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
         it = std::find(compositeFrom.begin(), compositeFrom.end(), my_id);
         int myIndex = it-compositeFrom.begin();
 
-		debug5 << "\n\n\n" <<my_id << " ~ index: " << myIndex << " compositeFrom.size(): " << compositeFrom.size() << std::endl;
+		debug5 << "\n\n" <<my_id << " ~ index: " << myIndex << " compositeFrom.size(): " << compositeFrom.size() << std::endl;
         
         localSkipProcs = skipProcs;
         if (compositeFrom.size()%skipProcs != 0) {
@@ -1885,6 +1885,9 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
             if (myDiv == sizeDiv)
                 localSkipProcs = compositeFrom.size()- ((compositeFrom.size()/skipProcs)*skipProcs);
         }
+
+        debug5 << my_id << " ~ localSkipProcs: " << localSkipProcs << "    SkipProcs: " << skipProcs << std::endl;
+
         
         //
         // Send section
@@ -1957,14 +1960,14 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 float *localRecvBuffer = NULL;
                 int sourceProc = compositeFrom[myIndex-rp];
 
-                debug5 << my_id << " To receive from: " << sourceProc <<  std::endl;
+                debug5 << my_id << " to receive from: " << sourceProc <<  std::endl;
 
                 MPI_Recv(dataToRecv, 6,  MPI_INT,   sourceProc, tags[0], MPI_COMM_WORLD, &status);
                 if (sourceProc != dataToRecv[0] && dataToRecv[0] != -1){
                     std::cout << my_id << " !!! Synchronization error !!!  myIndex: " << myIndex << "    source proc: " << sourceProc << "   dataToRecv[0]: " << dataToRecv[0] << "    sz: " << compositeFrom.size() << std::endl;
                 }
 
-                debug5 << my_id << " ~ Recv  _________ " << compositeFrom.size() << " : " 
+                debug5 << my_id << " ~ Recv  _________ list size: " << compositeFrom.size() << " : " 
                 	   << dataToRecv[0] << ", " << dataToRecv[1] << ", " << dataToRecv[2]  << ", " << dataToRecv[3] << ", " << dataToRecv[4] << ", " <<  dataToRecv[5] << std::endl;
 
                 // MPI Recv it
@@ -2081,7 +2084,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
         compositeFrom = compositeFromTemp;
         
         std::stringstream ss;
-        ss << "\n\n" << my_id << " doNodeCompositing next : " << compositeFrom.size() << " : ";
+        ss << "\n" << my_id << "next list of size : " << compositeFrom.size() << " : ";
         for (int i=0; i<compositeFrom.size();i++)
         	ss << compositeFrom[i] << ", ";
         debug5 << ss.str() << std::endl << std::endl ;
