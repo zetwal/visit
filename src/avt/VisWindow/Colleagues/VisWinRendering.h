@@ -264,7 +264,7 @@ class VISWINDOW_API VisWinRendering : public VisWinColleague
                                           bool doTranslucent = true,
                                           avtImage_p input = NULL);
 
-    void                    ScreenRender_two(bool doViewportOnly, 
+    void                    ScreenRenderRGBA(bool doViewportOnly, 
                                             bool doCanvasZBufferToo,
                                             bool doOpaque, 
                                             bool doTranslucent, 

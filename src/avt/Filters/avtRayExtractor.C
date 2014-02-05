@@ -309,7 +309,6 @@ avtRayExtractor::RestrictToTile(int wmin, int wmax, int hmin, int hmax)
 void
 avtRayExtractor::Execute(void)
 {
-    //std::cout << PAR_Rank() << " ~  avtRayExtractor::Execute" << std::endl;
     debug5 << " ~  avtRayExtractor::Execute" << std::endl;
 
     int timingsIndex = visitTimer->StartTimer();
@@ -327,12 +326,6 @@ avtRayExtractor::Execute(void)
         massVoxelExtractor->SetMeshDims(meshMin,meshMax);
     }
 
-    //
-    // Determine partition extents
-    //
-    //std::cout << PAR_Rank() << "   Partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << ", "
-    //                                                    << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl; 
-
     avtDataTree_p tree = GetInputDataTree();
     totalNodes = tree->GetNumberOfLeaves();
     currentNode = 0;
@@ -340,9 +333,10 @@ avtRayExtractor::Execute(void)
     ExecuteTree(tree);
 
     visitTimer->StopTimer(timingsIndex, "Ray point extraction");
+    visitTimer->DumpTimings();
 
-    // avtImage_p image = ExecuteRayTracer();
-    // SetOutputImage(image);
+    if (avtCallback::UseBlockingForTiming())
+        imgComm.syncAllProcs();
 }
 
 
@@ -1912,6 +1906,18 @@ avtRayExtractor::getPartitionExtents(int id, int numDivisions, int logicalBounds
 }
 
 
+
+// ****************************************************************************
+//  Method: avtRayExtractor::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 bool 
 avtRayExtractor::patchOverlap(float patchMinX, float patchMaxX, float patchMinY, float patchMaxY, float patchMinZ, float patchMaxZ,
                             float partitionMinX, float partitionMaxX, float partitionMinY, float partitionMaxY, float partitionMinZ, float partitionMaxZ){
@@ -1964,8 +1970,22 @@ void createPpmRE_RGBA(unsigned char array[], int dimx, int dimy, std::string fil
     //std::cout << "End createPpm: " << std::endl;
 }
 
+
+// ****************************************************************************
+//  Method: avtRayExtractor::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 avtImage_p
 avtRayExtractor::ExecuteRayTracerLB(){
+
+
     int timingVolToImg;
 
     //
@@ -1982,8 +2002,11 @@ avtRayExtractor::ExecuteRayTracerLB(){
     debug5 << PAR_Rank() << " ~ avtRayTracer::ExecuteRayTracerLB  - Getting the patches - num patches used: " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
     //std::cout << PAR_Rank() << " ~ avtRayTracer::ExecuteRayTracerLB  - Getting the patches - num patches used : " << numPatches << "   total assigned: " << getTotalAssignedPatches() << endl;
 
-    int localNodeCompositingTiming;
-    localNodeCompositingTiming = visitTimer->StartTimer();
+    if (avtCallback::UseBlockingForTiming())
+        imgComm.syncAllProcs();
+
+    int localProcCompsitingTiming;
+    localProcCompsitingTiming = visitTimer->StartTimer();
     
     int imgBufferWidth, imgBufferHeight;
     int startX, startY, endX, endY;
@@ -2028,8 +2051,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
     float *localBuffer = NULL;
     localBuffer = new float[imgBufferWidth * imgBufferHeight * 4]();
 
-    int localProcCompsitingTiming;
-    localProcCompsitingTiming = visitTimer->StartTimer();
+    
 
     for (int i=0; i<numPatches; i++){
         imgMetaData currentPatch = allImgMetaData[i];
@@ -2085,13 +2107,12 @@ avtRayExtractor::ExecuteRayTracerLB(){
     visitTimer->StopTimer(localProcCompsitingTiming, "Local Proc Compositing Timing");
     visitTimer->DumpTimings();
 
-    //imgComm.syncAllProcs();
+    if (avtCallback::UseBlockingForTiming())
+        imgComm.syncAllProcs();
 
     debug5 << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
-    //std::cout << PAR_Rank()  << " ~ Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
 
-    //std::string imgFilename_comp = "/home/pascal/Desktop/imgTests/_proc_ " + NumbToString(PAR_Rank()) + "_.ppm";
-    //createPpm(localBuffer, imgBufferWidth, imgBufferHeight, imgFilename_comp);
+
 
     //
     // Compositing
@@ -2138,6 +2159,13 @@ avtRayExtractor::ExecuteRayTracerLB(){
     				debug5 << PAR_Rank() << " ~ Done with compositing on one node!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
                 }
 
+
+
+                if (avtCallback::UseBlockingForTiming())
+                    imgComm.syncAllProcs();
+
+
+
                 //
                 // Compositing across nodes
                 //
@@ -2154,7 +2182,12 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
                 debug5 << PAR_Rank() << " ~ Done with compositing across nodes!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
                 
-                
+
+
+                if (avtCallback::UseBlockingForTiming())
+                    imgComm.syncAllProcs();
+
+
 
                 //
                 // Root Node timing
@@ -2299,6 +2332,17 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
 
 
+// ****************************************************************************
+//  Method: avtRayExtractor::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 vtkImageData* 
 avtRayExtractor::toVTKImage(float* buffer, int width, int height, int startX, int startY, float avg_z ){
     //
@@ -2385,13 +2429,36 @@ avtRayExtractor::toVTKImage(float* buffer, int width, int height, int startX, in
 }
 
 
+
+// ****************************************************************************
+//  Method: avtRayExtractor::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 void    
 avtRayExtractor::InsertOpaqueImage(avtImage_p img)
 {
     opaqueImage = img;
-    //std::cout << PAR_Rank() << "        inserting opaque image" << std::endl;
 }
 
+
+// ****************************************************************************
+//  Method: avtRayExtractor::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 void
 avtRayExtractor::GetContiguousNodeList()
 {

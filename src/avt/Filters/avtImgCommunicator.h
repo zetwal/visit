@@ -36,56 +36,56 @@
     *
     *****************************************************************************/
 
-    // ************************************************************************* //
-    //                          avtImgCommunicator.h                             //
-    // ************************************************************************* //
+// ************************************************************************* //
+//                          avtImgCommunicator.h                             //
+// ************************************************************************* //
 
-    #ifndef AVT_IMG_COMMUNICATOR_H
-    #define AVT_IMG_COMMUNICATOR_H
+#ifndef AVT_IMG_COMMUNICATOR_H
+#define AVT_IMG_COMMUNICATOR_H
 
-    #include <filters_exports.h>
-    #include <pipeline_exports.h>
-    #include <avtSamplePointExtractor.h>
-    #include <algorithm>
-    #include <string>
-    #include <map>
-    #include <TimingsManager.h>
+#include <filters_exports.h>
+#include <pipeline_exports.h>
+#include <avtSamplePointExtractor.h>
+#include <algorithm>
+#include <string>
+#include <map>
+#include <TimingsManager.h>
 
-    #include <avtCallback.h>
+#include <avtCallback.h>
 
-    #ifdef PARALLEL
-    #   include <mpi.h>
-    #endif
+#ifdef PARALLEL
+#   include <mpi.h>
+#endif
 
-    #define MSG_DATA 100
-    #define MSG_RESULT 101
+#define MSG_DATA 100
+#define MSG_RESULT 101
 
-    const int SEND = 1;
-    const int RECEIVE = 2;
+const int SEND = 1;
+const int RECEIVE = 2;
 
-    struct imageBuffer{
-    float *image;
-    float depth;
-    };
+struct imageBuffer{
+float *image;
+float depth;
+};
 
-    struct code{
-    float count;  // should be int but float makes it easier to send with MPI!
-    float color[4];
-    };
+struct code{
+float count;  // should be int but float makes it easier to send with MPI!
+float color[4];
+};
 
-    // ****************************************************************************
-    //  Class: avtRayTracer
-    //
-    //  Purpose:
-    //      Does the composition for Ray casting: SLIVR
-    //
-    //  Programmer: Pascal Grosset
-    //  Creation:   Spetember 20, 2013
-    //
-    // ****************************************************************************
+// ****************************************************************************
+//  Class: avtRayTracer
+//
+//  Purpose:
+//      Does the composition for Ray casting: SLIVR
+//
+//  Programmer: Pascal Grosset
+//  Creation:   Spetember 20, 2013
+//
+// ****************************************************************************
 
-    class avtImgCommunicator
-    {
+class avtImgCommunicator
+{
     int totalPatches;
     int numPatchesToCompose;
     int *processorPatchesCount;
@@ -126,12 +126,10 @@
     iotaMeta setIota(int _procId, int _patchNumber, int dim_x, int dim_y, int screen_ll_x, int screen_ll_y, float _avg_z);
     int getDataPatchID(int procID, int patchID);
 
-
     std::string getHostname();
     void topoInfo();
 
-
-    public:
+public:
     avtImgCommunicator();
     ~avtImgCommunicator();
 
@@ -187,11 +185,11 @@
 
     void doNodeCompositing(std::vector<int> compositeFrom, int &startX, int &startY, int &bufferWidth, int &bufferHeight, float avg_z, float *&localImage, int tags[3]);
     void finalAssemblyOnRoot(int fullsizex, int fullsizey, int startX, int startY, int sizeX, int sizeY, float *image, int tags[2]);
-    void compositeTwoImages(int imgOneStartX,   int imgOneStartY,   int imgOneX,        int imgOneY,        float one_z,    float *imgOne,
-                            int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,        int imgTwoY,        float two_z,    float *imgTwo,
-                            int &imgCompStartX, int &imgCompStartY, int &imgCompX,      int &imgCompY,      float &final_z, float *&compositedImg);
+    void compositeTwoImages(int imgOneStartX,   int imgOneStartY,   int imgOneX,        int imgOneY,       float one_z,    float *imgOne,
+                            int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,        int imgTwoY,       float two_z,    float *imgTwo,
+                            int imgCompStartX, int imgCompStartY, int imgCompX,         int imgCompY,      float *&compositedImg);
 
-    void compositeTwoImagesDims(int imgOneStartX,   int imgOneStartY,   int imgOneX,        int imgOneY,
+    void getFinalCompositedSize(int imgOneStartX,   int imgOneStartY,   int imgOneX,        int imgOneY,
                                 int imgTwoStartX,   int imgTwoStartY,   int imgTwoX,        int imgTwoY,
                                 int &imgCompStartX, int &imgCompStartY, int &imgCompX,      int &imgCompY);
 
@@ -200,9 +198,9 @@
         MPI_Datatype _img_mpi;
         MPI_Datatype createMetaDataType();
     #endif
-    };
+};
 
-    std::string NumbToString (int Number);
-    void createPpm(float array[], int dimx, int dimy, std::string filename);
+std::string NumbToString (int Number);
+void createPpm(float array[], int dimx, int dimy, std::string filename);
 
-    #endif
+#endif

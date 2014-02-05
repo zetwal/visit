@@ -466,7 +466,7 @@ public:
                                       bool doOpaque = true,
                                       bool doTranslucent = true,
                                       avtImage_p input = NULL);
-    void                 ScreenRender_two(bool doViewportOnly = false,
+    void                 ScreenRenderRGBA(bool doViewportOnly = false,
                                       bool doZBufferToo = false,
                                       bool doOpaque = true,
                                       bool doTranslucent = true,
