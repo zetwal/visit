@@ -2068,12 +2068,12 @@ VisWindow::ScreenRender(bool doViewportOnly, bool doZBufferToo,
 }
 
 void
-VisWindow::ScreenRender_two(bool doViewportOnly, bool doZBufferToo,
+VisWindow::ScreenRenderRGBA(bool doViewportOnly, bool doZBufferToo,
                         bool doOpaque, bool doTranslucent,
                         int Par_Rank,
                         avtImage_p input)
 {
-    rendering->ScreenRender_two(doViewportOnly, doZBufferToo,
+    rendering->ScreenRenderRGBA(doViewportOnly, doZBufferToo,
                             doOpaque, doTranslucent, Par_Rank, input);
 }
 

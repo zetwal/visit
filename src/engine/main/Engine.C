@@ -2264,6 +2264,10 @@ Engine::ProcessCommandLine(int argc, char **argv)
             this->useIceT = false;
             avtCallback::SetusingIcet(false);
         }
+        else if (strcmp(argv[i], "-blockingTiming") == 0)
+        {
+            avtCallback::SetBlockingForTiming(true);
+        }
         else if(strcmp(argv[i], "-auxsessionkey") == 0)
         {
             if (i+1 < argc)

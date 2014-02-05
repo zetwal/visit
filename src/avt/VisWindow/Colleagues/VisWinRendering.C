@@ -1135,13 +1135,22 @@ VisWinRendering::ScreenRender(bool doViewportOnly, bool doCanvasZBufferToo,
 }
 
 
-
+// ****************************************************************************
+//  Method: VisWinRendering::
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 void
-VisWinRendering::ScreenRender_two(bool doViewportOnly, bool doCanvasZBufferToo,
+VisWinRendering::ScreenRenderRGBA(bool doViewportOnly, bool doCanvasZBufferToo,
                                   bool doOpaque, bool doTranslucent, int Par_Rank,
                                   avtImage_p input)
 {
-    //std::cout << "ScreenRender_two" << std::endl;
     int t1 = visitTimer->StartTimer();
     bool second_pass = (*input != NULL);
 
@@ -1150,9 +1159,6 @@ VisWinRendering::ScreenRender_two(bool doViewportOnly, bool doCanvasZBufferToo,
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // glMatrixMode(GL_MODELVIEW);
-    // glPushMatrix();
-    // glTranslatef(-local_startx, 0, 0);
 
     vtkRenderWindow *renWin = GetRenderWindow();
 

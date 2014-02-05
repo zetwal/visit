@@ -552,16 +552,6 @@ avtRayTracer::Execute(void)
         double minY = currentPartitionExtents[1];  double maxY = currentPartitionExtents[4];
         double minZ = currentPartitionExtents[2];  double maxZ = currentPartitionExtents[5];
 
-        // for (int p=0; p<mmd->patch_parent.size(); p++){
-        //     std::stringstream ssss;
-        //     ssss << p << " <> ";
-        //     for (int c=0; c<mmd->patch_parent[p].size(); c++)
-        //         ssss << mmd->patch_parent[p][c] << ", ";
-        //     std::cout << PAR_Rank() << " ~ " << ssss.str() << std::endl;
-        // }
-
-
-
         //if (avtCallback::UseusingIcet() == false)
         {
             //
@@ -616,28 +606,12 @@ avtRayTracer::Execute(void)
                 cc++;
             }
 
-             // if (PAR_Rank() == 0){
-            //     std::cout << "Rank only: " << std::endl;
-            //     for (int i=processorCompositingOrder.size()-1; i>=0; i--)
-            //         std::cout << processorCompositingOrder[i] << std::endl;
-            // }
-
             //
             // Send the list the extractor and compute if processors on one node are adjacent
             extractorRay.SetProcessorCompositingOrder(processorCompositingOrder);
             extractorRay.GetContiguousNodeList();
         }
        
-
-        // for (int p=0; p<mmd->patch_parent.size(); p++){
-        //     std::stringstream ssss;
-        //     ssss << p << " <> ";
-        //     for (int c=0; c<mmd->patch_parent[p].size(); c++)
-        //         ssss << mmd->patch_parent[p][c] << ", ";
-        //     std::cout << PAR_Rank() << " ~ " << ssss.str() << std::endl;
-        // }
-
-
 
         //
         // AMR stuff
@@ -675,15 +649,6 @@ avtRayTracer::Execute(void)
         for (int j=0; j<patchesInsideList.size(); j++)
             patchesIn.push_back(patchesInsideList[j]);
 
-        // Adding those that are not specifically in but only overlap!
-        //for (int j=0; j<patchesOverlapList.size(); j++)
-        //    patchesIn.push_back(patchesOverlapList[j]);
-
-        // std::stringstream ss;
-        // for (int i=0; i<patchesIn.size(); i++)
-        //     ss << patchesIn[i] << ", ";
-        // std::cout << PAR_Rank() << " :::::::::::::: " << ss.str() << std::endl << std::endl << std::endl; 
-
         std::vector<int>parentChild;
         std::vector<int>numChildren;
         std::vector<int>numInEachLevel; 
@@ -715,18 +680,6 @@ avtRayTracer::Execute(void)
             numChildren.push_back(childrenCount);            
         }
     
-        // std::stringstream ssssss;
-        // int index = 0;
-        // for (int xx=0; xx<patchesIn.size(); xx++){
-        //     ssssss << PAR_Rank() << " ~ Parent: " << xx << " - num children = " << numChildren[xx] << " : ";
-        //     for (int yy=0; yy<numChildren[xx]; yy++){
-        //         ssssss << parentChild[index] << ", ";
-        //         index++;
-        //     }
-        //     ssssss << std::endl;
-        // }
-        // std::cout << ssssss.str() << std::endl;
-            
         debug5 << PAR_Rank() << 
                     " ~ varName: " << varName << 
                   "   Full dimensions: " << mmd->minSpatialExtents[0] << " , " << mmd->maxSpatialExtents[0] << 

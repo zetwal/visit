@@ -777,7 +777,7 @@ IceTNetworkManager::RenderImage()
     AnnotationAttributes::BackgroundMode bm = viswin->GetBackgroundMode();
     viswin->SetBackgroundMode(AnnotationAttributes::Solid);
 
-    viswin->ScreenRender_two(this->r_mgmt.viewportedMode, 
+    viswin->ScreenRenderRGBA(this->r_mgmt.viewportedMode, 
         false,              // Z buffer
         false,              // render opaque
         true,               // render translucent

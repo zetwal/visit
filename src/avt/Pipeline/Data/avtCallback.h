@@ -192,8 +192,11 @@ class PIPELINE_API avtCallback
                                      { togetherSize = i; }
     static int                  UseTogetherSize(void)
                                      { return togetherSize; }
-                                               
-                                               
+                                                       
+    static void                  SetBlockingForTiming(bool b)
+                                     { blockingForTiming = b; }
+    static bool                  UseBlockingForTiming(void)
+                                     { return blockingForTiming; }
 
 
     static void                  RegisterGetDatabaseCallback(
@@ -265,6 +268,7 @@ class PIPELINE_API avtCallback
     static int                   togetherSize;
 
     static bool                  localCompositingOff;
+    static bool                  blockingForTiming;
 };
 
 
