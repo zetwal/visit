@@ -2279,6 +2279,9 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             // MPI 1 up Send if it has something
             MPI_Send(dataToSend, 6, MPI_INT, 0, tags[0], MPI_COMM_WORLD);
 
+            debug5 << " sending to  0  from " << dataToSend[0] << "  position: " << dataToSend[1] << ", " << dataToSend[2] << " size " << dataToSend[3] << " x " << dataToSend[4] << "  encoding size: " << dataToSend[5] << std::endl;
+
+
             // MPI Send it
             MPI_Send(encoding, dataToSend[5]*5, MPI_FLOAT, 0, tags[1], MPI_COMM_WORLD);
             
@@ -2305,6 +2308,8 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             int recvTiming;
             recvTiming = visitTimer->StartTimer();
             MPI_Recv(dataToRecv, 6, MPI_FLOAT, MPI_ANY_SOURCE, tags[0], MPI_COMM_WORLD, &status);
+
+            debug5 << " Received from " << dataToRecv[0] << "  position: " << dataToRecv[1] << ", " << dataToRecv[2] << " size " << dataToRecv[3] << " x " << dataToRecv[4] << "  encoding size: " << dataToRecv[5] << std::endl;
 
             localRecvBuffer = new float[dataToRecv[5]*5];
             // recv image
