@@ -2310,6 +2310,8 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             MPI_Recv(dataToRecv, 6, MPI_FLOAT, MPI_ANY_SOURCE, tags[0], MPI_COMM_WORLD, &status);
 
             debug5 << " Received from " << dataToRecv[0] << "  position: " << dataToRecv[1] << ", " << dataToRecv[2] << " size " << dataToRecv[3] << " x " << dataToRecv[4] << "  encoding size: " << dataToRecv[5] << std::endl;
+            debug5 << " fullscreen size " << fullsizex << " x " << fullsizey << std::endl;
+
 
             localRecvBuffer = new float[dataToRecv[5]*5];
             // recv image
@@ -2348,7 +2350,7 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
                     if ((startX + j) > fullsizex) continue;
                     if ((startY + i) > fullsizey) continue;
 
-                    int subImgIndex = sizeX*i*4 + j*4;                                                           // index in the subimage 
+                    int subImgIndex = sizeX*i*4 + j*4;                                          // index in the subimage 
                     int bufferIndex = (startY*fullsizex*4 + i*fullsizex*4) + (startX*4 + j*4);  // index in the big buffer
 
                     if (imgBuffer[bufferIndex+3] > 1.0) continue;
@@ -2424,8 +2426,6 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
 
     #endif
 }
-
-
 
 
 std::string NumbToString(int Number)
