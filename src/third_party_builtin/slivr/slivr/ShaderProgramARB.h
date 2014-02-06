@@ -56,7 +56,6 @@ class SLIVRSHARE ShaderProgramARB
 
     // Call init_shaders_supported before shaders_supported queries!
     static bool init_shaders_supported(std::string& error, bool forceIntel = false);
-    static bool isGFXIntel();
 
     static bool isGFXIntel();
     static bool shaders_supported();

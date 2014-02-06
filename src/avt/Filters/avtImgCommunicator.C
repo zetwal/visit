@@ -2347,8 +2347,8 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
 
             for (int i=0; i<sizeY; i++){
                 for (int j=0; j<sizeX; j++){
-                    if ((startX + j) > fullsizex) continue;
-                    if ((startY + i) > fullsizey) continue;
+                    if ((startX + j) >= fullsizex) continue;
+                    if ((startY + i) >= fullsizey) continue;
 
                     int subImgIndex = sizeX*i*4 + j*4;                                          // index in the subimage 
                     int bufferIndex = (startY*fullsizex*4 + i*fullsizex*4) + (startX*4 + j*4);  // index in the big buffer
