@@ -2416,9 +2416,9 @@ avtRayExtractor::toVTKImage(float* buffer, int width, int height, int startX, in
             }
             if(index > width * height * 4) continue;
 
-            data[bufferIndex    ] = buffer[index ] * 255;
-            data[bufferIndex + 1] = buffer[index +1] * 255;
-            data[bufferIndex + 2] = buffer[index +2] * 255;
+            data[bufferIndex    ] = buffer[index ] * 255 * buffer[index +3];
+            data[bufferIndex + 1] = buffer[index +1] * 255 * buffer[index +3];
+            data[bufferIndex + 2] = buffer[index +2] * 255 * buffer[index +3];
             data[bufferIndex + 3] = buffer[index +3] * 255;
         }
     }
