@@ -2343,26 +2343,24 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             int compTiming;
             compTiming = visitTimer->StartTimer();
 
-            imgBuffer = new float[fullsizex*fullsizey*4]();
-
-            for (int i=0; i<sizeY; i++){
-                for (int j=0; j<sizeX; j++){
-                    if ((startX + j) >= fullsizex) continue;
-                    if ((startY + i) >= fullsizey) continue;
-
-                    int subImgIndex = sizeX*i*4 + j*4;                                          // index in the subimage 
-                    int bufferIndex = (startY*fullsizex*4 + i*fullsizex*4) + (startX*4 + j*4);  // index in the big buffer
-
-                    if (imgBuffer[bufferIndex+3] > 1.0) continue;
-                    if (localRecvImage[subImgIndex+3] <= 0.0) continue;
-
-                    // Front to Back
-                    imgBuffer[bufferIndex+0] = clamp( (localRecvImage[subImgIndex+0] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+0] );
-                    imgBuffer[bufferIndex+1] = clamp( (localRecvImage[subImgIndex+1] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+1] );
-                    imgBuffer[bufferIndex+2] = clamp( (localRecvImage[subImgIndex+2] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+2] );
-                    imgBuffer[bufferIndex+3] = clamp( (localRecvImage[subImgIndex+3] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+3] ); 
+            imgBuffer = new float[fullsizex*fullsizey*4];
+            for (int i=0; i<fullsizey; i++)
+                for (int j=0; j<fullsizex; j++){
+                    int bufferIndex = fullsizex*4*i + j*4;  
+                    
+                    if ((i>=startY && i<startY+sizeY) && (j>=startX && j<startX+sizeX)){
+                        int subImgIndex = (i-startY)*sizeX*4 + (j-startX)*4;
+                        imgBuffer[bufferIndex+0] = clamp( (localRecvImage[subImgIndex+0] * localRecvImage[subImgIndex+3]) + (background[0]/255.0)*(1.0 - localRecvImage[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+1] = clamp( (localRecvImage[subImgIndex+1] * localRecvImage[subImgIndex+3]) + (background[1]/255.0)*(1.0 - localRecvImage[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+2] = clamp( (localRecvImage[subImgIndex+2] * localRecvImage[subImgIndex+3]) + (background[2]/255.0)*(1.0 - localRecvImage[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+3] = clamp( localRecvImage[subImgIndex+3] ); 
+                    }else{
+                        imgBuffer[bufferIndex+0] = (background[0]/255.0);
+                        imgBuffer[bufferIndex+1] = (background[1]/255.0);
+                        imgBuffer[bufferIndex+2] = (background[2]/255.0);
+                        imgBuffer[bufferIndex+3] = 1.0;
+                    }
                 }
-            }
             
             visitTimer->StopTimer(compTiming, "Final compositing timing for " + NumbToString(dataToRecv[3]) + " x " + NumbToString(dataToRecv[4]) +  "  from " + NumbToString(dataToRecv[0]));
             visitTimer->DumpTimings();
@@ -2374,56 +2372,25 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             localRecvImage = NULL;
         }
 
-
-        // Add the background
-        for (int j=0; j<fullsizey; j++){
-            for (int k=0; k<fullsizex; k++){
-                int imgIndex = fullsizex*4*j + k*4;                   // index in the image 
-
-                // Front-to-Back compositing
-                imgBuffer[imgIndex+0] = clamp((1.0 - imgBuffer[imgIndex+3])*background[0]/255.0)  + imgBuffer[imgIndex+0];
-                imgBuffer[imgIndex+1] = clamp((1.0 - imgBuffer[imgIndex+3])*background[1]/255.0)  + imgBuffer[imgIndex+1];
-                imgBuffer[imgIndex+2] = clamp((1.0 - imgBuffer[imgIndex+3])*background[2]/255.0)  + imgBuffer[imgIndex+2];
-                imgBuffer[imgIndex+3] = clamp((1.0 - imgBuffer[imgIndex+3])*1.0)  + imgBuffer[imgIndex+3];
-            }
-        }
     #else
-        //std::cout << "startX: " << startX << "   startY: " << startY << "   sizeX: " << sizeX << "   sizeY: " << sizeY << "   fullsizex: " << fullsizex << "   fullsizey: "  << fullsizey << std::endl;
-        imgBuffer = new float[fullsizex*fullsizey*4]();
-
-        for (int i=0; i<sizeY; i++){
-            for (int j=0; j<sizeX; j++){
-                if ((startX + j) > fullsizex) continue;
-                if ((startY + i) > fullsizey) continue;
-
-                int subImgIndex = sizeX*i*4 + j*4;                                                           // index in the subimage 
-                int bufferIndex = (startY*fullsizex*4 + i*fullsizex*4) + (startX*4 + j*4);  // index in the big buffer
-
-                if (imgBuffer[bufferIndex+3] > 1.0) continue;
-                if (image[subImgIndex+3] <= 0.0) continue;
-
-                // Front to Back
-                imgBuffer[bufferIndex+0] = clamp( (image[subImgIndex+0] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+0] );
-                imgBuffer[bufferIndex+1] = clamp( (image[subImgIndex+1] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+1] );
-                imgBuffer[bufferIndex+2] = clamp( (image[subImgIndex+2] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+2] );
-                imgBuffer[bufferIndex+3] = clamp( (image[subImgIndex+3] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+3] ); 
-            }
-        }
-
-
-        // Add the background
-        for (int j=0; j<fullsizey; j++){
-            for (int k=0; k<fullsizex; k++){
-                int imgIndex = fullsizex*4*j + k*4;                   // index in the image 
-
-                // Front-to-Back compositing
-                imgBuffer[imgIndex+0] = clamp((1.0 - imgBuffer[imgIndex+3])*background[0]/255.0)  + imgBuffer[imgIndex+0];
-                imgBuffer[imgIndex+1] = clamp((1.0 - imgBuffer[imgIndex+3])*background[1]/255.0)  + imgBuffer[imgIndex+1];
-                imgBuffer[imgIndex+2] = clamp((1.0 - imgBuffer[imgIndex+3])*background[2]/255.0)  + imgBuffer[imgIndex+2];
-                imgBuffer[imgIndex+3] = clamp((1.0 - imgBuffer[imgIndex+3])*1.0)  + imgBuffer[imgIndex+3];
-            }
-        }
-
+        imgBuffer = new float[fullsizex*fullsizey*4];
+            for (int i=0; i<fullsizey; i++)
+                for (int j=0; j<fullsizex; j++){
+                    int bufferIndex = fullsizex*4*i + j*4;  
+                    
+                    if ((i>=startY && i<startY+sizeY) && (j>=startX && j<startX+sizeX)){
+                        int subImgIndex = (i-startY)*sizeX*4 + (j-startX)*4;
+                        imgBuffer[bufferIndex+0] = clamp( (image[subImgIndex+0] * image[subImgIndex+3]) + (background[0]/255.0)*(1.0 - image[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+1] = clamp( (image[subImgIndex+1] * image[subImgIndex+3]) + (background[1]/255.0)*(1.0 - image[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+2] = clamp( (image[subImgIndex+2] * image[subImgIndex+3]) + (background[2]/255.0)*(1.0 - image[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+3] = clamp( image[subImgIndex+3] ); 
+                    }else{
+                        imgBuffer[bufferIndex+0] = (background[0]/255.0);
+                        imgBuffer[bufferIndex+1] = (background[1]/255.0);
+                        imgBuffer[bufferIndex+2] = (background[2]/255.0);
+                        imgBuffer[bufferIndex+3] = 1.0;
+                    }
+                }
     #endif
 }
 

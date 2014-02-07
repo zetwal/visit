@@ -1675,6 +1675,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
     avtRay *ray;
     if (rayCastingSLIVR == false)
         ray = volume->GetRay(w, h);
+
     int myInd[3];
     bool calc_cell_index = ((ncell_arrays > 0) || (ghosts != NULL));
 
@@ -1830,6 +1831,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                     void  *cell_array = cell_arrays[l];
                     double values[8];
                     bool enableDebug = true;
+
                     for (int m = 0 ; m < cell_size[l] ; m++){       // cell_size[l] usually 1
                         AssignEight(cell_vartypes[l], values, indexT, cell_size[l], m, cell_array);         
                         double scalarValue = trilinearInterpolate(values, dist_from_left, dist_from_bottom, dist_from_front);
@@ -2352,11 +2354,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 
 void
 avtMassVoxelExtractor::computePixelColor(double source_rgb[4], double dest_rgb[4]){
-    // might need to add opacity correction later
-    //float opacityCorrectiong = 0.8;  // need to be properly set according to number of slices; 0.8 is too arbitrary
-    //float alpha = 1.0 - pow((1.0-source_rgb[3]),opacityCorrectiong);
-    //source_rgb[3] = alpha;
-
     // Phong Shading
     if (lighting == true){
         float dir[3];           // The view "right" vector.
@@ -2376,6 +2373,7 @@ avtMassVoxelExtractor::computePixelColor(double source_rgb[4], double dest_rgb[4
 
         // opacity correction
         float opacityCorrectiong = 0.7;
+        //float opacityCorrectiong = 1.0;
         float alpha = 1.0 - pow((1.0-source_rgb[3]),(double)opacityCorrectiong);
         source_rgb[3] = alpha;
 

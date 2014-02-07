@@ -714,7 +714,6 @@ avtSamplePointExtractor::ExecuteTree(avtDataTree_p dt)
 
     //initialize rayCastingSLIVR sampling state
     totalAssignedPatches = dt->GetNChildren();
-    std::cout << "totalAssignedPatches: " << totalAssignedPatches << std::endl;
 
     patchCount = 0;
     imageMetaPatchVector.clear();
