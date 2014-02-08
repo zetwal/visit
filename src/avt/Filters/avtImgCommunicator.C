@@ -1871,25 +1871,23 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 
     std::vector<int>::iterator it;
     while (compositeFrom.size() != 1){
-        int localSkipProcs = skipProcs;;
+        int localSkipProcs = skipProcs;
 
         it = std::find(compositeFrom.begin(), compositeFrom.end(), my_id);
         int myIndex = it-compositeFrom.begin();
 
 		debug5 << "\n\n" <<my_id << " ~ index: " << myIndex << " compositeFrom.size(): " << compositeFrom.size() << std::endl;
         
-        if (compositeFrom.size()%skipProcs != 0) {
-            int sizeDiv = compositeFrom.size()/skipProcs;
-            int myDiv = myIndex/skipProcs;
-            if (myDiv == sizeDiv)
+        if (compositeFrom.size()%skipProcs != 0) 
+            if (myIndex/skipProcs == compositeFrom.size()/skipProcs)
                 localSkipProcs = compositeFrom.size()- ((compositeFrom.size()/skipProcs)*skipProcs);
-        }
 
         debug5 << my_id << " ~ localSkipProcs: " << localSkipProcs << "    SkipProcs: " << skipProcs << std::endl;
 
         
         //
         // Send section
+        //
         if (myIndex%skipProcs != (localSkipProcs-1))	
         {	
             if (myIndex != (compositeFrom.size()-1))
@@ -1903,7 +1901,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                     dataToSend[0]=-1;
 
                     // MPI 1 up Send if it has something
-                    MPI_Send(dataToSend, 4, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
+                    MPI_Send(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
 
                     allSentDone = true;
                     debug5 << my_id << " ~ Sending - hasImageToComposite == false. Done!" << std::endl;
@@ -1952,7 +1950,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
         {
             //
             // Receive section
-
+            //
             for (int rp = 1; rp<localSkipProcs; rp++){
                 // MPI Recv from Any if it has something
                 int dataToRecv[6]; 
@@ -1961,10 +1959,10 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 
                 debug5 << my_id << " to receive from: " << sourceProc <<  std::endl;
 
-                MPI_Recv(dataToRecv, 6,  MPI_INT,   sourceProc, tags[0], MPI_COMM_WORLD, &status);
-                if (sourceProc != dataToRecv[0] && dataToRecv[0] != -1){
+                MPI_Recv(dataToRecv, 6, MPI_INT, sourceProc, tags[0], MPI_COMM_WORLD, &status);
+                if (sourceProc != dataToRecv[0] && dataToRecv[0] != -1)
                     std::cout << my_id << " !!! Synchronization error !!!  myIndex: " << myIndex << "    source proc: " << sourceProc << "   dataToRecv[0]: " << dataToRecv[0] << "    sz: " << compositeFrom.size() << std::endl;
-                }
+                
 
                 debug5 << my_id << " ~ Recv  _________ list size: " << compositeFrom.size() << " : " 
                 	   << dataToRecv[0] << ", " << dataToRecv[1] << ", " << dataToRecv[2]  << ", " << dataToRecv[3] << ", " << dataToRecv[4] << ", " <<  dataToRecv[5] << std::endl;
@@ -1976,6 +1974,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 
     				debug5 << my_id << " ~ Recv all from " << dataToRecv[0] << "   now decoding!" << std::endl;
     				
+    				//
                     // Decode
                     float *localRecvImage = NULL;
                     localRecvImage = new float[dataToRecv[3]*dataToRecv[4]*4];
@@ -1986,15 +1985,17 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                     visitTimer->StopTimer(decodingTiming, "Decoding timing for " + NumbToString(dataToRecv[3]) + " x " + NumbToString(dataToRecv[4]) +  "  from " + NumbToString(dataToRecv[0]));
                     visitTimer->DumpTimings();
 
+                    if (localRecvBuffer != NULL)
+                        delete []localRecvBuffer;
+                    localRecvBuffer = NULL;
+                        
     				debug5 << my_id << " ~ Recv - Done decoding!" << std::endl;
     				
                     if (hasImageToComposite == false){
                     	debug5 << my_id << " ~ Recv - replace by: " << dataToRecv[0] << std::endl;
 
-                        startX = dataToRecv[1];
-                        startY = dataToRecv[2];         
-                        bufferWidth = dataToRecv[3];
-                        bufferHeight = dataToRecv[4];
+                        startX = dataToRecv[1];         startY = dataToRecv[2];         
+                        bufferWidth = dataToRecv[3];    bufferHeight = dataToRecv[4];
 
                         if (localImage != NULL)
                             delete []localImage;
@@ -2003,7 +2004,12 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                         memcpy((void*)localImage,(const void*)localRecvImage,sizeof(float)*bufferWidth*bufferHeight*4);
                         hasImageToComposite = true;
                         
+                        if (localRecvImage != NULL)
+                            delete []localRecvImage;
+                        localRecvImage = NULL;
+                        
                         debug5 << my_id << " ~ Recv - replaced by received!" << std::endl;
+                        
                     }else{
                         // Do Compositing
                         float *localCompositedImage = NULL;
@@ -2014,7 +2020,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                     	compositingTiming = visitTimer->StartTimer();
 
                         int finalStartingX, finalStartingY, finalSizeX, finalSizeY;
-                        getFinalCompositedSize( startX,        startY,         bufferWidth,    bufferHeight,
+                        getFinalCompositedSize( startX,         startY,         bufferWidth,    bufferHeight,
                                                 dataToRecv[1],  dataToRecv[2],  dataToRecv[3],  dataToRecv[4],
                                                 finalStartingX, finalStartingY, finalSizeX,     finalSizeY);
 
@@ -2030,19 +2036,10 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                     	visitTimer->DumpTimings();
                     
                         // free up memory
-                        if (localRecvImage != NULL)
-                            delete []localRecvImage;
-                        localRecvImage = NULL;
-
-                        if (localRecvBuffer != NULL)
-                            delete []localRecvBuffer;
-                        localRecvBuffer = NULL;
-
                         if (localImage != NULL)
                             delete []localImage;
                         localImage = new float[bufferWidth*bufferHeight*4];
                         memcpy((void*)localImage,(const void*)localCompositedImage,sizeof(float)*bufferWidth*bufferHeight*4);
-
 
                         if (localCompositedImage != NULL)
                             delete []localCompositedImage;
@@ -2051,11 +2048,12 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                         hasImageToComposite = true;
                         debug5 << my_id << " ~ Recv - done compositing with " << dataToRecv[0] << " !!!"  << std::endl;
                     }
-                }else
-                    if (hasImageToComposite == true){
-                        hasImageToComposite = true;
-                        debug5 << my_id << " ~ Recv - passing this one on  !!!"  << std::endl;
-                    }
+                }
+                //else
+                //    if (hasImageToComposite == true){
+                //        hasImageToComposite = true;
+                //        debug5 << my_id << " ~ Recv - passing this one on  !!!"  << std::endl;
+                //    }
             }
         }
 
@@ -2225,32 +2223,35 @@ void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY
 // ****************************************************************************
 void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int startX, int startY, int sizeX, int sizeY, float *image, int tags[2]){
     #ifdef PARALLEL
-        if (hasImageToComposite == false && my_id != 0){
+    
+        if (hasImageToComposite == false && my_id != 0)
+            return;
+
+        if (hasImageToComposite == true && my_id == 0){
+            imgBuffer = new float[fullsizex*fullsizey*4];
+            
+            for (int i=0; i<fullsizey; i++)
+                for (int j=0; j<fullsizex; j++){
+                    int bufferIndex = fullsizex*4*i + j*4;  
+                    
+                    if ((i>=startY && i<startY+sizeY) && (j>=startX && j<startX+sizeX)){
+                        int subImgIndex = (i-startY)*sizeX*4 + (j-startX)*4;
+                        
+                        imgBuffer[bufferIndex+0] = clamp( (localRecvImage[subImgIndex+0] * localRecvImage[subImgIndex+3]) + (background[0]/255.0)*(1.0 - localRecvImage[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+1] = clamp( (localRecvImage[subImgIndex+1] * localRecvImage[subImgIndex+3]) + (background[1]/255.0)*(1.0 - localRecvImage[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+2] = clamp( (localRecvImage[subImgIndex+2] * localRecvImage[subImgIndex+3]) + (background[2]/255.0)*(1.0 - localRecvImage[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+3] = clamp( localRecvImage[subImgIndex+3] ); 
+                    }else{
+                        imgBuffer[bufferIndex+0] = (background[0]/255.0);
+                        imgBuffer[bufferIndex+1] = (background[1]/255.0);
+                        imgBuffer[bufferIndex+2] = (background[2]/255.0);
+                        imgBuffer[bufferIndex+3] = 1.0;
+                    }
+                }
+                
             return;
         }
 
-        if (hasImageToComposite == true && my_id == 0){
-            imgBuffer = new float[fullsizex*fullsizey*4]();
-
-            for (int i=0; i<sizeY; i++){
-                for (int j=0; j<sizeX; j++){
-                    if ((startX + j) > fullsizex) continue;
-                    if ((startY + i) > fullsizey) continue;
-
-                    int subImgIndex = sizeX*i*4 + j*4;                                                           // index in the subimage 
-                    int bufferIndex = (startY*fullsizex*4 + i*fullsizex*4) + (startX*4 + j*4);  // index in the big buffer
-
-                    if (imgBuffer[bufferIndex+3] > 1.0) continue;
-                    if (image[subImgIndex+3] <= 0.0) continue;
-
-                    // Front to Back
-                    imgBuffer[bufferIndex+0] = clamp( (image[subImgIndex+0] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+0] );
-                    imgBuffer[bufferIndex+1] = clamp( (image[subImgIndex+1] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+1] );
-                    imgBuffer[bufferIndex+2] = clamp( (image[subImgIndex+2] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+2] );
-                    imgBuffer[bufferIndex+3] = clamp( (image[subImgIndex+3] * (1.0 - imgBuffer[bufferIndex+3])) + imgBuffer[bufferIndex+3] ); 
-                }
-            }
-        }
 
         if (hasImageToComposite == true && my_id != 0){   // send it to 0
 
@@ -2370,6 +2371,8 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             if (localRecvImage != NULL)
                 delete []localRecvImage;
             localRecvImage = NULL;
+            
+            return;
         }
 
     #else
