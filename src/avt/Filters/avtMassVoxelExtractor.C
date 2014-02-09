@@ -1125,6 +1125,10 @@ avtMassVoxelExtractor::GetSegment(int w, int h, double *origin, double *terminus
     view[2] = cur_clip_range[0];
     view[3] = 1.;
     view_to_world_transform->MultiplyPoint(view, origin);
+    
+    //debug5 << "View: " << view[0] << ", " << view[1] << ", " << view[2] << ", " << view[3] << std::endl;
+    //debug5 << "cur_clip_range: " << cur_clip_range[0] << ", " << cur_clip_range[1] << std::endl;
+    
     if (origin[3] != 0.)
     {
         origin[0] /= origin[3];
@@ -2381,10 +2385,11 @@ avtMassVoxelExtractor::computePixelColor(double source_rgb[4], double dest_rgb[4
         // I = (I  * ka) + [ (I_i  * kd * (L.N)) + (Ia_i * ks * (R.V)^ns) ]_for each light source i
         // I = (I  * ka) +   (I  * kd*abs(cos(angle))) + (Ia * ks*abs(cos(angle))^ns)
         for (int i=0; i<3; i++)
-            source_rgb[i] = source_rgb[i] * materialProperties[0];                          // I  * ka
+            source_rgb[i] = source_rgb[i] * materialProperties[0] + 
+                            source_rgb[i] * materialProperties[1] * normal_dot_light;
 
-        for (int i=0; i<3; i++)
-            source_rgb[i] += source_rgb[i] * materialProperties[1] * normal_dot_light;      // I  * kd*abs(cos(angle))
+        //for (int i=0; i<3; i++)
+        //    source_rgb[i] += source_rgb[i] * materialProperties[1] * normal_dot_light;      // I  * kd*abs(cos(angle))
 
         for (int i=0; i<3; i++)
             source_rgb[i] += materialProperties[2] * pow((double)normal_dot_light,materialProperties[3]) * source_rgb[3];   // I  * kd*abs(cos(angle))
