@@ -1010,7 +1010,6 @@ TextureRenderer::bind_colormap1(vector<float> &cmap_array,
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glEnable(GL_TEXTURE_3D);
     glActiveTexture(GL_TEXTURE0_ARB);
-    std::cout << " if (ShaderProgramARB::shaders_supported() && glActiveTexture)" << std::endl;
   }
   else
 #endif

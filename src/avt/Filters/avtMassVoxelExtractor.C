@@ -1875,7 +1875,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     
                                     float distFromRight, distFromLeft, distFromTop, distFromBottom, distFromFront, distFromBack;
                                     int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
-                                    float gradientOffset = 0.49;
+                                    float gradientOffset = 0.25;
 
                                     double gradVals[8];
                                     int indexGrad[8], gradInd[3], gradIndices[6];
@@ -2375,21 +2375,12 @@ avtMassVoxelExtractor::computePixelColor(double source_rgb[4], double dest_rgb[4
         float normal_dot_light = dot(gradient,dir);   // angle between light and normal;
         normal_dot_light = std::max(0.0, std::min((double)fabs(normal_dot_light),1.0) );
 
-        // opacity correction
-        float opacityCorrectiong = 0.7;
-        //float opacityCorrectiong = 1.0;
-        float alpha = 1.0 - pow((1.0-source_rgb[3]),(double)opacityCorrectiong);
-        source_rgb[3] = alpha;
-
         // Calculate color using phong shading
         // I = (I  * ka) + [ (I_i  * kd * (L.N)) + (Ia_i * ks * (R.V)^ns) ]_for each light source i
         // I = (I  * ka) +   (I  * kd*abs(cos(angle))) + (Ia * ks*abs(cos(angle))^ns)
         for (int i=0; i<3; i++)
             source_rgb[i] = source_rgb[i] * materialProperties[0] + 
                             source_rgb[i] * materialProperties[1] * normal_dot_light;
-
-        //for (int i=0; i<3; i++)
-        //    source_rgb[i] += source_rgb[i] * materialProperties[1] * normal_dot_light;      // I  * kd*abs(cos(angle))
 
         for (int i=0; i<3; i++)
             source_rgb[i] += materialProperties[2] * pow((double)normal_dot_light,materialProperties[3]) * source_rgb[3];   // I  * kd*abs(cos(angle))
