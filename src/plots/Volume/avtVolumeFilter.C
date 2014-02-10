@@ -543,7 +543,7 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
 
     debug5 << "Camera: " << vi.camera[0] << ", " << vi.camera[1] << ", " << vi.camera[2] << std::endl;
     debug5 << "focus: " << vi.focus[0] << ", " << vi.focus[1] << ", " << vi.focus[2] << std::endl;
-    debug5 << "view_dir: " << vi.view_dir[0] << ", " << vi.view_dir[1] << ", " << vi.view_dir[2] << std::endl;
+    //debug5 << "view_dir: " << vi.view_dir[0] << ", " << vi.view_dir[1] << ", " << vi.view_dir[2] << std::endl;
     debug5 << "viewAngle: " << vi.viewAngle << std::endl;
     debug5 << "eyeAngle: " << vi.eyeAngle << std::endl;
     debug5 << "nearPlane: " << vi.nearPlane << std::endl;

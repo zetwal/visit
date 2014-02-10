@@ -2237,10 +2237,10 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
                     if ((i>=startY && i<startY+sizeY) && (j>=startX && j<startX+sizeX)){
                         int subImgIndex = (i-startY)*sizeX*4 + (j-startX)*4;
                         
-                        imgBuffer[bufferIndex+0] = clamp( (localRecvImage[subImgIndex+0] * localRecvImage[subImgIndex+3]) + (background[0]/255.0)*(1.0 - localRecvImage[subImgIndex+3]) );
-                        imgBuffer[bufferIndex+1] = clamp( (localRecvImage[subImgIndex+1] * localRecvImage[subImgIndex+3]) + (background[1]/255.0)*(1.0 - localRecvImage[subImgIndex+3]) );
-                        imgBuffer[bufferIndex+2] = clamp( (localRecvImage[subImgIndex+2] * localRecvImage[subImgIndex+3]) + (background[2]/255.0)*(1.0 - localRecvImage[subImgIndex+3]) );
-                        imgBuffer[bufferIndex+3] = clamp( localRecvImage[subImgIndex+3] ); 
+                        imgBuffer[bufferIndex+0] = clamp( (image[subImgIndex+0] * image[subImgIndex+3]) + (background[0]/255.0)*(1.0 - image[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+1] = clamp( (image[subImgIndex+1] * image[subImgIndex+3]) + (background[1]/255.0)*(1.0 - image[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+2] = clamp( (image[subImgIndex+2] * image[subImgIndex+3]) + (background[2]/255.0)*(1.0 - image[subImgIndex+3]) );
+                        imgBuffer[bufferIndex+3] = clamp( image[subImgIndex+3] ); 
                     }else{
                         imgBuffer[bufferIndex+0] = (background[0]/255.0);
                         imgBuffer[bufferIndex+1] = (background[1]/255.0);
