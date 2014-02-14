@@ -2271,9 +2271,8 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
 
         if (hasImageToComposite == true && my_id != 0){   // send it to 0
 
-            
-            waitFinalCompositing = visitTimer->StartTimer();
             debug5 << my_id << " ~ sending to 0 for final compositing" << std::endl;
+
             // encode image
             float *encoding = NULL;
             int *sizeEncoding = NULL;
@@ -2292,11 +2291,10 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             dataToSend[4]=sizeY;
             dataToSend[5]=*sizeEncoding;
 
-			
+            waitFinalCompositing = visitTimer->StartTimer();
             
             // MPI 1 up Send if it has something
             MPI_Send(dataToSend, 6, MPI_INT, 0, tags[0], MPI_COMM_WORLD);
-
             debug5 << " sending to  0  from " << dataToSend[0] << "  position: " << dataToSend[1] << ", " << dataToSend[2] << " size " << dataToSend[3] << " x " << dataToSend[4] << "  encoding size: " << dataToSend[5] << std::endl;
 
             visitTimer->StopTimer(waitFinalCompositing, "Final wait timing");
@@ -2308,7 +2306,7 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             // MPI Send it
             MPI_Send(encoding, dataToSend[5]*5, MPI_FLOAT, 0, tags[1], MPI_COMM_WORLD);
             
-            visitTimer->StopTimer(sendTiming, "Sending " + NumbToString(sizeX) + " x " + NumbToString(sizeY) +  "  from " + NumbToString(my_id));
+            visitTimer->StopTimer(sendTiming, "Final Sending " + NumbToString(sizeX) + " x " + NumbToString(sizeY) +  "  from " + NumbToString(my_id));
             visitTimer->DumpTimings();
 
             if (encoding != NULL)
@@ -2321,14 +2319,14 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
 
 
         if (hasImageToComposite == false && my_id == 0){ 
-            waitFinalCompositing = visitTimer->StartTimer();
             debug5 << my_id << " ~ waiting to receive from ... for  final compositing ..." << std::endl;
             int dataToRecv[6]; 
             float *localRecvBuffer = NULL;
 
             float recv_z;
-            
-            
+
+            waitFinalCompositing = visitTimer->StartTimer();    
+        
             MPI_Recv(dataToRecv, 6, MPI_FLOAT, MPI_ANY_SOURCE, tags[0], MPI_COMM_WORLD, &status);
 
             visitTimer->StopTimer(waitFinalCompositing, "Final wait timing");
