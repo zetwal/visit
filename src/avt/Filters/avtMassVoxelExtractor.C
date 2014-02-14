@@ -578,6 +578,14 @@ avtMassVoxelExtractor::world_to_screen(double _world[4], int imgWidth, int imgHe
     // from world to view
     world_to_view_transform->MultiplyPoint(_world, _view);
 
+    // std::cout << "world_to_view_transform: \n " 
+    // << world_to_view_transform->Element[0][0] << " " << world_to_view_transform->Element[0][1] << " "<< world_to_view_transform->Element[0][2] << " "<< world_to_view_transform->Element[0][3] << " \n "
+    // << world_to_view_transform->Element[1][0] << " " << world_to_view_transform->Element[1][1] << " "<< world_to_view_transform->Element[1][2] << " "<< world_to_view_transform->Element[1][3] << " \n "
+    // << world_to_view_transform->Element[2][0] << " " << world_to_view_transform->Element[2][1] << " "<< world_to_view_transform->Element[2][2] << " "<< world_to_view_transform->Element[2][3] << " \n "
+    // << world_to_view_transform->Element[3][0] << " " << world_to_view_transform->Element[3][1] << " "<< world_to_view_transform->Element[3][2] << " "<< world_to_view_transform->Element[3][3] << " \n\n "
+    // << " imgWidth, imgHeight: " << imgWidth << ", " << imgHeight << std::endl;
+
+
     // perspective divide -> normalized screen space: -1,-1,-1 to 1,1,1
     if (_view[3] != 0.){
         _view[0] /= _view[3];
@@ -787,13 +795,19 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                 }
             }
 
-        // std::cout << proc << " ~ " << patch << 
-        //     "  orig ind: 0 , 0, 0  to " << dims[0]-1 << ", " << dims[1]-1 << ", " << dims[2]-1 << 
-        //     "  new ind: " << minIndex[0] << ", " << minIndex[1] << ", " << minIndex[2] << "  to " << maxIndex[0] << ", " << maxIndex[1] << ", " << maxIndex[2] <<
-        //     "  patch extents: " << X[0] << ", " << Y[0] << ", " << Z[0] << "  to  " << X[dims[0]-1] << ", " << Y[dims[1]-1] << ", " << Z[dims[2]-1] <<
-        //     "  new patch extents: " << X[minIndex[0]] << ", " << Y[minIndex[1]] << ", " << Z[minIndex[2]] << "  to  " << X[maxIndex[0]] << ", " << Y[maxIndex[1]] << ", " << Z[maxIndex[2]] <<
-        //     "  partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << "  to  " << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl;
+        debug5 << proc << " ~ " << patch << 
+             "  orig ind: 0 , 0, 0  to " << dims[0]-1 << ", " << dims[1]-1 << ", " << dims[2]-1 << 
+             "  new ind: " << minIndex[0] << ", " << minIndex[1] << ", " << minIndex[2] << "  to " << maxIndex[0] << ", " << maxIndex[1] << ", " << maxIndex[2] <<
+             "  patch extents: " << X[0] << ", " << Y[0] << ", " << Z[0] << "  to  " << X[dims[0]-1] << ", " << Y[dims[1]-1] << ", " << Z[dims[2]-1] <<
+             "  new patch extents: " << X[minIndex[0]] << ", " << Y[minIndex[1]] << ", " << Z[minIndex[2]] << "  to  " << X[maxIndex[0]] << ", " << Y[maxIndex[1]] << ", " << Z[maxIndex[2]] <<
+             "  partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << "  to  " << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl;
     }
+
+
+    debug5 << proc << " ~ " << patch << 
+             "  orig ind: 0 , 0, 0  to " << dims[0]-1 << ", " << dims[1]-1 << ", " << dims[2]-1 << 
+             "  patch extents: " << X[0] << ", " << Y[0] << ", " << Z[0] << "  to  " << X[dims[0]-1] << ", " << Y[dims[1]-1] << ", " << Z[dims[2]-1] <<
+             "  partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << "  to  " << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl;
 
 
     //
@@ -840,8 +854,13 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             imgDepth += tempImgDepth;
             //if (imgDepth > tempImgDepth)
                 //imgDepth = tempImgDepth;
+
+        //std::cout << "origin: " << coordinates[i][0] << ", " << coordinates[i][1] << ", " << coordinates[i][2] << "   screenPos: " << screenPos[0] << ", " << screenPos[1] << std::endl;
+
     }
     imgDepth = imgDepth/8.0;
+
+    //std::cout << std::endl << std::endl << std::endl;
 
 
     xMin = xMin - error_correction;
@@ -1128,6 +1147,11 @@ avtMassVoxelExtractor::GetSegment(int w, int h, double *origin, double *terminus
     
     //debug5 << "View: " << view[0] << ", " << view[1] << ", " << view[2] << ", " << view[3] << std::endl;
     //debug5 << "cur_clip_range: " << cur_clip_range[0] << ", " << cur_clip_range[1] << std::endl;
+
+    // std::cout << "w, h: " << w << ", " << h 
+    //  << "    View: " << view[0] << ", " << view[1] << ", " << view[2] << ", " << view[3] 
+    //  << "  cur_clip_range: " << cur_clip_range[0] << ", " << cur_clip_range[1] << std::endl;
+
     
     if (origin[3] != 0.)
     {
@@ -1149,6 +1173,9 @@ avtMassVoxelExtractor::GetSegment(int w, int h, double *origin, double *terminus
         terminus[1] /= terminus[3];
         terminus[2] /= terminus[3];
     }
+
+    // std::cout << "Origin: " << origin[0] << ", " << origin[1] << ", " << origin[2] << ", " << origin[3] 
+    //           << "     terminus: " << terminus[0] << ", " << terminus[1] << ", " << terminus[2] << ", " << terminus[3] << std::endl;
 
 
     if (jitter)

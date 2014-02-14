@@ -1869,8 +1869,12 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
     bool allSentDone = false;
     int skipProcs = avtCallback::UseTogetherSize();     // get the value that was passed to it
 
+    int waitTiming;
+    waitTiming = visitTimer->StartTimer();
+
     std::vector<int>::iterator it;
     while (compositeFrom.size() != 1){
+        waitTiming = visitTimer->StartTimer();
         int localSkipProcs = skipProcs;
 
         it = std::find(compositeFrom.begin(), compositeFrom.end(), my_id);
@@ -1903,6 +1907,10 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                     // MPI 1 up Send if it has something
                     MPI_Send(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
 
+                    visitTimer->StopTimer(waitTiming, "Wait timing");
+                    visitTimer->DumpTimings();
+
+
                     allSentDone = true;
                     debug5 << my_id << " ~ Sending - hasImageToComposite == false. Done!" << std::endl;
                 }
@@ -1929,6 +1937,10 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 
                     // MPI 1 up Send if it has something
                     MPI_Send(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
+
+                    visitTimer->StopTimer(waitTiming, "Wait timing");
+                    visitTimer->DumpTimings();
+
                     MPI_Send(encoding, dataToSend[5]*5, MPI_FLOAT, destProc, tags[2], MPI_COMM_WORLD);
 
                     if (encoding != NULL)
@@ -1960,6 +1972,9 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 debug5 << my_id << " to receive from: " << sourceProc <<  std::endl;
 
                 MPI_Recv(dataToRecv, 6, MPI_INT, sourceProc, tags[0], MPI_COMM_WORLD, &status);
+
+                visitTimer->StopTimer(waitTiming, "Wait timing");
+                visitTimer->DumpTimings();
                 if (sourceProc != dataToRecv[0] && dataToRecv[0] != -1)
                     std::cout << my_id << " !!! Synchronization error !!!  myIndex: " << myIndex << "    source proc: " << sourceProc << "   dataToRecv[0]: " << dataToRecv[0] << "    sz: " << compositeFrom.size() << std::endl;
                 
@@ -2223,7 +2238,8 @@ void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY
 // ****************************************************************************
 void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int startX, int startY, int sizeX, int sizeY, float *image, int tags[2]){
     #ifdef PARALLEL
-    
+        int waitFinalCompositing;
+
         if (hasImageToComposite == false && my_id != 0)
             return;
 
@@ -2255,6 +2271,8 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
 
         if (hasImageToComposite == true && my_id != 0){   // send it to 0
 
+            
+            waitFinalCompositing = visitTimer->StartTimer();
             debug5 << my_id << " ~ sending to 0 for final compositing" << std::endl;
             // encode image
             float *encoding = NULL;
@@ -2263,7 +2281,7 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
 			int encodeTiming;
             encodeTiming = visitTimer->StartTimer();
             	rleEncodeAll(sizeX, sizeY, 1, image,  encoding, sizeEncoding);
-            visitTimer->StopTimer(encodeTiming, "Encoding timing for " + NumbToString(sizeX) + " x " + NumbToString(sizeY) +  "  from " + NumbToString(my_id));
+            visitTimer->StopTimer(encodeTiming, "Final Encoding timing for " + NumbToString(sizeX) + " x " + NumbToString(sizeY) +  "  from " + NumbToString(my_id));
             visitTimer->DumpTimings();
 
             int dataToSend[6];
@@ -2274,14 +2292,18 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
             dataToSend[4]=sizeY;
             dataToSend[5]=*sizeEncoding;
 
-			int sendTiming;
-            sendTiming = visitTimer->StartTimer();
+			
             
             // MPI 1 up Send if it has something
             MPI_Send(dataToSend, 6, MPI_INT, 0, tags[0], MPI_COMM_WORLD);
 
             debug5 << " sending to  0  from " << dataToSend[0] << "  position: " << dataToSend[1] << ", " << dataToSend[2] << " size " << dataToSend[3] << " x " << dataToSend[4] << "  encoding size: " << dataToSend[5] << std::endl;
 
+            visitTimer->StopTimer(waitFinalCompositing, "Final wait timing");
+            visitTimer->DumpTimings();
+
+            int sendTiming;
+            sendTiming = visitTimer->StartTimer();
 
             // MPI Send it
             MPI_Send(encoding, dataToSend[5]*5, MPI_FLOAT, 0, tags[1], MPI_COMM_WORLD);
@@ -2299,26 +2321,30 @@ void avtImgCommunicator::finalAssemblyOnRoot(int fullsizex, int fullsizey, int s
 
 
         if (hasImageToComposite == false && my_id == 0){ 
-
+            waitFinalCompositing = visitTimer->StartTimer();
             debug5 << my_id << " ~ waiting to receive from ... for  final compositing ..." << std::endl;
             int dataToRecv[6]; 
             float *localRecvBuffer = NULL;
 
             float recv_z;
             
-            int recvTiming;
-            recvTiming = visitTimer->StartTimer();
+            
             MPI_Recv(dataToRecv, 6, MPI_FLOAT, MPI_ANY_SOURCE, tags[0], MPI_COMM_WORLD, &status);
+
+            visitTimer->StopTimer(waitFinalCompositing, "Final wait timing");
+            visitTimer->DumpTimings();
 
             debug5 << " Received from " << dataToRecv[0] << "  position: " << dataToRecv[1] << ", " << dataToRecv[2] << " size " << dataToRecv[3] << " x " << dataToRecv[4] << "  encoding size: " << dataToRecv[5] << std::endl;
             debug5 << " fullscreen size " << fullsizex << " x " << fullsizey << std::endl;
 
+            int recvTiming;
+            recvTiming = visitTimer->StartTimer();
 
             localRecvBuffer = new float[dataToRecv[5]*5];
             // recv image
             MPI_Recv(localRecvBuffer, dataToRecv[5]*5, MPI_FLOAT, dataToRecv[0], tags[1], MPI_COMM_WORLD, &status);
             
-            visitTimer->StopTimer(recvTiming, "Recv timing for " + NumbToString(sizeX) + " x " + NumbToString(sizeY) +  "  from " + NumbToString(dataToRecv[0]));
+            visitTimer->StopTimer(recvTiming, "Final Recv timing for " + NumbToString(sizeX) + " x " + NumbToString(sizeY) +  "  from " + NumbToString(dataToRecv[0]));
             visitTimer->DumpTimings();
             
             int decodeTiming;

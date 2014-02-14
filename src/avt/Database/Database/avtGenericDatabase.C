@@ -8645,7 +8645,7 @@ void
 avtGenericDatabase::CreateStructuredIndices(avtDatasetCollection &dsc, 
                                             avtSourceFromDatabase *src)
 {
-    std::cout << "avtGenericDatabase::CreateStructuredIndices" << std::endl;
+    //std::cout << "avtGenericDatabase::CreateStructuredIndices" << std::endl;
     char  progressString[1024] = "Creating Structured Indices";
     src->DatabaseProgress(0, 0, progressString);
     for (int i = 0 ; i < dsc.GetNDomains() ; i++)

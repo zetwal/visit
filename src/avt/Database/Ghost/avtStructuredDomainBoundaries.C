@@ -1105,7 +1105,7 @@ BoundaryHelperFunctions<T>::SetNewBoundaryData(int       d1,
         int mi = n1->match;
         T *data = bnddata[d2][mi];
         if (!data){
-            std::cout << PAR_Rank() << " ~ domain error: " << d1 << std::endl;
+            debug5 << PAR_Rank() << " ~ domain error: " << d1 << std::endl;
             continue; // this instead of the exception
             //EXCEPTION1(VisItException,"Null array");
         }

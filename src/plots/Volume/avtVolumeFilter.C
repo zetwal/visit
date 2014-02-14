@@ -541,16 +541,7 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
 
     software->SetView(vi);
 
-    debug5 << "Camera: " << vi.camera[0] << ", " << vi.camera[1] << ", " << vi.camera[2] << std::endl;
-    debug5 << "focus: " << vi.focus[0] << ", " << vi.focus[1] << ", " << vi.focus[2] << std::endl;
-    //debug5 << "view_dir: " << vi.view_dir[0] << ", " << vi.view_dir[1] << ", " << vi.view_dir[2] << std::endl;
-    debug5 << "viewAngle: " << vi.viewAngle << std::endl;
-    debug5 << "eyeAngle: " << vi.eyeAngle << std::endl;
-    debug5 << "nearPlane: " << vi.nearPlane << std::endl;
-    debug5 << "farPlane: " << vi.farPlane << std::endl;
-    debug5 << "imageZoom: " << vi.imageZoom << std::endl;
-    debug5 << "farPlane: " << vi.farPlane << std::endl;
-    debug5 << "imagePan: " << vi.imagePan[0] << ", " << vi.imagePan[1] << std::endl;
+    
     
     double view_dir[3];
     view_dir[0] = vi.focus[0] - vi.camera[0];
@@ -558,6 +549,20 @@ avtVolumeFilter::RenderImageRaycastingSLIVR(avtImage_p opaque_image,
     view_dir[2] = vi.focus[2] - vi.camera[2];
     double mag = sqrt(view_dir[0]*view_dir[0] + view_dir[1]*view_dir[1]
                       + view_dir[2]*view_dir[2]);
+
+    debug5 << "Camera: " << vi.camera[0] << ", " << vi.camera[1] << ", " << vi.camera[2] << std::endl;
+    debug5 << "focus: " << vi.focus[0] << ", " << vi.focus[1] << ", " << vi.focus[2] << std::endl;
+    debug5 << "view_dir: " << view_dir[0] << ", " << view_dir[1] << ", " << view_dir[2] << std::endl;
+    debug5 << "viewUp: " << vi.viewUp[0] << ", " << vi.viewUp[1] << ", " << vi.viewUp[2] << std::endl;
+    debug5 << "viewAngle: " << vi.viewAngle << std::endl;
+    debug5 << "eyeAngle: " << vi.eyeAngle << std::endl;
+    debug5 << "nearPlane: " << vi.nearPlane << std::endl;
+    debug5 << "farPlane: " << vi.farPlane << std::endl;
+    debug5 << "imageZoom: " << vi.imageZoom << std::endl;
+    debug5 << "farPlane: " << vi.farPlane << std::endl;
+    debug5 << "imagePan: " << vi.imagePan[0] << ", " << vi.imagePan[1] << std::endl;
+
+
     if (mag != 0.) // only 0 if focus and camera are the same
     {
         view_dir[0] /= mag;

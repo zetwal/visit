@@ -1985,7 +1985,6 @@ void createPpmRE_RGBA(unsigned char array[], int dimx, int dimy, std::string fil
 avtImage_p
 avtRayExtractor::ExecuteRayTracerLB(){
 
-
     int timingVolToImg;
 
     //
@@ -2106,6 +2105,9 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
     visitTimer->StopTimer(localProcCompsitingTiming, "Local Proc Compositing Timing");
     visitTimer->DumpTimings();
+
+    int waitingTiming;
+   
 
     if (avtCallback::UseBlockingForTiming())
         imgComm.syncAllProcs();
