@@ -1870,7 +1870,6 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
     int skipProcs = avtCallback::UseTogetherSize();     // get the value that was passed to it
 
     int waitTiming;
-    waitTiming = visitTimer->StartTimer();
 
     std::vector<int>::iterator it;
     while (compositeFrom.size() != 1){
@@ -1904,8 +1903,14 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 if (hasImageToComposite == false){		// has NO data to compose
                     dataToSend[0]=-1;
 
-                    // MPI 1 up Send if it has something
-                    MPI_Send(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
+                    // MPI 1: Send metadata
+                    //MPI_Ssend(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
+
+                    // asynchronous send when there is nothing to send
+                    MPI_Request myRequest;
+                    MPI_Isend(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD,&myRequest);
+                    //MPI_Status myStatus;
+                    //MPI_Wait(&myRequest, &myStatus);
 
                     visitTimer->StopTimer(waitTiming, "Wait timing");
                     visitTimer->DumpTimings();
@@ -1935,13 +1940,21 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                     debug5 << my_id << " ~ Sending hasImageToComposite == true " << compositeFrom.size() << " : " 
                     	   << dataToSend[0] << ", " << dataToSend[1] << ", " << dataToSend[2] << ", " << dataToSend[3] << ", " << dataToSend[4] << ", " << dataToSend[5] << std::endl;
 
-                    // MPI 1 up Send if it has something
-                    MPI_Send(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
-
+                    // MPI 1: Send metadata
+                    MPI_Ssend(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
+                    //MPI_Request myRequest;
+                    //MPI_Isend(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD,&myRequest);
+                    //MPI_Status myStatus;
+                    //MPI_Wait(&myRequest, &myStatus);
+                    
                     visitTimer->StopTimer(waitTiming, "Wait timing");
                     visitTimer->DumpTimings();
 
-                    MPI_Send(encoding, dataToSend[5]*5, MPI_FLOAT, destProc, tags[2], MPI_COMM_WORLD);
+                    // MPI 2: Send data
+                    int sendTiming = visitTimer->StartTimer();
+                        MPI_Send(encoding, dataToSend[5]*5, MPI_FLOAT, destProc, tags[2], MPI_COMM_WORLD);
+                    visitTimer->StopTimer(sendTiming, "Sending timing for " + NumbToString(bufferWidth) + " x " + NumbToString(bufferHeight) + " to " + NumbToString(destProc));
+                    visitTimer->DumpTimings();
 
                     if (encoding != NULL)
                         delete []encoding;
@@ -1970,7 +1983,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 int sourceProc = compositeFrom[myIndex-rp];
 
                 debug5 << my_id << " to receive from: " << sourceProc <<  std::endl;
-
+                // MPI_RECV 1
                 MPI_Recv(dataToRecv, 6, MPI_INT, sourceProc, tags[0], MPI_COMM_WORLD, &status);
 
                 visitTimer->StopTimer(waitTiming, "Wait timing");
@@ -1985,7 +1998,10 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 // MPI Recv it
                 if (dataToRecv[0] != -1){   // has data to receive
                     localRecvBuffer = new float[dataToRecv[5]*5];
-                    MPI_Recv(localRecvBuffer, dataToRecv[5]*5, MPI_FLOAT, dataToRecv[0], tags[2], MPI_COMM_WORLD, &status);
+                    int recvTiming = visitTimer->StartTimer();
+                        MPI_Recv(localRecvBuffer, dataToRecv[5]*5, MPI_FLOAT, dataToRecv[0], tags[2], MPI_COMM_WORLD, &status);
+                    visitTimer->StopTimer(recvTiming, "Recv timing for " + NumbToString(dataToRecv[3]) + " x " + NumbToString(dataToRecv[4]) +  "  from " + NumbToString(dataToRecv[0]));
+                    visitTimer->DumpTimings();
 
     				debug5 << my_id << " ~ Recv all from " << dataToRecv[0] << "   now decoding!" << std::endl;
     				

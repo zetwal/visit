@@ -851,14 +851,14 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         if (i == 0)
             imgDepth = tempImgDepth;
         else
-            imgDepth += tempImgDepth;
-            //if (imgDepth > tempImgDepth)
-                //imgDepth = tempImgDepth;
+           // imgDepth += tempImgDepth;
+            if (imgDepth < tempImgDepth)
+                imgDepth = tempImgDepth;
 
         //std::cout << "origin: " << coordinates[i][0] << ", " << coordinates[i][1] << ", " << coordinates[i][2] << "   screenPos: " << screenPos[0] << ", " << screenPos[1] << std::endl;
 
     }
-    imgDepth = imgDepth/8.0;
+    //imgDepth = imgDepth/8.0;
 
     //std::cout << std::endl << std::endl << std::endl;
 

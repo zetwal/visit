@@ -597,14 +597,23 @@ avtRayTracer::Execute(void)
             // Sort to find the closest from the camera
             //if (PAR_Rank() == 0)
             debug5 << "processorCompositingOrder Rank: " << std::endl;
+            std::stringstream striStrm;
             int cc = 0;
             std::multimap<double,int>::iterator it;
             for (it=depths.begin(); it!=depths.end(); it++){
                 processorCompositingOrder.push_back(it->second);
                 //if (PAR_Rank() == 0)
-                    debug5 << cc << " : " << it->first << ", " << it->second << std::endl;
+                debug5 << cc << " : " << it->first << ", " << it->second << std::endl;
+                striStrm << it->second << " ";
                 cc++;
             }
+            debug5 << "processorCompositingOrder Rank: " << std::endl;
+
+
+            int fakeTiming;
+            fakeTiming = visitTimer->StartTimer();
+            visitTimer->StopTimer(fakeTiming, "ProcessorCompositingOrder rank " + striStrm.str());
+            visitTimer->DumpTimings();
 
             //
             // Send the list the extractor and compute if processors on one node are adjacent
