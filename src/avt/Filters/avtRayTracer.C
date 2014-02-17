@@ -607,13 +607,13 @@ avtRayTracer::Execute(void)
                 striStrm << it->second << " ";
                 cc++;
             }
-            debug5 << "processorCompositingOrder Rank: " << std::endl;
+            debug5 << "Processor compositingOrder Rank: " << striStrm.str() << std::endl;
 
 
-            int fakeTiming;
-            fakeTiming = visitTimer->StartTimer();
-            visitTimer->StopTimer(fakeTiming, "ProcessorCompositingOrder rank " + striStrm.str());
-            visitTimer->DumpTimings();
+            //int fakeTiming;
+            //fakeTiming = visitTimer->StartTimer();
+            //visitTimer->StopTimer(fakeTiming, "ProcessorCompositingOrder rank " + striStrm.str());
+            //visitTimer->DumpTimings();
 
             //
             // Send the list the extractor and compute if processors on one node are adjacent
