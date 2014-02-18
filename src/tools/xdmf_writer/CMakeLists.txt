@@ -70,13 +70,17 @@ TARGET_LINK_LIBRARIES(xdmf_writer_ser ${HDF5_LIB} ${ZLIB_LIB} m)
 IF(VISIT_PARALLEL)
     ADD_PARALLEL_EXECUTABLE(xdmf_mpi_example xdmf_mpi_example.c)
     TARGET_LINK_LIBRARIES(xdmf_mpi_example xdmf_writer_par m)
+    SET_TARGET_PROPERTIES(xdmf_mpi_example PROPERTIES HAS_CXX ON)
 
     ADD_PARALLEL_EXECUTABLE(xdmf_mpi_example2 xdmf_mpi_example2.c)
     TARGET_LINK_LIBRARIES(xdmf_mpi_example2 xdmf_writer_par m)
+    SET_TARGET_PROPERTIES(xdmf_mpi_example2 PROPERTIES HAS_CXX ON)
 
     ADD_PARALLEL_EXECUTABLE(xdmf_mpi_example3 xdmf_mpi_example3.c)
     TARGET_LINK_LIBRARIES(xdmf_mpi_example3 xdmf_writer_par m)
+    SET_TARGET_PROPERTIES(xdmf_mpi_example3 PROPERTIES HAS_CXX ON)
 
     ADD_PARALLEL_LIBRARY(xdmf_writer_par xdmf_writer.c)
     TARGET_LINK_LIBRARIES(xdmf_writer_par ${HDF5_LIB} ${ZLIB_LIB} m)
+    SET_TARGET_PROPERTIES(xdmf_writer_par PROPERTIES HAS_CXX ON)
 ENDIF(VISIT_PARALLEL)
