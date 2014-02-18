@@ -1894,7 +1894,8 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
         {	
 
             if (myIndex != (compositeFrom.size()-1))
-            { 
+            {   
+                waitTiming = 0;
                 waitTiming = visitTimer->StartTimer();
 
                 int destProc = compositeFrom[myIndex+( (localSkipProcs-1)-(myIndex%skipProcs) )];
@@ -1914,9 +1915,8 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                     //MPI_Status myStatus;
                     //MPI_Wait(&myRequest, &myStatus);
 
-                    visitTimer->StopTimer(waitTiming, "Wait timing");
+                    visitTimer->StopTimer(waitTiming, "Wait timing sending nothing ");
                     visitTimer->DumpTimings();
-
 
                     allSentDone = true;
                     debug5 << my_id << " ~ Sending - hasImageToComposite == false. Done!" << std::endl;
@@ -1975,8 +1975,9 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
         }
         else		
         {
+            waitTiming = 0;
             waitTiming = visitTimer->StartTimer();
-            
+
             //
             // Receive section
             //
@@ -1990,7 +1991,10 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 // MPI_RECV 1
                 MPI_Recv(dataToRecv, 6, MPI_INT, sourceProc, tags[0], MPI_COMM_WORLD, &status);
 
-                visitTimer->StopTimer(waitTiming, "Wait timing");
+                if (dataToRecv[0] != -1)
+                    visitTimer->StopTimer(waitTiming, "Wait timing - empty - from "+ NumbToString(sourceProc));
+                else
+                    visitTimer->StopTimer(waitTiming, "Wait timing from "+ NumbToString(sourceProc));
                 visitTimer->DumpTimings();
                 if (sourceProc != dataToRecv[0] && dataToRecv[0] != -1)
                     std::cout << my_id << " !!! Synchronization error !!!  myIndex: " << myIndex << "    source proc: " << sourceProc << "   dataToRecv[0]: " << dataToRecv[0] << "    sz: " << compositeFrom.size() << std::endl;

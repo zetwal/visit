@@ -2161,12 +2161,8 @@ avtRayExtractor::ExecuteRayTracerLB(){
     				debug5 << PAR_Rank() << " ~ Done with compositing on one node!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << numPatches << std::endl << std::endl;
                 }
 
-
-
                 if (avtCallback::UseBlockingForTiming())
                     imgComm.syncAllProcs();
-
-
 
                 //
                 // Compositing across nodes
