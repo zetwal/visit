@@ -803,7 +803,6 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
              "  partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << "  to  " << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl;
     }
 
-
     debug5 << proc << " ~ " << patch << 
              "  orig ind: 0 , 0, 0  to " << dims[0]-1 << ", " << dims[1]-1 << ", " << dims[2]-1 << 
              "  patch extents: " << X[0] << ", " << Y[0] << ", " << Z[0] << "  to  " << X[dims[0]-1] << ", " << Y[dims[1]-1] << ", " << Z[dims[2]-1] <<
@@ -851,17 +850,10 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         if (i == 0)
             imgDepth = tempImgDepth;
         else
-           // imgDepth += tempImgDepth;
             if (imgDepth < tempImgDepth)
                 imgDepth = tempImgDepth;
-
         //std::cout << "origin: " << coordinates[i][0] << ", " << coordinates[i][1] << ", " << coordinates[i][2] << "   screenPos: " << screenPos[0] << ", " << screenPos[1] << std::endl;
-
     }
-    //imgDepth = imgDepth/8.0;
-
-    //std::cout << std::endl << std::endl << std::endl;
-
 
     xMin = xMin - error_correction;
     yMin = yMin - error_correction;
@@ -1599,7 +1591,20 @@ avtMassVoxelExtractor::getIndexandDistFromCenter(float dist, int index,    int &
 //  Method: avtImgCommunicator::computeIndices
 //
 //  Purpose:
-//              back: 5, front: 4,  top:3, bottom:2,  ;right: 1, left:0
+//
+//  Parameters:
+//              indices: 0 left, 1 right  |  2: bottom, 3 top  | 4: front, 5 back
+//              dims: dimensions x, y & z
+//
+//                                 z       y      x
+//              returnIndices: 0:front, bottom, left
+//                             1:front, bottom, right
+//                             2:front, top,    left
+//                             3:front, top,    right
+//                             4:back,  bottom, left
+//                             5:back,  bottom, right
+//                             6:back,  top,    left
+//                             7:back,  top,    right
 //
 //  Programmer: 
 //  Creation:   
@@ -1607,6 +1612,7 @@ avtMassVoxelExtractor::getIndexandDistFromCenter(float dist, int index,    int &
 //  Modifications:
 //
 // ****************************************************************************
+
 
 void 
 avtMassVoxelExtractor::computeIndices(int dims[3], int indices[6], int returnIndices[8]){
@@ -1649,8 +1655,13 @@ avtMassVoxelExtractor::computeIndicesVert(int dims[3], int indices[6], int retur
 //
 //  Modifications:
 //
+//  Reference: http://www.scratchapixel.com/lessons/3d-advanced-lessons/interpolation/trilinear-interpolation/
+//
 // ****************************************************************************
 
+
+//trilinearInterpolate(values, dist_from_left, dist_from_bottom, dist_from_front);
+/*
 double 
 avtMassVoxelExtractor::trilinearInterpolate(double vals[8], float distRight, float distTop, float distBack){
     float dist_from_right, dist_from_left;
@@ -1668,6 +1679,40 @@ avtMassVoxelExtractor::trilinearInterpolate(double vals[8], float distRight, flo
 
     
     double val =   dist_from_right     * dist_from_top         * dist_from_back * vals[0] + 
+                    dist_from_left      * dist_from_top         * dist_from_back * vals[1] +
+                    dist_from_right     * dist_from_bottom      * dist_from_back * vals[2] +
+                    dist_from_left      * dist_from_bottom      * dist_from_back * vals[3] +
+
+                    dist_from_right     * dist_from_top         * dist_from_front * vals[4] +
+                    dist_from_left      * dist_from_top         * dist_from_front * vals[5] +
+                    dist_from_right     * dist_from_bottom      * dist_from_front * vals[6] +
+                    dist_from_left      * dist_from_bottom      * dist_from_front * vals[7];
+    return val;
+}
+
+void 
+avtMassVoxelExtractor::computeIndices(int dims[3], int indices[6], int returnIndices[8]){
+    returnIndices[0] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[0]);
+    returnIndices[1] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[1]);
+
+    returnIndices[2] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[0]);
+    returnIndices[3] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[1]);
+
+    returnIndices[4] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[0]);
+    returnIndices[5] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[1]);
+
+    returnIndices[6] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[0]);
+    returnIndices[7] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[1]);
+}
+*/
+
+double 
+avtMassVoxelExtractor::trilinearInterpolate(double vals[8], float dist_from_left, float dist_from_bottom, float dist_from_front){
+    float dist_from_right = 1.0 - dist_from_left;
+    float dist_from_top = 1.0 - dist_from_bottom;
+    float dist_from_back = 1.0 - dist_from_front;
+    
+    double val =    dist_from_right     * dist_from_top         * dist_from_back * vals[0] + 
                     dist_from_left      * dist_from_top         * dist_from_back * vals[1] +
                     dist_from_right     * dist_from_bottom      * dist_from_back * vals[2] +
                     dist_from_left      * dist_from_bottom      * dist_from_back * vals[3] +
@@ -1697,9 +1742,24 @@ avtMassVoxelExtractor::trilinearInterpolate(double vals[8], float distRight, flo
 //    Use double instead of float.
 //
 // ****************************************************************************
+
+//
+//  _ _ _ _ _ _ _
+// |
+// |
+// |- - x
+// |    |
+// |    |
+// |    |
+//  - - - - - - -
+//
+
 void
 avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
 {
+    //if (proc == 5 && patch == 24)
+    //    std::cout << "proc: " << proc << "   patch: " << patch << "  first: " << first << "   last: " << last << "   w: " << w << "  h:" << h << "   dims: " << dims[0] << ", " << dims[1] << ", " << dims[2] << std::endl;
+
     bool inrun = false;
     int  count = 0;
 
@@ -1713,12 +1773,15 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
     double dest_rgb[4] = {0.0,0.0,0.0, 0.0};     // to store the computed color
     for (int i = first ; i < last ; i++)
     {
-        const int *ind = ind_buffer + 3*i;
-        const double *prop = prop_buffer + 3*i;
-
+        // index computation
+        const int *ind = ind_buffer + 3*i;       // x,y,z indices into the cell
+        const double *prop = prop_buffer + 3*i;  // x: distance from left of cell |  y: distance from bottom of cell |  z: distance from the front of cell
         int index = 0;
         if (calc_cell_index)
-            index = ind[2]*((dims[0]-1)*(dims[1]-1)) + ind[1]*(dims[0]-1) + ind[0];
+            index = ind[2]*((dims[0]-1)*(dims[1]-1)) + ind[1]*(dims[0]-1) + ind[0]; // overall index
+
+        //if (proc == 5 && patch == 24)
+        //    std::cout << "\tTrying indices: " << ind[0] << ", " << ind[1] << ", " << ind[2] << "   prop: " << prop[0] << ", " << prop[1] << ", " << prop[2] << "  index: " << index << std::endl;
 
         if (rayCastingSLIVR && (isAMR && avtCallback::UseaMRDuplication() == true)){
             if (ind[0] < minIndex[0] || ind[0] > maxIndex[0])
@@ -1752,24 +1815,24 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
         offsetLow[0] = offsetLow[1] = offsetLow[2] = 1;
         offsetHigh[0] = offsetHigh[1] = offsetHigh[2] = 2;
 
-        int newInd[3];
-        newInd[0] = ind[0];
-        newInd[1] = ind[1];
-        newInd[2] = ind[2];
+       // float x_right = prop[0];       float x_left = 1. - x_right;    
+       // float y_top = prop[1];         float y_bottom = 1. - y_top;   
+       // float z_back = prop[2];        float z_front = 1. - z_back;   
 
-        float x_right = prop[0];       float x_left = 1. - x_right;    
-        float y_top = prop[1];         float y_bottom = 1. - y_top;   
-        float z_back = prop[2];        float z_front = 1. - z_back;   
+        float x_left = prop[0];         float x_right = 1. - x_left;    
+        float y_bottom = prop[1];       float y_top = 1. - y_bottom;   
+        float z_front = prop[2];        float z_back = 1. - z_front;   
 
         // get the index and distance from the center of the neighbouring cells
-        getIndexandDistFromCenter(x_right, newInd[0], index_left, index_right,   dist_from_left, dist_from_right);
-        getIndexandDistFromCenter(y_top,   newInd[1], index_bottom,index_top,    dist_from_bottom,dist_from_top);
-        getIndexandDistFromCenter(z_back,  newInd[2], index_front, index_back,   dist_from_front, dist_from_back);
+        getIndexandDistFromCenter(prop[0], ind[0], index_left, index_right,   dist_from_left, dist_from_right);
+        getIndexandDistFromCenter(prop[1],   ind[1], index_bottom,index_top,    dist_from_bottom,dist_from_top);
+        getIndexandDistFromCenter(prop[2],  ind[2], index_front, index_back,   dist_from_front, dist_from_back);
 
-        int indices[6];
-        indices[4] = index_front;       indices[5] = index_back;
-        indices[2] = index_bottom;      indices[3] = index_top;
+
+        int indices[6]; //0 left, 1 right  |  2: bottom, 3 top  | 4: front, 5 back
         indices[0] = index_left;        indices[1] = index_right;
+        indices[2] = index_bottom;      indices[3] = index_top;
+        indices[4] = index_front;       indices[5] = index_back;
 
         if (logicalBounds[0] == 1)
             indices[0] = indices[1] = 0;
@@ -1809,21 +1872,6 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                     valid_sample[i] = false;
         }
 
-        if (rayCastingSLIVR){
-            if (logicalBounds[0] > 1)
-                if (!(ind[0] >= offsetLow[0] && ind[0] <= (dims[0]-1) - offsetHigh[0]))
-                    valid_sample[i] = false;
-
-            if (logicalBounds[1] > 1)
-                if (!(ind[1] >= offsetLow[1] && ind[1] <= (dims[1]-1) - offsetHigh[1]))
-                    valid_sample[i] = false;
-
-            if (logicalBounds[2] > 1)
-                if (!(ind[2] >= offsetLow[2] && ind[2] <= (dims[2]-1) - offsetHigh[2]))
-                    valid_sample[i] = false;
-        }
-
-
         if (rayCastingSLIVR && (isAMR && avtCallback::UseaMRDuplication() == true)){
             if (indices[0] < minIndex[0] || indices[0] > maxIndex[0])
                 valid_sample[i] = false;
@@ -1846,8 +1894,26 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                 valid_sample[i] = false;
         }
 
+
+        if (rayCastingSLIVR){
+            if (logicalBounds[0] > 1)
+                if (!(ind[0] >= offsetLow[0] && ind[0] <= (dims[0]-1) - offsetHigh[0]))
+                    valid_sample[i] = false;
+
+            if (logicalBounds[1] > 1)
+                if (!(ind[1] >= offsetLow[1] && ind[1] <= (dims[1]-1) - offsetHigh[1]))
+                    valid_sample[i] = false;
+
+            if (logicalBounds[2] > 1)
+                if (!(ind[2] >= offsetLow[2] && ind[2] <= (dims[2]-1) - offsetHigh[2]))
+                    valid_sample[i] = false;
+        }
+
         if (!valid_sample[i])
             continue;
+
+        //if (proc == 5 && patch == 24)
+        //    std::cout << "\t\tIn indices: " << ind[0] << ", " << ind[1] << ", " << ind[2] << "   prop: " << prop[0] << ", " << prop[1] << ", " << prop[2] << std::endl;
 
         if (trilinearInterpolation || rayCastingSLIVR){
             //
@@ -1855,8 +1921,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
             //
             if (ncell_arrays > 0){
                 int indexT[8];
-                computeIndices(dims, indices, indexT);
-                
+                computeIndices(dims, indices, indexT);      // get the index of each of the 8 corners around the point in the data
+
                 for (int l = 0 ; l < ncell_arrays ; l++)            // ncell_arrays: usually 1
                 {
                     void  *cell_array = cell_arrays[l];
@@ -1902,7 +1968,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     
                                     float distFromRight, distFromLeft, distFromTop, distFromBottom, distFromFront, distFromBack;
                                     int indexLeft, indexRight, indexTop, indexBottom, indexFront, indexBack;
-                                    float gradientOffset = 0.25;
+                                    float gradientOffset = 0.5;
 
                                     double gradVals[8];
                                     int indexGrad[8], gradInd[3], gradIndices[6];
@@ -1919,16 +1985,25 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     //
                                     // find x-h
                                     //
-                                    if (x_right - gradientOffset < 0.0){
-                                        xRight = (x_right - gradientOffset)+1.0;
+                                    // if (x_right - gradientOffset < 0.0){
+                                    //     xRight = (x_right - gradientOffset)+1.0;
+                                    //     gradInd[0] = ind[0]-1;
+                                    // }
+                                    // else{
+                                    //     xRight = x_right - gradientOffset;
+                                    //     gradInd[0] = ind[0];
+                                    // }
+                                    float tempX;
+                                    if (prop[0] - gradientOffset < 0.0){
+                                        tempX = (prop[0] - gradientOffset)+1.0;
                                         gradInd[0] = ind[0]-1;
                                     }
                                     else{
-                                        xRight = x_right - gradientOffset;
+                                        tempX = prop[0];
                                         gradInd[0] = ind[0];
                                     }
                                     
-                                    getIndexandDistFromCenter(xRight, gradInd[0],  indexLeft, indexRight,  distFromLeft, distFromRight);
+                                    getIndexandDistFromCenter(tempX, gradInd[0],  indexLeft, indexRight,  distFromLeft, distFromRight);
                                     gradIndices[0] = indexLeft;    gradIndices[1] = indexRight;
                                     computeIndices(dims, gradIndices, indexGrad);
                                     AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -1937,15 +2012,23 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     //
                                     // find x+h
                                     //
-                                    if (x_right + gradientOffset > 1.0){
-                                        xRight = (x_right + gradientOffset)-1.0;
+                                    // if (x_right + gradientOffset > 1.0){
+                                    //     xRight = (x_right + gradientOffset)-1.0;
+                                    //     gradInd[0] = ind[0]+1;
+                                    // }else{
+                                    //     xRight = x_right + gradientOffset;
+                                    //     gradInd[0] = ind[0];
+                                    // }
+
+                                    if (prop[0] + gradientOffset > 1.0){
+                                        tempX = (prop[0] + gradientOffset)-1.0;
                                         gradInd[0] = ind[0]+1;
                                     }else{
-                                        xRight = x_right + gradientOffset;
+                                        tempX = prop[0];
                                         gradInd[0] = ind[0];
                                     }
 
-                                    getIndexandDistFromCenter(xRight, gradInd[0],  indexLeft, indexRight,  distFromLeft, distFromRight);
+                                    getIndexandDistFromCenter(tempX, gradInd[0],  indexLeft, indexRight,  distFromLeft, distFromRight);
                                     gradIndices[0] = indexLeft;    gradIndices[1] = indexRight;
                                     computeIndices(dims, gradIndices, indexGrad);
                                     AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -1962,16 +2045,25 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     //
                                     // find y-h
                                     //
-                                    if (y_top - gradientOffset < 0.0){
-                                        yTop = (y_top - gradientOffset)+1.0;
+                                    // if (y_top - gradientOffset < 0.0){
+                                    //     yTop = (y_top - gradientOffset)+1.0;
+                                    //     gradInd[1] = ind[1]-1;
+                                    // }
+                                    // else{
+                                    //     yTop = y_top - gradientOffset;
+                                    //     gradInd[1] = ind[1];
+                                    // }
+                                    float tempY;
+                                    if (prop[1] - gradientOffset < 0.0){
+                                        tempY = (prop[1] - gradientOffset)+1.0;
                                         gradInd[1] = ind[1]-1;
                                     }
                                     else{
-                                        yTop = y_top - gradientOffset;
+                                        tempY = prop[1];
                                         gradInd[1] = ind[1];
                                     }
                                     
-                                    getIndexandDistFromCenter(yTop, gradInd[1],  indexBottom, indexTop,  distFromBottom, distFromTop);
+                                    getIndexandDistFromCenter(tempY, gradInd[1],  indexBottom, indexTop,  distFromBottom, distFromTop);
                                     gradIndices[2] = indexBottom ;    gradIndices[3] = indexTop;
                                     computeIndices(dims, gradIndices, indexGrad);
                                     AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -1980,16 +2072,25 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     //
                                     // find y+h
                                     //
-                                    yTop = y_top;
-                                    if (y_top + gradientOffset > 1.0){
-                                        yTop = (y_top + gradientOffset)-1.0;
+                                    // yTop = y_top;
+                                    // if (y_top + gradientOffset > 1.0){
+                                    //     yTop = (y_top + gradientOffset)-1.0;
+                                    //     gradInd[1] = ind[1]+1;
+                                    // }else{
+                                    //     yTop = y_top + gradientOffset;
+                                    //     gradInd[1] = ind[1];
+                                    // }
+
+
+                                    if (prop[1] + gradientOffset > 1.0){
+                                        tempY = (prop[1] + gradientOffset)-1.0;
                                         gradInd[1] = ind[1]+1;
                                     }else{
-                                        yTop = y_top + gradientOffset;
+                                        tempY = prop[1];
                                         gradInd[1] = ind[1];
                                     }
 
-                                    getIndexandDistFromCenter(yTop, gradInd[1],  indexBottom, indexTop,  distFromBottom, distFromTop);
+                                    getIndexandDistFromCenter(tempY, gradInd[1],  indexBottom, indexTop,  distFromBottom, distFromTop);
                                     gradIndices[2] = indexBottom;    gradIndices[3] = indexTop;
                                     computeIndices(dims, gradIndices, indexGrad);
                                     AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -2005,16 +2106,25 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     //
                                     // z-h
                                     //
-                                    if (z_back - gradientOffset < 0.0){
-                                        zBack = (z_back - gradientOffset)+1.0;
+                                    // if (z_back - gradientOffset < 0.0){
+                                    //     zBack = (z_back - gradientOffset)+1.0;
+                                    //     gradInd[2] = ind[2]-1;
+                                    // }
+                                    // else{
+                                    //     zBack = z_back - gradientOffset;
+                                    //     gradInd[2] = ind[2];
+                                    // }
+                                    float tempZ;
+                                    if (prop[2] - gradientOffset < 0.0){
+                                        tempZ = (prop[2] - gradientOffset)+1.0;
                                         gradInd[2] = ind[2]-1;
                                     }
                                     else{
-                                        zBack = z_back - gradientOffset;
+                                        tempZ = prop[2];
                                         gradInd[2] = ind[2];
                                     }
                                     
-                                    getIndexandDistFromCenter(zBack, gradInd[2],  indexFront, indexBack,  distFromFront, distFromBack);
+                                    getIndexandDistFromCenter(tempZ, gradInd[2],  indexFront, indexBack,  distFromFront, distFromBack);
                                     gradIndices[4] = indexFront;    gradIndices[5] = indexBack;
                                     computeIndices(dims, gradIndices, indexGrad);
                                     AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -2023,15 +2133,23 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                                     //
                                     // z+h
                                     //
-                                    if (z_back + gradientOffset > 1.0){
-                                        zBack = (z_back + gradientOffset)-1.0;
+                                    // if (z_back + gradientOffset > 1.0){
+                                    //     zBack = (z_back + gradientOffset)-1.0;
+                                    //     gradInd[2] = ind[2]+1;
+                                    // }else{
+                                    //     zBack = z_back + gradientOffset;
+                                    //     gradInd[2] = ind[2];
+                                    // }
+
+                                    if (prop[2] + gradientOffset > 1.0){
+                                        tempZ = (prop[2] + gradientOffset)-1.0;
                                         gradInd[2] = ind[2]+1;
                                     }else{
-                                        zBack = z_back + gradientOffset;
+                                        tempZ = prop[2];
                                         gradInd[2] = ind[2];
                                     }
 
-                                    getIndexandDistFromCenter(zBack, gradInd[2],  indexFront, indexBack,  distFromFront, distFromBack);
+                                    getIndexandDistFromCenter(tempZ, gradInd[2],  indexFront, indexBack,  distFromFront, distFromBack);
                                     gradIndices[4] = indexFront;    gradIndices[5] = indexBack;
                                     computeIndices(dims, gradIndices, indexGrad);
                                     AssignEight(cell_vartypes[0], gradVals, indexGrad, 1, 0, cell_array);
@@ -2069,7 +2187,8 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
                     for (int m = 0 ; m < pt_size[l] ; m++)
                     {
                         AssignEight(pt_vartypes[l], values, indexT, pt_size[l], m, pt_array);
-                        double scalarValue = trilinearInterpolate(values, x_left, y_bottom, z_front);
+                        //double scalarValue = trilinearInterpolate(values, x_left, y_bottom, z_front);
+                        double scalarValue = trilinearInterpolate(values, dist_from_left, dist_from_bottom, dist_from_front);
 
                         if (rayCastingSLIVR){
                             double source_rgb[4];
