@@ -42,6 +42,7 @@
 
 #include <cerrno>
 #include <cstdlib>
+#include <stdlib.h>
 #include <cctype>
 #include <climits>
 #include <signal.h>
@@ -2205,25 +2206,26 @@ Engine::ProcessCommandLine(int argc, char **argv)
             avtCallback::SetTree(true);
             avtCallback::SetDirectSend(false);
         }
+        else if (strcmp(argv[i], "-numThreads") == 0)
+        {
+          if (i+1 < argc)
+          {
+            int numThreads = atoi(argv[i+1]);
+            i++;
+          }
+        }
         else if (strcmp(argv[i], "-nolocal") == 0)
         {
             avtCallback::SetLocalCompositingOff(true);
         }
-        else if (strcmp(argv[i], "-two") == 0)
+        else if (strcmp(argv[i], "-procsGrouping") == 0)
         {
-            avtCallback::SetTogetherSize(2);
-        }
-        else if (strcmp(argv[i], "-three") == 0)
-        {
-            avtCallback::SetTogetherSize(3);
-        }
-         else if (strcmp(argv[i], "-four") == 0)
-        {
-            avtCallback::SetTogetherSize(4);
-        }
-        else if (strcmp(argv[i], "-five") == 0)
-        {
-            avtCallback::SetTogetherSize(5);
+          if (i+1 < argc)
+          {
+            int group = atoi(argv[i+1]);
+            avtCallback::SetProcGroupSize(group);
+            i++;
+          }
         }
         else if (strcmp(argv[i], "-create-ghosts-for-t-intersections") == 0)
         {

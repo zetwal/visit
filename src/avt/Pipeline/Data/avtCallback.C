@@ -78,7 +78,8 @@ bool                          avtCallback::tree = true;
 bool                          avtCallback::localCompositingOff = false;
 bool                          avtCallback::blockingForTiming = false;
 
-int                           avtCallback::togetherSize = 2;
+int                           avtCallback::procGroupSize = 2;
+int                           avtCallback::numThreads = 0; 
 
 UpdatePlotAttributesCallback  avtCallback::updatePlotAttributesCallback = NULL;
 void                         *avtCallback::updatePlotAttributesCallbackArgs 

@@ -917,32 +917,37 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     
 
     if (enableThreads){
-        //pthread_mutex_init(&mutexA, NULL);
         int sizePartition = (xMax - xMin)/numThreads;
-        argStruct arguments;
-        pthread_barrier_t barrier;
+        threadArguments *threadArgs = NULL;
+        threadArgs = new threadArguments[numThreads];
 
         for (int i=0; i<numThreads; i++){
-            arguments.thisArg = this;
-            arguments.arg0 = i;
-            arguments.arg1 = xMin + sizePartition*i;
+            threadArgs[i].thisPtr = this;
+            threadArgs[i].arg0 = i;
+            threadArgs[i].arg1 = xMin + sizePartition*i;
 
             if (i != numThreads-1)
-                arguments.arg2 = arguments.arg1 + sizePartition;
+                threadArgs[i].arg2 = threadArgs[i].arg1 + sizePartition;
             else
-                arguments.arg2 = xMax;
+                threadArgs[i].arg2 = xMax;
 
-            arguments.arg3 = yMin;
-            arguments.arg4 = yMax;
+            threadArgs[i].arg3 = yMin;
+            threadArgs[i].arg4 = yMax;
 
-            if ( pthread_create(&threadHandles[i], NULL, runThread, (void *)&arguments) ){
+
+            if ( pthread_create(&threadHandles[i], NULL, runThread, (void *)&threadArgs[i]) )
                 std::cout << "Could NOT create thread " << i << std::endl;
-            }
-
-            pthread_barrier_wait (&barrier);
-            std::cout << "Done with threads!!!" << std::endl;
-            closeThreads();
         }
+
+        for (int i=0; i<numThreads; i++)
+            pthread_join(threadHandles[i],NULL);
+    
+        if (threadArgs != NULL)
+            delete []threadArgs;
+        threadArgs = NULL;
+
+        closeThreads();
+
     }else{
         for (int i = xMin ; i < xMax ; i++)
             for (int j = yMin ; j < yMax ; j++)
@@ -964,6 +969,29 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
 
 // ****************************************************************************
+//  Method: avtMassVoxelExtractor::runThread
+//
+//  Purpose:
+//      Total hack! Since pthreads does not like C++ and the only thing it
+//      accepts is a static function, we create one as an entry point into the
+//      class!
+//      So this function receives the arguments that the thread was called with
+//      and dispatches it to the class.
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void * avtMassVoxelExtractor::runThread(void *arg){
+    threadArguments *temp = (threadArguments *)arg;
+
+    (temp->thisPtr)->sampleImage(temp->arg0,temp->arg1,temp->arg2,temp->arg3,temp->arg4);
+}
+
+
+// ****************************************************************************
 //  Method: avtMassVoxelExtractor::sampleImage
 //
 //  Purpose:
@@ -974,27 +1002,16 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 //  Modifications:
 //
 // ****************************************************************************
-void * avtMassVoxelExtractor::runThread(void *arg){
-    argStruct *temp = (argStruct *)arg;
-
-    avtMassVoxelExtractor *pThis;
-    (temp->thisArg)->sampleImage(temp->arg0,temp->arg1,temp->arg2,temp->arg3,temp->arg4);
-}
-
-
 void avtMassVoxelExtractor::sampleImage(int threadId, int x_Min, int x_Max, int y_Min, int y_Max){
-    //std::cout << "Thread: " << threadId << " ~  params: " << x_Min << ", " << x_Max << " ~ " << y_Min << ", " << y_Max << std::endl;
+    debug5 << "Running with threads " << threadId << " of " << avtCallback::UseNumThreads() << std::endl;
 
     for (int i = x_Min ; i < x_Max ; i++)
         for (int j = y_Min ; j < y_Max ; j++)
         {
             double origin[4];                               // starting point where we start sampling
             double terminus[4];                             // ending point where we stop sampling
-            //std::cout << threadId << " ~ " << i << ", " << j << std::endl;
             GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
-            //std::cout << threadId << " ~ " << i << ", " << j << " After GetSegment " << std::endl;
             SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
-            //std::cout << threadId << " ~ " << i << ", " << j << " After SampleAlongSegment " << std::endl;
         }
 }
 

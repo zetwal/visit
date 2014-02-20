@@ -833,9 +833,12 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
             return;
             
-         //massVoxelExtractor->initThreads(8);
+        if (avtCallback::UseNumThreads() > 0){
+            massVoxelExtractor->initThreads(avtCallback::UseNumThreads());
+            debug5 << "Num threads: " << avtCallback::UseNumThreads() << std::endl;
+        }
         
-         if (partitionExtentsComputationDone == false){
+        if (partitionExtentsComputationDone == false){
             int minPos[2], maxPos[2];
             float minDepth, maxDepth;
             double minExtents[4], maxExtents[4];
@@ -860,8 +863,6 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
         massVoxelExtractor->SetAMR(avtCallback::UseAMR());
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds, varnames, varsizes);
-
-        //massVoxelExtractor->closeThreads();
 
         imgMetaData tmpImageMetaPatch;
         tmpImageMetaPatch = initMetaPatch(patchCount);

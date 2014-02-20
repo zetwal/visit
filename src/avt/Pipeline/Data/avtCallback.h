@@ -188,10 +188,16 @@ class PIPELINE_API avtCallback
     static bool                  UseLocalCompositingOff(void)
                                      { return localCompositingOff; }
 
-    static void                 SetTogetherSize(int i)
-                                     { togetherSize = i; }
-    static int                  UseTogetherSize(void)
-                                     { return togetherSize; }
+    static void                 SetProcGroupSize(int i)
+                                     { procGroupSize = i; }
+    static int                  UseProcGroupSize(void)
+                                     { return procGroupSize; }
+
+    static void                 SetNumThreads(int i)
+                                     { numThreads = i; }
+    static int                  UseNumThreads(void)
+                                     { return numThreads; }
+
                                                        
     static void                  SetBlockingForTiming(bool b)
                                      { blockingForTiming = b; }
@@ -265,10 +271,13 @@ class PIPELINE_API avtCallback
     static bool                  directSend;
     static bool                  tree;
 
-    static int                   togetherSize;
+    static int                   procGroupSize;
+    static int                   numThreads;
 
     static bool                  localCompositingOff;
     static bool                  blockingForTiming;
+
+    
 };
 
 

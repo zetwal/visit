@@ -263,8 +263,10 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             sampleImage(int threadId, int x_Min, int x_Max, int y_Min, int y_Max);
 };
 
-struct argStruct{
-    avtMassVoxelExtractor * thisArg;
+
+
+struct threadArguments{
+    avtMassVoxelExtractor * thisPtr;
     int arg0;
     int arg1;
     int arg2;

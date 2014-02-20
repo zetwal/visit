@@ -1867,7 +1867,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
     debug5 << ssss.str() << std::endl;
 
     bool allSentDone = false;
-    int skipProcs = avtCallback::UseTogetherSize();     // get the value that was passed to it
+    int skipProcs = avtCallback::UseProcGroupSize();     // get the value that was passed to it
 
     int waitTiming;
 
