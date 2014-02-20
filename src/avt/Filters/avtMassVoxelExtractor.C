@@ -142,9 +142,6 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     divisors_Y = NULL;
     divisors_Z = NULL;
 
-    prop_buffer   = new double[3*depth];
-    ind_buffer    = new int[3*depth];
-    valid_sample  = new bool[depth];
     lighting = false;
     fullyInside = false;
     lightPosition[0] = lightPosition[1] = lightPosition[2] = 0.0;   lightPosition[3] = 1.0;
@@ -194,12 +191,7 @@ avtMassVoxelExtractor::~avtMassVoxelExtractor()
 {
     view_to_world_transform->Delete();
     world_to_view_transform->Delete();
-    if (prop_buffer != NULL)
-    delete [] prop_buffer;
-    if (ind_buffer != NULL)
-    delete [] ind_buffer;
-    if (valid_sample != NULL)
-    delete [] valid_sample;
+
     if (X != NULL)
         delete [] X;
     if (Y != NULL)
@@ -934,7 +926,6 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             threadArgs[i].arg3 = yMin;
             threadArgs[i].arg4 = yMax;
 
-
             if ( pthread_create(&threadHandles[i], NULL, runThread, (void *)&threadArgs[i]) )
                 std::cout << "Could NOT create thread " << i << std::endl;
         }
@@ -1003,7 +994,8 @@ void * avtMassVoxelExtractor::runThread(void *arg){
 //
 // ****************************************************************************
 void avtMassVoxelExtractor::sampleImage(int threadId, int x_Min, int x_Max, int y_Min, int y_Max){
-    debug5 << "Running with threads " << threadId << " of " << avtCallback::UseNumThreads() << std::endl;
+    debug5 << "Running with threads " << threadId << " of " << avtCallback::UseNumThreads() <<
+            "Min/max: " << x_Min << ", " << x_Max << "  " << y_Min << ", " << y_Max << std::endl;
 
     for (int i = x_Min ; i < x_Max ; i++)
         for (int j = y_Min ; j < y_Max ; j++)
@@ -1807,7 +1799,7 @@ avtMassVoxelExtractor::trilinearInterpolate(double vals[8], float dist_from_left
 //
 // ****************************************************************************
 void
-avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h)
+avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h, double * prop_buffer, int * ind_buffer, bool * valid_sample)
 {
     // if (proc == 5 && patch == 24)
     //     std::cout << "proc: " << proc << "   patch: " << patch << "  first: " << first << "   last: " << last << "   w: " << w << "  h:" << h << "   dims: " << dims[0] << ", " << dims[1] << ", " << dims[2] << std::endl;
@@ -2597,7 +2589,14 @@ avtMassVoxelExtractor::SampleAlongSegment(const double *origin,
     double y_dist = (terminus[1]-origin[1]);
     double z_dist = (terminus[2]-origin[2]);
 
-   
+    double          *prop_buffer = NULL;
+    int             *ind_buffer = NULL;
+    bool            *valid_sample = NULL;
+
+    prop_buffer   = new double[3*depth];
+    ind_buffer    = new int[3*depth];
+    valid_sample  = new bool[depth];
+
     double pt[3];
     bool hasSamples = false;
  
@@ -2746,8 +2745,15 @@ avtMassVoxelExtractor::SampleAlongSegment(const double *origin,
     }
 
     if (hasSamples){
-        SampleVariable(first, last, w, h);
+        SampleVariable(first, last, w, h, prop_buffer, ind_buffer, valid_sample);
     }
+
+    if (prop_buffer != NULL)
+        delete [] prop_buffer;
+    if (ind_buffer != NULL)
+        delete [] ind_buffer;
+    if (valid_sample != NULL)
+        delete [] valid_sample;
 }
 
 

@@ -2211,6 +2211,7 @@ Engine::ProcessCommandLine(int argc, char **argv)
           if (i+1 < argc)
           {
             int numThreads = atoi(argv[i+1]);
+            avtCallback::SetNumThreads(numThreads);
             i++;
           }
         }

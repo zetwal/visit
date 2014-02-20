@@ -173,9 +173,6 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     int              pt_index[AVT_VARIABLE_LIMIT];
     int              pt_vartypes[AVT_VARIABLE_LIMIT];
 
-    double          *prop_buffer;
-    int             *ind_buffer;
-    bool            *valid_sample;
     bool            trilinearInterpolation;
     bool            rayCastingSLIVR;
     bool             isAMR;
@@ -241,7 +238,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             RegisterGrid(vtkRectilinearGrid*,
                                   std::vector<std::string>&,std::vector<int>&);
     void             SampleAlongSegment(const double *, const double*, int, int);
-    void             SampleVariable(int, int, int, int);
+    void             SampleVariable(int, int, int, int, double*, int*, bool*);
     bool             FrustumIntersectsGrid(int, int, int, int) const;
     bool             FrustumIntersectsGridSLIVR(int, int, int, int) const;
     void             GetSegment(int, int, double *, double *) const;
@@ -262,7 +259,6 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     static void *    runThread(void *arg);
     void             sampleImage(int threadId, int x_Min, int x_Max, int y_Min, int y_Max);
 };
-
 
 
 struct threadArguments{
