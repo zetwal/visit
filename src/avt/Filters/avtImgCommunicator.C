@@ -1944,11 +1944,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 
                     // MPI 1: Send metadata
                     MPI_Ssend(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
-                    //MPI_Request myRequest;
-                    //MPI_Isend(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD,&myRequest);
-                    //MPI_Status myStatus;
-                    //MPI_Wait(&myRequest, &myStatus);
-                    
+
                     visitTimer->StopTimer(waitTiming, "Wait timing");
                     visitTimer->DumpTimings();
 
@@ -1999,7 +1995,6 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 if (sourceProc != dataToRecv[0] && dataToRecv[0] != -1)
                     std::cout << my_id << " !!! Synchronization error !!!  myIndex: " << myIndex << "    source proc: " << sourceProc << "   dataToRecv[0]: " << dataToRecv[0] << "    sz: " << compositeFrom.size() << std::endl;
                 
-
                 debug5 << my_id << " ~ Recv  _________ list size: " << compositeFrom.size() << " : " 
                 	   << dataToRecv[0] << ", " << dataToRecv[1] << ", " << dataToRecv[2]  << ", " << dataToRecv[3] << ", " << dataToRecv[4] << ", " <<  dataToRecv[5] << std::endl;
 
@@ -2029,6 +2024,9 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                     localRecvBuffer = NULL;
                         
     				debug5 << my_id << " ~ Recv - Done decoding!" << std::endl;
+
+                    int compositingTiming;
+                    compositingTiming = visitTimer->StartTimer();
     				
                     if (hasImageToComposite == false){
                     	debug5 << my_id << " ~ Recv - replace by: " << dataToRecv[0] << std::endl;
@@ -2049,14 +2047,13 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                         
                         debug5 << my_id << " ~ Recv - replaced by received!" << std::endl;
                         
+                        visitTimer->StopTimer(compositingTiming, "compositingTiming timing replacing for " + NumbToString(bufferWidth) + " x " + NumbToString(bufferHeight));
+                        visitTimer->DumpTimings();
                     }else{
                         // Do Compositing
                         float *localCompositedImage = NULL;
 
     					debug5 << my_id << " ~ Recv - compositing with " << dataToRecv[0] << " ... "  << std::endl;
-    					
-    					int compositingTiming;
-                    	compositingTiming = visitTimer->StartTimer();
 
                         int finalStartingX, finalStartingY, finalSizeX, finalSizeY;
                         getFinalCompositedSize( startX,         startY,         bufferWidth,    bufferHeight,
@@ -2071,9 +2068,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                         startX = finalStartingX;    startY = finalStartingY;
                         bufferWidth = finalSizeX;   bufferHeight = finalSizeY;
 
-    					visitTimer->StopTimer(compositingTiming, "compositingTiming timing for " + NumbToString(bufferWidth) + " x " + NumbToString(bufferHeight));
-                    	visitTimer->DumpTimings();
-                    
+    					
                         // free up memory
                         if (localImage != NULL)
                             delete []localImage;
@@ -2086,13 +2081,11 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
 
                         hasImageToComposite = true;
                         debug5 << my_id << " ~ Recv - done compositing with " << dataToRecv[0] << " !!!"  << std::endl;
+
+                        visitTimer->StopTimer(compositingTiming, "compositingTiming timing for " + NumbToString(bufferWidth) + " x " + NumbToString(bufferHeight));
+                        visitTimer->DumpTimings();
                     }
                 }
-                //else
-                //    if (hasImageToComposite == true){
-                //        hasImageToComposite = true;
-                //        debug5 << my_id << " ~ Recv - passing this one on  !!!"  << std::endl;
-                //    }
             }
         }
 
@@ -2235,6 +2228,9 @@ void avtImgCommunicator::compositeTwoImages(int imgOneStartX,   int imgOneStartY
 
                 int subImgIndex = inputImagesX[ orderArray[z] ]*j*4 + k*4;         // index in the subimage 
                 int bufferIndex = ((inputImagesStartY[orderArray[z]]-imgCompStartY)*imgCompX*4 + j*imgCompX*4) + ((inputImagesStartX[ orderArray[z] ]-imgCompStartX)*4 + k*4);  // index in the big buffer
+
+                if (compositedImg[bufferIndex+3] >= 1.0)  continue;
+                if (subImage[subImgIndex+3] <= 0.0)  continue;
 
                 compositedImg[bufferIndex+0] = clamp( (subImage[subImgIndex+0] * (1.0 - compositedImg[bufferIndex+3])) + compositedImg[bufferIndex+0] );
                 compositedImg[bufferIndex+1] = clamp( (subImage[subImgIndex+1] * (1.0 - compositedImg[bufferIndex+3])) + compositedImg[bufferIndex+1] );
