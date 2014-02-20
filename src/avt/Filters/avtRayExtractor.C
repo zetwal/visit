@@ -811,6 +811,9 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         massVoxelExtractor->SetGridsAreInWorldSpace(
            rectilinearGridsAreInWorldSpace, viewInfo, aspect, xform);
 
+       
+
+
         std::vector<std::string> varnames;
         std::vector<int>         varsizes;
         varnames.push_back(varName);
@@ -829,6 +832,8 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
 
         if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
             return;
+            
+         //massVoxelExtractor->initThreads(8);
         
          if (partitionExtentsComputationDone == false){
             int minPos[2], maxPos[2];
@@ -855,6 +860,8 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         massVoxelExtractor->setProcIdPatchID(PAR_Rank(),num);
         massVoxelExtractor->SetAMR(avtCallback::UseAMR());
         massVoxelExtractor->Extract((vtkRectilinearGrid *) ds, varnames, varsizes);
+
+        //massVoxelExtractor->closeThreads();
 
         imgMetaData tmpImageMetaPatch;
         tmpImageMetaPatch = initMetaPatch(patchCount);
@@ -2095,6 +2102,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
 
         delImgData(currentPatch.patchNumber);
     }
+
 
     //
     // No longer need patches at this point, so doing some clean up and memory release

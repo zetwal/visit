@@ -58,6 +58,10 @@ class     vtkMatrix4x4;
 #include <stdio.h>
 #include <algorithm>    // std::max
 
+#include <pthread.h>
+
+
+
 // ****************************************************************************
 //  Class: avtMassVoxelExtractor
 //
@@ -97,6 +101,8 @@ class     vtkMatrix4x4;
 //
 // ****************************************************************************
 
+
+
 class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
 {
   public:
@@ -133,6 +139,11 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             setProcIdPatchID(int _proc, int _patch){ proc = _proc; patch = _patch; }
 
     void             world_to_screen(double _world[4], int imgWidth, int imgHeight, int screenPos[2], float &depth);
+    float            screen_to_WorldDistance(int x1, int y1, int x2, int y2);
+
+    // Threads
+    void             initThreads(int _numThreads);
+    void             closeThreads();
 
 
   protected:
@@ -207,6 +218,14 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     int              proc;                  // id of the processor
     int              patch;                 // id of the patch
 
+
+    // threads
+    bool enableThreads;
+    int numThreads;
+    pthread_t *threadHandles;
+    //pthread_mutex_t mutexPatchDrawn;
+
+
     int              fullImgWidth, fullImgHeight;
     int              xMin, xMax, yMin, yMax;
     void             ExtractImageSpaceGrid(vtkRectilinearGrid *,
@@ -237,8 +256,20 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             computeIndices(int dims[3], int indices[6], int returnIndices[8]);
     void             computeIndicesVert(int dims[3], int indices[6], int returnIndices[8]);
     void             getIndexandDistFromCenter(float dist, int index,    int &index_before, int &index_after,    float &dist_before, float &dist_after);
+
+    // Threads
+    
+    static void *    runThread(void *arg);
+    void             sampleImage(int threadId, int x_Min, int x_Max, int y_Min, int y_Max);
 };
 
-
+struct argStruct{
+    avtMassVoxelExtractor * thisArg;
+    int arg0;
+    int arg1;
+    int arg2;
+    int arg3;
+    int arg4;
+};
 
 #endif

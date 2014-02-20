@@ -214,7 +214,7 @@ class AVTFILTERS_API avtRayExtractor
     float partitionMinX, float partitionMaxX, float partitionMinY, float partitionMaxY, float partitionMinZ, float partitionMaxZ);
 
     void                     GetContiguousNodeList();
-
+    
     std::vector<int>         getAllChildrenOfPatch(int patchId);
     std::vector<int>         getDirectChildrenOfPatch(int patchId);
     // Check if not outside; if it is not outside it has to be somewhere inside 
@@ -311,7 +311,6 @@ class AVTFILTERS_API avtRayExtractor
     } LoadingInfo;
 
     void                      RasterBasedSample(vtkDataSet *, int num = 0);
-
 };
 
 
