@@ -501,8 +501,7 @@ avtRayTracer::Execute(void)
 
     int  timingVolToImg;
     if (rayCastingSLIVR == true){
-        if (parallelOn)
-            timingVolToImg = visitTimer->StartTimer();
+        timingVolToImg = visitTimer->StartTimer();
 
         double meshMin[3], meshMax[3];
         double currentPartitionExtents[6]; //minX,minY,minZ, maxX,maxY,maxZ
@@ -535,7 +534,6 @@ avtRayTracer::Execute(void)
         debug5 << "| db : " << db << "  mesh:  " << mesh << "   varname: " << varName << std::endl;
         debug5 << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
         //std::cout << PAR_Rank() << " ~ | logicalBounds : " << logicalBounds[0] << ", " << logicalBounds[1] << ", " << logicalBounds[2] << std::endl;
-        
 
         //
         // Get partitions extents

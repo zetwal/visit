@@ -146,7 +146,6 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     fullyInside = false;
     lightPosition[0] = lightPosition[1] = lightPosition[2] = 0.0;   lightPosition[3] = 1.0;
     materialProperties[0] = 0.4; materialProperties[1] = 0.75; materialProperties[3] = 0.0; materialProperties[3] = 15.0;
-    gradient[0] = gradient[1] = gradient[2] = 0;
 
     proc = patch = 0;
     patchDrawn = 0;
@@ -1998,6 +1997,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h, double 
                         
                         if (rayCastingSLIVR){
                             double source_rgb[4];
+                            float gradient[3];
                             int retVal = transferFn1D->QueryTF(scalarValue,source_rgb);
 
                             if ( ((retVal == 0)||(source_rgb[3]==0)) || (source_rgb[0]==0 && source_rgb[1]==0 && source_rgb[2]==0) ){
@@ -2140,7 +2140,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h, double 
                                     normalize(gradient);
                                 }
 
-                                computePixelColor(source_rgb, dest_rgb);
+                                computePixelColor(source_rgb, dest_rgb, gradient);
                                 if (dest_rgb[3] >= 1.0)
                                     alphaLimitReached = true;
                             }
@@ -2171,6 +2171,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h, double 
 
                         if (rayCastingSLIVR){
                             double source_rgb[4];
+                            float gradient[3];
                             int retVal = transferFn1D->QueryTF(scalarValue,source_rgb);
                             if ( ((retVal == 0)||(source_rgb[3]==0)) || (source_rgb[0]==0 && source_rgb[1]==0 && source_rgb[2]==0) ){
                                 // no need to do anything more if there will be no color
@@ -2306,7 +2307,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h, double 
                                 //
                                 // Compute the color
                                 //
-                                computePixelColor(source_rgb, dest_rgb);
+                                computePixelColor(source_rgb, dest_rgb, gradient);
                                 if (dest_rgb[3] >= 1.0)
                                     alphaLimitReached = true;
                             }
@@ -2459,7 +2460,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h, double 
 // ****************************************************************************
 
 void
-avtMassVoxelExtractor::computePixelColor(double source_rgb[4], double dest_rgb[4]){
+avtMassVoxelExtractor::computePixelColor(double source_rgb[4], double dest_rgb[4], float gradient[3]){
     // Phong Shading
     if (lighting == true){
         float dir[3];           // The view "right" vector.

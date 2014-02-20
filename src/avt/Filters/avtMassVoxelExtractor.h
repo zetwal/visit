@@ -189,7 +189,6 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     float            lightDirection[3];
     double           materialProperties[4];
     avtOpacityMap    *transferFn1D;
-    float            gradient[3];
 
     double           view_direction[3];
     double           view_up[3];
@@ -248,7 +247,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     bool             FindSegmentIntersections(const double *, const double *, 
                                               int &, int &);
 
-    void             computePixelColor(double source_rgb[4], double dest_rgb[4]);
+    void             computePixelColor(double source_rgb[4], double dest_rgb[4], float gradient[3]);
     double           trilinearInterpolate(double vals[8], float distRight, float distTop, float distBack);
     void             computeIndices(int dims[3], int indices[6], int returnIndices[8]);
     void             computeIndicesVert(int dims[3], int indices[6], int returnIndices[8]);
