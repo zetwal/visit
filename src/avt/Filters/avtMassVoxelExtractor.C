@@ -161,6 +161,7 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     numThreads = 0;
     threadHandles = NULL;
     threadArgument = NULL;
+    allPatchesProcessed = false;
 }
 
 
@@ -3134,29 +3135,63 @@ void avtMassVoxelExtractor::initThreads(){
     threadHandles = new pthread_t[numThreads];
     threadArgument = new threadArgument[numThreads];
 
+    pthread_mutex_init(&mutexPatchAvailable, NULL);
+    pthread_cond_init(&condPatchAvailable, NULL);
+
     for (int i=0; i<numThreads; i++){
         threadArgument[i].pThis = this;
         threadArgument[i].id = i;
 
-        if ( pthread_create(&threadHandles[i], NULL, runThread, (void *)&threadArgument[i]) )
+        if ( pthread_create(&threadHandles[i], NULL, setupThread, (void *)&threadArgument[i]) )
             std::cout << "Could NOT create thread " << i << " !"<<std::endl;
     }
 }
 
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::closeThreads
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 void * avtMassVoxelExtractor::setupThread(void *arg){
-    threadArg *temp = (threadArg *)arg;
-    (temp->pThis)->sampleImage(temp->arg0,temp->arg1,temp->arg2,temp->arg3,temp->arg4);
-}
-
-
-void * avtMassVoxelExtractor::runThread(void *arg){
     threadArguments *temp = (threadArguments *)arg;
 
     (temp->thisPtr)->doWork(temp->id);
 }
 
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::closeThreads
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 void avtMassVoxelExtractor::doWork(int id){
 
+    if (allPatchesProcessed == true)
+        return;
+
+    for (int i = x_Min ; i < x_Max ; i++)
+        for (int j = y_Min ; j < y_Max ; j++)
+        {
+            double origin[4];                               // starting point where we start sampling
+            double terminus[4];                             // ending point where we stop sampling
+            GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
+            SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
+        }
 }
 
 
@@ -3185,6 +3220,9 @@ void avtMassVoxelExtractor::closeThreads(){
     if (threadHandles != NULL)
         delete []threadHandles;
     threadHandles = NULL;
+
+    pthread_cond_destroy(&mutexPatchAvailable);
+    pthread_mutex_destroy(&mutexPatchAvailable);
 
     pthread_exit(NULL);
 }

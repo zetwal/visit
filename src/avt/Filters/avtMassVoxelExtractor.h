@@ -149,6 +149,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
 
     // Threads
     void             setNumThreads(int _numThreads){numThreads = _numThreads;}
+    void             setAllPatchesProcessed(bool _allPatchesProcessed){ allPatchesProcessed = _allPatchesProcessed;}
     void             initThreads();
     void             closeThreads();
     void             clearTaskList(){ taskList.clear(); }
@@ -230,8 +231,11 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     pthread_t *threadHandles;
     threadArg *threadArgument;
 
+    bool allPatchesProcessed;
+
     std::list <task> taskList;
-    //pthread_mutex_t mutexPatchDrawn;
+    pthread_mutex_t mutexPatchAvailable;
+    pthread_cond_t condPatchAvailable;
 
 
     int              fullImgWidth, fullImgHeight;
