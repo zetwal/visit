@@ -1899,7 +1899,7 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                 waitTiming = visitTimer->StartTimer();
 
                 int destProc = compositeFrom[myIndex+( (localSkipProcs-1)-(myIndex%skipProcs) )];
-                int dataToSend[6];                          //0: -1 = no data,1=data| 1: length | 2:width | 3:compressed size
+                int dataToSend[6];                       //0: -1 = no data,1=data| 1: length | 2:width | 3:compressed size
 
                 debug5 << my_id << " ~ Sending - index: " << myIndex << "    destProc: " << destProc << std::endl;
 
@@ -1907,13 +1907,10 @@ void avtImgCommunicator::doNodeCompositing(std::vector<int> compositeFrom, int &
                     dataToSend[0]=-1;
 
                     // MPI 1: Send metadata
-                    //MPI_Ssend(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD);
-
                     // asynchronous send when there is nothing to send
                     MPI_Request myRequest;
                     MPI_Isend(dataToSend, 6, MPI_INT, destProc, tags[0], MPI_COMM_WORLD,&myRequest);
-                    //MPI_Status myStatus;
-                    //MPI_Wait(&myRequest, &myStatus);
+
 
                     visitTimer->StopTimer(waitTiming, "Wait timing sending nothing ");
                     visitTimer->DumpTimings();

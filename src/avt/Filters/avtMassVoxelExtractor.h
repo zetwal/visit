@@ -57,6 +57,7 @@ class     vtkMatrix4x4;
 #include <stdlib.h>
 #include <stdio.h>
 #include <algorithm>    // std::max
+#include <list>
 
 #include <pthread.h>
 
@@ -102,6 +103,11 @@ class     vtkMatrix4x4;
 // ****************************************************************************
 
 
+struct task{
+    int xMin, xMax;
+    int yMin, yMax;
+};
+
 
 class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
 {
@@ -142,8 +148,10 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     float            screen_to_WorldDistance(int x1, int y1, int x2, int y2);
 
     // Threads
-    void             initThreads(int _numThreads);
+    void             setNumThreads(int _numThreads){numThreads = _numThreads;}
+    void             initThreads();
     void             closeThreads();
+    void             clearTaskList(){ taskList.clear(); }
 
 
   protected:
@@ -218,7 +226,11 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     // threads
     bool enableThreads;
     int numThreads;
+
     pthread_t *threadHandles;
+    threadArg *threadArgument;
+
+    std::list <task> taskList;
     //pthread_mutex_t mutexPatchDrawn;
 
 
@@ -256,7 +268,10 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     // Threads
     
     static void *    runThread(void *arg);
+    static void *    setupThread(void *arg);
     void             sampleImage(int threadId, int x_Min, int x_Max, int y_Min, int y_Max);
+    void             doWork(int id);
+
 };
 
 
@@ -267,6 +282,11 @@ struct threadArguments{
     int arg2;
     int arg3;
     int arg4;
+};
+
+struct threadArg{
+    int id;
+    avtMassVoxelExtractor * pThis;
 };
 
 #endif

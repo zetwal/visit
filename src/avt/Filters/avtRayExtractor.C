@@ -315,22 +315,16 @@ avtRayExtractor::Execute(void)
 
     SetUpExtractors();
 
-    if (rayCastingSLIVR == true){
-        massVoxelExtractor->SetLighting(lighting);
-        massVoxelExtractor->SetLightDirection(lightDirection);
-        massVoxelExtractor->SetMatProperties(materialProperties);
-        massVoxelExtractor->SetModelViewMatrix(modelViewMatrix);
-        massVoxelExtractor->SetTransferFn(transferFn1D);
-        massVoxelExtractor->SetViewDirection(view_direction);
-        massVoxelExtractor->SetViewUp(view_up);
-        massVoxelExtractor->SetMeshDims(meshMin,meshMax);
-    }
-
     avtDataTree_p tree = GetInputDataTree();
     totalNodes = tree->GetNumberOfLeaves();
     currentNode = 0;
     partitionExtentsComputationDone = false;
     ExecuteTree(tree);
+
+    if (rayCastingSLIVR){
+        massVoxelExtractor->closeThreads();
+        massVoxelExtractor->clearTaskList();
+    }
 
     visitTimer->StopTimer(timingsIndex, "Ray point extraction");
     visitTimer->DumpTimings();
@@ -390,6 +384,23 @@ avtRayExtractor::SetUpExtractors(void)
     massVoxelExtractor->SetTrilinear(trilinearInterpolation);
     massVoxelExtractor->SetRayCastingSLIVR(rayCastingSLIVR);
     massVoxelExtractor->SetJittering(jitter);
+
+    if (rayCastingSLIVR == true){
+        massVoxelExtractor->SetLighting(lighting);
+        massVoxelExtractor->SetLightDirection(lightDirection);
+        massVoxelExtractor->SetMatProperties(materialProperties);
+        massVoxelExtractor->SetModelViewMatrix(modelViewMatrix);
+        massVoxelExtractor->SetTransferFn(transferFn1D);
+        massVoxelExtractor->SetViewDirection(view_direction);
+        massVoxelExtractor->SetViewUp(view_up);
+        massVoxelExtractor->SetMeshDims(meshMin,meshMax);
+
+        if (avtCallback::UseNumThreads() > 0){
+            massVoxelExtractor->setNumThreads(avtCallback::UseNumThreads());
+            massVoxelExtractor->initThreads();
+            debug5 << "Num threads: " << avtCallback::UseNumThreads() << std::endl;
+        }
+    }
 
     if (shouldDoTiling)
         massVoxelExtractor->Restrict(width_min, width_max-1, height_min, height_max-1);
@@ -812,8 +823,6 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
            rectilinearGridsAreInWorldSpace, viewInfo, aspect, xform);
 
        
-
-
         std::vector<std::string> varnames;
         std::vector<int>         varsizes;
         varnames.push_back(varName);
@@ -834,10 +843,11 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
             return;
             
         if (avtCallback::UseNumThreads() > 0){
-            massVoxelExtractor->initThreads(avtCallback::UseNumThreads());
+            massVoxelExtractor->setNumThreads(avtCallback::UseNumThreads());
+            massVoxelExtractor->initThreads();
             debug5 << "Num threads: " << avtCallback::UseNumThreads() << std::endl;
         }
-        
+         
         if (partitionExtentsComputationDone == false){
             int minPos[2], maxPos[2];
             float minDepth, maxDepth;

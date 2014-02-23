@@ -160,6 +160,7 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     enableThreads = false;
     numThreads = 0;
     threadHandles = NULL;
+    threadArgument = NULL;
 }
 
 
@@ -317,6 +318,178 @@ ConvertToDouble(int vartype, int index, int s, int m, void *array)
 
 
 // ****************************************************************************
+//  Function: FindMatch
+//
+//  Purpose:
+//      Traverses an ordered array in logarithmic time.
+//
+//  Programmer: Hank Childs
+//  Creation:   November 22, 2004
+//
+//  Modifications:
+//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
+//    Use double instead of float.
+//
+// ****************************************************************************
+
+static inline int FindMatch(const double *A, const double &a, const int &nA)
+{
+    if ((a < A[0]) || (a > A[nA-1]))
+        return -1;
+
+    int low = 0;
+    int hi  = nA-1;
+    while ((hi - low) > 1)
+    {
+        int guess = (hi+low)/2;
+        if (A[guess] == a)
+            return guess;
+        if (a < A[guess])
+            hi = guess;
+        else
+            low = guess;
+    }
+
+
+    return low;
+}
+
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::RegisterGrid
+//
+//  Purpose:
+//      Registers a rectilinear grid.  This is called in combination with
+//      SampleAlongSegment, which assumes that data members in this class have
+//      been set up.
+//
+//  Programmer: Hank Childs
+//  Creation:   November 20, 2004
+//
+//  Modifications:
+//
+//    Hank Childs, Fri Jun  1 15:37:33 PDT 2007
+//    Add support for non-scalars.
+//
+//    Hank Childs, Wed Aug 27 11:06:27 PDT 2008
+//    Add support for non-floats.
+//
+//    Hank Childs, Thu Aug 28 10:52:32 PDT 2008
+//    Make sure we only sample the variables that were requested.
+//
+//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
+//    Use double instead of float.
+//
+// ****************************************************************************
+
+void
+avtMassVoxelExtractor::RegisterGrid(vtkRectilinearGrid *rgrid,
+                                    std::vector<std::string> &varorder,
+                                    std::vector<int> &varsize)
+{
+    int  i, j, k;
+
+    rgrid->GetDimensions(dims);
+    if (X != NULL)
+        delete [] X;
+    if (Y != NULL)
+        delete [] Y;
+    if (Z != NULL)
+        delete [] Z;
+
+    // dims is the size of each of the small 3D patches e.g. 52x16x16 (or grid)
+    // X, Y & Z store the "real" coordinates each point in the grid (the above grid) e.g. 0.61075, 0.19536, 0.01936 for 0,0,0
+    X = new double[dims[0]];
+    for (i = 0 ; i < dims[0] ; i++)
+        X[i] = rgrid->GetXCoordinates()->GetTuple1(i);
+    Y = new double[dims[1]];
+    for (i = 0 ; i < dims[1] ; i++)
+        Y[i] = rgrid->GetYCoordinates()->GetTuple1(i);
+    Z = new double[dims[2]];
+    for (i = 0 ; i < dims[2] ; i++)
+        Z[i] = rgrid->GetZCoordinates()->GetTuple1(i);
+
+    vtkDataArray *arr = rgrid->GetCellData()->GetArray("avtGhostZones");
+    if (arr != NULL)
+        ghosts = (unsigned char *) arr->GetVoidPointer(0);  // here
+    else
+        ghosts = NULL;
+
+    ncell_arrays = 0;
+    for (i = 0 ; i < rgrid->GetCellData()->GetNumberOfArrays() ; i++)
+    {
+        vtkDataArray *arr = rgrid->GetCellData()->GetArray(i);
+        const char *name = arr->GetName();
+        int idx = -1;
+        for (j = 0 ; j < varorder.size() ; j++)
+        {
+            if (varorder[j] == name)
+            {
+                idx = 0;
+                for (k = 0 ; k < j ; k++)
+                    idx += varsize[k];
+                break;
+            }
+        }
+        if (idx < 0)
+            continue;
+        cell_index[ncell_arrays] = idx;
+        cell_vartypes[ncell_arrays] = arr->GetDataType();
+        cell_size[ncell_arrays] = arr->GetNumberOfComponents();
+        cell_arrays[ncell_arrays++] = arr->GetVoidPointer(0);
+    }
+
+    npt_arrays = 0;
+    for (i = 0 ; i < rgrid->GetPointData()->GetNumberOfArrays() ; i++)
+    {
+        vtkDataArray *arr = rgrid->GetPointData()->GetArray(i);
+        const char *name = arr->GetName();
+        int idx = -1;
+        for (j = 0 ; j < varorder.size() ; j++)
+        {
+            if (varorder[j] == name)
+            {
+                idx = 0;
+                for (k = 0 ; k < j ; k++)
+                    idx += varsize[k];
+                break;
+            }
+        }
+        if (idx < 0)
+            continue;
+        pt_index[npt_arrays] = idx;
+        pt_vartypes[npt_arrays] = arr->GetDataType();
+        pt_size[npt_arrays] = arr->GetNumberOfComponents();
+        pt_arrays[npt_arrays++] = arr->GetVoidPointer(0);
+    }
+
+    if (divisors_X != NULL)
+        delete [] divisors_X;
+    if (divisors_Y != NULL)
+        delete [] divisors_Y;
+    if (divisors_Z != NULL)
+        delete [] divisors_Z;
+
+    //
+    // We end up dividing by the term A[i+1]/A[i] a whole bunch.  So store
+    // out its inverse so that we can do cheap multiplication.  This gives us
+    // a 5% performance boost.
+    //
+    divisors_X = new double[dims[0]-1];
+    for (i = 0 ; i < dims[0] - 1 ; i++)
+        divisors_X[i] = (X[i+1] == X[i] ? 1. : 1./(X[i+1]-X[i]));
+    divisors_Y = new double[dims[1]-1];
+    for (i = 0 ; i < dims[1] - 1 ; i++)
+        divisors_Y[i] = (Y[i+1] == Y[i] ? 1. : 1./(Y[i+1]-Y[i]));
+    divisors_Z = new double[dims[2]-1];
+    for (i = 0 ; i < dims[2] - 1 ; i++)
+        divisors_Z[i] = (Z[i+1] == Z[i] ? 1. : 1./(Z[i+1]-Z[i]));
+}
+
+
+
+// ****************************************************************************
 //  Method: avtMassVoxelExtractor::Extract
 //
 //  Purpose:
@@ -348,100 +521,6 @@ avtMassVoxelExtractor::Extract(vtkRectilinearGrid *rgrid,
         ExtractImageSpaceGrid(rgrid, varnames, varsizes);
 }
 
-
-// ****************************************************************************
-//  Method: avtMassVoxelExtractor::SetGridsAreInWorldSpace
-//
-//  Purpose:
-//      Tells the MVE whether or not it is extracting a world space or image
-//      space grid.
-//
-//  Programmer: Hank Childs
-//  Creation:   November 20, 2004
-//
-//  Modifications:
-//    Jeremy Meredith, Thu Feb 15 13:11:34 EST 2007
-//    Added an ability to extract voxels using the world-space version
-//    even when they're really in image space.
-//
-//    Hank Childs, Wed Dec 24 11:22:43 PST 2008
-//    No longer calculate deprecated data member ProportionSpaceToZBufferSpace.
-//
-//    Hank Childs, Fri Nov 18 08:32:45 PST 2011
-//    Fix ray cast of rectilinear with panning.
-//
-// ****************************************************************************
-
-void
-avtMassVoxelExtractor::SetGridsAreInWorldSpace(bool val, const avtViewInfo &v,
-                                               double asp, const double *xform)
-{
-    gridsAreInWorldSpace = val;
-
-    if (!gridsAreInWorldSpace)
-    {
-        if (xform)
-        {
-            // We're essentially doing resampling, but we cannot
-            // use the faster version because there is another
-            // transform to take into consideration.  In this case,
-            // just revert to the world space algorithm and
-            // fake the necessary parameters.
-            pretendGridsAreInWorldSpace = true;
-        }
-        else
-        {
-            // We can use the faster version that doesn't depend on the
-            // rest of the parameters set in this function, so return;
-            return;
-        }
-    }
-
-    view = v;
-    aspect = asp;
-
-    if (pretendGridsAreInWorldSpace)
-    {
-        view = avtViewInfo();
-        view.setScale = true;
-        view.parallelScale = 1;
-        view.nearPlane = 1;
-        view.farPlane = 2;
-
-        aspect = 1.0;
-    }
-
-    //
-    // Set up a VTK camera.  This will allow us to get the direction of
-    // each ray and also the origin of each ray (this is simply the
-    // position of the camera for perspective projection).
-    //
-    vtkCamera *cam = vtkCamera::New();
-    // We have *= -1.0 throughout the code.  Here is "yet another".
-    view.imagePan[0] *= -1.0;
-    view.imagePan[1] *= -1.0;
-    view.SetCameraFromView(cam);
-    cam->GetClippingRange(cur_clip_range);
-    vtkMatrix4x4 *mat = cam->GetCompositeProjectionTransformMatrix(aspect,
-                                         cur_clip_range[0], cur_clip_range[1]);
-
-    if (xform)
-    {
-        vtkMatrix4x4 *rectTrans = vtkMatrix4x4::New();
-        rectTrans->DeepCopy(xform);
-        vtkMatrix4x4::Multiply4x4(mat, rectTrans, view_to_world_transform);
-        world_to_view_transform->DeepCopy(view_to_world_transform);
-        view_to_world_transform->Invert();
-        rectTrans->Delete();
-    }
-    else
-    {
-        // being executed for now for raycasting slivr
-        vtkMatrix4x4::Invert(mat, view_to_world_transform);
-        world_to_view_transform->DeepCopy(mat);
-    }
-    cam->Delete();
-}
 
 
 // ****************************************************************************
@@ -552,70 +631,6 @@ avtMassVoxelExtractor::ExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     }
 }
 
-
-// ****************************************************************************
-//  Method: avtMassVoxelExtractor::world_to_screen
-//
-//  Purpose:
-//          http://www.songho.ca/opengl/gl_transform.html
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-
-void 
-avtMassVoxelExtractor::world_to_screen(double _world[4], int imgWidth, int imgHeight, int screenPos[2], float &depth)
-{
-    double _view[4] = {0,0,0,0};
-
-    // from world to view
-    world_to_view_transform->MultiplyPoint(_world, _view);
-
-    // perspective divide -> normalized screen space: -1,-1,-1 to 1,1,1
-    if (_view[3] != 0.){
-        _view[0] /= _view[3];
-        _view[1] /= _view[3];
-        _view[2] /= _view[3];
-    }
-
-    // viewport transform: screen coordinates
-    screenPos[0] = int(_view[0]*(imgWidth/2.)  + (imgWidth /2.) + 0.5);     // 0.5 added so that proper rounding is done
-    screenPos[1] = int(_view[1]*(imgHeight/2.) + (imgHeight/2.) + 0.5);
-
-    depth = _view[2];
-}
-
-
-float 
-avtMassVoxelExtractor::screen_to_WorldDistance(int x1, int y1, int x2, int y2){
-    double origin1[4], origin2[4];
-    double view[4];
-    int w = x1;
-    int h = y1;
-
-    view[0] = (w - width/2.)/(width/2.);
-    if (pretendGridsAreInWorldSpace)
-        view[0] *= -1;
-    view[1] = (h - height/2.)/(height/2.);
-    view[2] = cur_clip_range[0];
-    view[3] = 1.;
-    view_to_world_transform->MultiplyPoint(view, origin1);
-
-    w = x2;
-    h = y2;
-    view[0] = (w - width/2.)/(width/2.);
-    if (pretendGridsAreInWorldSpace)
-        view[0] *= -1;
-    view[1] = (h - height/2.)/(height/2.);
-    view[2] = cur_clip_range[0];
-    view[3] = 1.;
-    view_to_world_transform->MultiplyPoint(view, origin2);
-
-    return fabs(origin1[0]-origin2[0]);
-}
 
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor::simpleExtractWorldSpaceGrid
@@ -907,6 +922,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     debug5 << "distance between points: " <<  screen_to_WorldDistance(xMin, yMin, xMin+1,yMin) << std::endl;
     
 
+    task tempTask;
     if (enableThreads){
         int sizePartition = (xMax - xMin)/numThreads;
         threadArguments *threadArgs = NULL;
@@ -927,6 +943,12 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
             if ( pthread_create(&threadHandles[i], NULL, runThread, (void *)&threadArgs[i]) )
                 std::cout << "Could NOT create thread " << i << std::endl;
+
+
+            tempTask.xMin = xMin + sizePartition*i;   
+            tempTask.xMax = tempTask.xMin + sizePartition;
+            tempTask.yMin = yMin;   tempTask.yMax = yMax;
+            taskList.push_back(tempTask);
         }
 
         for (int i=0; i<numThreads; i++)
@@ -936,7 +958,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
             delete []threadArgs;
         threadArgs = NULL;
 
-        closeThreads();
+        //closeThreads();
 
     }else{
         for (int i = xMin ; i < xMax ; i++)
@@ -956,6 +978,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         imgArray = NULL;
     }
 }
+
 
 
 // ****************************************************************************
@@ -994,7 +1017,7 @@ void * avtMassVoxelExtractor::runThread(void *arg){
 // ****************************************************************************
 void avtMassVoxelExtractor::sampleImage(int threadId, int x_Min, int x_Max, int y_Min, int y_Max){
     debug5 << "Running with threads " << threadId << " of " << avtCallback::UseNumThreads() <<
-            "Min/max: " << x_Min << ", " << x_Max << "  " << y_Min << ", " << y_Max << std::endl;
+              "Min/max: " << x_Min << ", " << x_Max << "  " << y_Min << ", " << y_Max << std::endl;
 
     for (int i = x_Min ; i < x_Max ; i++)
         for (int j = y_Min ; j < y_Max ; j++)
@@ -1005,191 +1028,6 @@ void avtMassVoxelExtractor::sampleImage(int threadId, int x_Min, int x_Max, int 
             SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
         }
 }
-
-
-
-// ****************************************************************************
-//  Method: avtMassVoxelExtractor::getImageDimensions
-//
-//  Purpose:
-//      transfers the metadata of the patch
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-void
-avtMassVoxelExtractor::getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, bool &_fullyInside)
-{
-    inUse = patchDrawn;
-
-    dims[0] = imgDims[0];    dims[1] = imgDims[1];
-
-    screen_ll[0] = imgLowerLeft[0];     screen_ll[1] = imgLowerLeft[1];
-    screen_ur[0] = imgUpperRight[0];    screen_ur[1] = imgUpperRight[1];
-
-    avg_z = imgDepth;
-    _fullyInside = fullyInside;
-}
-
-
-// ****************************************************************************
-//  Method: avtMassVoxelExtractor::getComputedImage
-//
-//  Purpose:
-//      allocates space to the pointer address and copy the image generated to it
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-
-void
-avtMassVoxelExtractor::getComputedImage(float *image)
-{
-    memcpy(image,imgArray, imgDims[0]*4*imgDims[1]*sizeof(float));
-   
-    if (imgArray != NULL)
-        delete []imgArray;
-    imgArray = NULL;
-}
-
-
-// ****************************************************************************
-//  Method: avtMassVoxelExtractor::RegisterGrid
-//
-//  Purpose:
-//      Registers a rectilinear grid.  This is called in combination with
-//      SampleAlongSegment, which assumes that data members in this class have
-//      been set up.
-//
-//  Programmer: Hank Childs
-//  Creation:   November 20, 2004
-//
-//  Modifications:
-//
-//    Hank Childs, Fri Jun  1 15:37:33 PDT 2007
-//    Add support for non-scalars.
-//
-//    Hank Childs, Wed Aug 27 11:06:27 PDT 2008
-//    Add support for non-floats.
-//
-//    Hank Childs, Thu Aug 28 10:52:32 PDT 2008
-//    Make sure we only sample the variables that were requested.
-//
-//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
-//    Use double instead of float.
-//
-// ****************************************************************************
-
-void
-avtMassVoxelExtractor::RegisterGrid(vtkRectilinearGrid *rgrid,
-                                    std::vector<std::string> &varorder,
-                                    std::vector<int> &varsize)
-{
-    int  i, j, k;
-
-    rgrid->GetDimensions(dims);
-    if (X != NULL)
-        delete [] X;
-    if (Y != NULL)
-        delete [] Y;
-    if (Z != NULL)
-        delete [] Z;
-
-    // dims is the size of each of the small 3D patches e.g. 52x16x16 (or grid)
-    // X, Y & Z store the "real" coordinates each point in the grid (the above grid) e.g. 0.61075, 0.19536, 0.01936 for 0,0,0
-    X = new double[dims[0]];
-    for (i = 0 ; i < dims[0] ; i++)
-        X[i] = rgrid->GetXCoordinates()->GetTuple1(i);
-    Y = new double[dims[1]];
-    for (i = 0 ; i < dims[1] ; i++)
-        Y[i] = rgrid->GetYCoordinates()->GetTuple1(i);
-    Z = new double[dims[2]];
-    for (i = 0 ; i < dims[2] ; i++)
-        Z[i] = rgrid->GetZCoordinates()->GetTuple1(i);
-
-    vtkDataArray *arr = rgrid->GetCellData()->GetArray("avtGhostZones");
-    if (arr != NULL)
-        ghosts = (unsigned char *) arr->GetVoidPointer(0);  // here
-    else
-        ghosts = NULL;
-
-    ncell_arrays = 0;
-    for (i = 0 ; i < rgrid->GetCellData()->GetNumberOfArrays() ; i++)
-    {
-        vtkDataArray *arr = rgrid->GetCellData()->GetArray(i);
-        const char *name = arr->GetName();
-        int idx = -1;
-        for (j = 0 ; j < varorder.size() ; j++)
-        {
-            if (varorder[j] == name)
-            {
-                idx = 0;
-                for (k = 0 ; k < j ; k++)
-                    idx += varsize[k];
-                break;
-            }
-        }
-        if (idx < 0)
-            continue;
-        cell_index[ncell_arrays] = idx;
-        cell_vartypes[ncell_arrays] = arr->GetDataType();
-        cell_size[ncell_arrays] = arr->GetNumberOfComponents();
-        cell_arrays[ncell_arrays++] = arr->GetVoidPointer(0);
-    }
-
-    npt_arrays = 0;
-    for (i = 0 ; i < rgrid->GetPointData()->GetNumberOfArrays() ; i++)
-    {
-        vtkDataArray *arr = rgrid->GetPointData()->GetArray(i);
-        const char *name = arr->GetName();
-        int idx = -1;
-        for (j = 0 ; j < varorder.size() ; j++)
-        {
-            if (varorder[j] == name)
-            {
-                idx = 0;
-                for (k = 0 ; k < j ; k++)
-                    idx += varsize[k];
-                break;
-            }
-        }
-        if (idx < 0)
-            continue;
-        pt_index[npt_arrays] = idx;
-        pt_vartypes[npt_arrays] = arr->GetDataType();
-        pt_size[npt_arrays] = arr->GetNumberOfComponents();
-        pt_arrays[npt_arrays++] = arr->GetVoidPointer(0);
-    }
-
-    if (divisors_X != NULL)
-        delete [] divisors_X;
-    if (divisors_Y != NULL)
-        delete [] divisors_Y;
-    if (divisors_Z != NULL)
-        delete [] divisors_Z;
-
-    //
-    // We end up dividing by the term A[i+1]/A[i] a whole bunch.  So store
-    // out its inverse so that we can do cheap multiplication.  This gives us
-    // a 5% performance boost.
-    //
-    divisors_X = new double[dims[0]-1];
-    for (i = 0 ; i < dims[0] - 1 ; i++)
-        divisors_X[i] = (X[i+1] == X[i] ? 1. : 1./(X[i+1]-X[i]));
-    divisors_Y = new double[dims[1]-1];
-    for (i = 0 ; i < dims[1] - 1 ; i++)
-        divisors_Y[i] = (Y[i+1] == Y[i] ? 1. : 1./(Y[i+1]-Y[i]));
-    divisors_Z = new double[dims[2]-1];
-    for (i = 0 ; i < dims[2] - 1 ; i++)
-        divisors_Z[i] = (Z[i+1] == Z[i] ? 1. : 1./(Z[i+1]-Z[i]));
-}
-
 
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor::GetSegment
@@ -1244,11 +1082,6 @@ avtMassVoxelExtractor::GetSegment(int w, int h, double *origin, double *terminus
     
     //debug5 << "View: " << view[0] << ", " << view[1] << ", " << view[2] << ", " << view[3] << std::endl;
     //debug5 << "cur_clip_range: " << cur_clip_range[0] << ", " << cur_clip_range[1] << std::endl;
-
-    // std::cout << "w, h: " << w << ", " << h 
-    //  << "    View: " << view[0] << ", " << view[1] << ", " << view[2] << ", " << view[3] 
-    //  << "  cur_clip_range: " << cur_clip_range[0] << ", " << cur_clip_range[1] << std::endl;
-
     
     if (origin[3] != 0.)
     {
@@ -1271,10 +1104,6 @@ avtMassVoxelExtractor::GetSegment(int w, int h, double *origin, double *terminus
         terminus[2] /= terminus[3];
     }
 
-    // std::cout << "Origin: " << origin[0] << ", " << origin[1] << ", " << origin[2] << ", " << origin[3] 
-    //           << "     terminus: " << terminus[0] << ", " << terminus[1] << ", " << terminus[2] << ", " << terminus[3] << std::endl;
-
-
     if (jitter)
     {
         int reliable_random_number = (13*w*h + 14*w*w + 79*h*h + 247*w + 779*h)%513;
@@ -1294,490 +1123,220 @@ avtMassVoxelExtractor::GetSegment(int w, int h, double *origin, double *terminus
 
 
 // ****************************************************************************
-//  Method: avtMassVoxelExtractor::FrustumIntersectsGrid
+//  Method: avtMassVoxelExtractor::SampleAlongSegment
 //
 //  Purpose:
-//      Determines if a frustum intersects the grid.
+//      Samples the grid along a line segment.
 //
 //  Programmer: Hank Childs
-//  Creation:   November 21, 2004
+//  Creation:   November 20, 2004
 //
 //  Modifications:
-//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
-//    Use double instead of float.
 //
-// ****************************************************************************
-
-bool
-avtMassVoxelExtractor::FrustumIntersectsGrid(int w_min, int w_max, int h_min,
-                                             int h_max) const
-{
-    //
-    // Start off by getting the segments corresponding to the bottom left (bl),
-    // upper left (ul), bottom right (br), and upper right (ur) rays.
-    //
-    double bl_start[4];
-    double bl_end[4];
-    GetSegment(w_min, h_min, bl_start, bl_end);
-
-    double ul_start[4];
-    double ul_end[4];
-    GetSegment(w_min, h_max, ul_start, ul_end);
-
-    double br_start[4];
-    double br_end[4];
-    GetSegment(w_max, h_min, br_start, br_end);
-
-    double ur_start[4];
-    double ur_end[4];
-    GetSegment(w_max, h_max, ur_start, ur_end);
-
-    //
-    // Now use those segments to construct bounding planes.  If the grid is
-    // not on the plus side of the bounding planes, then none of the frustum
-    // will intersect the grid.
-    //
-    // Note: the plus side of the plane is dependent on the order that these
-    // points are sent into the routine "FindPlaneNormal".  There are some
-    // subtleties with putting the arguments in the right order.
-    //
-    double normal[3];
-    FindPlaneNormal(bl_start, bl_end, ul_start, normal);
-    if (!GridOnPlusSideOfPlane(bl_start, normal))
-        return false;
-    FindPlaneNormal(bl_start, br_start, br_end, normal);
-    if (!GridOnPlusSideOfPlane(bl_start, normal))
-        return false;
-    FindPlaneNormal(ur_start, ul_start, ur_end, normal);
-    if (!GridOnPlusSideOfPlane(ur_start, normal))
-        return false;
-    FindPlaneNormal(ur_start, ur_end, br_start, normal);
-    if (!GridOnPlusSideOfPlane(ur_start, normal))
-        return false;
-
-    return true;
-}
-
-
-// ****************************************************************************
-//  Method: avtMassVoxelExtractor::FindPlaneNormal
+//    Hank Childs, Tue Jan  3 17:26:11 PST 2006
+//    Fix bug that ultimately led to UMR where sampling occurred along 
+//    invalid values.
 //
-//  Purpose:
-//      Finds the normal to a plane using three points.
+//    Hank Childs, Wed Dec 24 11:22:43 PST 2008
+//    No longer use the ProportionSpaceToZBufferSpace data member, as we now 
+//    do our sampling in even intervals (wbuffer).
 //
-//  Programmer: Hank Childs
-//  Creation:   November 21, 2004
-//
-//  Modifications:
 //    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
 //    Use double instead of float.
 //
 // ****************************************************************************
 
 void
-avtMassVoxelExtractor::FindPlaneNormal(const double *pt1, const double *pt2,
-                                       const double *pt3, double *normal)
+avtMassVoxelExtractor::SampleAlongSegment(const double *origin, 
+                                          const double *terminus, int w, int h)
 {
-    //
-    // Set up vectors P1P2 and P1P3.
-    //
-    double v1[3];
-    double v2[3];
+    int first = 0;
+    int last = 0;
+    bool hasIntersections = FindSegmentIntersections(origin, terminus,
+                                                     first, last);
+    if (!hasIntersections)
+        return;
+    //std::cout <<  proc << " *# hasIntersection #* " <<patch  << std::endl;
 
-    v1[0] = pt2[0] - pt1[0];
-    v1[1] = pt2[1] - pt1[1];
-    v1[2] = pt2[2] - pt1[2];
-    v2[0] = pt3[0] - pt1[0];
-    v2[1] = pt3[1] - pt1[1];
-    v2[2] = pt3[2] - pt1[2];
+    bool foundHit = false;
+    int curX = -1;
+    int curY = -1;
+    int curZ = -1;
+    bool xGoingUp = (terminus[0] > origin[0]);
+    bool yGoingUp = (terminus[1] > origin[1]);
+    bool zGoingUp = (terminus[2] > origin[2]);
 
-    //
-    // The normal is the cross-product of these two vectors.
-    //
-    normal[0] = v1[1]*v2[2] - v1[2]*v2[1];
-    normal[1] = v1[2]*v2[0] - v1[0]*v2[2];
-    normal[2] = v1[0]*v2[1] - v1[1]*v2[0];
-}
+    double x_dist = (terminus[0]-origin[0]);
+    double y_dist = (terminus[1]-origin[1]);
+    double z_dist = (terminus[2]-origin[2]);
 
+    double          *prop_buffer = NULL;
+    int             *ind_buffer = NULL;
+    bool            *valid_sample = NULL;
 
-// ****************************************************************************
-//  Method: avtMassVoxelExtractor::GridOnPlusSideOfPlane
-//
-//  Purpose:
-//      Determines if a grid is on the plus side of a plane.
-//
-//  Programmer: Hank Childs
-//  Creation:   November 21, 2004
-//
-//  Modifications:
-//    Jeremy Meredith, Thu Feb 15 13:11:34 EST 2007
-//    Added an ability to extract voxels using the world-space version
-//    even when they're really in image space.
-//
-//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
-//    Use double instead of float.
-//
-// ****************************************************************************
+    prop_buffer   = new double[3*depth];
+    ind_buffer    = new int[3*depth];
+    valid_sample  = new bool[depth];
 
-bool
-avtMassVoxelExtractor::GridOnPlusSideOfPlane(const double *origin, 
-                                             const double *normal) const
-{
-    double x_min = X[0];
-    double x_max = X[dims[0]-1];
-    double y_min = Y[0];
-    double y_max = Y[dims[1]-1];
-    double z_min = Z[0];
-    double z_max = Z[dims[2]-1];
-
-    for (int i = 0 ; i < 8 ; i++)
+    double pt[3];
+    bool hasSamples = false;
+ 
+    for (int i = first ; i < last ; i++)
     {
-        double pt[3];
-        pt[0] = (i & 1 ? x_max : x_min);
-        pt[1] = (i & 2 ? y_max : y_min);
-        pt[2] = (i & 4 ? z_max : z_min);
+        int *ind = ind_buffer + 3*i;
+        double *dProp = prop_buffer + 3*i;
+        valid_sample[i] = false;
 
-        //
-        // The plane is of the form Ax + By + Cz - D = 0.
-        //
-        // Using the origin, we can calculate D:
-        // D = A*origin[0] + B*origin[1] + C*origin[2]
-        //
-        // We want to know if 'pt' gives:
-        // A*pt[0] + B*pt[1] + C*pt[2] - D >=? 0.
-        //
-        // We can substitute in D to get
-        // A*(pt[0]-origin[0]) + B*(pt[1]-origin[1]) + C*(pt[2-origin[2]) ?>= 0
-        //
-        double val  = normal[0]*(pt[0] - origin[0])
-                   + normal[1]*(pt[1] - origin[1])
-                   + normal[2]*(pt[2] - origin[2]);
+        double proportion = ((double)i)/((double)depth);
+        pt[0] = origin[0] + proportion*x_dist;
+        pt[1] = origin[1] + proportion*y_dist;
+        pt[2] = origin[2] + proportion*z_dist;
 
-        // Note: If we're only pretending that grids are in world space -- i.e.
-        // we're resampling, not raycasting an image -- then flipping across
-        // the x axis also negates the proper normal values here.
-        if (pretendGridsAreInWorldSpace)
-            val *= -1;
+        ind[0] = -1;
+        ind[1] = -1;
+        ind[2] = -1;
 
-        if (val >= 0)
-            return true;
-    }
-
-    return false;
-}
-
-
-// ****************************************************************************
-//  Method: avtMassVoxelExtractor::FindSegmentIntersections
-//
-//  Purpose:
-//      Finds the intersection points of a line segment and a rectilinear grid.
-//  
-//  Programmer: Hank Childs
-//  Creation:   November 21, 2004
-//
-//  Modifications:
-//
-//    Hank Childs, Tue Feb  5 15:44:53 PST 2008
-//    Fix bugs with the origin or the terminus of the segment being inside 
-//    the volume.
-//
-//    Hank Childs, Wed Dec 24 11:21:57 PST 2008
-//    Change the logic for perspective projections to account for w-buffering
-//    (that is, even sampling in space).
-//
-//    Hank Childs, Wed Dec 31 09:08:50 PST 2008
-//    For the case where the segment intersects the volume one time, return
-//    that the entire segment should be examined, as it is probably more
-//    likely that we have floating point error than we have intersected a
-//    corner of the data set.
-//
-//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
-//    Use double instead of float.
-//
-// ****************************************************************************
-
-bool
-avtMassVoxelExtractor::FindSegmentIntersections(const double *origin, 
-                                  const double *terminus, int &start, int &end)
-{
-    double  t, x, y, z;
-
-    int num_hits = 0;
-    double hits[6]; // Should always be 2 or 0.
-
-    double x_min = X[0];
-    double x_max = X[dims[0]-1];
-    double y_min = Y[0];
-    double y_max = Y[dims[1]-1];
-    double z_min = Z[0];
-    double z_max = Z[dims[2]-1];
-
-    if (x_min <= origin[0] && origin[0] <= x_max &&
-        y_min <= origin[1] && origin[1] <= y_max &&
-        z_min <= origin[2] && origin[2] <= z_max)
-    {
-        hits[num_hits++] = 0.0;
-    }
-    if (x_min <= terminus[0] && terminus[0] <= x_max &&
-        y_min <= terminus[1] && terminus[1] <= y_max &&
-        z_min <= terminus[2] && terminus[2] <= z_max)
-    {
-        hits[num_hits++] = 1.0;
-    }
-
-    //
-    // If the terminus and the origin have the same X, then we will find
-    // the intersection at another face.
-    //
-    if (terminus[0] != origin[0])
-    {
-        //
-        // See if we hit the X-min face.
-        //
-        t = (x_min - origin[0]) / (terminus[0] - origin[0]);
-        y = origin[1] + t*(terminus[1] - origin[1]);
-        z = origin[2] + t*(terminus[2] - origin[2]);
-        if (y_min <= y && y <= y_max && z_min <= z && z <= z_max &&
-            t > 0. && t < 1.)
+        if (!foundHit)
         {
-            hits[num_hits++] = t;
+            //
+            // We haven't found any hits previously.  Exhaustively search
+            // through arrays and try to find a hit.
+            //
+            ind[0] = FindMatch(X, pt[0], dims[0]);
+            if (ind[0] >= 0)
+                dProp[0] = (pt[0] - X[ind[0]]) * divisors_X[ind[0]];
+            ind[1] = FindMatch(Y, pt[1], dims[1]);
+            if (ind[1] >= 0)
+                dProp[1] = (pt[1] - Y[ind[1]]) * divisors_Y[ind[1]];
+            ind[2] = FindMatch(Z, pt[2], dims[2]);
+            if (ind[2] >= 0)
+                dProp[2] = (pt[2] - Z[ind[2]]) * divisors_Z[ind[2]];
+        }
+        else
+        {
+            //
+            // We have found a hit before.  Try to locate the next sample 
+            // based on what we already found.
+            //
+            if (xGoingUp)
+            {
+                for ( ; curX < dims[0]-1 ; curX++)
+                {
+                    if (pt[0] >= X[curX] && pt[0] <= X[curX+1])
+                    {
+                        dProp[0] = (pt[0] - X[curX]) * divisors_X[curX];
+                        ind[0] = curX;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for ( ; curX >= 0 ; curX--)
+                {
+                    if (pt[0] >= X[curX] && pt[0] <= X[curX+1])
+                    {
+                        dProp[0] = (pt[0] - X[curX]) * divisors_X[curX];
+                        ind[0] = curX;
+                        break;
+                    }
+                }
+            }
+            if (yGoingUp)
+            {
+                for ( ; curY < dims[1]-1 ; curY++)
+                {
+                    if (pt[1] >= Y[curY] && pt[1] <= Y[curY+1])
+                    {
+                        dProp[1] = (pt[1] - Y[curY]) * divisors_Y[curY];
+                        ind[1] = curY;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for ( ; curY >= 0 ; curY--)
+                {
+                    if (pt[1] >= Y[curY] && pt[1] <= Y[curY+1])
+                    {
+                        dProp[1] = (pt[1] - Y[curY]) * divisors_Y[curY];
+                        ind[1] = curY;
+                        break;
+                    }
+                }
+            }
+            if (zGoingUp)
+            {
+                for ( ; curZ < dims[2]-1 ; curZ++)
+                {
+                    if (pt[2] >= Z[curZ] && pt[2] <= Z[curZ+1])
+                    {
+                        dProp[2] = (pt[2] - Z[curZ]) * divisors_Z[curZ];
+                        ind[2] = curZ;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for ( ; curZ >= 0 ; curZ--)
+                {
+                    if (pt[2] >= Z[curZ] && pt[2] <= Z[curZ+1])
+                    {
+                        dProp[2] = (pt[2] - Z[curZ]) * divisors_Z[curZ];
+                        ind[2] = curZ;
+                        break;
+                    }
+                }
+            }
         }
 
-        //
-        // See if we hit the X-max face.
-        //
-        t = (x_max - origin[0]) / (terminus[0] - origin[0]);
-        y = origin[1] + t*(terminus[1] - origin[1]);
-        z = origin[2] + t*(terminus[2] - origin[2]);
-        if (y_min <= y && y <= y_max && z_min <= z && z <= z_max &&
-            t > 0. && t < 1.)
+        bool intersectedDataset = !(ind[0] < 0 || ind[1] < 0 || ind[2] < 0);
+        if (!intersectedDataset)
         {
-            hits[num_hits++] = t;
+            if (!foundHit) 
+            {
+                // We still haven't found the start.  Keep looking.
+                continue;
+            }
+            else
+            {
+                // This is the true terminus.
+                last = i;
+                break;
+            }
         }
-    }
-
-    //
-    // If the terminus and the origin have the same Y, then we will find
-    // the intersection at another face.
-    //
-    if (terminus[1] != origin[1])
-    {
-        //
-        // See if we hit the Y-min face.
-        //
-        t = (y_min - origin[1]) / (terminus[1] - origin[1]);
-        x = origin[0] + t*(terminus[0] - origin[0]);
-        z = origin[2] + t*(terminus[2] - origin[2]);
-        if (x_min <= x && x <= x_max && z_min <= z && z <= z_max &&
-            t > 0. && t < 1.)
+        else  // Did intersect data set.
         {
-            hits[num_hits++] = t;
+            if (!foundHit)
+            {
+                // This is the first true sample.  "The true start"
+                first = i;
+            }
         }
 
-        //
-        // See if we hit the Y-max face.
-        //
-        t = (y_max - origin[1]) / (terminus[1] - origin[1]);
-        x = origin[0] + t*(terminus[0] - origin[0]);
-        z = origin[2] + t*(terminus[2] - origin[2]);
-        if (x_min <= x && x <= x_max && z_min <= z && z <= z_max &&
-            t > 0. && t < 1.)
-        {
-            hits[num_hits++] = t;
-        }
+        valid_sample[i] = true;
+        foundHit = true;
+        hasSamples = true;
+
+        curX = ind[0];
+        curY = ind[1];
+        curZ = ind[2];
     }
 
-    //
-    // If the terminus and the origin have the same Z, then we will find
-    // the intersection at another face.
-    //
-    if (terminus[2] != origin[2])
-    {
-        //
-        // See if we hit the Z-min face.
-        //
-        t = (z_min - origin[2]) / (terminus[2] - origin[2]);
-        x = origin[0] + t*(terminus[0] - origin[0]);
-        y = origin[1] + t*(terminus[1] - origin[1]);
-        if (x_min <= x && x <= x_max && y_min <= y && y <= y_max &&
-            t > 0. && t < 1.)
-        {
-            hits[num_hits++] = t;
-        }
-
-        //
-        // See if we hit the Z-max face.
-        //
-        t = (z_max - origin[2]) / (terminus[2] - origin[2]);
-        x = origin[0] + t*(terminus[0] - origin[0]);
-        y = origin[1] + t*(terminus[1] - origin[1]);
-        if (x_min <= x && x <= x_max && y_min <= y && y <= y_max &&
-            t > 0. && t < 1.)
-        {
-            hits[num_hits++] = t;
-        }
+    if (hasSamples){
+        SampleVariable(first, last, w, h, prop_buffer, ind_buffer, valid_sample);
     }
 
-    if (num_hits == 0)
-        return false;
-
-    //
-    // We are expecting exactly two hits.  If we don't get that, then
-    // we probably hit an edge of the dataset.  Give up on this optimization.
-    //
-    if (num_hits != 2)
-    {
-        start = 0;
-        end = depth-1;
-        return true;
-    }
-
-    if (hits[0] > hits[1])
-    {
-        double t = hits[0];
-        hits[0] = hits[1];
-        hits[1] = t;
-    }
-
-    if (hits[0] < 0 && hits[1] < 0)
-        // Dataset on back side of camera -- no intersection.
-        return false;
-    if (hits[0] > 1. && hits[1] > 1.)
-        // Dataset past far clipping plane -- no intersection.
-        return false;
-
-    // This is the correct calculation whether we are using orthographic or
-    // perspective projection ... because with perspective we are using
-    // w-buffering.
-    start = (int) floor(depth*hits[0]);
-    end   = (int) ceil(depth*hits[1]);
-    if (start < 0)
-        start = 0;
-    if (end > depth)
-        end = depth;
-
-    return true;
+    if (prop_buffer != NULL)
+        delete [] prop_buffer;
+    if (ind_buffer != NULL)
+        delete [] ind_buffer;
+    if (valid_sample != NULL)
+        delete [] valid_sample;
 }
 
-
-// ****************************************************************************
-//  Method: avtImgCommunicator::getIndexandDistFromCenter
-//
-//  Purpose:
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-
-void 
-avtMassVoxelExtractor::getIndexandDistFromCenter(float dist, int index,    int &index_before, int &index_after,    float &dist_before, float &dist_after){
-    float center = 0.5;
-    if (dist < center){
-        index_before = index-1;
-        index_after = index;
-        dist_before = dist + center;
-        dist_after = 1.0 - dist_before;
-    }else{
-        index_before = index;
-        index_after = index+1;
-        dist_before = dist - center;
-        dist_after = 1.0 - dist_before;
-    }
-}
-
-
-// ****************************************************************************
-//  Method: avtImgCommunicator::computeIndices
-//
-//  Purpose:
-//
-//  Parameters:
-//              indices: 0 left, 1 right  |  2: bottom, 3 top  | 4: front, 5 back
-//              dims: dimensions x, y & z
-//
-//                                 z       y      x
-//              returnIndices: 0:front, bottom, left
-//                             1:front, bottom, right
-//                             2:front, top,    left
-//                             3:front, top,    right
-//                             4:back,  bottom, left
-//                             5:back,  bottom, right
-//                             6:back,  top,    left
-//                             7:back,  top,    right
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-void 
-avtMassVoxelExtractor::computeIndices(int dims[3], int indices[6], int returnIndices[8]){
-    returnIndices[0] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[0]);
-    returnIndices[1] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[1]);
-
-    returnIndices[2] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[0]);
-    returnIndices[3] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[1]);
-
-    returnIndices[4] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[0]);
-    returnIndices[5] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[1]);
-
-    returnIndices[6] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[0]);
-    returnIndices[7] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[1]);
-}
-
-
-void 
-avtMassVoxelExtractor::computeIndicesVert(int dims[3], int indices[6], int returnIndices[8]){
-    returnIndices[0] = (indices[4])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[0]);
-    returnIndices[1] = (indices[4])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[1]);
-
-    returnIndices[2] = (indices[4])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[0]);
-    returnIndices[3] = (indices[4])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[1]);
-
-    returnIndices[4] = (indices[5])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[0]);
-    returnIndices[5] = (indices[5])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[1]);
-
-    returnIndices[6] = (indices[5])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[0]);
-    returnIndices[7] = (indices[5])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[1]);
-}
-
-
-// ****************************************************************************
-//  Method: avtImgCommunicator::trilinearInterpolate
-//
-//  Purpose:
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-//  Reference: http://www.scratchapixel.com/lessons/3d-advanced-lessons/interpolation/trilinear-interpolation/
-//
-// ****************************************************************************
-
-double 
-avtMassVoxelExtractor::trilinearInterpolate(double vals[8], float dist_from_left, float dist_from_bottom, float dist_from_front){
-    float dist_from_right = 1.0 - dist_from_left;
-    float dist_from_top = 1.0 - dist_from_bottom;
-    float dist_from_back = 1.0 - dist_from_front;
-    
-    double val =    dist_from_right     * dist_from_top         * dist_from_back * vals[0] + 
-                    dist_from_left      * dist_from_top         * dist_from_back * vals[1] +
-                    dist_from_right     * dist_from_bottom      * dist_from_back * vals[2] +
-                    dist_from_left      * dist_from_bottom      * dist_from_back * vals[3] +
-
-                    dist_from_right     * dist_from_top         * dist_from_front * vals[4] +
-                    dist_from_left      * dist_from_top         * dist_from_front * vals[5] +
-                    dist_from_right     * dist_from_bottom      * dist_from_front * vals[6] +
-                    dist_from_left      * dist_from_bottom      * dist_from_front * vals[7];
-    return val;
-}
 
 // ****************************************************************************
 //  Method: avtMassVoxelExtractor::SampleVariable
@@ -2441,7 +2000,664 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h, double 
 }
 
 
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::world_to_screen
+//
+//  Purpose:
+//          http://www.songho.ca/opengl/gl_transform.html
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 
+void 
+avtMassVoxelExtractor::world_to_screen(double _world[4], int imgWidth, int imgHeight, int screenPos[2], float &depth)
+{
+    double _view[4] = {0,0,0,0};
+
+    // from world to view
+    world_to_view_transform->MultiplyPoint(_world, _view);
+
+    // perspective divide -> normalized screen space: -1,-1,-1 to 1,1,1
+    if (_view[3] != 0.){
+        _view[0] /= _view[3];
+        _view[1] /= _view[3];
+        _view[2] /= _view[3];
+    }
+
+    // viewport transform: screen coordinates
+    screenPos[0] = int(_view[0]*(imgWidth/2.)  + (imgWidth /2.) + 0.5);     // 0.5 added so that proper rounding is done
+    screenPos[1] = int(_view[1]*(imgHeight/2.) + (imgHeight/2.) + 0.5);
+
+    depth = _view[2];
+}
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::screen_to_WorldDistance
+//
+//  Purpose:
+//
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+float 
+avtMassVoxelExtractor::screen_to_WorldDistance(int x1, int y1, int x2, int y2){
+    double origin1[4], origin2[4];
+    double view[4];
+    int w = x1;
+    int h = y1;
+
+    view[0] = (w - width/2.)/(width/2.);
+    if (pretendGridsAreInWorldSpace)
+        view[0] *= -1;
+    view[1] = (h - height/2.)/(height/2.);
+    view[2] = cur_clip_range[0];
+    view[3] = 1.;
+    view_to_world_transform->MultiplyPoint(view, origin1);
+
+    w = x2;
+    h = y2;
+    view[0] = (w - width/2.)/(width/2.);
+    if (pretendGridsAreInWorldSpace)
+        view[0] *= -1;
+    view[1] = (h - height/2.)/(height/2.);
+    view[2] = cur_clip_range[0];
+    view[3] = 1.;
+    view_to_world_transform->MultiplyPoint(view, origin2);
+
+    return fabs(origin1[0]-origin2[0]);
+}
+
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::SetGridsAreInWorldSpace
+//
+//  Purpose:
+//      Tells the MVE whether or not it is extracting a world space or image
+//      space grid.
+//
+//  Programmer: Hank Childs
+//  Creation:   November 20, 2004
+//
+//  Modifications:
+//    Jeremy Meredith, Thu Feb 15 13:11:34 EST 2007
+//    Added an ability to extract voxels using the world-space version
+//    even when they're really in image space.
+//
+//    Hank Childs, Wed Dec 24 11:22:43 PST 2008
+//    No longer calculate deprecated data member ProportionSpaceToZBufferSpace.
+//
+//    Hank Childs, Fri Nov 18 08:32:45 PST 2011
+//    Fix ray cast of rectilinear with panning.
+//
+// ****************************************************************************
+
+void
+avtMassVoxelExtractor::SetGridsAreInWorldSpace(bool val, const avtViewInfo &v,
+                                               double asp, const double *xform)
+{
+    gridsAreInWorldSpace = val;
+
+    if (!gridsAreInWorldSpace)
+    {
+        if (xform)
+        {
+            // We're essentially doing resampling, but we cannot
+            // use the faster version because there is another
+            // transform to take into consideration.  In this case,
+            // just revert to the world space algorithm and
+            // fake the necessary parameters.
+            pretendGridsAreInWorldSpace = true;
+        }
+        else
+        {
+            // We can use the faster version that doesn't depend on the
+            // rest of the parameters set in this function, so return;
+            return;
+        }
+    }
+
+    view = v;
+    aspect = asp;
+
+    if (pretendGridsAreInWorldSpace)
+    {
+        view = avtViewInfo();
+        view.setScale = true;
+        view.parallelScale = 1;
+        view.nearPlane = 1;
+        view.farPlane = 2;
+
+        aspect = 1.0;
+    }
+
+    //
+    // Set up a VTK camera.  This will allow us to get the direction of
+    // each ray and also the origin of each ray (this is simply the
+    // position of the camera for perspective projection).
+    //
+    vtkCamera *cam = vtkCamera::New();
+    // We have *= -1.0 throughout the code.  Here is "yet another".
+    view.imagePan[0] *= -1.0;
+    view.imagePan[1] *= -1.0;
+    view.SetCameraFromView(cam);
+    cam->GetClippingRange(cur_clip_range);
+    vtkMatrix4x4 *mat = cam->GetCompositeProjectionTransformMatrix(aspect,
+                                         cur_clip_range[0], cur_clip_range[1]);
+
+    if (xform)
+    {
+        vtkMatrix4x4 *rectTrans = vtkMatrix4x4::New();
+        rectTrans->DeepCopy(xform);
+        vtkMatrix4x4::Multiply4x4(mat, rectTrans, view_to_world_transform);
+        world_to_view_transform->DeepCopy(view_to_world_transform);
+        view_to_world_transform->Invert();
+        rectTrans->Delete();
+    }
+    else
+    {
+        // being executed for now for raycasting slivr
+        vtkMatrix4x4::Invert(mat, view_to_world_transform);
+        world_to_view_transform->DeepCopy(mat);
+    }
+    cam->Delete();
+}
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::FrustumIntersectsGrid
+//
+//  Purpose:
+//      Determines if a frustum intersects the grid.
+//
+//  Programmer: Hank Childs
+//  Creation:   November 21, 2004
+//
+//  Modifications:
+//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
+//    Use double instead of float.
+//
+// ****************************************************************************
+
+bool
+avtMassVoxelExtractor::FrustumIntersectsGrid(int w_min, int w_max, int h_min,
+                                             int h_max) const
+{
+    //
+    // Start off by getting the segments corresponding to the bottom left (bl),
+    // upper left (ul), bottom right (br), and upper right (ur) rays.
+    //
+    double bl_start[4];
+    double bl_end[4];
+    GetSegment(w_min, h_min, bl_start, bl_end);
+
+    double ul_start[4];
+    double ul_end[4];
+    GetSegment(w_min, h_max, ul_start, ul_end);
+
+    double br_start[4];
+    double br_end[4];
+    GetSegment(w_max, h_min, br_start, br_end);
+
+    double ur_start[4];
+    double ur_end[4];
+    GetSegment(w_max, h_max, ur_start, ur_end);
+
+    //
+    // Now use those segments to construct bounding planes.  If the grid is
+    // not on the plus side of the bounding planes, then none of the frustum
+    // will intersect the grid.
+    //
+    // Note: the plus side of the plane is dependent on the order that these
+    // points are sent into the routine "FindPlaneNormal".  There are some
+    // subtleties with putting the arguments in the right order.
+    //
+    double normal[3];
+    FindPlaneNormal(bl_start, bl_end, ul_start, normal);
+    if (!GridOnPlusSideOfPlane(bl_start, normal))
+        return false;
+    FindPlaneNormal(bl_start, br_start, br_end, normal);
+    if (!GridOnPlusSideOfPlane(bl_start, normal))
+        return false;
+    FindPlaneNormal(ur_start, ul_start, ur_end, normal);
+    if (!GridOnPlusSideOfPlane(ur_start, normal))
+        return false;
+    FindPlaneNormal(ur_start, ur_end, br_start, normal);
+    if (!GridOnPlusSideOfPlane(ur_start, normal))
+        return false;
+
+    return true;
+}
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::FindPlaneNormal
+//
+//  Purpose:
+//      Finds the normal to a plane using three points.
+//
+//  Programmer: Hank Childs
+//  Creation:   November 21, 2004
+//
+//  Modifications:
+//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
+//    Use double instead of float.
+//
+// ****************************************************************************
+
+void
+avtMassVoxelExtractor::FindPlaneNormal(const double *pt1, const double *pt2,
+                                       const double *pt3, double *normal)
+{
+    //
+    // Set up vectors P1P2 and P1P3.
+    //
+    double v1[3];
+    double v2[3];
+
+    v1[0] = pt2[0] - pt1[0];
+    v1[1] = pt2[1] - pt1[1];
+    v1[2] = pt2[2] - pt1[2];
+    v2[0] = pt3[0] - pt1[0];
+    v2[1] = pt3[1] - pt1[1];
+    v2[2] = pt3[2] - pt1[2];
+
+    //
+    // The normal is the cross-product of these two vectors.
+    //
+    normal[0] = v1[1]*v2[2] - v1[2]*v2[1];
+    normal[1] = v1[2]*v2[0] - v1[0]*v2[2];
+    normal[2] = v1[0]*v2[1] - v1[1]*v2[0];
+}
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::GridOnPlusSideOfPlane
+//
+//  Purpose:
+//      Determines if a grid is on the plus side of a plane.
+//
+//  Programmer: Hank Childs
+//  Creation:   November 21, 2004
+//
+//  Modifications:
+//    Jeremy Meredith, Thu Feb 15 13:11:34 EST 2007
+//    Added an ability to extract voxels using the world-space version
+//    even when they're really in image space.
+//
+//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
+//    Use double instead of float.
+//
+// ****************************************************************************
+
+bool
+avtMassVoxelExtractor::GridOnPlusSideOfPlane(const double *origin, 
+                                             const double *normal) const
+{
+    double x_min = X[0];
+    double x_max = X[dims[0]-1];
+    double y_min = Y[0];
+    double y_max = Y[dims[1]-1];
+    double z_min = Z[0];
+    double z_max = Z[dims[2]-1];
+
+    for (int i = 0 ; i < 8 ; i++)
+    {
+        double pt[3];
+        pt[0] = (i & 1 ? x_max : x_min);
+        pt[1] = (i & 2 ? y_max : y_min);
+        pt[2] = (i & 4 ? z_max : z_min);
+
+        //
+        // The plane is of the form Ax + By + Cz - D = 0.
+        //
+        // Using the origin, we can calculate D:
+        // D = A*origin[0] + B*origin[1] + C*origin[2]
+        //
+        // We want to know if 'pt' gives:
+        // A*pt[0] + B*pt[1] + C*pt[2] - D >=? 0.
+        //
+        // We can substitute in D to get
+        // A*(pt[0]-origin[0]) + B*(pt[1]-origin[1]) + C*(pt[2-origin[2]) ?>= 0
+        //
+        double val  = normal[0]*(pt[0] - origin[0])
+                   + normal[1]*(pt[1] - origin[1])
+                   + normal[2]*(pt[2] - origin[2]);
+
+        // Note: If we're only pretending that grids are in world space -- i.e.
+        // we're resampling, not raycasting an image -- then flipping across
+        // the x axis also negates the proper normal values here.
+        if (pretendGridsAreInWorldSpace)
+            val *= -1;
+
+        if (val >= 0)
+            return true;
+    }
+
+    return false;
+}
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::FindSegmentIntersections
+//
+//  Purpose:
+//      Finds the intersection points of a line segment and a rectilinear grid.
+//  
+//  Programmer: Hank Childs
+//  Creation:   November 21, 2004
+//
+//  Modifications:
+//
+//    Hank Childs, Tue Feb  5 15:44:53 PST 2008
+//    Fix bugs with the origin or the terminus of the segment being inside 
+//    the volume.
+//
+//    Hank Childs, Wed Dec 24 11:21:57 PST 2008
+//    Change the logic for perspective projections to account for w-buffering
+//    (that is, even sampling in space).
+//
+//    Hank Childs, Wed Dec 31 09:08:50 PST 2008
+//    For the case where the segment intersects the volume one time, return
+//    that the entire segment should be examined, as it is probably more
+//    likely that we have floating point error than we have intersected a
+//    corner of the data set.
+//
+//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
+//    Use double instead of float.
+//
+// ****************************************************************************
+
+bool
+avtMassVoxelExtractor::FindSegmentIntersections(const double *origin, 
+                                  const double *terminus, int &start, int &end)
+{
+    double  t, x, y, z;
+
+    int num_hits = 0;
+    double hits[6]; // Should always be 2 or 0.
+
+    double x_min = X[0];
+    double x_max = X[dims[0]-1];
+    double y_min = Y[0];
+    double y_max = Y[dims[1]-1];
+    double z_min = Z[0];
+    double z_max = Z[dims[2]-1];
+
+    if (x_min <= origin[0] && origin[0] <= x_max &&
+        y_min <= origin[1] && origin[1] <= y_max &&
+        z_min <= origin[2] && origin[2] <= z_max)
+    {
+        hits[num_hits++] = 0.0;
+    }
+    if (x_min <= terminus[0] && terminus[0] <= x_max &&
+        y_min <= terminus[1] && terminus[1] <= y_max &&
+        z_min <= terminus[2] && terminus[2] <= z_max)
+    {
+        hits[num_hits++] = 1.0;
+    }
+
+    //
+    // If the terminus and the origin have the same X, then we will find
+    // the intersection at another face.
+    //
+    if (terminus[0] != origin[0])
+    {
+        //
+        // See if we hit the X-min face.
+        //
+        t = (x_min - origin[0]) / (terminus[0] - origin[0]);
+        y = origin[1] + t*(terminus[1] - origin[1]);
+        z = origin[2] + t*(terminus[2] - origin[2]);
+        if (y_min <= y && y <= y_max && z_min <= z && z <= z_max &&
+            t > 0. && t < 1.)
+        {
+            hits[num_hits++] = t;
+        }
+
+        //
+        // See if we hit the X-max face.
+        //
+        t = (x_max - origin[0]) / (terminus[0] - origin[0]);
+        y = origin[1] + t*(terminus[1] - origin[1]);
+        z = origin[2] + t*(terminus[2] - origin[2]);
+        if (y_min <= y && y <= y_max && z_min <= z && z <= z_max &&
+            t > 0. && t < 1.)
+        {
+            hits[num_hits++] = t;
+        }
+    }
+
+    //
+    // If the terminus and the origin have the same Y, then we will find
+    // the intersection at another face.
+    //
+    if (terminus[1] != origin[1])
+    {
+        //
+        // See if we hit the Y-min face.
+        //
+        t = (y_min - origin[1]) / (terminus[1] - origin[1]);
+        x = origin[0] + t*(terminus[0] - origin[0]);
+        z = origin[2] + t*(terminus[2] - origin[2]);
+        if (x_min <= x && x <= x_max && z_min <= z && z <= z_max &&
+            t > 0. && t < 1.)
+        {
+            hits[num_hits++] = t;
+        }
+
+        //
+        // See if we hit the Y-max face.
+        //
+        t = (y_max - origin[1]) / (terminus[1] - origin[1]);
+        x = origin[0] + t*(terminus[0] - origin[0]);
+        z = origin[2] + t*(terminus[2] - origin[2]);
+        if (x_min <= x && x <= x_max && z_min <= z && z <= z_max &&
+            t > 0. && t < 1.)
+        {
+            hits[num_hits++] = t;
+        }
+    }
+
+    //
+    // If the terminus and the origin have the same Z, then we will find
+    // the intersection at another face.
+    //
+    if (terminus[2] != origin[2])
+    {
+        //
+        // See if we hit the Z-min face.
+        //
+        t = (z_min - origin[2]) / (terminus[2] - origin[2]);
+        x = origin[0] + t*(terminus[0] - origin[0]);
+        y = origin[1] + t*(terminus[1] - origin[1]);
+        if (x_min <= x && x <= x_max && y_min <= y && y <= y_max &&
+            t > 0. && t < 1.)
+        {
+            hits[num_hits++] = t;
+        }
+
+        //
+        // See if we hit the Z-max face.
+        //
+        t = (z_max - origin[2]) / (terminus[2] - origin[2]);
+        x = origin[0] + t*(terminus[0] - origin[0]);
+        y = origin[1] + t*(terminus[1] - origin[1]);
+        if (x_min <= x && x <= x_max && y_min <= y && y <= y_max &&
+            t > 0. && t < 1.)
+        {
+            hits[num_hits++] = t;
+        }
+    }
+
+    if (num_hits == 0)
+        return false;
+
+    //
+    // We are expecting exactly two hits.  If we don't get that, then
+    // we probably hit an edge of the dataset.  Give up on this optimization.
+    //
+    if (num_hits != 2)
+    {
+        start = 0;
+        end = depth-1;
+        return true;
+    }
+
+    if (hits[0] > hits[1])
+    {
+        double t = hits[0];
+        hits[0] = hits[1];
+        hits[1] = t;
+    }
+
+    if (hits[0] < 0 && hits[1] < 0)
+        // Dataset on back side of camera -- no intersection.
+        return false;
+    if (hits[0] > 1. && hits[1] > 1.)
+        // Dataset past far clipping plane -- no intersection.
+        return false;
+
+    // This is the correct calculation whether we are using orthographic or
+    // perspective projection ... because with perspective we are using
+    // w-buffering.
+    start = (int) floor(depth*hits[0]);
+    end   = (int) ceil(depth*hits[1]);
+    if (start < 0)
+        start = 0;
+    if (end > depth)
+        end = depth;
+
+    return true;
+}
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::getIndexandDistFromCenter
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+
+void 
+avtMassVoxelExtractor::getIndexandDistFromCenter(float dist, int index,    int &index_before, int &index_after,    float &dist_before, float &dist_after){
+    float center = 0.5;
+    if (dist < center){
+        index_before = index-1;
+        index_after = index;
+        dist_before = dist + center;
+        dist_after = 1.0 - dist_before;
+    }else{
+        index_before = index;
+        index_after = index+1;
+        dist_before = dist - center;
+        dist_after = 1.0 - dist_before;
+    }
+}
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::computeIndices
+//
+//  Purpose:
+//
+//  Parameters:
+//              indices: 0 left, 1 right  |  2: bottom, 3 top  | 4: front, 5 back
+//              dims: dimensions x, y & z
+//
+//                                 z       y      x
+//              returnIndices: 0:front, bottom, left
+//                             1:front, bottom, right
+//                             2:front, top,    left
+//                             3:front, top,    right
+//                             4:back,  bottom, left
+//                             5:back,  bottom, right
+//                             6:back,  top,    left
+//                             7:back,  top,    right
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void 
+avtMassVoxelExtractor::computeIndices(int dims[3], int indices[6], int returnIndices[8]){
+    returnIndices[0] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[0]);
+    returnIndices[1] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[1]);
+
+    returnIndices[2] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[0]);
+    returnIndices[3] = (indices[4])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[1]);
+
+    returnIndices[4] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[0]);
+    returnIndices[5] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[2])*(dims[0]-1) + (indices[1]);
+
+    returnIndices[6] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[0]);
+    returnIndices[7] = (indices[5])*((dims[0]-1)*(dims[1]-1)) + (indices[3])*(dims[0]-1) + (indices[1]);
+}
+
+
+void 
+avtMassVoxelExtractor::computeIndicesVert(int dims[3], int indices[6], int returnIndices[8]){
+    returnIndices[0] = (indices[4])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[0]);
+    returnIndices[1] = (indices[4])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[1]);
+
+    returnIndices[2] = (indices[4])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[0]);
+    returnIndices[3] = (indices[4])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[1]);
+
+    returnIndices[4] = (indices[5])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[0]);
+    returnIndices[5] = (indices[5])*((dims[0])*(dims[1])) + (indices[2])*(dims[0]) + (indices[1]);
+
+    returnIndices[6] = (indices[5])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[0]);
+    returnIndices[7] = (indices[5])*((dims[0])*(dims[1])) + (indices[3])*(dims[0]) + (indices[1]);
+}
+
+
+// ****************************************************************************
+//  Method: avtImgCommunicator::trilinearInterpolate
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+//  Reference: http://www.scratchapixel.com/lessons/3d-advanced-lessons/interpolation/trilinear-interpolation/
+//
+// ****************************************************************************
+
+double 
+avtMassVoxelExtractor::trilinearInterpolate(double vals[8], float dist_from_left, float dist_from_bottom, float dist_from_front){
+    float dist_from_right = 1.0 - dist_from_left;
+    float dist_from_top = 1.0 - dist_from_bottom;
+    float dist_from_back = 1.0 - dist_from_front;
+    
+    double val =    dist_from_right     * dist_from_top         * dist_from_back * vals[0] + 
+                    dist_from_left      * dist_from_top         * dist_from_back * vals[1] +
+                    dist_from_right     * dist_from_bottom      * dist_from_back * vals[2] +
+                    dist_from_left      * dist_from_bottom      * dist_from_back * vals[3] +
+
+                    dist_from_right     * dist_from_top         * dist_from_front * vals[4] +
+                    dist_from_left      * dist_from_top         * dist_from_front * vals[5] +
+                    dist_from_right     * dist_from_bottom      * dist_from_front * vals[6] +
+                    dist_from_left      * dist_from_bottom      * dist_from_front * vals[7];
+    return val;
+}
 
 
 // ****************************************************************************
@@ -2504,258 +2720,61 @@ avtMassVoxelExtractor::computePixelColor(double source_rgb[4], double dest_rgb[4
 }
 
 
+
+
+
+
+
 // ****************************************************************************
-//  Function: FindMatch
+//  Method: avtMassVoxelExtractor::getImageDimensions
 //
 //  Purpose:
-//      Traverses an ordered array in logarithmic time.
+//      transfers the metadata of the patch
 //
-//  Programmer: Hank Childs
-//  Creation:   November 22, 2004
+//  Programmer: 
+//  Creation:   
 //
 //  Modifications:
-//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
-//    Use double instead of float.
 //
 // ****************************************************************************
-
-static inline int FindMatch(const double *A, const double &a, const int &nA)
+void
+avtMassVoxelExtractor::getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, bool &_fullyInside)
 {
-    if ((a < A[0]) || (a > A[nA-1]))
-        return -1;
+    inUse = patchDrawn;
 
-    int low = 0;
-    int hi  = nA-1;
-    while ((hi - low) > 1)
-    {
-        int guess = (hi+low)/2;
-        if (A[guess] == a)
-            return guess;
-        if (a < A[guess])
-            hi = guess;
-        else
-            low = guess;
-    }
+    dims[0] = imgDims[0];    dims[1] = imgDims[1];
 
+    screen_ll[0] = imgLowerLeft[0];     screen_ll[1] = imgLowerLeft[1];
+    screen_ur[0] = imgUpperRight[0];    screen_ur[1] = imgUpperRight[1];
 
-    return low;
+    avg_z = imgDepth;
+    _fullyInside = fullyInside;
 }
 
 
 // ****************************************************************************
-//  Method: avtMassVoxelExtractor::SampleAlongSegment
+//  Method: avtMassVoxelExtractor::getComputedImage
 //
 //  Purpose:
-//      Samples the grid along a line segment.
+//      allocates space to the pointer address and copy the image generated to it
 //
-//  Programmer: Hank Childs
-//  Creation:   November 20, 2004
+//  Programmer: 
+//  Creation:   
 //
 //  Modifications:
-//
-//    Hank Childs, Tue Jan  3 17:26:11 PST 2006
-//    Fix bug that ultimately led to UMR where sampling occurred along 
-//    invalid values.
-//
-//    Hank Childs, Wed Dec 24 11:22:43 PST 2008
-//    No longer use the ProportionSpaceToZBufferSpace data member, as we now 
-//    do our sampling in even intervals (wbuffer).
-//
-//    Kathleen Biagas, Fri Jul 13 09:23:55 PDT 2012
-//    Use double instead of float.
 //
 // ****************************************************************************
 
 void
-avtMassVoxelExtractor::SampleAlongSegment(const double *origin, 
-                                          const double *terminus, int w, int h)
+avtMassVoxelExtractor::getComputedImage(float *image)
 {
-    int first = 0;
-    int last = 0;
-    bool hasIntersections = FindSegmentIntersections(origin, terminus,
-                                                     first, last);
-    if (!hasIntersections)
-        return;
-    //std::cout <<  proc << " *# hasIntersection #* " <<patch  << std::endl;
-
-    bool foundHit = false;
-    int curX = -1;
-    int curY = -1;
-    int curZ = -1;
-    bool xGoingUp = (terminus[0] > origin[0]);
-    bool yGoingUp = (terminus[1] > origin[1]);
-    bool zGoingUp = (terminus[2] > origin[2]);
-
-    double x_dist = (terminus[0]-origin[0]);
-    double y_dist = (terminus[1]-origin[1]);
-    double z_dist = (terminus[2]-origin[2]);
-
-    double          *prop_buffer = NULL;
-    int             *ind_buffer = NULL;
-    bool            *valid_sample = NULL;
-
-    prop_buffer   = new double[3*depth];
-    ind_buffer    = new int[3*depth];
-    valid_sample  = new bool[depth];
-
-    double pt[3];
-    bool hasSamples = false;
- 
-    for (int i = first ; i < last ; i++)
-    {
-        int *ind = ind_buffer + 3*i;
-        double *dProp = prop_buffer + 3*i;
-        valid_sample[i] = false;
-
-        double proportion = ((double)i)/((double)depth);
-        pt[0] = origin[0] + proportion*x_dist;
-        pt[1] = origin[1] + proportion*y_dist;
-        pt[2] = origin[2] + proportion*z_dist;
-
-        ind[0] = -1;
-        ind[1] = -1;
-        ind[2] = -1;
-
-        if (!foundHit)
-        {
-            //
-            // We haven't found any hits previously.  Exhaustively search
-            // through arrays and try to find a hit.
-            //
-            ind[0] = FindMatch(X, pt[0], dims[0]);
-            if (ind[0] >= 0)
-                dProp[0] = (pt[0] - X[ind[0]]) * divisors_X[ind[0]];
-            ind[1] = FindMatch(Y, pt[1], dims[1]);
-            if (ind[1] >= 0)
-                dProp[1] = (pt[1] - Y[ind[1]]) * divisors_Y[ind[1]];
-            ind[2] = FindMatch(Z, pt[2], dims[2]);
-            if (ind[2] >= 0)
-                dProp[2] = (pt[2] - Z[ind[2]]) * divisors_Z[ind[2]];
-        }
-        else
-        {
-            //
-            // We have found a hit before.  Try to locate the next sample 
-            // based on what we already found.
-            //
-            if (xGoingUp)
-            {
-                for ( ; curX < dims[0]-1 ; curX++)
-                {
-                    if (pt[0] >= X[curX] && pt[0] <= X[curX+1])
-                    {
-                        dProp[0] = (pt[0] - X[curX]) * divisors_X[curX];
-                        ind[0] = curX;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                for ( ; curX >= 0 ; curX--)
-                {
-                    if (pt[0] >= X[curX] && pt[0] <= X[curX+1])
-                    {
-                        dProp[0] = (pt[0] - X[curX]) * divisors_X[curX];
-                        ind[0] = curX;
-                        break;
-                    }
-                }
-            }
-            if (yGoingUp)
-            {
-                for ( ; curY < dims[1]-1 ; curY++)
-                {
-                    if (pt[1] >= Y[curY] && pt[1] <= Y[curY+1])
-                    {
-                        dProp[1] = (pt[1] - Y[curY]) * divisors_Y[curY];
-                        ind[1] = curY;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                for ( ; curY >= 0 ; curY--)
-                {
-                    if (pt[1] >= Y[curY] && pt[1] <= Y[curY+1])
-                    {
-                        dProp[1] = (pt[1] - Y[curY]) * divisors_Y[curY];
-                        ind[1] = curY;
-                        break;
-                    }
-                }
-            }
-            if (zGoingUp)
-            {
-                for ( ; curZ < dims[2]-1 ; curZ++)
-                {
-                    if (pt[2] >= Z[curZ] && pt[2] <= Z[curZ+1])
-                    {
-                        dProp[2] = (pt[2] - Z[curZ]) * divisors_Z[curZ];
-                        ind[2] = curZ;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                for ( ; curZ >= 0 ; curZ--)
-                {
-                    if (pt[2] >= Z[curZ] && pt[2] <= Z[curZ+1])
-                    {
-                        dProp[2] = (pt[2] - Z[curZ]) * divisors_Z[curZ];
-                        ind[2] = curZ;
-                        break;
-                    }
-                }
-            }
-        }
-
-        bool intersectedDataset = !(ind[0] < 0 || ind[1] < 0 || ind[2] < 0);
-        if (!intersectedDataset)
-        {
-            if (!foundHit) 
-            {
-                // We still haven't found the start.  Keep looking.
-                continue;
-            }
-            else
-            {
-                // This is the true terminus.
-                last = i;
-                break;
-            }
-        }
-        else  // Did intersect data set.
-        {
-            if (!foundHit)
-            {
-                // This is the first true sample.  "The true start"
-                first = i;
-            }
-        }
-
-        valid_sample[i] = true;
-        foundHit = true;
-        hasSamples = true;
-
-        curX = ind[0];
-        curY = ind[1];
-        curZ = ind[2];
-    }
-
-    if (hasSamples){
-        SampleVariable(first, last, w, h, prop_buffer, ind_buffer, valid_sample);
-    }
-
-    if (prop_buffer != NULL)
-        delete [] prop_buffer;
-    if (ind_buffer != NULL)
-        delete [] ind_buffer;
-    if (valid_sample != NULL)
-        delete [] valid_sample;
+    memcpy(image,imgArray, imgDims[0]*4*imgDims[1]*sizeof(float));
+   
+    if (imgArray != NULL)
+        delete []imgArray;
+    imgArray = NULL;
 }
+
 
 
 // ****************************************************************************
@@ -3095,22 +3114,77 @@ avtMassVoxelExtractor::ExtractImageSpaceGrid(vtkRectilinearGrid *rgrid,
 }
 
 
-void avtMassVoxelExtractor::initThreads(int _numThreads){
-    numThreads = _numThreads;
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::initThreads
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void avtMassVoxelExtractor::initThreads(){
     if (numThreads > 0)
         enableThreads = true;
 
     threadHandles = new pthread_t[numThreads];
+    threadArgument = new threadArgument[numThreads];
+
+    for (int i=0; i<numThreads; i++){
+        threadArgument[i].pThis = this;
+        threadArgument[i].id = i;
+
+        if ( pthread_create(&threadHandles[i], NULL, runThread, (void *)&threadArgument[i]) )
+            std::cout << "Could NOT create thread " << i << " !"<<std::endl;
+    }
+}
+
+void * avtMassVoxelExtractor::setupThread(void *arg){
+    threadArg *temp = (threadArg *)arg;
+    (temp->pThis)->sampleImage(temp->arg0,temp->arg1,temp->arg2,temp->arg3,temp->arg4);
 }
 
 
+void * avtMassVoxelExtractor::runThread(void *arg){
+    threadArguments *temp = (threadArguments *)arg;
+
+    (temp->thisPtr)->doWork(temp->id);
+}
+
+void avtMassVoxelExtractor::doWork(int id){
+
+}
+
+
+// ****************************************************************************
+//  Method: avtMassVoxelExtractor::closeThreads
+//
+//  Purpose:
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
 void avtMassVoxelExtractor::closeThreads(){
     enableThreads = false;
     numThreads = 0;
 
+    for (int i=0; i<numThreads; i++)
+        pthread_join(threadHandles[i],NULL);
+    
+    if (threadArgument != NULL)
+        delete []threadArgument;
+    threadArgument = NULL;
+
     if (threadHandles != NULL)
         delete []threadHandles;
     threadHandles = NULL;
+
+    pthread_exit(NULL);
 }
-
-
