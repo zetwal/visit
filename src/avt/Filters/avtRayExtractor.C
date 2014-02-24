@@ -321,10 +321,11 @@ avtRayExtractor::Execute(void)
     partitionExtentsComputationDone = false;
     ExecuteTree(tree);
 
-    if (rayCastingSLIVR){
-        massVoxelExtractor->closeThreads();
-        massVoxelExtractor->clearTaskList();
-    }
+    if (rayCastingSLIVR)
+        if (avtCallback::UseNumThreads() > 0){
+            massVoxelExtractor->closeThreads();
+            massVoxelExtractor->clearTaskList();
+        }
 
     visitTimer->StopTimer(timingsIndex, "Ray point extraction");
     visitTimer->DumpTimings();

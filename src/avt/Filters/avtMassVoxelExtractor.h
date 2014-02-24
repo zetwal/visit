@@ -153,6 +153,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             initThreads();
     void             closeThreads();
     void             clearTaskList(){ taskList.clear(); }
+    void             setEnableThreads(bool _enableThreads){ enableThreads = _enableThreads; }
 
 
   protected:
@@ -228,10 +229,11 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     bool enableThreads;
     int numThreads;
 
-    pthread_t *threadHandles;
-    threadArg *threadArgument;
+    pthread_t * threadHandles;
+    //threadArg * threadArgument;
 
     bool allPatchesProcessed;
+    bool onePatchProcessed;
 
     std::list <task> taskList;
     pthread_mutex_t mutexPatchAvailable;
@@ -279,8 +281,13 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
 };
 
 
+struct threadArg{
+    int id;
+    avtMassVoxelExtractor * pThis;
+};
+
 struct threadArguments{
-    avtMassVoxelExtractor * thisPtr;
+    avtMassVoxelExtractor * pThis;
     int arg0;
     int arg1;
     int arg2;
@@ -288,9 +295,6 @@ struct threadArguments{
     int arg4;
 };
 
-struct threadArg{
-    int id;
-    avtMassVoxelExtractor * pThis;
-};
+
 
 #endif

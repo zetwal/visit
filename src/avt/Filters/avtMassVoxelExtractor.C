@@ -160,8 +160,9 @@ avtMassVoxelExtractor::avtMassVoxelExtractor(int w, int h, int d,
     enableThreads = false;
     numThreads = 0;
     threadHandles = NULL;
-    threadArgument = NULL;
+    //threadArgument = NULL;
     allPatchesProcessed = false;
+    onePatchProcessed = false;
 }
 
 
@@ -925,12 +926,15 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
     task tempTask;
     if (enableThreads){
+        
+        
         int sizePartition = (xMax - xMin)/numThreads;
         threadArguments *threadArgs = NULL;
         threadArgs = new threadArguments[numThreads];
 
         for (int i=0; i<numThreads; i++){
-            threadArgs[i].thisPtr = this;
+        /*
+            threadArgs[i].pThis = this;
             threadArgs[i].arg0 = i;
             threadArgs[i].arg1 = xMin + sizePartition*i;
 
@@ -944,20 +948,24 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 
             if ( pthread_create(&threadHandles[i], NULL, runThread, (void *)&threadArgs[i]) )
                 std::cout << "Could NOT create thread " << i << std::endl;
-
+        */
 
             tempTask.xMin = xMin + sizePartition*i;   
             tempTask.xMax = tempTask.xMin + sizePartition;
             tempTask.yMin = yMin;   tempTask.yMax = yMax;
             taskList.push_back(tempTask);
         }
+        
+        pthread_mutex_lock(&mutexPatchAvailable);
+        pthread_cond_broadcast(&condPatchAvailable);
+        pthread_mutex_unlock(&mutexPatchAvailable);
 
-        for (int i=0; i<numThreads; i++)
-            pthread_join(threadHandles[i],NULL);
+        //for (int i=0; i<numThreads; i++)
+        //    pthread_join(threadHandles[i],NULL);
     
-        if (threadArgs != NULL)
-            delete []threadArgs;
-        threadArgs = NULL;
+        //if (threadArgs != NULL)
+        //    delete []threadArgs;
+        //threadArgs = NULL;
 
         //closeThreads();
 
@@ -970,6 +978,12 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
                 GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
                 SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
             }
+    }
+    
+    if (enableThreads){
+        while (onePatchProcessed == false){
+            //wait
+        }
     }
 
     if (patchDrawn == 0){
@@ -1001,7 +1015,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
 void * avtMassVoxelExtractor::runThread(void *arg){
     threadArguments *temp = (threadArguments *)arg;
 
-    (temp->thisPtr)->sampleImage(temp->arg0,temp->arg1,temp->arg2,temp->arg3,temp->arg4);
+    (temp->pThis)->sampleImage(temp->arg0,temp->arg1,temp->arg2,temp->arg3,temp->arg4);
 }
 
 
@@ -1363,6 +1377,7 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h, double 
     // if (proc == 5 && patch == 24)
     //     std::cout << "proc: " << proc << "   patch: " << patch << "  first: " << first << "   last: " << last << "   w: " << w << "  h:" << h << "   dims: " << dims[0] << ", " << dims[1] << ", " << dims[2] << std::endl;
 
+    //debug5 << "proc: " << proc << "   patch: " << patch << "  first: " << first << "   last: " << last << "   w: " << w << "  h:" << h << "   dims: " << dims[0] << ", " << dims[1] << ", " << dims[2] << std::endl;
     bool inrun = false;
     int  count = 0;
 
@@ -2642,7 +2657,7 @@ avtMassVoxelExtractor::computeIndicesVert(int dims[3], int indices[6], int retur
 //
 // ****************************************************************************
 
-double 
+inline double 
 avtMassVoxelExtractor::trilinearInterpolate(double vals[8], float dist_from_left, float dist_from_bottom, float dist_from_front){
     float dist_from_right = 1.0 - dist_from_left;
     float dist_from_top = 1.0 - dist_from_bottom;
@@ -3133,17 +3148,17 @@ void avtMassVoxelExtractor::initThreads(){
         enableThreads = true;
 
     threadHandles = new pthread_t[numThreads];
-    threadArgument = new threadArgument[numThreads];
+    //threadArgument = new threadArg[numThreads];
 
     pthread_mutex_init(&mutexPatchAvailable, NULL);
     pthread_cond_init(&condPatchAvailable, NULL);
 
     for (int i=0; i<numThreads; i++){
-        threadArgument[i].pThis = this;
-        threadArgument[i].id = i;
+      //  threadArgument[i].pThis = this;
+       // threadArgument[i].id = i;
 
-        if ( pthread_create(&threadHandles[i], NULL, setupThread, (void *)&threadArgument[i]) )
-            std::cout << "Could NOT create thread " << i << " !"<<std::endl;
+      //  if ( pthread_create(&threadHandles[i], NULL, setupThread, (void *)&threadArgument[i]) )
+      //      std::cout << "Could NOT create thread " << i << " !"<<std::endl;
     }
 }
 
@@ -3161,9 +3176,9 @@ void avtMassVoxelExtractor::initThreads(){
 //
 // ****************************************************************************
 void * avtMassVoxelExtractor::setupThread(void *arg){
-    threadArguments *temp = (threadArguments *)arg;
+    threadArg *temp = (threadArg *)arg;
 
-    (temp->thisPtr)->doWork(temp->id);
+    (temp->pThis)->doWork(temp->id);
 }
 
 
@@ -3184,14 +3199,35 @@ void avtMassVoxelExtractor::doWork(int id){
     if (allPatchesProcessed == true)
         return;
 
-    for (int i = x_Min ; i < x_Max ; i++)
-        for (int j = y_Min ; j < y_Max ; j++)
-        {
-            double origin[4];                               // starting point where we start sampling
-            double terminus[4];                             // ending point where we stop sampling
-            GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
-            SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
+    pthread_mutex_lock(&mutexPatchAvailable);
+    pthread_cond_wait(&condPatchAvailable,&mutexPatchAvailable);
+    pthread_mutex_unlock(&mutexPatchAvailable);
+    
+    task tempTask;
+    
+    while(onePatchProcessed == false){
+    
+        pthread_mutex_lock(&mutexPatchAvailable);
+        if (taskList.size() > 0){
+        
+			tempTask = taskList.front();
+			taskList.pop_front();
+			pthread_mutex_unlock(&mutexPatchAvailable);
+		
+            pthread_mutex_unlock(&mutexPatchAvailable);
+            for (int i = tempTask.xMin ; i < tempTask.xMax ; i++)
+                for (int j = tempTask.yMin ; j < tempTask.yMax ; j++)
+                {
+                    double origin[4];                               // starting point where we start sampling
+                    double terminus[4];                             // ending point where we stop sampling
+                    GetSegment(i, j, origin, terminus);             // find the starting point & ending point of the ray
+                    SampleAlongSegment(origin, terminus, i, j);     // Go get the segments along this ray and store them in 
+                }
         }
+		else{
+		    pthread_mutex_unlock(&mutexPatchAvailable);
+		}
+    }
 }
 
 
@@ -3213,15 +3249,15 @@ void avtMassVoxelExtractor::closeThreads(){
     for (int i=0; i<numThreads; i++)
         pthread_join(threadHandles[i],NULL);
     
-    if (threadArgument != NULL)
-        delete []threadArgument;
-    threadArgument = NULL;
+   // if (threadArgument != NULL)
+   //     delete []threadArgument;
+  //  threadArgument = NULL;
 
     if (threadHandles != NULL)
         delete []threadHandles;
     threadHandles = NULL;
 
-    pthread_cond_destroy(&mutexPatchAvailable);
+    pthread_cond_destroy(&condPatchAvailable);
     pthread_mutex_destroy(&mutexPatchAvailable);
 
     pthread_exit(NULL);

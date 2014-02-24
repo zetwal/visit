@@ -69,8 +69,8 @@ float depth;
 };
 
 struct code{
-float count;  // should be int but float makes it easier to send with MPI!
-float color[4];
+    float count;  // should be int but float makes it easier to send with MPI!
+    float color[4];
 };
 
 // ****************************************************************************
