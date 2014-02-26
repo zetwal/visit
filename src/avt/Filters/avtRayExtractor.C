@@ -408,6 +408,88 @@ avtRayExtractor::SetUpExtractors(void)
 }
 
 
+
+// ****************************************************************************
+//  Method: avtRayExtractor::delImgPatches
+//
+//  Purpose:
+//      allocates space to the pointer address and copy the image generated to it
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void
+avtRayExtractor::delImgPatches(){
+    imageMetaPatchVector.clear();
+
+    for (iter_t it=imgDataHashMap.begin(); it!=imgDataHashMap.end(); it++){
+        if ((*it).second.imagePatch != NULL)
+            delete [](*it).second.imagePatch;
+
+        (*it).second.imagePatch = NULL;
+    }
+    imgDataHashMap.clear();
+}
+
+
+
+// ****************************************************************************
+//  Method: avtRayExtractor::getImgData
+//
+//  Purpose:
+//      copies a patchover
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+void 
+avtRayExtractor::getnDelImgData(int patchId, imgData &tempImgData){
+    iter_t it = imgDataHashMap.find(patchId);
+    if (it == imgDataHashMap.end())
+        std::cout << "########################### ERROR!!!! ################################################" << std::endl;
+
+    tempImgData.procId = it->second.procId;
+    tempImgData.patchNumber = it->second.patchNumber;
+    memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1] * sizeof(float));
+
+    if (it->second.imagePatch != NULL)
+        delete [](*it).second.imagePatch;
+    it->second.imagePatch = NULL;
+}
+
+
+void 
+avtRayExtractor::getImgData(int patchId, imgData &tempImgData){
+    iter_t it = imgDataHashMap.find(patchId);
+
+     if (it == imgDataHashMap.end())
+        std::cout << "########################### ERROR!!!! ################################################" << std::endl;
+
+    tempImgData.procId = it->second.procId;
+    tempImgData.patchNumber = it->second.patchNumber;
+    memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1] * sizeof(float));
+}
+
+void 
+avtRayExtractor::delImgData(int patchId){
+    iter_t it = imgDataHashMap.find(patchId);
+
+     if (it == imgDataHashMap.end())
+        std::cout << "########################### ERROR!!!! ################################################" << std::endl;
+
+    if (it->second.imagePatch != NULL)
+        delete [](*it).second.imagePatch;
+    it->second.imagePatch = NULL;
+}
+
+
+
 // ****************************************************************************
 //  Method: avtRayExtractor::SetUpArbitrator
 //
@@ -509,6 +591,33 @@ avtRayExtractor::PostExecute(void)
 
 
 // ****************************************************************************
+//  Method: avtRayExtractor::
+//
+//  Purpose:
+//      allocates space to the pointer address and copy the image generated to it
+//
+//  Programmer: 
+//  Creation:   
+//
+//  Modifications:
+//
+// ****************************************************************************
+imgMetaData
+avtRayExtractor::initMetaPatch(int id){
+    imgMetaData temp;
+    temp.inUse = 0;
+    temp.procId = PAR_Rank();
+    temp.destProcId = PAR_Rank();
+    temp.patchNumber = id;
+    temp.dims[0] = temp.dims[1] = -1;
+    temp.screen_ll[0] = temp.screen_ll[1] = -1;
+    temp.screen_ur[0] = temp.screen_ur[1] = -1;
+    temp.avg_z = -1.0;
+    
+    return temp;
+}
+
+// ****************************************************************************
 //  Method: avtRayExtractor::ExecuteTree
 //
 //  Purpose:
@@ -564,7 +673,7 @@ avtRayExtractor::PostExecute(void)
 //    Converted the recursive function to iteration
 //
 // ****************************************************************************
-
+/*
 void
 avtRayExtractor::ExecuteTree(avtDataTree_p dt)
 {
@@ -612,7 +721,7 @@ avtRayExtractor::ExecuteTree(avtDataTree_p dt)
            <<  "   ... avtRayExtractor::ExecuteTree done@!!!" << endl;
     
 }
-
+*/
 //
 // Previous recursive equivalent
 //
@@ -660,37 +769,18 @@ avtRayExtractor::ExecuteTree(avtDataTree_p dt)
 
 
 // ****************************************************************************
-//  Method: avtRayExtractor::delImgPatches
+//  Method: avtRayExtractor::determinePatchOrder
 //
-//  Purpose:
-//      allocates space to the pointer address and copy the image generated to it
+//  Purpose: 
+//          Sorts outs the patches so that those closer to the camera are 
+//          processed first   
 //
-//  Programmer: 
-//  Creation:   
+//  Arguments:
+//         
 //
-//  Modifications:
-//
-// ****************************************************************************
-void
-avtRayExtractor::delImgPatches(){
-    imageMetaPatchVector.clear();
-
-    for (iter_t it=imgDataHashMap.begin(); it!=imgDataHashMap.end(); it++){
-        if ((*it).second.imagePatch != NULL)
-            delete [](*it).second.imagePatch;
-
-        (*it).second.imagePatch = NULL;
-    }
-    imgDataHashMap.clear();
-}
-
-
-
-// ****************************************************************************
-//  Method: avtRayExtractor::getImgData
-//
-//  Purpose:
-//      copies a patchover
+//  Returns:
+//          0 if everything is fine
+//          1 if there is no data to process
 //
 //  Programmer: 
 //  Creation:   
@@ -698,72 +788,135 @@ avtRayExtractor::delImgPatches(){
 //  Modifications:
 //
 // ****************************************************************************
-void 
-avtRayExtractor::getnDelImgData(int patchId, imgData &tempImgData){
-    iter_t it = imgDataHashMap.find(patchId);
-    if (it == imgDataHashMap.end())
-        std::cout << "########################### ERROR!!!! ################################################" << std::endl;
+int avtRayExtractor::determinePatchOrder(avtDataTree_p dt){
 
-    tempImgData.procId = it->second.procId;
-    tempImgData.patchNumber = it->second.patchNumber;
-    memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1] * sizeof(float));
-
-    if (it->second.imagePatch != NULL)
-        delete [](*it).second.imagePatch;
-    it->second.imagePatch = NULL;
-}
-
-
-void 
-avtRayExtractor::getImgData(int patchId, imgData &tempImgData){
-    iter_t it = imgDataHashMap.find(patchId);
-
-     if (it == imgDataHashMap.end())
-        std::cout << "########################### ERROR!!!! ################################################" << std::endl;
-
-    tempImgData.procId = it->second.procId;
-    tempImgData.patchNumber = it->second.patchNumber;
-    memcpy(tempImgData.imagePatch,it->second.imagePatch,imageMetaPatchVector[patchId].dims[0] * 4 * imageMetaPatchVector[patchId].dims[1] * sizeof(float));
-}
-
-void 
-avtRayExtractor::delImgData(int patchId){
-    iter_t it = imgDataHashMap.find(patchId);
-
-     if (it == imgDataHashMap.end())
-        std::cout << "########################### ERROR!!!! ################################################" << std::endl;
-
-    if (it->second.imagePatch != NULL)
-        delete [](*it).second.imagePatch;
-    it->second.imagePatch = NULL;
-}
-
-// ****************************************************************************
-//  Method: avtRayExtractor::
-//
-//  Purpose:
-//      allocates space to the pointer address and copy the image generated to it
-//
-//  Programmer: 
-//  Creation:   
-//
-//  Modifications:
-//
-// ****************************************************************************
-imgMetaData
-avtRayExtractor::initMetaPatch(int id){
-    imgMetaData temp;
-    temp.inUse = 0;
-    temp.procId = PAR_Rank();
-    temp.destProcId = PAR_Rank();
-    temp.patchNumber = id;
-    temp.dims[0] = temp.dims[1] = -1;
-    temp.screen_ll[0] = temp.screen_ll[1] = -1;
-    temp.screen_ur[0] = temp.screen_ur[1] = -1;
-    temp.avg_z = -1.0;
+    if (*dt == NULL)
+        return 1;
     
-    return temp;
+    if (dt->GetNChildren() <= 0 && (!(dt->HasData())))
+        return 1;
+    
+    totalAssignedPatches = dt->GetNChildren();
+    if ((totalAssignedPatches != 0) && (dt->ChildIsPresent(0) && !( *(dt->GetChild(0)) == NULL))){
+    }else
+        totalAssignedPatches = 0;
+    
+    if (totalAssignedPatches == 0)
+        return 1;
+
+
+    patchCount = 0;
+    double center[3]; 
+    double bounds[6];       // xmin,xmax, ymin,ymax, zmin,zmax    
+    double worldCoordinates[4];
+    double eyeCoordinates[4];
+    
+
+    for (int i = 0; i < totalAssignedPatches; i++) {
+        worldCoordinates[3] = 1.0;
+        if (dt->ChildIsPresent(i) && !( *(dt->GetChild(i)) == NULL))
+        {
+            avtDataTree_p child = dt->GetChild(i);
+            vtkDataSet *ds = child->GetDataRepresentation().GetDataVTK();
+            
+            //
+            // Scalar Range
+            double scRange[2];
+            ds->GetScalarRange(scRange);
+
+            double minUsedScalar = transferFn1D->GetMinUsedScalar();
+            double maxUsedScalar = transferFn1D->GetMaxUsedScalar();
+
+            debug5 << PAR_Rank() << " ~ " << i << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   used scalar: " << minUsedScalar << ", " << maxUsedScalar << " || Tests: " << (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar) << " , " << (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar) << endl;
+    
+            // Outside scalar range and so have no impact on the rest
+            if (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar)
+                continue;
+
+            if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
+                continue;
+                
+                
+            //
+            // Z ordering
+            
+            // Center
+            ds->GetCenter(center);
+            worldCoordinates[0] = center[0];
+            worldCoordinates[1] = center[1];
+            worldCoordinates[2] = center[2];
+            
+            // Multiply it by the projection matrix
+            massVoxelExtractor->world_to_view(worldCoordinates, eyeCoordinates);
+
+            // Push it in a multimap so that it sorts itself
+            patchDepths.insert( std::pair<double,int>(eyeCoordinates[2],i) );
+            
+            // Get max and min bounds
+            if (i == 0)
+                ds->GetBounds(maxBounds);
+            else{
+                ds->GetBounds(bounds);
+                if (bounds[0] < maxBounds[0])
+                    maxBounds[0] = bounds[0];
+                    
+                if (bounds[1] > maxBounds[1])
+                    maxBounds[1] = bounds[1];
+                    
+                    
+                if (bounds[2] < maxBounds[2])
+                    maxBounds[2] = bounds[2];
+                    
+                if (bounds[3] > maxBounds[3])
+                    maxBounds[3] = bounds[3];
+                    
+                    
+                if (bounds[4] < maxBounds[4])
+                    maxBounds[4] = bounds[4];
+
+                if (bounds[5] > maxBounds[5])
+                    maxBounds[5] = bounds[5];
+            }
+        }
+    }
+    
+    return 0;
+
 }
+
+
+void
+avtRayExtractor::ExecuteTree(avtDataTree_p dt)
+{
+    if (determinePatchOrder(dt) == 1)
+        return;
+        
+    // patchDepths now contains the order
+    unsigned long m_size, m_rss;
+    GetMemorySize(m_size, m_rss);
+
+    debug5 << PAR_Rank() << " ~ avtRayExtractor::ExecuteTree  .. .  " 
+           << "    Memory use before: " << m_size << "  rss (MB): " << m_rss/(1024*1024) << endl;
+
+    imageMetaPatchVector.clear();
+    imgDataHashMap.clear();
+    int index;
+    for (std::multimap<double,int>::iterator it=patchDepths.begin(); it!=patchDepths.end(); ++it){
+            avtDataTree_p child = dt->GetChild((*it).second);
+
+            vtkDataSet *ds = child->GetDataRepresentation().GetDataVTK();
+            RasterBasedSample(ds, (*it).second);
+
+            UpdateProgress(10*currentNode+9, 10*totalNodes);
+            currentNode++;
+    }
+
+    GetMemorySize(m_size, m_rss);
+    debug5 << PAR_Rank() << " ~ Memory use after: " << m_size << "  rss (MB): " << m_rss/(1024*1024)
+           <<  "   ... avtRayExtractor::ExecuteTree done@!!!" << endl;
+    
+}
+
 
 
 // ****************************************************************************
@@ -796,6 +949,23 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
     if (ds->GetDataObjectType() == VTK_RECTILINEAR_GRID){
 
         bool completelyInside = true;
+        
+        //
+        // Check if it is inside the transfer function range; discard if not!
+        double scRange[2];
+        ds->GetScalarRange(scRange);
+
+        double minUsedScalar = transferFn1D->GetMinUsedScalar();
+        double maxUsedScalar = transferFn1D->GetMaxUsedScalar();
+
+        debug5 << PAR_Rank() << " ~ " << num << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   used scalar: " << minUsedScalar << ", " << maxUsedScalar << " || Tests: " << (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar) << " , " << (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar) << endl;
+    
+        if (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar)
+            return;
+
+        if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
+            return;
+            
 
         //
         // Check if that patch is completely inside or not
@@ -829,19 +999,7 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         varnames.push_back(varName);
         varsizes.push_back(1);
 
-        double scRange[2];
-        ds->GetScalarRange(scRange);
-
-        double minUsedScalar = transferFn1D->GetMinUsedScalar();
-        double maxUsedScalar = transferFn1D->GetMaxUsedScalar();
-
-        debug5 << PAR_Rank() << " ~ " << num << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   used scalar: " << minUsedScalar << ", " << maxUsedScalar << " || Tests: " << (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar) << " , " << (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar) << endl;
-    
-        if (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar)
-            return;
-
-        if (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar)
-            return;
+        
             
         if (avtCallback::UseNumThreads() > 0){
             massVoxelExtractor->setNumThreads(avtCallback::UseNumThreads());

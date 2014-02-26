@@ -255,6 +255,10 @@ class AVTFILTERS_API avtRayExtractor
     std::vector<imgMetaData>    imageMetaPatchVector;
     std::multimap<int, imgData> imgDataHashMap;
     typedef std::multimap<int, imgData>::iterator iter_t;
+    
+    
+    
+    std::multimap<double, int> patchDepths;
 
 
     std::vector<int>          processorCompositingOrder;       // order patches will be composited
@@ -279,6 +283,7 @@ class AVTFILTERS_API avtRayExtractor
     void                      PreExecute(void);
     virtual void              PostExecute(void);
     virtual void              ExecuteTree(avtDataTree_p);
+    int                       determinePatchOrder(avtDataTree_p dt);
     void                      SetUpExtractors(void);
     imgMetaData               initMetaPatch(int id);    // initialize a patch
 
@@ -289,6 +294,9 @@ class AVTFILTERS_API avtRayExtractor
     int                       screenPartitionExtents[2];
     float                     screenPartitionDepth;
     bool                      partitionExtentsComputationDone;
+    
+    double                    maxBounds[6];     // xmin,xmax, ymin,ymax, zmin,zmax
+    
 
     std::vector<int>          parentChild;      // parent child relationship
     std::vector<int>          numChildren;      // number of children for each patch

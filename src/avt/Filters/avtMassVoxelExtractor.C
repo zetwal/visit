@@ -2029,6 +2029,20 @@ avtMassVoxelExtractor::SampleVariable(int first, int last, int w, int h, double 
 //
 // ****************************************************************************
 
+
+void 
+avtMassVoxelExtractor::world_to_view(double _world[4], double _view[4])
+{
+    // from world to view
+    world_to_view_transform->MultiplyPoint(_world, _view);
+
+    if (_view[3] != 0.){
+        _view[0] /= _view[3];
+        _view[1] /= _view[3];
+        _view[2] /= _view[3];
+    }
+}
+
 void 
 avtMassVoxelExtractor::world_to_screen(double _world[4], int imgWidth, int imgHeight, int screenPos[2], float &depth)
 {

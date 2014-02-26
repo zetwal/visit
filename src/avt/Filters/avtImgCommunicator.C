@@ -1393,12 +1393,10 @@ iotaMeta avtImgCommunicator::setIota(int _procId, int _patchNumber, int dim_x, i
 inline bool compareColor(code x, float r, float g, float b, float a){
     float epsilon = FLT_MIN;
 
-    if  (  ((fabs(x.color[0] - r) < epsilon) && (fabs(x.color[1] - g) < epsilon)) && ((fabs(x.color[0] - r) < epsilon) && (fabs(x.color[1] - g) < epsilon)) ){
-        return true;
-    }
-    else{
+    if  (  ((fabs(x.color[0] - r) < epsilon) && (fabs(x.color[1] - g) < epsilon)) && ((fabs(x.color[0] - r) < epsilon) && (fabs(x.color[1] - g) < epsilon)) )
+        return true; 
+    else
         return false;
-    }
 }
 
 
@@ -1418,6 +1416,7 @@ inline code initCode(int count, float r, float g, float b, float a){
     code temp;
     temp.count = count;
     temp.color[0] = r;  temp.color[1]=g;  temp.color[2]=b;  temp.color[3]=a;
+    
     return temp;  
 }
 
@@ -1444,10 +1443,8 @@ inline code initCode(int count, float r, float g, float b, float a){
 //
 // ****************************************************************************
 int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *imgArray,  float *& encoding, int *& sizeOfEncoding){
-    //std::vector<code> encodingVec;
     std::vector<float> rawEncodingVec;
     rawEncodingVec.clear();
-    //encodingVec.clear();
     code tempCode;
     sizeOfEncoding = new int[numDivs];
     int prev = 0;
@@ -1484,37 +1481,16 @@ int avtImgCommunicator::rleEncodeAll(int dimsX, int dimsY, int numDivs, float *i
         rawEncodingVec.push_back(tempCode.color[3]);
 
         if (j == 0)
-            //prev = sizeOfEncoding[j] = encodingVec.size();
             prev = sizeOfEncoding[j] = rawEncodingVec.size()/5;
         else{
-            //sizeOfEncoding[j] = encodingVec.size() - prev;
-            //prev = encodingVec.size();
-
             sizeOfEncoding[j] = rawEncodingVec.size()/5 - prev;
             prev = rawEncodingVec.size()/5;
         }
     }
 
-    // Transfer the data to the encoding array
-    //int encSize = encodingVec.size();
-    //encoding = new float[encSize*5];
-
     int encSize = rawEncodingVec.size()/5;
     encoding = new float[rawEncodingVec.size()];
-
     std::copy(rawEncodingVec.begin(), rawEncodingVec.end(), encoding);
-    //memcpy(encoding,&encodingVec,encodingVec.size()*sizeof(float)*5);
-
-    // int index = 0;
-    // for (int j=0; j<encSize; j++){
-    //     encoding[index] = encodingVec[j].count; index++;
-    //     encoding[index] = encodingVec[j].color[0];  index++;
-    //     encoding[index] = encodingVec[j].color[1];  index++;
-    //     encoding[index] = encodingVec[j].color[2];  index++;
-    //     encoding[index] = encodingVec[j].color[3];  index++;  
-    // }
-
-    //encodingVec.clear();
 
     return encSize;   // size of the array
 }

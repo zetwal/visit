@@ -120,10 +120,8 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
                              std::vector<std::string> &varnames,
                              std::vector<int> &varsize);
 
-    void             SetGridsAreInWorldSpace(bool, const avtViewInfo &,double,
-                                             const double *);
-    void             SetVariableInformation(std::vector<std::string> &names,
-                                            std::vector<int> varsize);
+    void             SetGridsAreInWorldSpace(bool, const avtViewInfo &,double, const double *);
+    void             SetVariableInformation(std::vector<std::string> &names, std::vector<int> varsize);
     void             SetRayCastingSLIVR(bool s) {rayCastingSLIVR = s; };
     void             SetTrilinear(bool t) {trilinearInterpolation = t;   };
     void             SetLighting(bool l) {lighting = l; };
@@ -146,6 +144,7 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
 
     void             world_to_screen(double _world[4], int imgWidth, int imgHeight, int screenPos[2], float &depth);
     float            screen_to_WorldDistance(int x1, int y1, int x2, int y2);
+    void             world_to_view(double _world[4], double _view[4]);
 
     // Threads
     void             setNumThreads(int _numThreads){numThreads = _numThreads;}
@@ -252,24 +251,21 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
                              std::vector<std::string> &varnames,
                              std::vector<int> &varsize);
 
-    void             RegisterGrid(vtkRectilinearGrid*,
-                                  std::vector<std::string>&,std::vector<int>&);
+    void             RegisterGrid(vtkRectilinearGrid*, std::vector<std::string>&,std::vector<int>&);
     void             SampleAlongSegment(const double *, const double*, int, int);
     void             SampleVariable(int, int, int, int, double*, int*, bool*);
     bool             FrustumIntersectsGrid(int, int, int, int) const;
     bool             FrustumIntersectsGridSLIVR(int, int, int, int) const;
     void             GetSegment(int, int, double *, double *) const;
-    static void      FindPlaneNormal(const double *, const double *, 
-                                     const double *, double *);
+    static void      FindPlaneNormal(const double *, const double *, const double *, double *);
     bool             GridOnPlusSideOfPlane(const double *, const double *) const;
-    bool             FindSegmentIntersections(const double *, const double *, 
-                                              int &, int &);
+    bool             FindSegmentIntersections(const double *, const double *, int &, int &);
 
     void             computePixelColor(double source_rgb[4], double dest_rgb[4], float gradient[3]);
     double           trilinearInterpolate(double vals[8], float distRight, float distTop, float distBack);
     void             computeIndices(int dims[3], int indices[6], int returnIndices[8]);
     void             computeIndicesVert(int dims[3], int indices[6], int returnIndices[8]);
-    void             getIndexandDistFromCenter(float dist, int index,    int &index_before, int &index_after,    float &dist_before, float &dist_after);
+    void             getIndexandDistFromCenter(float dist, int index,  int &index_before, int &index_after,  float &dist_before, float &dist_after);
 
     // Threads
     
