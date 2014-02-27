@@ -63,6 +63,7 @@
 #include <avtImageSource.h>
 
 #include <deque>
+#include <vtkMatrix4x4.h>
 
 class  vtkDataArray;
 class  vtkDataSet;
@@ -176,7 +177,8 @@ class AVTFILTERS_API avtRayExtractor
     void                      SetLightDirection(double _lightDir[3]) { for (int i=0;i<3;i++) lightDirection[i]=_lightDir[i]; }
     void                      SetMatProperties(double _matProp[4]) { for (int i=0;i<4;i++) materialProperties[i]=_matProp[i]; }
     void                      SetTransferFn(avtOpacityMap *_transferFn1D) {transferFn1D = _transferFn1D; };
-    void                      SetModelViewMatrix(double _modelViewMatrix[16]) { for (int i=0;i<16;i++) modelViewMatrix[i]=_modelViewMatrix[i]; }
+    void                      SetModelViewMatrix(double _modelViewMatrix[16]) { std::copy(_modelViewMatrix, _modelViewMatrix+16, modelViewMatrix);  }
+
     void                      SetViewDirection(double *vd){ for (int i=0; i<3; i++) view_direction[i] = vd[i]; }
     void                      SetViewUp(double *vu){ for (int i=0; i<3; i++) view_up[i] = vu[i]; }
     void                      SetMeshDims(double _meshMin[3], double _meshMax[3]){ for (int i=0; i<3; i++) { meshMin[i] = _meshMin[i]; meshMax[i] = _meshMax[i];}}
@@ -251,6 +253,7 @@ class AVTFILTERS_API avtRayExtractor
 
     int                       patchCount;
     int                       totalAssignedPatches;
+    int                       countUsedPatches;
 
     std::vector<imgMetaData>    imageMetaPatchVector;
     std::multimap<int, imgData> imgDataHashMap;
@@ -295,6 +298,8 @@ class AVTFILTERS_API avtRayExtractor
     float                     screenPartitionDepth;
     bool                      partitionExtentsComputationDone;
     
+    int                       screenExtents[4]; // xmin, xmax, ymin, ymax
+    int                       screenSize[2];    // sizeX, sizeY
     double                    maxBounds[6];     // xmin,xmax, ymin,ymax, zmin,zmax
     
 

@@ -59,6 +59,7 @@
 #include <vtkVoxel.h>
 #include <vtkWedge.h>
 #include <vtkImageData.h>
+#include <vtkCamera.h>
 
 #include <avtCellList.h>
 #include <avtDatasetExaminer.h>
@@ -766,7 +767,20 @@ avtRayExtractor::ExecuteTree(avtDataTree_p dt)
 //     currentNode++;
 // }
 
+inline void 
+matrixVectorMul(double mat[16], double inVec[4], double outVec[4]){
+    outVec[0] = mat[0] *inVec[0] + mat[1] *inVec[1] + mat[2] *inVec[2] + mat[3] *inVec[3];
+    outVec[1] = mat[4] *inVec[0] + mat[5] *inVec[1] + mat[6] *inVec[2] + mat[7] *inVec[3];
+    outVec[2] = mat[8] *inVec[0] + mat[9] *inVec[1] + mat[10]*inVec[2] + mat[11]*inVec[3];
+    outVec[3] = mat[12]*inVec[0] + mat[13]*inVec[1] + mat[14]*inVec[2] + mat[15]*inVec[3];
 
+    if (outVec[3] != 0){
+        outVec[0] = outVec[0]/outVec[3];
+        outVec[1] = outVec[1]/outVec[3];
+        outVec[2] = outVec[2]/outVec[3];
+        outVec[3] = outVec[3]/outVec[3];
+    }
+}
 
 // ****************************************************************************
 //  Method: avtRayExtractor::determinePatchOrder
@@ -805,13 +819,35 @@ int avtRayExtractor::determinePatchOrder(avtDataTree_p dt){
         return 1;
 
 
+    // Get the model_view_matrix
+    double           cur_clip_range[2];
+    vtkCamera *cam = vtkCamera::New();
+    avtViewInfo      view = viewInfo;
+    view.imagePan[0] *= -1.0;
+    view.imagePan[1] *= -1.0;
+    view.SetCameraFromView(cam);
+    cam->GetClippingRange(cur_clip_range);
+    vtkMatrix4x4 *mat = cam->GetCompositeProjectionTransformMatrix(aspect, cur_clip_range[0], cur_clip_range[1]);
+
+    double modelViewMat[16];
+    debug5 << "Mat _ _ ";
+    for (int i=0; i<4; i++){
+        for (int j=0; j<4; j++){
+            int index = i*4 + j;
+            modelViewMat[index] = mat->GetElement(i,j);
+            debug5 << modelViewMat[index] << "  ";
+        }
+        debug5 << "\n";
+    }
+
     patchCount = 0;
     double center[3]; 
     double bounds[6];       // xmin,xmax, ymin,ymax, zmin,zmax    
     double worldCoordinates[4];
     double eyeCoordinates[4];
     
-
+    countUsedPatches = 0;
+    patchDepths.clear();
     for (int i = 0; i < totalAssignedPatches; i++) {
         worldCoordinates[3] = 1.0;
         if (dt->ChildIsPresent(i) && !( *(dt->GetChild(i)) == NULL))
@@ -827,7 +863,7 @@ int avtRayExtractor::determinePatchOrder(avtDataTree_p dt){
             double minUsedScalar = transferFn1D->GetMinUsedScalar();
             double maxUsedScalar = transferFn1D->GetMaxUsedScalar();
 
-            debug5 << PAR_Rank() << " ~ " << i << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   used scalar: " << minUsedScalar << ", " << maxUsedScalar << " || Tests: " << (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar) << " , " << (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar) << endl;
+            //debug5 << PAR_Rank() << " ~ " << i << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   used scalar: " << minUsedScalar << ", " << maxUsedScalar << " || Tests: " << (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar) << " , " << (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar) << endl;
     
             // Outside scalar range and so have no impact on the rest
             if (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar)
@@ -847,13 +883,13 @@ int avtRayExtractor::determinePatchOrder(avtDataTree_p dt){
             worldCoordinates[2] = center[2];
             
             // Multiply it by the projection matrix
-            massVoxelExtractor->world_to_view(worldCoordinates, eyeCoordinates);
+            matrixVectorMul(modelViewMat,worldCoordinates,eyeCoordinates);
 
             // Push it in a multimap so that it sorts itself
-            patchDepths.insert( std::pair<double,int>(eyeCoordinates[2],i) );
+            patchDepths.insert( std::pair<double,int>(eyeCoordinates[2],i) );  
             
             // Get max and min bounds
-            if (i == 0)
+            if (countUsedPatches == 0)
                 ds->GetBounds(maxBounds);
             else{
                 ds->GetBounds(bounds);
@@ -877,7 +913,53 @@ int avtRayExtractor::determinePatchOrder(avtDataTree_p dt){
                 if (bounds[5] > maxBounds[5])
                     maxBounds[5] = bounds[5];
             }
+            countUsedPatches++;
         }
+        //debug5 << "maxBounds: " << maxBounds[0] << ", " << maxBounds[2] << ", " << maxBounds[4] << "  to  " << maxBounds[1] << ", " << maxBounds[3] << ", " << maxBounds[5] <<  std::endl;
+
+    }
+
+    if (countUsedPatches > 0){
+        float coordinates[8][3];
+        coordinates[0][0] = maxBounds[0];   coordinates[0][1] = maxBounds[2];   coordinates[0][2] = maxBounds[4];
+        coordinates[1][0] = maxBounds[1];   coordinates[1][1] = maxBounds[2];   coordinates[1][2] = maxBounds[4];
+        coordinates[2][0] = maxBounds[1];   coordinates[2][1] = maxBounds[3];   coordinates[2][2] = maxBounds[4];
+        coordinates[3][0] = maxBounds[0];   coordinates[3][1] = maxBounds[3];   coordinates[3][2] = maxBounds[4];
+
+        coordinates[4][0] = maxBounds[0];   coordinates[4][1] = maxBounds[2];   coordinates[4][2] = maxBounds[5];
+        coordinates[5][0] = maxBounds[1];   coordinates[5][1] = maxBounds[2];   coordinates[5][2] = maxBounds[5];
+        coordinates[6][0] = maxBounds[1];   coordinates[6][1] = maxBounds[3];   coordinates[6][2] = maxBounds[5];
+        coordinates[7][0] = maxBounds[0];   coordinates[7][1] = maxBounds[3];   coordinates[7][2] = maxBounds[5];
+
+        double _world[4], _view[4];
+        for (int i=0; i<8; i++){
+            _world[0] = coordinates[i][0]; 
+            _world[1] = coordinates[i][1]; 
+            _world[2] = coordinates[i][2];
+            _world[3] = 1.0;
+
+            matrixVectorMul(modelViewMat,_world, _view);
+            int tempX = int(_view[0]*(width/2.)  + (width /2.) + 0.5);
+            int tempY = int(_view[1]*(height/2.) + (height/2.) + 0.5);
+
+            if (i == 0){
+                screenExtents[0] = screenExtents[1] = tempX;
+                screenExtents[2] = screenExtents[3] = tempY;
+            }else{
+                if (screenExtents[0] > tempX) screenExtents[0] = tempX;
+                if (screenExtents[1] < tempX) screenExtents[1] = tempX;
+                if (screenExtents[2] > tempY) screenExtents[2] = tempY;
+                if (screenExtents[3] < tempY) screenExtents[3] = tempY;
+            }
+            
+            //debug5 << "_world: " << coordinates[i][0] << ", " << coordinates[i][1] << ", " << coordinates[i][2] << "   screenPos: " << tempX << ", " << tempY << "   width, height:" << width << ", " << height << std::endl;
+        }
+
+        screenSize[0] = screenExtents[1] - screenExtents[0] + 1;
+        screenSize[1] = screenExtents[3] - screenExtents[2] + 1;
+
+        debug5 << "screenExtents: " << screenExtents[0] << ", " << screenExtents[2] << "  to  " << screenExtents[1] << ", " << screenExtents[3] << endl;
+        debug5 << "ScreenSize: " << screenSize[0] << " x " << screenSize[1] << endl;
     }
     
     return 0;
@@ -958,7 +1040,7 @@ avtRayExtractor::RasterBasedSample(vtkDataSet *ds, int num)
         double minUsedScalar = transferFn1D->GetMinUsedScalar();
         double maxUsedScalar = transferFn1D->GetMaxUsedScalar();
 
-        debug5 << PAR_Rank() << " ~ " << num << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   used scalar: " << minUsedScalar << ", " << maxUsedScalar << " || Tests: " << (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar) << " , " << (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar) << endl;
+        //debug5 << PAR_Rank() << " ~ " << num << "  |  Scalar range: " << scRange[0] << ", " << scRange[1] << "   used scalar: " << minUsedScalar << ", " << maxUsedScalar << " || Tests: " << (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar) << " , " << (scRange[0] > maxUsedScalar && scRange[1] > maxUsedScalar) << endl;
     
         if (scRange[1] < minUsedScalar && scRange[0] < minUsedScalar)
             return;
@@ -2290,7 +2372,7 @@ avtRayExtractor::ExecuteRayTracerLB(){
     if (avtCallback::UseBlockingForTiming())
         imgComm.syncAllProcs();
 
-    debug5 << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "  avg_z: " <<  avg_z << std::endl;
+    debug5 << "Local compositing done :  num patches: " << numPatches << "   size: " << imgBufferWidth << " x " << imgBufferHeight  << "   position: " << startX << ", " << startY <<  "   to  " << endX << ", " << endY << "  avg_z: " <<  avg_z << std::endl;
 
 
 

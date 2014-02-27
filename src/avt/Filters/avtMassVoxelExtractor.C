@@ -835,18 +835,25 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
              "  partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << "  to  " << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl;
     }
 
-    debug5 << proc << " ~ " << patch << 
-             "  orig ind: 0 , 0, 0  to " << dims[0]-1 << ", " << dims[1]-1 << ", " << dims[2]-1 << 
-             "  patch extents: " << X[0] << ", " << Y[0] << ", " << Z[0] << "  to  " << X[dims[0]-1] << ", " << Y[dims[1]-1] << ", " << Z[dims[2]-1] <<
-             "  partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << "  to  " << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl;
+    // debug5 << proc << " ~ " << patch << 
+    //          "  orig ind: 0 , 0, 0  to " << dims[0]-1 << ", " << dims[1]-1 << ", " << dims[2]-1 << 
+    //          "  patch extents: " << X[0] << ", " << Y[0] << ", " << Z[0] << "  to  " << X[dims[0]-1] << ", " << Y[dims[1]-1] << ", " << Z[dims[2]-1] <<
+    //          "  partition extents: " << currentPartitionExtents[0] << ", " << currentPartitionExtents[1] << ", " << currentPartitionExtents[2] << "  to  " << currentPartitionExtents[3] << ", " << currentPartitionExtents[4] << ", " << currentPartitionExtents[5] << std::endl;
 
+
+
+    // debug5 << "World to view matrix:" <<endl;
+    // for (int i=0; i<4; i++){
+    //     for (int j=0; j<4; j++){
+    //         debug5 << world_to_view_transform->GetElement(i,j) << " ";
+    //     }
+    //     debug5 << "\n";
+    // }
 
     //
     // Determine the screen size of the patch being processed
     //
-    xMin = yMin = 1000000;
-    xMax = yMax = -1000000;
-    
+
     float coordinates[8][3];
     coordinates[0][0] = X[0];           coordinates[0][1] = Y[0];           coordinates[0][2] = Z[0];
     coordinates[1][0] = X[dims[0]-1];   coordinates[1][1] = Y[0];           coordinates[1][2] = Z[0];
@@ -862,29 +869,32 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
     double _world[4], _view[4];
     float offset, offset_0, error_correction;
     offset = offset_0 = error_correction = 0.0f;
-    _world[3] = 1.0;
+    
     imgDepth = 0;
-
+    float tempImgDepth;
     for (int i=0; i<8; i++){
         _world[0] = coordinates[i][0]; 
         _world[1] = coordinates[i][1]; 
         _world[2] = coordinates[i][2];
+        _world[3] = 1.0;
         
         int screenPos[2]; 
-        float tempImgDepth;
         world_to_screen(_world, fullImgWidth, fullImgHeight, screenPos, tempImgDepth);
 
-        if (xMin > screenPos[0]) xMin = screenPos[0];
-        if (xMax < screenPos[0]) xMax = screenPos[0];
-        if (yMin > screenPos[1]) yMin = screenPos[1];
-        if (yMax < screenPos[1]) yMax = screenPos[1];
-
-        if (i == 0)
+        if (i == 0){
             imgDepth = tempImgDepth;
-        else
+            xMin = xMax = screenPos[0];
+            yMin = yMax = screenPos[1];
+        }else{
+            if (xMin > screenPos[0]) xMin = screenPos[0];
+            if (xMax < screenPos[0]) xMax = screenPos[0];
+            if (yMin > screenPos[1]) yMin = screenPos[1];
+            if (yMax < screenPos[1]) yMax = screenPos[1];
+
             if (imgDepth < tempImgDepth)
                 imgDepth = tempImgDepth;
-        //std::cout << "origin: " << coordinates[i][0] << ", " << coordinates[i][1] << ", " << coordinates[i][2] << "   screenPos: " << screenPos[0] << ", " << screenPos[1] << std::endl;
+        }
+       // debug5 << "origin: " << coordinates[i][0] << ", " << coordinates[i][1] << ", " << coordinates[i][2] << "   screenPos: " << screenPos[0] << ", " << screenPos[1] << "   sidth, height:" << fullImgWidth << ", " << fullImgHeight << std::endl;
     }
 
     xMin = xMin - error_correction;
@@ -921,7 +931,7 @@ avtMassVoxelExtractor::simpleExtractWorldSpaceGrid(vtkRectilinearGrid *rgrid,
         debug5 << "pretendGridsAreInWorldSpace: true" << std::endl;
     else
         debug5 << "pretendGridsAreInWorldSpace: false" << std::endl;
-    debug5 << "distance between points: " <<  screen_to_WorldDistance(xMin, yMin, xMin+1,yMin) << std::endl;
+    debug5 << "Distance between points: " <<  screen_to_WorldDistance(xMin, yMin, xMin+1,yMin) << "  z: " << tempImgDepth << std::endl;
     
 
     task tempTask;
@@ -2161,6 +2171,8 @@ avtMassVoxelExtractor::SetGridsAreInWorldSpace(bool val, const avtViewInfo &v,
 
     if (pretendGridsAreInWorldSpace)
     {
+        debug5 << "pretendGridsAreInWorldSpace true" << endl;
+
         view = avtViewInfo();
         view.setScale = true;
         view.parallelScale = 1;
@@ -2183,6 +2195,15 @@ avtMassVoxelExtractor::SetGridsAreInWorldSpace(bool val, const avtViewInfo &v,
     cam->GetClippingRange(cur_clip_range);
     vtkMatrix4x4 *mat = cam->GetCompositeProjectionTransformMatrix(aspect,
                                          cur_clip_range[0], cur_clip_range[1]);
+
+
+    debug5 << "mat _ _ _:" <<endl;
+    for (int i=0; i<4; i++){
+        for (int j=0; j<4; j++){
+            debug5 << mat->GetElement(i,j) << " ";
+        }
+        debug5 << "\n";
+    }
 
     if (xform)
     {

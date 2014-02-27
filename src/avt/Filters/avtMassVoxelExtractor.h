@@ -137,6 +137,9 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     void             SetPartitionExtents(double _currentPartitionExtents[6]){for (int i=0; i<6; i++) currentPartitionExtents[i]=_currentPartitionExtents[i]; }
     void             SetAMR(bool amr) {isAMR = amr; };
 
+    void             SetScreenSize(double _screenSize[2]){ std::copy(_screenSize, _screenSize+2, screenSize); }
+    void             SetScreenExtents(double _screenExtents[4]){ std::copy(_screenExtents, _screenExtents+4, screenExtents); }
+
     // Getting the image
     void             getImageDimensions(int &inUse, int dims[2], int screen_ll[2], int screen_ur[2], float &avg_z, bool &_fullyInside);
     void             getComputedImage(float *image);
@@ -206,6 +209,9 @@ class AVTFILTERS_API avtMassVoxelExtractor : public avtExtractor
     double           meshMax[3];
     int              logicalBounds[3];
     double           currentPartitionExtents[6];  // minX, minY, minZ,    maxX, maxY,maxZ
+
+    double           screenExtents[4];
+    double           screenSize[2];
 
 
     // Patch details for one image
